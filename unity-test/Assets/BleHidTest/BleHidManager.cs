@@ -1,336 +1,403 @@
-using UnityEngine;
 using System;
-using System.Runtime.InteropServices;
+using System.Collections;
+using UnityEngine;
+using UnityEngine.UI;
+
+#if UNITY_ANDROID
+using UnityEngine.Android;
+#endif
 
 /// <summary>
-/// Unity C# wrapper for the Android BLE HID plugin.
-/// Provides an interface for utilizing the BLE HID functionality in Unity.
+/// Unity manager for BLE HID functionality.
+/// This class provides a Unity-friendly interface to the Android BLE HID plugin.
 /// </summary>
 public class BleHidManager : MonoBehaviour
 {
-    // Events for plugin callbacks
-    public event Action<string> OnDeviceConnected;
-    public event Action<string> OnDeviceDisconnected;
-    public event Action<string, int> OnPairingRequested;
-    public event Action<string> OnPairingFailed;
-    public event Action<bool> OnAdvertisingStateChanged;
-
-    // Singleton instance
-    private static BleHidManager _instance;
-    public static BleHidManager Instance
+    // References to UI components
+    public Button connectButton;
+    public Button mouseButton;
+    public Button keyboardButton;
+    public Text statusText;
+    
+    // Private state
+    private bool isInitialized = false;
+    private bool isAdvertising = false;
+    
+    // Status strings
+    private const string STATUS_NOT_INITIALIZED = "Status: Not initialized";
+    private const string STATUS_READY = "Status: Ready";
+    private const string STATUS_ADVERTISING = "Status: Advertising";
+    private const string STATUS_CONNECTED = "Status: Connected";
+    
+#if UNITY_ANDROID
+    // Connection listener implementation (for Android)
+    private class ConnectionListener : AndroidJavaProxy
     {
-        get
+        private BleHidManager manager;
+        
+        public ConnectionListener(BleHidManager manager) 
+            : base("com.inventonater.hid.unity.UnityConnectionListener")
         {
-            if (_instance == null)
+            this.manager = manager;
+        }
+        
+        public void onConnected(string deviceAddress)
+        {
+            // Use main thread for UI updates
+            manager.RunOnMainThread(() =>
             {
-                GameObject go = new GameObject("BleHidManager");
-                _instance = go.AddComponent<BleHidManager>();
-                DontDestroyOnLoad(go);
-            }
-            return _instance;
+                manager.statusText.text = STATUS_CONNECTED;
+                manager.isAdvertising = false;
+                manager.UpdateUI();
+                Debug.Log($"Connected to device: {deviceAddress}");
+            });
         }
-    }
-
-    // HID key codes (USB HID spec)
-    public static class KeyCode
-    {
-        public const int KEY_A = 0x04;
-        public const int KEY_B = 0x05;
-        public const int KEY_C = 0x06;
-        public const int KEY_D = 0x07;
-        public const int KEY_E = 0x08;
-        public const int KEY_F = 0x09;
-        public const int KEY_G = 0x0A;
-        public const int KEY_H = 0x0B;
-        public const int KEY_I = 0x0C;
-        public const int KEY_J = 0x0D;
-        public const int KEY_K = 0x0E;
-        public const int KEY_L = 0x0F;
-        public const int KEY_M = 0x10;
-        public const int KEY_N = 0x11;
-        public const int KEY_O = 0x12;
-        public const int KEY_P = 0x13;
-        public const int KEY_Q = 0x14;
-        public const int KEY_R = 0x15;
-        public const int KEY_S = 0x16;
-        public const int KEY_T = 0x17;
-        public const int KEY_U = 0x18;
-        public const int KEY_V = 0x19;
-        public const int KEY_W = 0x1A;
-        public const int KEY_X = 0x1B;
-        public const int KEY_Y = 0x1C;
-        public const int KEY_Z = 0x1D;
-        public const int KEY_1 = 0x1E;
-        public const int KEY_2 = 0x1F;
-        public const int KEY_3 = 0x20;
-        public const int KEY_4 = 0x21;
-        public const int KEY_5 = 0x22;
-        public const int KEY_6 = 0x23;
-        public const int KEY_7 = 0x24;
-        public const int KEY_8 = 0x25;
-        public const int KEY_9 = 0x26;
-        public const int KEY_0 = 0x27;
-        public const int KEY_RETURN = 0x28;
-        public const int KEY_ESCAPE = 0x29;
-        public const int KEY_BACKSPACE = 0x2A;
-        public const int KEY_TAB = 0x2B;
-        public const int KEY_SPACE = 0x2C;
-    }
-
-    private AndroidJavaObject _pluginInstance;
-    private AndroidJavaClass _pluginClass;
-    private AndroidJavaObject _unityActivity;
-    private bool _isInitialized = false;
-
-    private void Awake()
-    {
-        if (_instance != null && _instance != this)
+        
+        public void onDisconnected(string deviceAddress)
         {
-            Destroy(gameObject);
-            return;
+            // Use main thread for UI updates
+            manager.RunOnMainThread(() =>
+            {
+                manager.statusText.text = STATUS_READY;
+                Debug.Log($"Disconnected from device: {deviceAddress}");
+                
+                // Restart advertising after disconnection
+                if (manager.isInitialized && !manager.isAdvertising)
+                {
+                    manager.StartAdvertising();
+                }
+            });
         }
-
-        _instance = this;
-        DontDestroyOnLoad(gameObject);
-
-#if UNITY_ANDROID && !UNITY_EDITOR
-        InitializePlugin();
-#else
-        Debug.LogWarning("BLE HID functionality is only available on Android devices.");
+    }
+    
+    // Android plugin
+    private AndroidJavaClass unityBleHid;
+#endif
+    
+    // Start is called before the first frame update
+    void Start()
+    {
+        // Set initial UI state
+        statusText.text = STATUS_NOT_INITIALIZED;
+        UpdateUI();
+        
+#if UNITY_ANDROID
+        // Request required permissions
+        RequestPermissions();
 #endif
     }
-
-    /// <summary>
-    /// Initializes the BLE HID plugin.
-    /// </summary>
-    private void InitializePlugin()
+    
+    // Update UI state based on connection state
+    private void UpdateUI()
     {
-        if (_isInitialized) return;
-
-        try
+        connectButton.interactable = isInitialized;
+        
+        if (isAdvertising)
         {
-            Debug.Log("Initializing BLE HID Plugin...");
-
-            // Get the Unity player activity
-            AndroidJavaClass unityPlayer = new AndroidJavaClass("com.unity3d.player.UnityPlayer");
-            _unityActivity = unityPlayer.GetStatic<AndroidJavaObject>("currentActivity");
-
-            // Get the plugin class
-            _pluginClass = new AndroidJavaClass("com.example.blehid.unity.BleHidPlugin");
-
-            // Create a callback instance
-            AndroidJavaClass callbackClass = new AndroidJavaClass("com.example.blehid.unity.UnityCallback");
-            CallbackImpl callbackImpl = new CallbackImpl(this);
-            AndroidJavaObject callbackInstance = callbackClass.CallStatic<AndroidJavaObject>("createInstance", callbackImpl);
-
-            // Initialize the plugin
-            bool result = _pluginClass.CallStatic<bool>("initialize", _unityActivity);
-            if (!result)
+            connectButton.GetComponentInChildren<Text>().text = "Stop Advertising";
+        }
+        else
+        {
+            connectButton.GetComponentInChildren<Text>().text = "Start Advertising";
+        }
+        
+        bool isConnected = IsConnected();
+        mouseButton.interactable = isConnected;
+        keyboardButton.interactable = isConnected;
+    }
+    
+#if UNITY_ANDROID
+    // Check and request required permissions
+    private void RequestPermissions()
+    {
+        // Android 12+ requires different permissions than older versions
+        if (AndroidHelpers.IsAndroid12OrHigher())
+        {
+            string[] permissions = new string[] {
+                "android.permission.BLUETOOTH_ADVERTISE",
+                "android.permission.BLUETOOTH_CONNECT",
+                "android.permission.BLUETOOTH_SCAN"
+            };
+            
+            bool allGranted = true;
+            foreach (string permission in permissions)
             {
-                Debug.LogError("Failed to initialize BLE HID Plugin");
+                if (!Permission.HasUserAuthorizedPermission(permission))
+                {
+                    allGranted = false;
+                    break;
+                }
+            }
+            
+            if (!allGranted)
+            {
+                Permission.RequestUserPermissions(permissions);
                 return;
             }
-
-            // Set the callback
-            _pluginClass.CallStatic("setCallback", callbackInstance);
-
-            _isInitialized = true;
-            Debug.Log("BLE HID Plugin initialized successfully");
+        }
+        else
+        {
+            // Pre-Android 12
+            string[] permissions = new string[] {
+                "android.permission.BLUETOOTH",
+                "android.permission.BLUETOOTH_ADMIN",
+                "android.permission.ACCESS_FINE_LOCATION"
+            };
+            
+            bool allGranted = true;
+            foreach (string permission in permissions)
+            {
+                if (!Permission.HasUserAuthorizedPermission(permission))
+                {
+                    allGranted = false;
+                    break;
+                }
+            }
+            
+            if (!allGranted)
+            {
+                Permission.RequestUserPermissions(permissions);
+                return;
+            }
+        }
+        
+        // Initialize BLE HID after permissions are granted
+        Initialize();
+    }
+    
+    // Execute action on main thread (for UI updates from callbacks)
+    private void RunOnMainThread(Action action)
+    {
+        MainThreadDispatcher.Enqueue(action);
+    }
+#endif
+    
+    // Initialize the BLE HID functionality
+    public void Initialize()
+    {
+#if UNITY_ANDROID
+        try
+        {
+            // Create plugin classes
+            unityBleHid = new AndroidJavaClass("com.inventonater.hid.unity.UnityBleHid");
+            AndroidJavaClass unityPlayer = new AndroidJavaClass("com.unity3d.player.UnityPlayer");
+            AndroidJavaObject activity = unityPlayer.GetStatic<AndroidJavaObject>("currentActivity");
+            AndroidJavaObject context = activity.Call<AndroidJavaObject>("getApplicationContext");
+            
+            // Initialize BLE HID
+            bool success = unityBleHid.CallStatic<bool>("initialize", context);
+            
+            if (success)
+            {
+                // Set connection listener
+                unityBleHid.CallStatic("setConnectionListener", new ConnectionListener(this));
+                
+                isInitialized = true;
+                statusText.text = STATUS_READY;
+                
+                // Check if peripheral mode is supported
+                if (!unityBleHid.CallStatic<bool>("isBlePeripheralSupported"))
+                {
+                    Debug.LogWarning("BLE peripheral mode not supported on this device");
+                    statusText.text = "BLE peripheral not supported";
+                }
+            }
+            else
+            {
+                Debug.LogError("Failed to initialize BLE HID");
+                statusText.text = "Failed to initialize";
+            }
         }
         catch (Exception e)
         {
-            Debug.LogError("Error initializing BLE HID Plugin: " + e.Message);
+            Debug.LogError($"Error initializing BLE HID: {e.Message}");
+            statusText.text = "Error: " + e.Message;
         }
-    }
-
-    /// <summary>
-    /// Checks if BLE peripheral mode is supported on this device.
-    /// </summary>
-    public bool IsBlePeripheralSupported()
-    {
-#if UNITY_ANDROID && !UNITY_EDITOR
-        if (!_isInitialized) return false;
-        return _pluginClass.CallStatic<bool>("isBlePeripheralSupported");
 #else
-        return false;
+        Debug.LogWarning("BLE HID is only supported on Android");
+        statusText.text = "Not supported on this platform";
 #endif
-    }
-
-    /// <summary>
-    /// Starts advertising the BLE HID device.
-    /// </summary>
-    public bool StartAdvertising()
-    {
-#if UNITY_ANDROID && !UNITY_EDITOR
-        if (!_isInitialized) return false;
-        return _pluginClass.CallStatic<bool>("startAdvertising");
-#else
-        Debug.LogWarning("BLE HID advertising is only available on Android devices.");
-        return false;
-#endif
-    }
-
-    /// <summary>
-    /// Stops advertising the BLE HID device.
-    /// </summary>
-    public void StopAdvertising()
-    {
-#if UNITY_ANDROID && !UNITY_EDITOR
-        if (!_isInitialized) return;
-        _pluginClass.CallStatic("stopAdvertising");
-#else
-        Debug.LogWarning("BLE HID advertising is only available on Android devices.");
-#endif
-    }
-
-    /// <summary>
-    /// Checks if the device is connected to a host.
-    /// </summary>
-    public bool IsConnected()
-    {
-#if UNITY_ANDROID && !UNITY_EDITOR
-        if (!_isInitialized) return false;
-        return _pluginClass.CallStatic<bool>("isConnected");
-#else
-        return false;
-#endif
-    }
-
-    /// <summary>
-    /// Gets the address of the connected device.
-    /// </summary>
-    public string GetConnectedDeviceAddress()
-    {
-#if UNITY_ANDROID && !UNITY_EDITOR
-        if (!_isInitialized) return null;
-        return _pluginClass.CallStatic<string>("getConnectedDeviceAddress");
-#else
-        return null;
-#endif
-    }
-
-    /// <summary>
-    /// Sends a keyboard HID report with the specified key.
-    /// </summary>
-    public bool SendKey(int keyCode)
-    {
-#if UNITY_ANDROID && !UNITY_EDITOR
-        if (!_isInitialized) return false;
-        return _pluginClass.CallStatic<bool>("sendKey", keyCode);
-#else
-        Debug.LogWarning("BLE HID key sending is only available on Android devices.");
-        return false;
-#endif
-    }
-
-    /// <summary>
-    /// Sends multiple keyboard HID keys simultaneously.
-    /// </summary>
-    public bool SendKeys(int[] keyCodes)
-    {
-#if UNITY_ANDROID && !UNITY_EDITOR
-        if (!_isInitialized) return false;
-        return _pluginClass.CallStatic<bool>("sendKeys", keyCodes);
-#else
-        Debug.LogWarning("BLE HID key sending is only available on Android devices.");
-        return false;
-#endif
-    }
-
-    /// <summary>
-    /// Releases all pressed keys.
-    /// </summary>
-    public bool ReleaseKeys()
-    {
-#if UNITY_ANDROID && !UNITY_EDITOR
-        if (!_isInitialized) return false;
-        return _pluginClass.CallStatic<bool>("releaseKeys");
-#else
-        Debug.LogWarning("BLE HID key releasing is only available on Android devices.");
-        return false;
-#endif
-    }
-
-    /// <summary>
-    /// Sends a key press and then releases it after a short delay.
-    /// </summary>
-    public bool SendKeyPress(int keyCode)
-    {
-#if UNITY_ANDROID && !UNITY_EDITOR
-        if (!_isInitialized) return false;
         
-        bool result = _pluginClass.CallStatic<bool>("sendKey", keyCode);
-        if (result)
+        UpdateUI();
+    }
+    
+    // Toggle advertising
+    public void ToggleAdvertising()
+    {
+#if UNITY_ANDROID
+        if (!isInitialized)
         {
-            StartCoroutine(ReleaseKeysAfterDelay(0.1f));
+            Debug.LogWarning("BLE HID not initialized");
+            return;
         }
-        return result;
+        
+        if (isAdvertising)
+        {
+            // Stop advertising
+            unityBleHid.CallStatic("stopAdvertising");
+            isAdvertising = false;
+            statusText.text = STATUS_READY;
+        }
+        else
+        {
+            // Start advertising
+            bool success = unityBleHid.CallStatic<bool>("startAdvertising");
+            
+            if (success)
+            {
+                isAdvertising = true;
+                statusText.text = STATUS_ADVERTISING;
+            }
+            else
+            {
+                Debug.LogError("Failed to start advertising");
+            }
+        }
+        
+        UpdateUI();
+#endif
+    }
+    
+    // Check if device is connected
+    private bool IsConnected()
+    {
+#if UNITY_ANDROID
+        if (!isInitialized)
+        {
+            return false;
+        }
+        
+        return unityBleHid.CallStatic<bool>("isConnected");
 #else
-        Debug.LogWarning("BLE HID key pressing is only available on Android devices.");
         return false;
 #endif
     }
-
-    /// <summary>
-    /// Coroutine to release keys after a delay.
-    /// </summary>
-    private System.Collections.IEnumerator ReleaseKeysAfterDelay(float delay)
+    
+    // Send a mouse movement
+    public void MoveMouse(int x, int y)
     {
-        yield return new WaitForSeconds(delay);
-        ReleaseKeys();
+#if UNITY_ANDROID
+        if (!IsConnected())
+        {
+            Debug.LogWarning("Not connected to a device");
+            return;
+        }
+        
+        unityBleHid.CallStatic<bool>("moveMouse", x, y);
+#endif
     }
-
+    
+    // Click a mouse button
+    public void ClickMouseButton(int button)
+    {
+#if UNITY_ANDROID
+        if (!IsConnected())
+        {
+            Debug.LogWarning("Not connected to a device");
+            return;
+        }
+        
+        unityBleHid.CallStatic<bool>("clickMouseButton", button);
+#endif
+    }
+    
+    // Send a keyboard key
+    public void SendKey(int keyCode)
+    {
+#if UNITY_ANDROID
+        if (!IsConnected())
+        {
+            Debug.LogWarning("Not connected to a device");
+            return;
+        }
+        
+        unityBleHid.CallStatic<bool>("sendKey", keyCode);
+#endif
+    }
+    
+    // Open mouse control UI
+    public void OpenMouseControl()
+    {
+        // Navigate to mouse control UI
+        Debug.Log("Opening mouse control UI");
+    }
+    
+    // Open keyboard control UI
+    public void OpenKeyboardControl()
+    {
+        // Navigate to keyboard control UI
+        Debug.Log("Opening keyboard control UI");
+    }
+    
+    // Clean up
     private void OnDestroy()
     {
-#if UNITY_ANDROID && !UNITY_EDITOR
-        if (_isInitialized)
+#if UNITY_ANDROID
+        if (isInitialized)
         {
-            _pluginClass.CallStatic("close");
-            _isInitialized = false;
+            unityBleHid.CallStatic("shutdown");
         }
 #endif
     }
+}
 
-    /// <summary>
-    /// Implementation of the UnityCallback interface to receive events from the plugin.
-    /// </summary>
-    private class CallbackImpl : AndroidJavaProxy
+// Helper class for Unity main thread execution
+public class MainThreadDispatcher : MonoBehaviour
+{
+    private static readonly Queue actions = new Queue();
+    private static MainThreadDispatcher instance = null;
+    
+    // Singleton instance
+    public static MainThreadDispatcher Instance
     {
-        private readonly BleHidManager _manager;
-
-        public CallbackImpl(BleHidManager manager) : base("com.example.blehid.unity.UnityCallback")
+        get
         {
-            _manager = manager;
+            if (instance == null)
+            {
+                GameObject go = new GameObject("MainThreadDispatcher");
+                DontDestroyOnLoad(go);
+                instance = go.AddComponent<MainThreadDispatcher>();
+            }
+            return instance;
         }
-
-        public void onPairingRequested(string deviceAddress, int variant)
+    }
+    
+    // Enqueue action to run on main thread
+    public static void Enqueue(Action action)
+    {
+        lock (actions)
         {
-            Debug.Log($"Pairing requested by {deviceAddress}, variant: {variant}");
-            _manager.OnPairingRequested?.Invoke(deviceAddress, variant);
+            actions.Enqueue(action);
         }
-
-        public void onDeviceConnected(string deviceAddress)
+    }
+    
+    // Update is called once per frame
+    void Update()
+    {
+        lock (actions)
         {
-            Debug.Log($"Device connected: {deviceAddress}");
-            _manager.OnDeviceConnected?.Invoke(deviceAddress);
+            while (actions.Count > 0)
+            {
+                Action action = actions.Dequeue() as Action;
+                action.Invoke();
+            }
         }
+    }
+}
 
-        public void onDeviceDisconnected(string deviceAddress)
+// Helper for Android version checking
+public static class AndroidHelpers
+{
+    public static bool IsAndroid12OrHigher()
+    {
+#if UNITY_ANDROID && !UNITY_EDITOR
+        using (AndroidJavaClass buildVersionClass = new AndroidJavaClass("android.os.Build$VERSION"))
         {
-            Debug.Log($"Device disconnected: {deviceAddress}");
-            _manager.OnDeviceDisconnected?.Invoke(deviceAddress);
+            int sdkInt = buildVersionClass.GetStatic<int>("SDK_INT");
+            return sdkInt >= 31; // Android 12 is API level 31
         }
-
-        public void onPairingFailed(string deviceAddress)
-        {
-            Debug.Log($"Pairing failed with {deviceAddress}");
-            _manager.OnPairingFailed?.Invoke(deviceAddress);
-        }
-
-        public void onAdvertisingStateChanged(bool isAdvertising)
-        {
-            Debug.Log($"Advertising state changed: {(isAdvertising ? "started" : "stopped")}");
-            _manager.OnAdvertisingStateChanged?.Invoke(isAdvertising);
-        }
+#else
+        return false;
+#endif
     }
 }

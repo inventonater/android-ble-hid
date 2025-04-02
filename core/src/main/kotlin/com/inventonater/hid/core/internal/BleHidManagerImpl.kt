@@ -14,6 +14,7 @@ import com.inventonater.hid.core.api.HidServiceBase
 import com.inventonater.hid.core.api.MouseButton
 import com.inventonater.hid.core.api.ServiceFactory
 import com.inventonater.hid.core.internal.ble.BleAdvertiserImpl
+import com.inventonater.hid.core.internal.service.KeyboardService
 import com.inventonater.hid.core.internal.service.MouseService
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -158,6 +159,10 @@ class BleHidManagerImpl(
         // Register standard services
         registerServiceFactory(MouseService.SERVICE_ID) {
             MouseService(connectionManager, diagnosticsManager.logManager)
+        }
+        
+        registerServiceFactory(KeyboardService.SERVICE_ID) {
+            KeyboardService(connectionManager, diagnosticsManager.logManager)
         }
         
         initialized = true
@@ -414,21 +419,56 @@ class BleHidManagerImpl(
         return mouseService.scroll(amount)
     }
     
-    // Keyboard functionality - these would be implemented similarly to the mouse functions
-    // For now, we'll provide stub implementations since we haven't implemented KeyboardService yet
+    // Keyboard functionality
     
     override fun sendKey(keyCode: Int): Boolean {
-        logger.warn("Keyboard service not implemented yet")
-        return false
+        if (!initialized) {
+            logger.error("Not initialized")
+            return false
+        }
+        
+        // Get keyboard service
+        val keyboardService = activeServices[KeyboardService.SERVICE_ID] as? KeyboardService
+        if (keyboardService == null) {
+            logger.error("Keyboard service not active")
+            return false
+        }
+        
+        // Send the key
+        return keyboardService.sendKey(keyCode)
     }
     
     override fun sendKeys(keyCodes: IntArray): Boolean {
-        logger.warn("Keyboard service not implemented yet")
-        return false
+        if (!initialized) {
+            logger.error("Not initialized")
+            return false
+        }
+        
+        // Get keyboard service
+        val keyboardService = activeServices[KeyboardService.SERVICE_ID] as? KeyboardService
+        if (keyboardService == null) {
+            logger.error("Keyboard service not active")
+            return false
+        }
+        
+        // Send the keys
+        return keyboardService.sendKeys(keyCodes)
     }
     
     override fun releaseKeys(): Boolean {
-        logger.warn("Keyboard service not implemented yet")
-        return false
+        if (!initialized) {
+            logger.error("Not initialized")
+            return false
+        }
+        
+        // Get keyboard service
+        val keyboardService = activeServices[KeyboardService.SERVICE_ID] as? KeyboardService
+        if (keyboardService == null) {
+            logger.error("Keyboard service not active")
+            return false
+        }
+        
+        // Release all keys
+        return keyboardService.releaseAllKeys()
     }
 }
