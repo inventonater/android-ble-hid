@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Inventonater HID</string>
+    
+    <!-- Main Activity -->
+    <string name="ready_to_start">Ready! Click a button below to start the BLE HID device.</string>
+    <string name="bluetooth_disabled">Bluetooth is disabled. Please enable Bluetooth to continue.</string>
+    <string name="bluetooth_not_supported">Bluetooth is not supported on this device.</string>
+    <string name="bluetooth_permission_required">Bluetooth permission required.</string>
+    <string name="ble_peripheral_not_supported">BLE Peripheral mode is not supported on this device.</string>
+    <string name="permissions_required">Required permissions were not granted.</string>
+    <string name="start_keyboard">Start BLE Keyboard</string>
+    <string name="start_mouse">Start BLE Mouse</string>
+    
+    <!-- Keyboard Activity -->
+    <string name="ready">Ready to start advertising</string>
+    <string name="advertising">Advertising as BLE HID device</string>
+    <string name="initialization_failed">Failed to initialize BLE HID</string>
+    <string name="not_connected">Not connected</string>
+    <string name="connected_to">Connected to %s</string>
+    <string name="start_advertising">Start Advertising</string>
+    <string name="stop_advertising">Stop Advertising</string>
+    <string name="advertising_failed">Failed to start advertising</string>
+    
+    <!-- Keyboard keys -->
+    <string name="key_a">A</string>
+    <string name="key_b">B</string>
+    <string name="key_c">C</string>
+    <string name="key_d">D</string>
+    <string name="key_e">E</string>
+    <string name="key_f">F</string>
+    <string name="key_g">G</string>
+    <string name="key_h">H</string>
+    <string name="key_i">I</string>
+    <string name="key_j">J</string>
+    <string name="key_k">K</string>
+    <string name="key_l">L</string>
+    <string name="key_m">M</string>
+    <string name="key_n">N</string>
+    <string name="key_o">O</string>
+    <string name="key_p">P</string>
+    <string name="key_q">Q</string>
+    <string name="key_r">R</string>
+    <string name="key_s">S</string>
+    <string name="key_t">T</string>
+    <string name="key_u">U</string>
+    <string name="key_v">V</string>
+    <string name="key_w">W</string>
+    <string name="key_x">X</string>
+    <string name="key_y">Y</string>
+    <string name="key_z">Z</string>
+    <string name="key_space">Space</string>
+    <string name="key_enter">Enter</string>
+    <string name="key_backspace">⌫</string>
+</resources>

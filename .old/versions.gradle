@@ -1,0 +1,38 @@
+/**
+ * Shared build configuration for the Android BLE HID project.
+ * This file consolidates version information and common settings across all modules.
+ */
+
+ext {
+    // SDK versions
+    compileSdkVersion = 34
+    minSdkVersion = 21
+    targetSdkVersion = 34
+    
+    // App version
+    versionCode = 1
+    versionName = "1.0"
+    
+    // Java versions
+    javaVersion = JavaVersion.VERSION_1_8
+    
+    // Dependencies
+    deps = [
+        // AndroidX
+        appcompat: 'androidx.appcompat:appcompat:1.6.1',
+        core: 'androidx.core:core:1.10.1',
+        material: 'com.google.android.material:material:1.9.0',
+        constraintlayout: 'androidx.constraintlayout:constraintlayout:2.1.4',
+        
+        // Testing
+        junit: 'junit:junit:4.13.2',
+        androidxTestJunit: 'androidx.test.ext:junit:1.1.5',
+        espresso: 'androidx.test.espresso:espresso-core:3.5.1'
+    ]
+    
+    // Default Proguard files
+    defaultProguardFile = 'proguard-android-optimize.txt'
+    
+    // Default test runner
+    testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+}

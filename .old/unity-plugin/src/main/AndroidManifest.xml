@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- This is a library module for Unity, so no permissions are defined here -->
+    <!-- Permissions will be merged from the Unity app's manifest -->
+</manifest>

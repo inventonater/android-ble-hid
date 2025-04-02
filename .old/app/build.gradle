@@ -1,0 +1,50 @@
+apply plugin: 'com.android.application'
+
+// Define a constant for the app ID
+def appId = "com.example.blehid.app"
+
+android {
+    namespace appId
+    compileSdk rootProject.ext.compileSdkVersion
+    
+    defaultConfig {
+        applicationId appId
+        minSdk rootProject.ext.minSdkVersion
+        targetSdk rootProject.ext.targetSdkVersion
+        versionCode rootProject.ext.versionCode
+        versionName rootProject.ext.versionName
+        
+        testInstrumentationRunner rootProject.ext.testInstrumentationRunner
+    }
+    
+    buildTypes {
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile(rootProject.ext.defaultProguardFile), 'proguard-rules.pro'
+        }
+    }
+    
+    compileOptions {
+        sourceCompatibility rootProject.ext.javaVersion
+        targetCompatibility rootProject.ext.javaVersion
+    }
+}
+
+// Note: Permission granting functionality has been moved to ble-tools.sh script
+// The redundant grantPermissions task has been removed
+
+dependencies {
+    implementation project(':core')
+    implementation rootProject.ext.deps.appcompat
+    implementation rootProject.ext.deps.material
+    implementation rootProject.ext.deps.constraintlayout
+    testImplementation rootProject.ext.deps.junit
+    androidTestImplementation rootProject.ext.deps.androidxTestJunit
+    androidTestImplementation rootProject.ext.deps.espresso
+    
+    // Add explicit Kotlin dependencies with consistent versions
+    implementation 'org.jetbrains.kotlin:kotlin-stdlib:1.8.10'
+    implementation 'org.jetbrains.kotlin:kotlin-stdlib-jdk7:1.8.10'
+    implementation 'org.jetbrains.kotlin:kotlin-stdlib-jdk8:1.8.10'
+    implementation 'org.jetbrains.kotlin:kotlin-stdlib-common:1.8.10'
+}
