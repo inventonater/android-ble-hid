@@ -98,8 +98,8 @@ BleHid.shutdown()
 
 The library follows a clean architecture approach with distinct layers:
 
-- **API Layer**: Public interfaces and entry points
-- **Implementation Layer**: Internal implementations of the API interfaces
+- **API Layer**: Public interfaces and entry points (`com.inventonater.hid.core.api`)
+- **Implementation Layer**: Internal implementations of the API interfaces (`com.inventonater.hid.core.internal`)
 - **Service Layer**: Specific HID service implementations (mouse, keyboard)
 
 ### Key Components
@@ -109,6 +109,28 @@ The library follows a clean architecture approach with distinct layers:
 - **HidServiceBase**: Base class for all HID services (mouse, keyboard)
 - **ConnectionManager**: Handles BLE connection state and notifications
 - **DeviceCompatibility**: Manages compatibility with different host platforms
+
+## Recent Improvements
+
+- **Complete Kotlin Migration**: Fully rewritten in Kotlin with modern language features
+- **Improved Architecture**: Clean separation between API and implementation
+- **Enhanced Type Safety**: Proper enums and sealed classes for type-safe operations
+- **Coroutine Support**: Asynchronous operations using Kotlin coroutines
+- **Unity Plugin**: Updated Unity integration with Java-Kotlin interoperability
+- **Resource Management**: Better lifecycle management and resource cleanup
+- **Improved Diagnostics**: Structured logging and error reporting
+
+## Documentation
+
+Detailed documentation is available in the `docs` directory:
+
+- [Architecture Overview](docs/architecture/overview.md)
+- [Core Components](docs/architecture/core-components.md)
+- [Service Design](docs/architecture/service-design.md)
+- [Device Compatibility](docs/implementation/device-compatibility.md)
+- [BLE Connectivity](docs/implementation/ble-connectivity.md)
+- [Diagnostics](docs/implementation/diagnostics.md)
+- [Kotlin Migration](docs/implementation/kotlin-migration.md)
 
 ## License
 
