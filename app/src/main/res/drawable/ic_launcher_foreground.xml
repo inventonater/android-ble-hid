@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <group
+        android:scaleX="0.6"
+        android:scaleY="0.6"
+        android:translateX="32.4"
+        android:translateY="32.4">
+        <!-- Bluetooth icon -->
+        <path
+            android:fillColor="#FFFFFF"
+            android:pathData="M43.67,33.17l-8.33,-8.33L43.67,16.5L27,0h-4v32.17l-11.5,-11.5l-2.83,2.83L27,41.83V74h4L47.33,57.5l-8.33,-8.33 8.33,-8.33 -10.5,-10.5 7,-7 -7.33,-7.33L43.67,33.17zM31,7.33l4,4L31,15.33L31,7.33zM35,66.67l-4,4v-8L35,66.67zM31,44.17L31,35.5l4.33,4.33L31,44.17z"/>
+    </group>
+</vector>

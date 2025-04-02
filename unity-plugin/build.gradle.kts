@@ -44,7 +44,7 @@ tasks.register<Copy>("copyToUnity") {
 }
 
 dependencies {
-    implementation(project(":core"))
+    api(project(":core"))
     
     // Testing dependencies
     testImplementation(Dependencies.Test.junit)
