@@ -91,16 +91,11 @@ grant_permissions() {
         fi
     }
 
-    # Only try to grant the runtime permissions
-    if [ "$ANDROID_VERSION" -ge 31 ]; then  # Android 12+
-        echo "🔒 Granting Android 12+ specific permissions:"
-        grant_permission "android.permission.BLUETOOTH_ADVERTISE"
-        grant_permission "android.permission.BLUETOOTH_CONNECT"
-        grant_permission "android.permission.BLUETOOTH_SCAN"
-    else
-        echo "🔒 Granting legacy permissions for Android < 12:"
-        grant_permission "android.permission.ACCESS_FINE_LOCATION"
-    fi
+    # Grant Android 12+ specific permissions (required for all our supported devices)
+    echo "🔒 Granting Bluetooth permissions:"
+    grant_permission "android.permission.BLUETOOTH_ADVERTISE"
+    grant_permission "android.permission.BLUETOOTH_CONNECT"
+    grant_permission "android.permission.BLUETOOTH_SCAN"
 
     # Enable permission dialogs
     echo -n "🔄 Enabling permission dialogs: "

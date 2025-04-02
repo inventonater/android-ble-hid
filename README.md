@@ -26,9 +26,9 @@ The project is organized into three main modules:
 
 ## Requirements
 
-- Android 8.0 (API level 26) or higher
+- Android 12 (API level 31) or higher
 - Device with BLE peripheral mode support
-- Bluetooth permissions
+- Modern Bluetooth permissions (BLUETOOTH_ADVERTISE, BLUETOOTH_CONNECT, BLUETOOTH_SCAN)
 
 ## Getting Started
 
@@ -131,6 +131,7 @@ Detailed documentation is available in the `docs` directory:
 - [BLE Connectivity](docs/implementation/ble-connectivity.md)
 - [Diagnostics](docs/implementation/diagnostics.md)
 - [Kotlin Migration](docs/implementation/kotlin-migration.md)
+- [Modern Permissions](docs/implementation/modern-permissions.md)
 
 ## License
 
