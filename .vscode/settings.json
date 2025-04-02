@@ -1,0 +1,15 @@
+{
+    "explorer.excludeGitIgnore": true,
+    "dotnet.preferCSharpExtension": true,
+    "workbench.editor.closeOnFileDelete": true,
+    "files.exclude": {
+        "**/.git": true,
+        "**/.svn": true,
+        "**/.hg": true,
+        "**/.DS_Store": true,
+        "**/Thumbs.db": true,
+        "**/*.meta": true
+    },
+    "open-all-files.recursive": true,
+    "open-all-files.maxFilesWithoutConfirmation":-1,
+}

@@ -1,0 +1,71 @@
+apply plugin: 'com.android.application'
+
+android {
+    namespace 'com.example.blehid.app'
+    compileSdk 34
+    
+    defaultConfig {
+        applicationId "com.example.blehid.app"
+        minSdk 21
+        targetSdk 34
+        versionCode 1
+        versionName "1.0"
+        
+        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+    }
+    
+    buildTypes {
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+        }
+    }
+    
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_1_8
+        targetCompatibility JavaVersion.VERSION_1_8
+    }
+}
+
+// Add a task to automatically grant required permissions after app installation
+tasks.register('grantPermissions', Exec) {
+    description 'Grant all required BLE permissions via ADB'
+    group 'Install'
+    
+    // Get the application ID from the Android extension
+    def appId = android.defaultConfig.applicationId
+    
+    // Android 12+ permissions that can be granted via ADB
+    commandLine 'sh', '-c', """
+        # Only try to grant the runtime permissions on Android 12+
+        # BLUETOOTH and BLUETOOTH_ADMIN are not runtime permissions
+        adb shell pm grant ${appId} android.permission.BLUETOOTH_ADVERTISE || echo "Could not grant BLUETOOTH_ADVERTISE"
+        adb shell pm grant ${appId} android.permission.BLUETOOTH_CONNECT || echo "Could not grant BLUETOOTH_CONNECT" 
+        adb shell pm grant ${appId} android.permission.BLUETOOTH_SCAN || echo "Could not grant BLUETOOTH_SCAN"
+        
+        # Enable the app to request runtime permissions from the user
+        adb shell appops set ${appId} REQUEST_INSTALL_PACKAGES allow || true
+        
+        # Enable Bluetooth if not already enabled
+        adb shell am broadcast -a android.bluetooth.adapter.action.REQUEST_ENABLE || true
+        
+        echo "Permissions setup completed for ${appId}"
+    """
+}
+
+// Make installDebug task depend on grantPermissions
+tasks.whenTaskAdded { task ->
+    if (task.name == 'installDebug') {
+        task.finalizedBy(grantPermissions)
+    }
+}
+
+dependencies {
+    implementation project(':core')
+    implementation 'androidx.appcompat:appcompat:1.6.1'
+    implementation 'com.google.android.material:material:1.9.0'
+    implementation 'androidx.constraintlayout:constraintlayout:2.1.4'
+    testImplementation 'junit:junit:4.13.2'
+    androidTestImplementation 'androidx.test.ext:junit:1.1.5'
+    androidTestImplementation 'androidx.test.espresso:espresso-core:3.5.1'
+}

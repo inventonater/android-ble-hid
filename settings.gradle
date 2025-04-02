@@ -1,0 +1,4 @@
+rootProject.name = 'android-ble-hid'
+include ':app'
+include ':core'
+include ':unity-plugin'
