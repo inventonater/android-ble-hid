@@ -196,16 +196,7 @@ interface Logger {
     fun verbose(message: String, metadata: Map<String, Any>? = null)
 }
 
-/**
- * Log levels.
- */
-enum class LogLevel {
-    ERROR,
-    WARN,
-    INFO,
-    DEBUG,
-    VERBOSE
-}
+// Using the LogLevel enum from core.api.LogLevel instead of redefining it here
 
 /**
  * Sink for log messages.

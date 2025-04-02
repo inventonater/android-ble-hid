@@ -34,24 +34,34 @@
         app:layout_constraintTop_toBottomOf="@+id/titleText" />
 
     <Button
-        android:id="@+id/startKeyboardButton"
+        android:id="@+id/advertiseButton"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginTop="32dp"
-        android:text="@string/start_keyboard"
+        android:text="@string/start_advertising"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/statusText" />
         
     <Button
-        android:id="@+id/startMouseButton"
+        android:id="@+id/keyboardButton"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
+        android:text="@string/start_keyboard"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/advertiseButton" />
+        
+    <Button
+        android:id="@+id/mouseButton"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginTop="16dp"
         android:text="@string/start_mouse"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/startKeyboardButton" />
+        app:layout_constraintTop_toBottomOf="@+id/keyboardButton" />
 
     <TextView
         android:id="@+id/infoText"
@@ -62,6 +72,6 @@
         android:textAlignment="center"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/startMouseButton" />
+        app:layout_constraintTop_toBottomOf="@+id/mouseButton" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>

@@ -36,15 +36,15 @@ class KeyboardService(
         // Report sizes
         private const val KEYBOARD_REPORT_SIZE = 8
         
-        // Keyboard modifier byte bit masks (byte 0 of report)
-        const val KEYBOARD_MODIFIER_LEFT_CTRL = 0x01
-        const val KEYBOARD_MODIFIER_LEFT_SHIFT = 0x02
-        const val KEYBOARD_MODIFIER_LEFT_ALT = 0x04
-        const val KEYBOARD_MODIFIER_LEFT_GUI = 0x08
-        const val KEYBOARD_MODIFIER_RIGHT_CTRL = 0x10
-        const val KEYBOARD_MODIFIER_RIGHT_SHIFT = 0x20
-        const val KEYBOARD_MODIFIER_RIGHT_ALT = 0x40
-        const val KEYBOARD_MODIFIER_RIGHT_GUI = 0x80
+    // Keyboard modifier byte bit masks (byte 0 of report)
+    const val KEYBOARD_MODIFIER_LEFT_CTRL = 0x01.toByte()
+    const val KEYBOARD_MODIFIER_LEFT_SHIFT = 0x02.toByte()
+    const val KEYBOARD_MODIFIER_LEFT_ALT = 0x04.toByte()
+    const val KEYBOARD_MODIFIER_LEFT_GUI = 0x08.toByte()
+    const val KEYBOARD_MODIFIER_RIGHT_CTRL = 0x10.toByte()
+    const val KEYBOARD_MODIFIER_RIGHT_SHIFT = 0x20.toByte()
+    const val KEYBOARD_MODIFIER_RIGHT_ALT = 0x40.toByte()
+    const val KEYBOARD_MODIFIER_RIGHT_GUI = 0x80.toByte()
         
         // Maximum number of keys to report at once (6 is standard for boot protocol)
         private const val MAX_KEYS = 6
@@ -53,75 +53,75 @@ class KeyboardService(
     // Report map for a standard keyboard
     override val reportMap: ByteArray = byteArrayOf(
         // Usage Page (Generic Desktop)
-        0x05, 0x01,
+        0x05.toByte(), 0x01.toByte(),
         // Usage (Keyboard)
-        0x09, 0x06,
+        0x09.toByte(), 0x06.toByte(),
         // Collection (Application)
-        0xA1.toByte(), 0x01,
+        0xA1.toByte(), 0x01.toByte(),
         
         // Report ID
         0x85.toByte(), KEYBOARD_REPORT_ID.toByte(),
         
         // Usage Page (Key Codes)
-        0x05, 0x07,
+        0x05.toByte(), 0x07.toByte(),
         // Usage Minimum (Keyboard Left Control)
-        0x19, 0xE0.toByte(),
+        0x19.toByte(), 0xE0.toByte(),
         // Usage Maximum (Keyboard Right GUI)
-        0x29, 0xE7.toByte(),
+        0x29.toByte(), 0xE7.toByte(),
         // Logical Minimum (0)
-        0x15, 0x00,
+        0x15.toByte(), 0x00.toByte(),
         // Logical Maximum (1)
-        0x25, 0x01,
+        0x25.toByte(), 0x01.toByte(),
         // Report Size (1)
-        0x75, 0x01,
+        0x75.toByte(), 0x01.toByte(),
         // Report Count (8)
-        0x95, 0x08,
+        0x95.toByte(), 0x08.toByte(),
         // Input (Data, Variable, Absolute): Modifier byte
-        0x81.toByte(), 0x02,
+        0x81.toByte(), 0x02.toByte(),
         
         // Report Count (1)
-        0x95, 0x01,
+        0x95.toByte(), 0x01.toByte(),
         // Report Size (8)
-        0x75, 0x08,
+        0x75.toByte(), 0x08.toByte(),
         // Input (Constant): Reserved byte
-        0x81.toByte(), 0x01,
+        0x81.toByte(), 0x01.toByte(),
         
         // Report Count (5)
-        0x95, 0x05,
+        0x95.toByte(), 0x05.toByte(),
         // Report Size (1)
-        0x75, 0x01,
+        0x75.toByte(), 0x01.toByte(),
         // Usage Page (LEDs)
-        0x05, 0x08,
+        0x05.toByte(), 0x08.toByte(),
         // Usage Minimum (Num Lock)
-        0x19, 0x01,
+        0x19.toByte(), 0x01.toByte(),
         // Usage Maximum (Kana)
-        0x29, 0x05,
+        0x29.toByte(), 0x05.toByte(),
         // Output (Data, Variable, Absolute): LED report
-        0x91.toByte(), 0x02,
+        0x91.toByte(), 0x02.toByte(),
         
         // Report Count (1)
-        0x95, 0x01,
+        0x95.toByte(), 0x01.toByte(),
         // Report Size (3)
-        0x75, 0x03,
+        0x75.toByte(), 0x03.toByte(),
         // Output (Constant): LED report padding
-        0x91.toByte(), 0x01,
+        0x91.toByte(), 0x01.toByte(),
         
         // Report Count (6)
-        0x95, 0x06,
+        0x95.toByte(), 0x06.toByte(),
         // Report Size (8)
-        0x75, 0x08,
+        0x75.toByte(), 0x08.toByte(),
         // Logical Minimum (0)
-        0x15, 0x00,
+        0x15.toByte(), 0x00.toByte(),
         // Logical Maximum (255)
-        0x25, 0xFF.toByte(),
+        0x25.toByte(), 0xFF.toByte(),
         // Usage Page (Key Codes)
-        0x05, 0x07,
+        0x05.toByte(), 0x07.toByte(),
         // Usage Minimum (0)
-        0x19, 0x00,
+        0x19.toByte(), 0x00.toByte(),
         // Usage Maximum (255)
-        0x29, 0xFF.toByte(),
+        0x29.toByte(), 0xFF.toByte(),
         // Input (Data, Array): Key array (6 keys)
-        0x81.toByte(), 0x00,
+        0x81.toByte(), 0x00.toByte(),
         
         // End Collection
         0xC0.toByte()

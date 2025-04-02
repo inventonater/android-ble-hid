@@ -2,6 +2,7 @@ package com.inventonater.hid.core.internal.service
 
 import com.inventonater.hid.core.api.CompositeHidService
 import com.inventonater.hid.core.api.HidServiceBase
+import com.inventonater.hid.core.api.ServiceCharacteristic
 import com.inventonater.hid.core.api.ServiceFactory
 import com.inventonater.hid.core.api.ServiceRegistration
 import com.inventonater.hid.core.internal.diagnostics.LoggerFactory

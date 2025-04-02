@@ -17,6 +17,7 @@ import com.inventonater.hid.core.internal.compatibility.DeviceDetectorImpl
 import com.inventonater.hid.core.internal.compatibility.GenericCompatibilityStrategy
 import com.inventonater.hid.core.internal.compatibility.WindowsCompatibilityStrategy
 import com.inventonater.hid.core.internal.diagnostics.DiagnosticsManagerImpl
+import com.inventonater.hid.core.internal.diagnostics.LogManagerLoggerFactory
 import com.inventonater.hid.core.internal.service.ServiceFactoryImpl
 
 /**
@@ -117,7 +118,7 @@ object BleHidModule {
     private fun createServiceFactory(
         diagManager: DiagnosticsManager
     ): ServiceFactory {
-        return ServiceFactoryImpl(diagManager.logManager)
+        return ServiceFactoryImpl(LogManagerLoggerFactory(diagManager.logManager))
     }
     
     /**

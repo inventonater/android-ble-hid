@@ -28,6 +28,7 @@ import com.inventonater.hid.core.api.ReportRecord
 import com.inventonater.hid.core.api.ReportType
 import com.inventonater.hid.core.api.SessionSummary
 import com.inventonater.hid.core.api.TimeRange
+import android.bluetooth.BluetoothAdapter
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
@@ -284,7 +285,7 @@ class DiagnosticsManagerImpl(
             // Update session counters
             if (level == LogLevel.ERROR) {
                 sessionErrors.incrementAndGet()
-            } else if (level == LogLevel.WARN) {
+            } else if (level == LogLevel.WARNING) {
                 sessionWarnings.incrementAndGet()
             }
             
@@ -349,7 +350,7 @@ class DiagnosticsManagerImpl(
         }
         
         override fun warn(message: String, throwable: Throwable?, metadata: Map<String, Any>?) {
-            logManager.log(LogLevel.WARN, tag, message, throwable, metadata)
+            logManager.log(LogLevel.WARNING, tag, message, throwable, metadata)
         }
         
         override fun info(message: String, metadata: Map<String, Any>?) {
@@ -361,7 +362,7 @@ class DiagnosticsManagerImpl(
         }
         
         override fun verbose(message: String, metadata: Map<String, Any>?) {
-            logManager.log(LogLevel.VERBOSE, tag, message, null, metadata)
+            logManager.log(LogLevel.DEBUG, tag, message, null, metadata)
         }
     }
     
@@ -372,10 +373,11 @@ class DiagnosticsManagerImpl(
         override fun processLog(entry: LogEntry) {
             val priority = when (entry.level) {
                 LogLevel.ERROR -> Log.ERROR
-                LogLevel.WARN -> Log.WARN
+                LogLevel.WARNING -> Log.WARN
                 LogLevel.INFO -> Log.INFO
                 LogLevel.DEBUG -> Log.DEBUG
-                LogLevel.VERBOSE -> Log.VERBOSE
+                LogLevel.NONE -> Log.INFO 
+                else -> Log.VERBOSE
             }
             
             val message = entry.message
@@ -629,7 +631,7 @@ class DiagnosticsManagerImpl(
             // Create event
             val event = ConnectionEvent(
                 timestamp = Instant.now(),
-                device = device ?: BluetoothDevice.getDefaultAdapter().getRemoteDevice("00:00:00:00:00:00"),
+                device = device ?: BluetoothAdapter.getDefaultAdapter()?.getRemoteDevice("00:00:00:00:00:00") ?: return,
                 eventType = eventType,
                 details = details
             )
@@ -727,7 +729,8 @@ class DiagnosticsManagerImpl(
                 unit = unit
             )
             
-            metrics.getOrPut(metricName) { mutableListOf() }.add(metricValue)
+            val metricsList = metrics.getOrPut(metricName) { mutableListOf<MetricValue>() }
+            metricsList.add(metricValue)
             
             logger.debug("Recorded metric: $metricName = $value $unit")
         }
@@ -741,20 +744,22 @@ class DiagnosticsManagerImpl(
             val operationAverageDurations = mutableMapOf<String, Double>()
             
             // Filter metrics
-            val filteredMetrics = mutableMapOf<String, List<MetricValue>>()
+            val filteredMetrics = mutableMapOf<String, MutableList<MetricValue>>()
             
             for ((name, values) in metrics) {
-                var filtered = values
+                val filtered = ArrayList<MetricValue>()
                 
                 // Filter by operation type
                 if (operationType != null && !name.startsWith(operationType)) {
                     continue
                 }
                 
-                // Filter by time range
-                if (timeRange != null) {
-                    filtered = filtered.filter {
-                        it.timestamp.isAfter(timeRange.start) && it.timestamp.isBefore(timeRange.end)
+                // Add values that match the time range criteria
+                for (value in values) {
+                    if (timeRange == null || 
+                        (value.timestamp.isAfter(timeRange.start) && 
+                         value.timestamp.isBefore(timeRange.end))) {
+                        filtered.add(value)
                     }
                 }
                 
@@ -792,10 +797,14 @@ class DiagnosticsManagerImpl(
             )
         }
         
-        private data class OperationData(
-            val type: String,
-            val details: String?,
-            val startTime: Instant
-        )
     }
+    
+    /**
+     * Data class for tracking operations in PerformanceTracker
+     */
+    private class OperationData(
+        val type: String,
+        val details: String?,
+        val startTime: Instant
+    )
 }

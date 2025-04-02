@@ -32,7 +32,7 @@ local.properties
 .navigation/
 
 # Old backup files
-.old/
+# .old/
 
 # Android Studio captured traces
 captures/

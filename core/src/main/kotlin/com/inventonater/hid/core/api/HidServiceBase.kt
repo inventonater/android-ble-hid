@@ -57,23 +57,3 @@ interface HidServiceBase {
      */
     fun isInitialized(): Boolean
 }
-
-/**
- * Represents a Bluetooth GATT characteristic used by a HID service.
- */
-interface ServiceCharacteristic {
-    val uuid: String
-    val properties: Int
-    val permissions: Int
-    val initialValue: ByteArray?
-    val descriptors: List<ServiceDescriptor>
-}
-
-/**
- * Represents a Bluetooth GATT descriptor used by a HID service characteristic.
- */
-interface ServiceDescriptor {
-    val uuid: String
-    val permissions: Int
-    val value: ByteArray?
-}

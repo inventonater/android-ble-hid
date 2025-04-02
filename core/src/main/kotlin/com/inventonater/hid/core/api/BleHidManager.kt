@@ -188,24 +188,7 @@ interface BleHidManager {
     fun releaseKeys(): Boolean
 }
 
-/**
- * Listener for connection events.
- */
-interface ConnectionListener {
-    /**
-     * Called when a device connects.
-     *
-     * @param device The connected device
-     */
-    fun onDeviceConnected(device: BluetoothDevice)
-    
-    /**
-     * Called when a device disconnects.
-     *
-     * @param device The disconnected device
-     */
-    fun onDeviceDisconnected(device: BluetoothDevice)
-}
+// ConnectionListener moved to its own file
 
 /**
  * Connection states for the BLE HID manager.
@@ -236,11 +219,4 @@ sealed class ConnectionState {
     data class Failed(val reason: String) : ConnectionState()
 }
 
-/**
- * Mouse buttons.
- */
-enum class MouseButton(val value: Int) {
-    LEFT(1),
-    RIGHT(2),
-    MIDDLE(4)
-}
+// MouseButton moved to its own file

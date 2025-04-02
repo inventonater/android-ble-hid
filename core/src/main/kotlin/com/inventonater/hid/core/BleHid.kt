@@ -1,5 +1,6 @@
 package com.inventonater.hid.core
 
+import android.bluetooth.BluetoothDevice
 import android.content.Context
 import com.inventonater.hid.core.api.BleHidManager
 import com.inventonater.hid.core.api.ConnectionListener
@@ -109,6 +110,16 @@ object BleHid {
     @JvmStatic
     fun isConnected(): Boolean {
         return manager?.isConnected() ?: false
+    }
+    
+    /**
+     * Get the currently connected BluetoothDevice.
+     *
+     * @return the connected device, or null if no device is connected
+     */
+    @JvmStatic
+    fun getConnectedDevice(): BluetoothDevice? {
+        return manager?.getConnectedDevice()
     }
     
     /**

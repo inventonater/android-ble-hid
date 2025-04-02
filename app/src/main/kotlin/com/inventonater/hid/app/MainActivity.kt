@@ -9,7 +9,6 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
-import android.view.View
 import android.widget.Button
 import android.widget.TextView
 import android.widget.Toast
@@ -31,8 +30,8 @@ class MainActivity : AppCompatActivity() {
     
     private lateinit var statusText: TextView
     private lateinit var advertiseButton: Button
-    private lateinit var mouseButton: Button
     private lateinit var keyboardButton: Button
+    private lateinit var mouseButton: Button
     
     private var isInitialized = false
     private var isAdvertising = false
@@ -44,13 +43,13 @@ class MainActivity : AppCompatActivity() {
         // UI components
         statusText = findViewById(R.id.statusText)
         advertiseButton = findViewById(R.id.advertiseButton)
-        mouseButton = findViewById(R.id.mouseButton)
         keyboardButton = findViewById(R.id.keyboardButton)
+        mouseButton = findViewById(R.id.mouseButton)
         
         // Setup button click listeners
-        advertiseButton.setOnClickListener(this::onAdvertiseClicked)
-        mouseButton.setOnClickListener { startActivity(Intent(this, SimpleMouseActivity::class.java)) }
+        advertiseButton.setOnClickListener { onAdvertiseClicked() }
         keyboardButton.setOnClickListener { startActivity(Intent(this, SimpleKeyboardActivity::class.java)) }
+        mouseButton.setOnClickListener { startActivity(Intent(this, SimpleMouseActivity::class.java)) }
         
         // Check if BLE is supported
         if (!packageManager.hasSystemFeature(PackageManager.FEATURE_BLUETOOTH_LE)) {
@@ -95,7 +94,7 @@ class MainActivity : AppCompatActivity() {
         }
     }
     
-    private fun onAdvertiseClicked(view: View) {
+    private fun onAdvertiseClicked() {
         if (!isInitialized) {
             Toast.makeText(this, "BLE HID not initialized", Toast.LENGTH_SHORT).show()
             return
@@ -122,8 +121,8 @@ class MainActivity : AppCompatActivity() {
         if (!isInitialized) {
             statusText.text = "Status: Not initialized"
             advertiseButton.isEnabled = false
-            mouseButton.isEnabled = false
             keyboardButton.isEnabled = false
+            mouseButton.isEnabled = false
             return
         }
         
@@ -139,11 +138,11 @@ class MainActivity : AppCompatActivity() {
         
         if (BleHid.isConnected()) {
             statusText.text = "Status: Connected"
-            mouseButton.isEnabled = true
             keyboardButton.isEnabled = true
+            mouseButton.isEnabled = true
         } else {
-            mouseButton.isEnabled = false
             keyboardButton.isEnabled = false
+            mouseButton.isEnabled = false
         }
     }
     

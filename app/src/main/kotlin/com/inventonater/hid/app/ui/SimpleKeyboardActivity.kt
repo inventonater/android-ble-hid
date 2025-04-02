@@ -401,12 +401,14 @@ class SimpleKeyboardActivity : AppCompatActivity() {
     private fun updateConnectionStatus() {
         if (BleHid.isConnected()) {
             val device = BleHid.getConnectedDevice()
-            val deviceName = device?.name?.takeIf { it.isNotEmpty() } ?: device?.address ?: "Unknown"
+            val deviceName = device?.name?.takeIf { !it.isNullOrEmpty() } ?: device?.address ?: "Unknown"
             connectionText.text = getString(R.string.connected_to, deviceName)
             addLogEntry("CONNECTION: Connected to ${device?.name ?: "Unknown"} (${device?.address})")
             
             // Check HID profile status for the connected device
-            device?.let { checkHidProfileStatus(it) }
+            if (device != null) {
+                checkHidProfileStatus(device)
+            }
         } else {
             connectionText.setText(R.string.not_connected)
         }

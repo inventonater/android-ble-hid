@@ -1,19 +1,19 @@
 package com.inventonater.hid.core.internal.compatibility
 
+import android.bluetooth.BluetoothAdapter
 import android.bluetooth.BluetoothDevice
-import android.os.Build
 import com.inventonater.hid.core.api.CompatibilityStrategy
 import com.inventonater.hid.core.api.DeviceCompatibilityManager
 import com.inventonater.hid.core.api.DeviceDetector
 import com.inventonater.hid.core.api.DeviceType
 import com.inventonater.hid.core.api.LogManager
+import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.atomic.AtomicReference
 
 /**
- * Implementation of DeviceCompatibilityManager that manages compatibility strategies for different devices.
+ * Implementation of the DeviceCompatibilityManager interface.
  *
- * @property logManager The log manager for logging
- * @property deviceDetector The device detector for detecting device types
- * @property defaultStrategy The default compatibility strategy
+ * This class manages compatibility strategies for different device types.
  */
 class DeviceCompatibilityManagerImpl(
     private val logManager: LogManager,
@@ -23,88 +23,80 @@ class DeviceCompatibilityManagerImpl(
     
     private val logger = logManager.getLogger("DeviceCompatibilityManager")
     
-    // Compatibility strategies for different device types
-    private val strategies = mutableMapOf<DeviceType, CompatibilityStrategy>()
+    // Map of device types to compatibility strategies
+    private val strategies = ConcurrentHashMap<DeviceType, CompatibilityStrategy>()
     
-    // Current device type override
-    private var deviceTypeOverride: DeviceType? = null
+    // Cache of device addresses to compatibility strategies
+    private val deviceCache = ConcurrentHashMap<String, CompatibilityStrategy>()
     
-    init {
-        // Register the default strategy for UNKNOWN device type
-        strategies[DeviceType.UNKNOWN] = defaultStrategy
-    }
+    // Device type override (if set)
+    private val deviceTypeOverride = AtomicReference<DeviceType?>(null)
     
     override fun getStrategyForDevice(device: BluetoothDevice): CompatibilityStrategy {
-        // If there's an override, use that
-        if (deviceTypeOverride != null) {
-            logger.info("Using device type override: $deviceTypeOverride")
-            return strategies[deviceTypeOverride] ?: defaultStrategy
+        // Check cache first
+        val cachedStrategy = deviceCache[device.address]
+        if (cachedStrategy != null) {
+            return cachedStrategy
         }
         
-        // Otherwise, detect the device type
-        val deviceType = deviceDetector.detectDeviceType(device)
-        logger.info("Detected device type: $deviceType")
+        // If there's an override, use that
+        val override = deviceTypeOverride.get()
+        if (override != null) {
+            val strategy = strategies[override] ?: defaultStrategy
+            deviceCache[device.address] = strategy
+            return strategy
+        }
         
-        // Return the appropriate strategy
-        return strategies[deviceType] ?: defaultStrategy
+        // Detect device type
+        val deviceType = deviceDetector.detectDeviceType(device)
+        
+        // Get strategy for device type
+        val strategy = strategies[deviceType] ?: defaultStrategy
+        
+        // Cache the strategy
+        deviceCache[device.address] = strategy
+        
+        logger.info("Using compatibility strategy for ${device.address}: ${strategy.getDeviceName()}")
+        return strategy
     }
     
     override fun setDeviceTypeOverride(deviceType: DeviceType): CompatibilityStrategy {
-        logger.info("Setting device type override: $deviceType")
-        deviceTypeOverride = deviceType
+        logger.info("Setting device type override to $deviceType")
+        deviceTypeOverride.set(deviceType)
+        
+        // Clear device cache
+        deviceCache.clear()
+        
         return strategies[deviceType] ?: defaultStrategy
     }
     
     override fun clearDeviceTypeOverride() {
         logger.info("Clearing device type override")
-        deviceTypeOverride = null
+        deviceTypeOverride.set(null)
+        
+        // Clear device cache
+        deviceCache.clear()
     }
     
     override fun registerStrategy(deviceType: DeviceType, strategy: CompatibilityStrategy) {
-        logger.info("Registering compatibility strategy for device type: $deviceType")
+        if (strategies.containsKey(deviceType)) {
+            logger.warn("Replacing existing strategy for device type: $deviceType")
+        }
+        
         strategies[deviceType] = strategy
+        logger.info("Registered compatibility strategy for $deviceType: ${strategy.getDeviceName()}")
+        
+        // Clear device cache
+        deviceCache.clear()
     }
     
     override fun getCurrentDeviceType(): DeviceType {
-        return deviceTypeOverride ?: DeviceType.UNKNOWN
-    }
-}
-
-/**
- * Implementation of DeviceDetector that detects device types.
- *
- * @property logManager The log manager for logging
- */
-class DeviceDetectorImpl(private val logManager: LogManager) : DeviceDetector {
-    
-    private val logger = logManager.getLogger("DeviceDetector")
-    
-    override fun detectDeviceType(device: BluetoothDevice): DeviceType {
-        logger.debug("Detecting device type for: ${device.address}")
-        
-        // Try to detect the device type based on available information
-        val deviceName = device.name ?: ""
-        
-        // Check for Apple devices
-        if (deviceName.contains("Mac") || deviceName.contains("iPhone") || deviceName.contains("iPad")) {
-            logger.info("Detected Apple device: $deviceName")
-            return DeviceType.APPLE
+        val override = deviceTypeOverride.get()
+        if (override != null) {
+            return override
         }
         
-        // Check for Windows devices
-        if (deviceName.contains("Windows") || deviceName.contains("PC")) {
-            logger.info("Detected Windows device: $deviceName")
-            return DeviceType.WINDOWS
-        }
-        
-        // Check for Android devices
-        if (deviceName.contains("Android")) {
-            logger.info("Detected Android device: $deviceName")
-            return DeviceType.ANDROID
-        }
-        
-        // Unable to determine device type
-        logger.info("Unable to determine device type for: $deviceName")
+        // Just return UNKNOWN since we don't have a specific device to check
         return DeviceType.UNKNOWN
     }
 }

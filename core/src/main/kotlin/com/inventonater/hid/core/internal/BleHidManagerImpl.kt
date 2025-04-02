@@ -8,6 +8,8 @@ import com.inventonater.hid.core.api.BleConnectionManager
 import com.inventonater.hid.core.api.BleHidManager
 import com.inventonater.hid.core.api.ConnectionListener
 import com.inventonater.hid.core.api.ConnectionState
+import com.inventonater.hid.core.api.ConnectionStateListener
+import com.inventonater.hid.core.api.NotificationManager
 import com.inventonater.hid.core.api.DeviceCompatibilityManager
 import com.inventonater.hid.core.api.DiagnosticsManager
 import com.inventonater.hid.core.api.HidServiceBase
@@ -23,6 +25,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import com.inventonater.hid.core.internal.diagnostics.LogManagerLoggerFactory
 import java.util.concurrent.CopyOnWriteArrayList
 
 /**
@@ -115,54 +118,57 @@ class BleHidManagerImpl(
         )
         
         // Subscribe to connection state changes
-        connectionManager.addConnectionStateListener { newState ->
-            _connectionState.value = newState
-            
-            // Notify connection listeners
-            when (newState) {
-                is ConnectionState.Connected -> {
-                    for (listener in connectionListeners) {
-                        listener.onDeviceConnected(newState.device)
-                    }
-                }
-                is ConnectionState.Disconnected -> {
-                    val device = (_connectionState.value as? ConnectionState.Connected)?.device
-                    if (device != null) {
+        connectionManager.addConnectionStateListener(object : ConnectionStateListener {
+            override fun onConnectionStateChanged(newState: ConnectionState) {
+                _connectionState.value = newState
+                
+                // Notify connection listeners
+                when (newState) {
+                    is ConnectionState.Connected -> {
                         for (listener in connectionListeners) {
-                            listener.onDeviceDisconnected(device)
+                            listener.onDeviceConnected(newState.device)
                         }
                     }
-                }
-                else -> {
-                    // No action for other states
-                }
-            }
-            
-            // Handle connection state changes
-            when (newState) {
-                is ConnectionState.Connected -> {
-                    // Stop advertising when connected
-                    stopAdvertising()
-                }
-                is ConnectionState.Disconnected -> {
-                    // Restart advertising when disconnected
-                    if (!isAdvertising()) {
-                        startAdvertising()
+                    is ConnectionState.Disconnected -> {
+                        val device = (_connectionState.value as? ConnectionState.Connected)?.device
+                        if (device != null) {
+                            for (listener in connectionListeners) {
+                                listener.onDeviceDisconnected(device)
+                            }
+                        }
+                    }
+                    else -> {
+                        // No action for other states
                     }
                 }
-                else -> {
-                    // No action for other states
+                
+                // Handle connection state changes
+                when (newState) {
+                    is ConnectionState.Connected -> {
+                        // Stop advertising when connected
+                        stopAdvertising()
+                    }
+                    is ConnectionState.Disconnected -> {
+                        // Restart advertising when disconnected
+                        if (!isAdvertising()) {
+                            startAdvertising()
+                        }
+                    }
+                    else -> {
+                        // No action for other states
+                    }
                 }
             }
-        }
+        })
         
         // Register standard services
+        // Register standard services
         registerServiceFactory(MouseService.SERVICE_ID) {
-            MouseService(connectionManager, diagnosticsManager.logManager)
+            MouseService(connectionManager as NotificationManager, LogManagerLoggerFactory(diagnosticsManager.logManager))
         }
         
         registerServiceFactory(KeyboardService.SERVICE_ID) {
-            KeyboardService(connectionManager, diagnosticsManager.logManager)
+            KeyboardService(connectionManager as NotificationManager, LogManagerLoggerFactory(diagnosticsManager.logManager))
         }
         
         initialized = true

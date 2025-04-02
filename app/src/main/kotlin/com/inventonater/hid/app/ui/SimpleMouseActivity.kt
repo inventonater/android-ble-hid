@@ -24,7 +24,7 @@ class SimpleMouseActivity : AppCompatActivity() {
     }
     
     // UI components
-    private lateinit var mousepadView: View
+    private lateinit var touchpadArea: View
     private lateinit var leftButton: Button
     private lateinit var rightButton: Button
     private lateinit var middleButton: Button
@@ -39,7 +39,7 @@ class SimpleMouseActivity : AppCompatActivity() {
         setContentView(R.layout.activity_mouse)
         
         // Initialize UI components
-        mousepadView = findViewById(R.id.mousepadView)
+        touchpadArea = findViewById(R.id.touchpadArea)
         leftButton = findViewById(R.id.leftButton)
         rightButton = findViewById(R.id.rightButton)
         middleButton = findViewById(R.id.middleButton)
@@ -49,7 +49,7 @@ class SimpleMouseActivity : AppCompatActivity() {
         updateStatus()
         
         // Setup touch listeners
-        mousepadView.setOnTouchListener(this::onMousepadTouch)
+        touchpadArea.setOnTouchListener(this::onMousepadTouch)
         
         // Setup button click listeners for mouse buttons
         leftButton.setOnClickListener { handleButtonClick(MouseButton.LEFT) }
@@ -129,14 +129,14 @@ class SimpleMouseActivity : AppCompatActivity() {
     }
     
     private fun enableControls(enabled: Boolean) {
-        mousepadView.isEnabled = enabled
+        touchpadArea.isEnabled = enabled
         leftButton.isEnabled = enabled
         rightButton.isEnabled = enabled
         middleButton.isEnabled = enabled
         
         // Change the alpha for visual feedback
         val alpha = if (enabled) 1.0f else 0.5f
-        mousepadView.alpha = alpha
+        touchpadArea.alpha = alpha
         leftButton.alpha = alpha
         rightButton.alpha = alpha
         middleButton.alpha = alpha
