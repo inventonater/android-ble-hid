@@ -111,11 +111,16 @@ class BleHidManagerImpl(
             return false
         }
         
-        // Create advertiser
-        advertiser = BleAdvertiserImpl(
-            bluetoothAdapter!!,
-            diagnosticsManager.logManager
-        )
+        try {
+            // Create advertiser - catches security exceptions immediately
+            advertiser = BleAdvertiserImpl(
+                bluetoothAdapter!!,
+                diagnosticsManager.logManager
+            )
+        } catch (e: SecurityException) {
+            logger.error("Missing required Bluetooth permissions", e)
+            return false
+        }
         
         // Subscribe to connection state changes
         connectionManager.addConnectionStateListener(object : ConnectionStateListener {
@@ -197,11 +202,21 @@ class BleHidManagerImpl(
             ).getDeviceName()
         }
         
-        // Set device name
-        bluetoothAdapter!!.name = deviceName
+        try {
+            // Set device name - this requires BLUETOOTH_CONNECT permission on Android 12+
+            bluetoothAdapter!!.name = deviceName
+        } catch (e: SecurityException) {
+            logger.error("Permission denied for setting Bluetooth device name", e)
+            // Continue anyway as this is not critical
+        }
         
         // Start advertising
-        return advertiser.startAdvertising()
+        try {
+            return advertiser.startAdvertising()
+        } catch (e: SecurityException) {
+            logger.error("Permission denied for BLE advertising", e)
+            return false
+        }
     }
     
     override fun stopAdvertising() {

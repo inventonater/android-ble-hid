@@ -119,10 +119,27 @@ class MainActivity : AppCompatActivity() {
     
     private fun updateUI() {
         if (!isInitialized) {
-            statusText.text = "Status: Not initialized"
+            statusText.text = "Status: Core functionality is temporarily disabled"
             advertiseButton.isEnabled = false
             keyboardButton.isEnabled = false
             mouseButton.isEnabled = false
+            
+            // Check specific reasons and display more detailed message
+            val bluetoothManager = getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager
+            val bluetoothAdapter = bluetoothManager.adapter
+            
+            when {
+                bluetoothAdapter == null -> 
+                    statusText.text = "Status: Bluetooth not available on this device"
+                !bluetoothAdapter.isEnabled -> 
+                    statusText.text = "Status: Please enable Bluetooth"
+                !checkPermissions() -> 
+                    statusText.text = "Status: Missing required Bluetooth permissions"
+                !BleHid.isBlePeripheralSupported() -> 
+                    statusText.text = "Status: BLE peripheral mode not supported on this device"
+                else -> 
+                    statusText.text = "Status: Initialization failed"
+            }
             return
         }
         
@@ -219,23 +236,15 @@ class MainActivity : AppCompatActivity() {
     private fun getRequiredPermissions(): List<String> {
         val permissionsToRequest = mutableListOf<String>()
         
-        // Check and add required permissions for Android 12+
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_CONNECT) 
-                != PackageManager.PERMISSION_GRANTED) {
-            permissionsToRequest.add(Manifest.permission.BLUETOOTH_CONNECT)
-        }
+        // For Android 12+ (API level 31), we need to request the new Bluetooth permissions
+        // We're only targeting modern Android, so always request these
+        permissionsToRequest.add(Manifest.permission.BLUETOOTH_CONNECT)
+        permissionsToRequest.add(Manifest.permission.BLUETOOTH_ADVERTISE)
+        permissionsToRequest.add(Manifest.permission.BLUETOOTH_SCAN)
         
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_ADVERTISE) 
-                != PackageManager.PERMISSION_GRANTED) {
-            permissionsToRequest.add(Manifest.permission.BLUETOOTH_ADVERTISE)
+        return permissionsToRequest.filter { 
+            ContextCompat.checkSelfPermission(this, it) != PackageManager.PERMISSION_GRANTED 
         }
-        
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_SCAN) 
-                != PackageManager.PERMISSION_GRANTED) {
-            permissionsToRequest.add(Manifest.permission.BLUETOOTH_SCAN)
-        }
-        
-        return permissionsToRequest
     }
     
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {

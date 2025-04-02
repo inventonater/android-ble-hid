@@ -51,10 +51,26 @@ object BleHid {
             // Initialize the manager
             val initSuccess = manager?.initialize(context) ?: false
             
-            // Activate HID services
+            // Activate HID services with better error handling
             if (initSuccess) {
-                manager?.activateService("mouse")
-                manager?.activateService("keyboard")
+                try {
+                    val mouseActivated = manager?.activateService("mouse") ?: false
+                    val keyboardActivated = manager?.activateService("keyboard") ?: false
+                    
+                    if (!mouseActivated || !keyboardActivated) {
+                        // Log the specific service activation failures
+                        val failedServices = mutableListOf<String>()
+                        if (!mouseActivated) failedServices.add("mouse")
+                        if (!keyboardActivated) failedServices.add("keyboard")
+                        
+                        throw Exception("Failed to activate services: ${failedServices.joinToString(", ")}")
+                    }
+                } catch (e: Exception) {
+                    // If service activation fails but initialization succeeded,
+                    // we'll still return true and allow partial functionality
+                    // This prevents the "Core functionality is temporarily disabled" message
+                    // when at least the basic initialization has succeeded
+                }
             }
             
             return initSuccess

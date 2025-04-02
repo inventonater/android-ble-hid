@@ -67,13 +67,20 @@ class BleAdvertiserImpl(
                 .addServiceUuid(ParcelUuid(HID_SERVICE_UUID))
                 .build()
             
-            // Start advertising
-            advertiser?.startAdvertising(settings, data, advertiseCallback)
-            logger.debug("Advertise request sent")
-            
-            // For now, assume success until callback
-            advertising = true
-            return true
+                    try {
+                // Start advertising - this requires BLUETOOTH_ADVERTISE permission on Android 12+
+                advertiser?.startAdvertising(settings, data, advertiseCallback)
+                logger.debug("Advertise request sent")
+                
+                // For now, assume success until callback
+                advertising = true
+                return true
+            } catch (securityException: SecurityException) {
+                // This happens when permission is not granted
+                logger.error("Permission denied for BLE advertising", securityException)
+                advertising = false
+                return false
+            }
         } catch (e: Exception) {
             logger.error("Failed to start advertising", e)
             advertising = false
