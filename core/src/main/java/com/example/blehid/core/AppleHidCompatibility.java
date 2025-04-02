@@ -126,7 +126,7 @@ public class AppleHidCompatibility {
         
         try {
             // Use a name format that works better with macOS
-            String deviceName = "BLE HID Mouse";
+            String deviceName = "Inventonater HID Mouse";
             bluetoothAdapter.setName(deviceName);
             Log.i(TAG, "Set Apple-friendly device name: " + deviceName);
         } catch (Exception e) {

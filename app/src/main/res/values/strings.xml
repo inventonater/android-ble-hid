@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">BLE HID Peripheral</string>
+    <string name="app_name">Inventonater HID</string>
     
     <!-- Main Activity -->
     <string name="ready_to_start">Ready! Click a button below to start the BLE HID device.</string>

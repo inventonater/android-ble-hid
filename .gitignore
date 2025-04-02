@@ -105,6 +105,7 @@ sysinfo.txt
 
 # Debug files
 ble_hid_debug_log.txt
+*_debug_log.txt
 
 # Crashlytics generated file
 crashlytics-build.properties

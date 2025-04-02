@@ -11,5 +11,6 @@
         "**/*.meta": true
     },
     "open-all-files.recursive": true,
-    "open-all-files.maxFilesWithoutConfirmation":-1,
+    "open-all-files.maxFilesWithoutConfirmation": -1,
+    "java.configuration.updateBuildConfiguration": "automatic",
 }

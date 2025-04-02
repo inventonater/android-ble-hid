@@ -1,6 +1,6 @@
-# Android BLE HID Peripheral
+# Inventonater HID
 
-This project implements an Android application that functions as a Bluetooth Low Energy (BLE) Human Interface Device (HID) peripheral, allowing your Android device to be used as a wireless mouse or keyboard for other devices like computers, tablets, or smart TVs.
+This project implements an Android application that functions as a Bluetooth Low Energy (BLE) Human Interface Device (HID), allowing your Android device to be used as a wireless mouse or keyboard for other devices like computers, tablets, or smart TVs.
 
 ## Prerequisites
 
@@ -44,18 +44,27 @@ If you're experiencing issues, try the following:
 
 ### Basic Troubleshooting
 
-1. Make sure your Android device supports BLE peripheral mode (run `./ble_capability_checker.sh`)
+1. Make sure your Android device supports BLE peripheral mode (run `./ble-tools.sh check`)
 2. Ensure Bluetooth is enabled on both devices
 3. Try restarting both devices
 4. Grant all requested permissions to the app
 
 ### Advanced Troubleshooting
 
-For more detailed diagnostics, we provide several debugging tools:
+We provide a unified tool with several commands for diagnosing and fixing issues:
 
-1. `./debug_ble.sh` - Basic BLE debugging information
-2. `./enhanced_debug.sh` - Comprehensive BLE HID debugging tool
-3. `./run_app.sh` - Install, configure, and run the app in one step
+```bash
+./ble-tools.sh [command]
+```
+
+Available commands:
+
+* `check` - Check if your device supports BLE peripheral mode
+* `debug` - Basic BLE debugging information
+* `debug --enhanced` - Comprehensive BLE HID debugging tool
+* `run` - Build, install, and run the app in one step
+* `test` - Test mouse connectivity on host devices
+* `help` - Show available commands and options
 
 ### Mac-Specific Issues
 
@@ -117,3 +126,30 @@ When running the enhanced debugging tool, look for these key indicators:
 ## License
 
 This project is licensed under the MIT License - see the LICENSE file for details.
+
+## Development Guide
+
+### Project Structure
+
+The project is organized into three modules:
+- `app`: Main Android application with UI and user interactions
+- `core`: Core BLE HID functionality library that can be reused in other projects
+- `unity-plugin`: Unity integration for using BLE HID in Unity games/apps
+
+### Build Configuration
+
+The build configuration has been consolidated for maintainability:
+- `versions.gradle`: Central configuration file for SDK versions, dependencies, and other build settings
+- Module build files reference this central configuration to ensure consistency
+
+### Development Tools
+
+Development tools have been consolidated into a single script:
+- `ble-tools.sh`: Unified script with multiple commands for debugging, setup, and testing
+  - `./ble-tools.sh check`: Check device BLE peripheral capability
+  - `./ble-tools.sh debug [--enhanced]`: Debug BLE issues with optional enhanced mode
+  - `./ble-tools.sh run`: Build, install, and run the app
+  - `./ble-tools.sh test`: Test mouse connectivity
+  - `./ble-tools.sh help`: Show usage information
+
+This centralized approach simplifies development, ensures consistency, and reduces code duplication.

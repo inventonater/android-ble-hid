@@ -2,26 +2,26 @@ apply plugin: 'com.android.library'
 
 android {
     namespace 'com.example.blehid.unity'
-    compileSdk 34
+    compileSdk rootProject.ext.compileSdkVersion
     
     defaultConfig {
-        minSdk 21
-        targetSdk 34
+        minSdk rootProject.ext.minSdkVersion
+        targetSdk rootProject.ext.targetSdkVersion
         
-        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+        testInstrumentationRunner rootProject.ext.testInstrumentationRunner
         consumerProguardFiles "consumer-rules.pro"
     }
     
     buildTypes {
         release {
             minifyEnabled false
-            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+            proguardFiles getDefaultProguardFile(rootProject.ext.defaultProguardFile), 'proguard-rules.pro'
         }
     }
     
     compileOptions {
-        sourceCompatibility JavaVersion.VERSION_1_8
-        targetCompatibility JavaVersion.VERSION_1_8
+        sourceCompatibility rootProject.ext.javaVersion
+        targetCompatibility rootProject.ext.javaVersion
     }
 }
 
@@ -36,6 +36,12 @@ task copyToUnity(type: Copy, dependsOn: 'assembleRelease') {
 
 dependencies {
     implementation project(':core')
-    testImplementation 'junit:junit:4.13.2'
-    androidTestImplementation 'androidx.test.ext:junit:1.1.5'
+    testImplementation rootProject.ext.deps.junit
+    androidTestImplementation rootProject.ext.deps.androidxTestJunit
+    
+    // Add explicit Kotlin dependencies with consistent versions
+    implementation 'org.jetbrains.kotlin:kotlin-stdlib:1.8.10'
+    implementation 'org.jetbrains.kotlin:kotlin-stdlib-jdk7:1.8.10'
+    implementation 'org.jetbrains.kotlin:kotlin-stdlib-jdk8:1.8.10'
+    implementation 'org.jetbrains.kotlin:kotlin-stdlib-common:1.8.10'
 }
