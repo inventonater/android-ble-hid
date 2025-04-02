@@ -1,7 +1,7 @@
 apply plugin: 'com.android.application'
 
 // Define a constant for the app ID
-def appId = "com.example.blehid.app"
+def appId = "com.inventonater.hid.app"
 
 android {
     namespace appId

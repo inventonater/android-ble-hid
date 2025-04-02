@@ -12,7 +12,7 @@ BLUE="\033[0;34m"
 BOLD="\033[1m"
 NC="\033[0m" # No Color
 
-APP_ID="com.example.blehid.app"
+APP_ID="com.inventonater.hid.app"
 
 # ===========================================================================
 # Common utility functions
@@ -309,18 +309,18 @@ cmd_debug() {
 
     # Check if app is running, if not, start it
     echo -n "🔍 Checking if app is running: "
-    APP_RUNNING=$(adb shell ps | grep com.example.blehid.app | wc -l)
+    APP_RUNNING=$(adb shell ps | grep $APP_ID | wc -l)
     if [ "$APP_RUNNING" -gt 0 ]; then
         echo -e "${GREEN}✅ Yes${NC}"
     else
         echo -e "${YELLOW}❌ No${NC}"
         echo "🚀 Starting app..."
-        adb shell am start -n com.example.blehid.app/.MainActivity
+        adb shell am start -n $APP_ID/.MainActivity
     fi
 
     # Check Bluetooth permissions
     echo "🔐 Checking Bluetooth permissions:"
-    adb shell dumpsys package com.example.blehid.app | grep -E "BLUETOOTH|ACCESS_FINE_LOCATION" | while read -r line; do
+    adb shell dumpsys package $APP_ID | grep -E "BLUETOOTH|ACCESS_FINE_LOCATION" | while read -r line; do
         PERM=$(echo "$line" | xargs)
         GRANTED=$(echo "$line" | grep "granted=true" | wc -l)
         if [ "$GRANTED" -gt 0 ]; then
@@ -588,7 +588,7 @@ cmd_test() {
             echo -e "${GREEN}✓ Android device connected${NC}"
             
             # Check if app is installed
-            if $ADB shell pm list packages | grep -q "com.example.blehid"; then
+            if $ADB shell pm list packages | grep -q "com.inventonater.hid"; then
                 echo -e "${GREEN}✓ BLE HID app is installed${NC}"
                 
                 # Check for BLE peripheral mode support
