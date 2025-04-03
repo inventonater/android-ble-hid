@@ -48,7 +48,7 @@ public class HidMouseConstants {
     public static final int BUTTON_MIDDLE = 0x04;
     
     // HID Report Map descriptor for a standard mouse
-    // Simplified 3-byte mouse report: [buttons, x, y]
+    // 4-byte mouse report: [buttons, x, y, wheel] without report ID
     public static final byte[] REPORT_MAP = new byte[] {
         // USAGE_PAGE (Generic Desktop)
         (byte)0x05, (byte)0x01,
@@ -102,6 +102,20 @@ public class HidMouseConstants {
         (byte)0x75, (byte)0x08,
         // REPORT_COUNT (2)
         (byte)0x95, (byte)0x02,
+        // INPUT (Data,Var,Rel)
+        (byte)0x81, (byte)0x06,
+        
+        // Vertical wheel
+        // USAGE (Wheel)
+        (byte)0x09, (byte)0x38,
+        // LOGICAL_MINIMUM (-127)
+        (byte)0x15, (byte)0x81,
+        // LOGICAL_MAXIMUM (127)
+        (byte)0x25, (byte)0x7F,
+        // REPORT_SIZE (8)
+        (byte)0x75, (byte)0x08,
+        // REPORT_COUNT (1)
+        (byte)0x95, (byte)0x01,
         // INPUT (Data,Var,Rel)
         (byte)0x81, (byte)0x06,
         

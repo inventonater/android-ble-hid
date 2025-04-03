@@ -171,8 +171,8 @@ public class HidMouseService {
                 BluetoothGattCharacteristic.PERMISSION_READ_ENCRYPTED | 
                 BluetoothGattCharacteristic.PERMISSION_WRITE_ENCRYPTED);
         
-        // Set initial report value for 3-byte format [buttons, x, y]
-        byte[] initialReport = new byte[3];
+        // Set initial report value for 4-byte format [buttons, x, y, wheel]
+        byte[] initialReport = new byte[4];
         characteristic.setValue(initialReport);
         
         // Add Report Reference descriptor to help hosts identify the report type
@@ -198,7 +198,7 @@ public class HidMouseService {
     /**
      * Sends a mouse movement report.
      */
-    public boolean sendMouseReport(int buttons, int x, int y) {
+    public boolean sendMouseReport(int buttons, int x, int y, int wheel) {
         if (!isInitialized) {
             Log.e(TAG, "HID service not initialized");
             return false;
@@ -210,21 +210,21 @@ public class HidMouseService {
             return false;
         }
         
-        return reportHandler.sendMouseReport(connectedDevice, buttons, x, y);
+        return reportHandler.sendMouseReport(connectedDevice, buttons, x, y, wheel);
     }
     
     /**
      * Sends a mouse button press report.
      */
     public boolean pressButton(int button) {
-        return sendMouseReport(button, 0, 0);
+        return sendMouseReport(button, 0, 0, 0);
     }
     
     /**
      * Releases all mouse buttons.
      */
     public boolean releaseButtons() {
-        return sendMouseReport(0, 0, 0);
+        return sendMouseReport(0, 0, 0, 0);
     }
     
     /**
@@ -242,6 +242,19 @@ public class HidMouseService {
         boolean result = reportHandler.movePointer(connectedDevice, x, y);
         Log.d(TAG, "HID movePointer EXIT - result: " + result);
         return result;
+    }
+    
+    /**
+     * Sends a mouse wheel scroll report.
+     */
+    public boolean scroll(int amount) {
+        connectedDevice = bleHidManager.getConnectedDevice();
+        if (connectedDevice == null) {
+            Log.e(TAG, "No connected device");
+            return false;
+        }
+        
+        return reportHandler.scroll(connectedDevice, amount);
     }
     
     /**

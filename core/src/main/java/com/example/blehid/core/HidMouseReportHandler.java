@@ -16,8 +16,8 @@ import static com.example.blehid.core.HidMouseConstants.*;
 public class HidMouseReportHandler {
     private static final String TAG = "HidMouseReportHandler";
     
-    // Mouse report: [buttons, x, y] - Simplified 3-byte format
-    private final byte[] mouseReport = new byte[3];
+    // Mouse report: [buttons, x, y, wheel] - 4-byte format without report ID
+    private final byte[] mouseReport = new byte[4];
     
     private final BleGattServerManager gattServerManager;
     private final BluetoothGattCharacteristic reportCharacteristic;
@@ -49,10 +49,11 @@ public class HidMouseReportHandler {
      * @param buttons Button state (bit 0: left, bit 1: right, bit 2: middle)
      * @param x       X movement (-127 to 127)
      * @param y       Y movement (-127 to 127)
+     * @param wheel   Wheel movement (-127 to 127)
      * @return true if the report was sent successfully, false otherwise
      */
-    public boolean sendMouseReport(BluetoothDevice device, int buttons, int x, int y) {
-        Log.d(TAG, "sendMouseReport - buttons: " + buttons + ", x: " + x + ", y: " + y);
+    public boolean sendMouseReport(BluetoothDevice device, int buttons, int x, int y, int wheel) {
+        Log.d(TAG, "sendMouseReport - buttons: " + buttons + ", x: " + x + ", y: " + y + ", wheel: " + wheel);
         
         if (device == null) {
             Log.e(TAG, "No connected device");
@@ -69,17 +70,19 @@ public class HidMouseReportHandler {
         // Clamp values to byte range
         x = Math.max(-127, Math.min(127, x));
         y = Math.max(-127, Math.min(127, y));
+        wheel = Math.max(-127, Math.min(127, wheel));
         
         // Update report data
         mouseReport[0] = (byte) (buttons & 0x07);  // Buttons (3 bits)
         mouseReport[1] = (byte) x;                 // X movement
         mouseReport[2] = (byte) y;                 // Y movement
+        mouseReport[3] = (byte) wheel;             // Wheel movement
         
         // Log more detailed report information
-        Log.d(TAG, String.format("MOUSE REPORT DATA - X: %d (%02X), Y: %d (%02X), buttons=%d",
-                x, (byte)x & 0xFF, y, (byte)y & 0xFF, buttons));
-        Log.d(TAG, String.format("MOUSE REPORT BYTES - [%02X, %02X, %02X]",
-                mouseReport[0], mouseReport[1], mouseReport[2]));
+        Log.d(TAG, String.format("MOUSE REPORT DATA - X: %d (%02X), Y: %d (%02X), buttons=%d, wheel=%d",
+                x, (byte)x & 0xFF, y, (byte)y & 0xFF, buttons, wheel));
+        Log.d(TAG, String.format("MOUSE REPORT BYTES - [%02X, %02X, %02X, %02X]",
+                mouseReport[0], mouseReport[1], mouseReport[2], mouseReport[3]));
         
         boolean success = false;
         
@@ -136,7 +139,7 @@ public class HidMouseReportHandler {
      * @return true if the report was sent successfully, false otherwise
      */
     public boolean pressButton(BluetoothDevice device, int button) {
-        return sendMouseReport(device, button, 0, 0);
+        return sendMouseReport(device, button, 0, 0, 0);
     }
     
     /**
@@ -146,7 +149,7 @@ public class HidMouseReportHandler {
      * @return true if the report was sent successfully, false otherwise
      */
     public boolean releaseButtons(BluetoothDevice device) {
-        return sendMouseReport(device, 0, 0, 0);
+        return sendMouseReport(device, 0, 0, 0, 0);
     }
     
     /**
@@ -160,9 +163,20 @@ public class HidMouseReportHandler {
     public boolean movePointer(BluetoothDevice device, int x, int y) {
         Log.d(TAG, "movePointer - x: " + x + ", y: " + y);
         // Removed X-axis inversion to fix horizontal movement issues
-        boolean result = sendMouseReport(device, 0, x, y);
+        boolean result = sendMouseReport(device, 0, x, y, 0);
         Log.d(TAG, "movePointer result: " + result);
         return result;
+    }
+    
+    /**
+     * Sends a mouse wheel scroll report.
+     * 
+     * @param device The connected Bluetooth device
+     * @param amount Scroll amount (-127 to 127, positive for up, negative for down)
+     * @return true if the report was sent successfully, false otherwise
+     */
+    public boolean scroll(BluetoothDevice device, int amount) {
+        return sendMouseReport(device, 0, 0, 0, amount);
     }
     
     /**
@@ -210,6 +224,7 @@ public class HidMouseReportHandler {
             mouseReport[0] = 0; // No buttons
             mouseReport[1] = 0; // No X movement
             mouseReport[2] = 0; // No Y movement
+            mouseReport[3] = 0; // No wheel
             reportCharacteristic.setValue(mouseReport);
             
             // Send two initial reports - one is sometimes not enough

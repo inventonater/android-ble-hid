@@ -199,9 +199,6 @@ public class BleHidManager {
     
     /**
      * Scrolls the mouse wheel.
-     * 
-     * Note: This is now a stub method since we've removed wheel support to match the 
-     * sample 3-byte mouse report format. It will send a vertical mouse movement instead.
      *
      * @param amount Scroll amount (-127 to 127, positive for up, negative for down)
      * @return true if the report was sent successfully, false otherwise
@@ -212,8 +209,7 @@ public class BleHidManager {
             return false;
         }
         
-        // Convert scroll to vertical movement (an approximation as we don't have wheel support)
-        return hidMouseService.movePointer(0, amount > 0 ? -5 : 5);
+        return hidMouseService.scroll(amount);
     }
     
     /**
