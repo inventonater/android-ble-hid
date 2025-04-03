@@ -9,6 +9,7 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
+import android.view.View
 import android.widget.Button
 import android.widget.TextView
 import android.widget.Toast
@@ -143,23 +144,19 @@ class MainActivity : AppCompatActivity() {
             return
         }
         
-        advertiseButton.isEnabled = true
+        // Enable input type selection buttons once initialized
+        keyboardButton.isEnabled = true
+        mouseButton.isEnabled = true
         
-        if (isAdvertising) {
-            advertiseButton.text = "Stop Advertising"
-            statusText.text = "Status: Advertising"
-        } else {
-            advertiseButton.text = "Start Advertising"
-            statusText.text = "Status: Ready"
-        }
+        // Update advertising button state
+        advertiseButton.isEnabled = false  // Disable in main activity to enforce proper flow
+        advertiseButton.visibility = View.GONE  // Hide the advertising button
         
+        // Show appropriate status
         if (BleHid.isConnected()) {
             statusText.text = "Status: Connected"
-            keyboardButton.isEnabled = true
-            mouseButton.isEnabled = true
         } else {
-            keyboardButton.isEnabled = false
-            mouseButton.isEnabled = false
+            statusText.text = "Status: Ready - Select Keyboard or Mouse"
         }
     }
     

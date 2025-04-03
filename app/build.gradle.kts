@@ -56,10 +56,11 @@ dependencies {
     implementation(Dependencies.Kotlin.coroutinesCore)
     implementation(Dependencies.Kotlin.coroutinesAndroid)
     
-    // Lifecycle
-    implementation(Dependencies.Lifecycle.viewModel)
-    implementation(Dependencies.Lifecycle.runtime)
-    implementation(Dependencies.Lifecycle.liveData)
+    // Lifecycle - Use specific versions to fix the Companion object error
+    implementation("androidx.lifecycle:lifecycle-viewmodel-ktx:2.5.1")
+    implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.5.1")
+    implementation("androidx.lifecycle:lifecycle-livedata-ktx:2.5.1")
+    implementation("androidx.lifecycle:lifecycle-common-java8:2.5.1")
 
     // Testing
     testImplementation(Dependencies.Test.junit)

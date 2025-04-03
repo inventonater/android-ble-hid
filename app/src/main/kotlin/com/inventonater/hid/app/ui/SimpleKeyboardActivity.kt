@@ -239,6 +239,9 @@ class SimpleKeyboardActivity : AppCompatActivity() {
     private fun initializeBleHid() {
         val initialized = BleHid.isInitialized()
         if (initialized) {
+            // Ensure keyboard service is specifically activated
+            ensureKeyboardServiceActive()
+            
             statusText.setText(R.string.ready)
             advertisingButton.isEnabled = true
             addLogEntry("BLE HID initialized successfully")
@@ -246,6 +249,27 @@ class SimpleKeyboardActivity : AppCompatActivity() {
             statusText.setText(R.string.initialization_failed)
             advertisingButton.isEnabled = false
             addLogEntry("BLE HID initialization FAILED")
+        }
+    }
+    
+    /**
+     * Ensures that the keyboard service is properly activated.
+     */
+    private fun ensureKeyboardServiceActive() {
+        try {
+            // Deactivate mouse service if active to prevent profile confusion
+            BleHid.manager?.deactivateService("mouse")
+            
+            // Activate keyboard service
+            val keyboardActivated = BleHid.manager?.activateService("keyboard") ?: false
+            if (keyboardActivated) {
+                addLogEntry("Keyboard service activated successfully")
+            } else {
+                addLogEntry("Failed to activate keyboard service")
+                Toast.makeText(this, "Failed to activate keyboard service", Toast.LENGTH_SHORT).show()
+            }
+        } catch (e: Exception) {
+            addLogEntry("Error activating keyboard service: ${e.message}")
         }
     }
     

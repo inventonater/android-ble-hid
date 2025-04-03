@@ -32,7 +32,11 @@ import com.inventonater.hid.core.di.BleHidModule
  * ```
  */
 object BleHid {
-    private var manager: BleHidManager? = null
+    /**
+     * The BleHidManager instance. Exposed to allow service-specific configuration.
+     */
+    var manager: BleHidManager? = null
+        private set  // Only allow setting from within this class
     
     /**
      * Initialize the BLE HID library.
