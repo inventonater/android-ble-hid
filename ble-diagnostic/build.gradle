@@ -1,7 +1,7 @@
 apply plugin: 'com.android.application'
 
 // Define a constant for the app ID
-def appId = "com.example.blehid.app"
+def appId = "com.example.blehid.diagnostic"
 
 android {
     namespace appId
@@ -28,25 +28,25 @@ android {
         sourceCompatibility rootProject.ext.javaVersion
         targetCompatibility rootProject.ext.javaVersion
     }
-    
-    // Exclude keyboard functionality to simplify the project
-    sourceSets {
-        main {
-            java {
-                exclude '**/SimpleKeyboardActivity.java'
-            }
-        }
-    }
 }
-
-// Note: Permission granting functionality has been moved to ble-tools.sh script
-// The redundant grantPermissions task has been removed
 
 dependencies {
     implementation project(':core')
     implementation rootProject.ext.deps.appcompat
     implementation rootProject.ext.deps.material
     implementation rootProject.ext.deps.constraintlayout
+    
+    // Additional dependencies specific to diagnostic functionality
+    implementation 'androidx.recyclerview:recyclerview:1.2.1'
+    implementation 'androidx.cardview:cardview:1.0.0'
+    implementation 'androidx.lifecycle:lifecycle-viewmodel:2.5.1'
+    implementation 'androidx.lifecycle:lifecycle-livedata:2.5.1'
+    
+    // BLE scan and connection monitoring
+    implementation 'no.nordicsemi.android:ble-common:2.5.1'
+    implementation 'no.nordicsemi.android:ble-livedata:2.5.1'
+    
+    // Testing dependencies
     testImplementation rootProject.ext.deps.junit
     androidTestImplementation rootProject.ext.deps.androidxTestJunit
     androidTestImplementation rootProject.ext.deps.espresso

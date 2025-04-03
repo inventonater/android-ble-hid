@@ -20,7 +20,7 @@ public class BleHidManager {
     private final BleAdvertiser advertiser;
     private final BleGattServerManager gattServerManager;
     private final BlePairingManager pairingManager;
-    private final HidKeyboardService hidKeyboardService;
+    // Only using mouse service - removing keyboard for simplicity
     private final HidMouseService hidMouseService;
 
     private boolean isInitialized = false;
@@ -47,7 +47,7 @@ public class BleHidManager {
         advertiser = new BleAdvertiser(this);
         gattServerManager = new BleGattServerManager(this);
         pairingManager = new BlePairingManager(this);
-        hidKeyboardService = new HidKeyboardService(this);
+        // Only initialize mouse service
         hidMouseService = new HidMouseService(this);
     }
 
@@ -84,8 +84,7 @@ public class BleHidManager {
             return false;
         }
         
-        // Initialize HID services - only one can be active at a time
-        // We'll initialize mouse by default, keyboard can be initialized on demand
+        // Initialize only the mouse service
         boolean hidInitialized = hidMouseService.initialize();
         if (!hidInitialized) {
             Log.e(TAG, "Failed to initialize HID mouse service");
@@ -121,49 +120,7 @@ public class BleHidManager {
         }
     }
 
-    /**
-     * Sends a keyboard HID report with the specified key.
-     * 
-     * @param keyCode The HID key code to send
-     * @return true if the report was sent successfully, false otherwise
-     */
-    public boolean sendKey(int keyCode) {
-        if (!isInitialized || connectedDevice == null) {
-            Log.e(TAG, "Not connected or initialized");
-            return false;
-        }
-        
-        return hidKeyboardService.sendKey(keyCode);
-    }
-
-    /**
-     * Sends multiple keyboard HID keys simultaneously.
-     * 
-     * @param keyCodes Array of HID key codes to send
-     * @return true if the report was sent successfully, false otherwise
-     */
-    public boolean sendKeys(int[] keyCodes) {
-        if (!isInitialized || connectedDevice == null) {
-            Log.e(TAG, "Not connected or initialized");
-            return false;
-        }
-        
-        return hidKeyboardService.sendKeys(keyCodes);
-    }
-
-    /**
-     * Releases all pressed keys.
-     * 
-     * @return true if the report was sent successfully, false otherwise
-     */
-    public boolean releaseKeys() {
-        if (!isInitialized || connectedDevice == null) {
-            Log.e(TAG, "Not connected or initialized");
-            return false;
-        }
-        
-        return hidKeyboardService.releaseAllKeys();
-    }
+    // Removed all keyboard-related methods to simplify the codebase
 
     /**
      * Checks if the device supports BLE peripheral mode.
@@ -216,10 +173,6 @@ public class BleHidManager {
         return gattServerManager;
     }
 
-    public HidKeyboardService getHidKeyboardService() {
-        return hidKeyboardService;
-    }
-    
     public HidMouseService getHidMouseService() {
         return hidMouseService;
     }

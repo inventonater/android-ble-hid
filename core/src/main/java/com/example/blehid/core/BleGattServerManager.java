@@ -247,15 +247,10 @@ public class BleGattServerManager {
                 success = true;
             } 
             else if (charUuid.equals(HID_REPORT_MAP_UUID)) {
-                // First try to get the report map from the mouse service
+                // Get the report map from the mouse service only
                 byte[] reportMap = null;
                 if (bleHidManager.getHidMouseService() != null) {
                     reportMap = bleHidManager.getHidMouseService().getReportMap();
-                }
-                
-                // If mouse service didn't provide a report map, fall back to keyboard
-                if (reportMap == null && bleHidManager.getHidKeyboardService() != null) {
-                    reportMap = bleHidManager.getHidKeyboardService().getReportMap();
                 }
                 
                 if (reportMap != null) {
@@ -280,15 +275,10 @@ public class BleGattServerManager {
                 }
             } 
             else {
-                // Try the mouse service first
+                // Try the mouse service only
                 byte[] response = null;
                 if (bleHidManager.getHidMouseService() != null) {
                     response = bleHidManager.getHidMouseService().handleCharacteristicRead(charUuid, offset);
-                }
-                
-                // If mouse service didn't handle it, try keyboard service
-                if (response == null && bleHidManager.getHidKeyboardService() != null) {
-                    response = bleHidManager.getHidKeyboardService().handleCharacteristicRead(charUuid, offset);
                 }
                 
                 if (response != null) {
@@ -324,14 +314,15 @@ public class BleGattServerManager {
                     byte controlPoint = value[0];
                     Log.d(TAG, "HID Control Point set to: " + controlPoint);
                     
-                    // Process the control point command (typically just host suspend/resume)
-                    bleHidManager.getHidKeyboardService().handleControlPoint(controlPoint);
+                    // Process the control point command for mouse service only
+                    // Mouse doesn't generally need control point handling, but keep the structure
+                    // for future expansion if needed
                     success = true;
                 }
             } 
             else {
-                // Delegate other characteristics to the HID service handler
-                success = bleHidManager.getHidKeyboardService()
+                // Delegate other characteristics to the mouse service handler - fixed comma issue
+                success = bleHidManager.getHidMouseService()
                         .handleCharacteristicWrite(charUuid, value);
             }
             
@@ -358,8 +349,8 @@ public class BleGattServerManager {
                 gattServer.sendResponse(device, requestId, BluetoothGatt.GATT_SUCCESS, 
                         0, value);
             } else {
-                // Get descriptor value from HID service handler
-                byte[] response = bleHidManager.getHidKeyboardService()
+                // Get descriptor value from mouse service handler - fixed comma issue
+                byte[] response = bleHidManager.getHidMouseService()
                         .handleDescriptorRead(descriptor.getUuid(), descriptor.getCharacteristic().getUuid());
                 
                 if (response != null) {
@@ -415,8 +406,8 @@ public class BleGattServerManager {
                     success = true;
                 }
             } else {
-                // Delegate to HID service handler for other descriptors
-                success = bleHidManager.getHidKeyboardService()
+                // Delegate to mouse service handler for other descriptors - fixed comma and params
+                success = bleHidManager.getHidMouseService()
                         .handleDescriptorWrite(descriptor.getUuid(), 
                                 descriptor.getCharacteristic().getUuid(), 
                                 value);

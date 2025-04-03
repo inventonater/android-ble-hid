@@ -10,7 +10,7 @@ import java.util.UUID;
 
 /**
  * Implements a BLE HID mouse service.
- * Based on the USB HID specification for mice with special Apple compatibility.
+ * Based on the standard USB HID specification for mice.
  */
 public class HidMouseService {
     private static final String TAG = "HidMouseService";
@@ -31,11 +31,58 @@ public class HidMouseService {
     // Report IDs
     private static final byte REPORT_ID_MOUSE = 0x01;
     
-    // Use Apple-compatible report map to improve compatibility with macOS
-    private static final byte[] REPORT_MAP = AppleHidCompatibility.getAppleCompatibleMouseReportMap();
+    // Standard Mouse Report Descriptor
+    private static final byte[] REPORT_MAP = {
+        (byte) 0x05, (byte) 0x01,        // USAGE_PAGE (Generic Desktop)
+        (byte) 0x09, (byte) 0x02,        // USAGE (Mouse)
+        (byte) 0xA1, (byte) 0x01,        // COLLECTION (Application)
+        (byte) 0x85, (byte) 0x01,        //   REPORT_ID (1)
+        (byte) 0x09, (byte) 0x01,        //   USAGE (Pointer)
+        (byte) 0xA1, (byte) 0x00,        //   COLLECTION (Physical)
+        
+        // Buttons (3 buttons)
+        (byte) 0x05, (byte) 0x09,        //     USAGE_PAGE (Button)
+        (byte) 0x19, (byte) 0x01,        //     USAGE_MINIMUM (Button 1)
+        (byte) 0x29, (byte) 0x03,        //     USAGE_MAXIMUM (Button 3)
+        (byte) 0x15, (byte) 0x00,        //     LOGICAL_MINIMUM (0)
+        (byte) 0x25, (byte) 0x01,        //     LOGICAL_MAXIMUM (1)
+        (byte) 0x95, (byte) 0x03,        //     REPORT_COUNT (3)
+        (byte) 0x75, (byte) 0x01,        //     REPORT_SIZE (1)
+        (byte) 0x81, (byte) 0x02,        //     INPUT (Data,Var,Abs)
+        
+        // Padding (5 bits)
+        (byte) 0x95, (byte) 0x01,        //     REPORT_COUNT (1)
+        (byte) 0x75, (byte) 0x05,        //     REPORT_SIZE (5) 
+        (byte) 0x81, (byte) 0x03,        //     INPUT (Cnst,Var,Abs)
+        
+        // X and Y axis
+        (byte) 0x05, (byte) 0x01,        //     USAGE_PAGE (Generic Desktop)
+        (byte) 0x09, (byte) 0x30,        //     USAGE (X)
+        (byte) 0x09, (byte) 0x31,        //     USAGE (Y)
+        (byte) 0x15, (byte) 0x81,        //     LOGICAL_MINIMUM (-127)
+        (byte) 0x25, (byte) 0x7F,        //     LOGICAL_MAXIMUM (127)
+        (byte) 0x75, (byte) 0x08,        //     REPORT_SIZE (8)
+        (byte) 0x95, (byte) 0x02,        //     REPORT_COUNT (2)
+        (byte) 0x81, (byte) 0x06,        //     INPUT (Data,Var,Rel)
+        
+        // Vertical wheel
+        (byte) 0x09, (byte) 0x38,        //     USAGE (Wheel)
+        (byte) 0x15, (byte) 0x81,        //     LOGICAL_MINIMUM (-127)
+        (byte) 0x25, (byte) 0x7F,        //     LOGICAL_MAXIMUM (127)
+        (byte) 0x75, (byte) 0x08,        //     REPORT_SIZE (8)
+        (byte) 0x95, (byte) 0x01,        //     REPORT_COUNT (1)
+        (byte) 0x81, (byte) 0x06,        //     INPUT (Data,Var,Rel)
+        
+        (byte) 0xC0,                     //   END_COLLECTION
+        (byte) 0xC0                      // END_COLLECTION
+    };
     
-    // Use Apple-compatible HID Information to improve compatibility with macOS
-    private static final byte[] HID_INFORMATION = AppleHidCompatibility.getAppleHidInformation();
+    // Standard HID Information
+    private static final byte[] HID_INFORMATION = {
+        (byte) 0x11, (byte) 0x01,  // bcdHID (HID spec version 1.11)
+        (byte) 0x00,               // bCountryCode (0 = not specified)
+        (byte) 0x00                // Flags (0x00 = No special flags)
+    };
     
     // Mouse report: [reportId, buttons, x, y, wheel]
     private static final byte[] mouseReport = new byte[5];
@@ -101,7 +148,7 @@ public class HidMouseService {
                 BluetoothGattCharacteristic.PROPERTY_READ,
                 BluetoothGattCharacteristic.PERMISSION_READ);
         reportMapCharacteristic.setValue(REPORT_MAP);
-        Log.d(TAG, "Set Report Map characteristic (Apple-compatible)");
+        Log.d(TAG, "Set Report Map characteristic (Standard HID)");
         
         // HID Control Point characteristic
         BluetoothGattCharacteristic hidControlCharacteristic = new BluetoothGattCharacteristic(
@@ -142,15 +189,14 @@ public class HidMouseService {
         hidService.addCharacteristic(hidControlCharacteristic);
         hidService.addCharacteristic(reportCharacteristic);
         
-        // Apply Apple-specific compatibility adjustments
-        AppleHidCompatibility.applyAppleCompatibility(hidService);
+        // No compatibility adjustments needed for standard HID
         
         // Add service to GATT server
         boolean success = gattServerManager.addHidService(hidService);
         
         if (success) {
             isInitialized = true;
-            Log.i(TAG, "HID mouse service initialized with Apple compatibility");
+            Log.i(TAG, "HID mouse service initialized with standard HID descriptor");
         } else {
             Log.e(TAG, "Failed to initialize HID mouse service");
         }
@@ -168,6 +214,8 @@ public class HidMouseService {
      * @return true if the report was sent successfully, false otherwise
      */
     public boolean sendMouseReport(int buttons, int x, int y, int wheel) {
+        Log.d(TAG, "sendMouseReport ENTRY - buttons: " + buttons + ", x: " + x + ", y: " + y + ", wheel: " + wheel);
+        
         if (!isInitialized || reportCharacteristic == null) {
             Log.e(TAG, "HID service not initialized");
             return false;
@@ -198,7 +246,9 @@ public class HidMouseService {
         mouseReport[4] = (byte) wheel;             // Wheel movement
         
         // Log more detailed report information
-        Log.d(TAG, String.format("Mouse report data: [%02X, %02X, %02X, %02X, %02X]",
+        Log.d(TAG, String.format("MOUSE REPORT DATA - X: %d (%02X), Y: %d (%02X), buttons=%d, wheel=%d",
+                x, (byte)x & 0xFF, y, (byte)y & 0xFF, buttons, wheel));
+        Log.d(TAG, String.format("MOUSE REPORT BYTES - [%02X, %02X, %02X, %02X, %02X]",
                 mouseReport[0], mouseReport[1], mouseReport[2], mouseReport[3], mouseReport[4]));
         
         // Set report value
@@ -257,7 +307,11 @@ public class HidMouseService {
      * @return true if the report was sent successfully, false otherwise
      */
     public boolean movePointer(int x, int y) {
-        return sendMouseReport(0, x, y, 0);
+        Log.d(TAG, "HID movePointer ENTRY - x: " + x + ", y: " + y);
+        // Removed X-axis inversion to fix horizontal movement issues
+        boolean result = sendMouseReport(0, x, y, 0);
+        Log.d(TAG, "HID movePointer EXIT - result: " + result);
+        return result;
     }
     
     /**
@@ -374,6 +428,70 @@ public class HidMouseService {
         } else {
             Log.e(TAG, "Missing Client Configuration Descriptor (CCCD)");
         }
+    }
+    
+    /**
+     * Handles characteristic write requests.
+     * 
+     * @param charUuid The UUID of the characteristic being written
+     * @param value The value being written
+     * @return true if the write was handled, false otherwise
+     */
+    public boolean handleCharacteristicWrite(UUID charUuid, byte[] value) {
+        if (charUuid.equals(HID_REPORT_UUID)) {
+            // Handle write to report characteristic if needed
+            Log.d(TAG, "Received write to report characteristic: " + bytesToHex(value));
+            return true;
+        }
+        
+        // Unhandled characteristic
+        return false;
+    }
+    
+    /**
+     * Handles descriptor read requests.
+     *
+     * @param descriptorUuid The UUID of the descriptor being read
+     * @param characteristicUuid The UUID of the characteristic the descriptor belongs to
+     * @return The descriptor value, or null if not handled
+     */
+    public byte[] handleDescriptorRead(UUID descriptorUuid, UUID characteristicUuid) {
+        if (descriptorUuid.equals(REPORT_REFERENCE_UUID) && characteristicUuid.equals(HID_REPORT_UUID)) {
+            // Report Reference descriptor for report characteristic
+            return new byte[] { REPORT_ID_MOUSE, 0x01 };  // Report ID, Input report
+        }
+        
+        // Unhandled descriptor
+        return null;
+    }
+    
+    /**
+     * Handles descriptor write requests.
+     *
+     * @param descriptorUuid The UUID of the descriptor being written
+     * @param characteristicUuid The UUID of the characteristic the descriptor belongs to
+     * @param value The value being written
+     * @return true if the write was handled, false otherwise
+     */
+    public boolean handleDescriptorWrite(UUID descriptorUuid, UUID characteristicUuid, byte[] value) {
+        if (descriptorUuid.equals(CLIENT_CONFIG_UUID) && characteristicUuid.equals(HID_REPORT_UUID)) {
+            // Client Characteristic Configuration Descriptor for notifications
+            if (value.length == 2) {
+                if (value[0] == 0x01 && value[1] == 0x00) {
+                    // Notifications enabled
+                    Log.d(TAG, "Notifications enabled for mouse report characteristic");
+                    notificationsEnabled = true;
+                } else {
+                    // Notifications disabled
+                    Log.d(TAG, "Notifications disabled for mouse report characteristic");
+                    notificationsEnabled = false;
+                }
+                return true;
+            }
+        }
+        
+        // Unhandled descriptor
+        return false;
     }
     
     /**

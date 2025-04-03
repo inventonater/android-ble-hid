@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">BLE HID Diagnostic</string>
+    
+    <!-- Main Activity -->
+    <string name="title_device_scan">Scan for Devices</string>
+    <string name="title_connection_debug">Connection Debugging</string>
+    <string name="title_report_monitor">HID Report Monitor</string>
+    <string name="title_gatt_profile">GATT Service Browser</string>
+    
+    <!-- Device Scan -->
+    <string name="scan_start">Start Scan</string>
+    <string name="scan_stop">Stop Scan</string>
+    <string name="scanning">Scanning for devices…</string>
+    <string name="empty_scan_result">No devices found</string>
+    <string name="connect">Connect</string>
+    <string name="disconnect">Disconnect</string>
+    <string name="device_name">Device Name</string>
+    <string name="device_address">MAC Address</string>
+    <string name="rssi">RSSI</string>
+    <string name="bond_state">Bond State</string>
+    
+    <!-- Connection Debugging -->
+    <string name="connection_status">Connection Status</string>
+    <string name="connection_params">Connection Parameters</string>
+    <string name="mtu">MTU Size</string>
+    <string name="connection_interval">Connection Interval</string>
+    <string name="supervision_timeout">Supervision Timeout</string>
+    <string name="latency">Slave Latency</string>
+    <string name="refresh_connection">Refresh Connection</string>
+    <string name="request_mtu">Request MTU</string>
+    
+    <!-- Report Monitor -->
+    <string name="monitor_start">Start Monitoring</string>
+    <string name="monitor_stop">Stop Monitoring</string>
+    <string name="report_timestamp">Timestamp</string>
+    <string name="report_data">Report Data</string>
+    <string name="report_type">Report Type</string>
+    <string name="clear_logs">Clear Logs</string>
+    <string name="save_logs">Save Logs</string>
+    <string name="decoded_report">Decoded Value</string>
+    <string name="no_reports">No HID reports received</string>
+    
+    <!-- GATT Profile -->
+    <string name="service">Service</string>
+    <string name="characteristic">Characteristic</string>
+    <string name="descriptor">Descriptor</string>
+    <string name="properties">Properties</string>
+    <string name="read">Read</string>
+    <string name="write">Write</string>
+    <string name="notify">Notify</string>
+    <string name="indicate">Indicate</string>
+    <string name="refresh_gatt">Refresh GATT</string>
+    <string name="hid_report_descriptor">HID Report Descriptor</string>
+    <string name="no_services">No services discovered</string>
+    
+    <!-- General -->
+    <string name="error_bluetooth_not_supported">Bluetooth not supported on this device</string>
+    <string name="error_bluetooth_not_enabled">Bluetooth is not enabled</string>
+    <string name="error_location_permission">Location permission required for BLE scanning</string>
+    <string name="error_bluetooth_permissions">Bluetooth permissions required</string>
+    <string name="error_connection_failed">Connection failed</string>
+    <string name="logs_saved">Logs saved to %1$s</string>
+</resources>

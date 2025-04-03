@@ -11,6 +11,7 @@ import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.text.format.DateFormat;
+import android.util.Log;
 import android.view.MotionEvent;
 import android.view.View;
 import android.widget.Button;
@@ -57,8 +58,8 @@ public class SimpleMouseActivity extends AppCompatActivity {
     private float lastTouchY;
     private boolean isTrackingTouch = false;
     
-    // Movement sensitivity - increased for better recognition
-    private static final float MOVEMENT_FACTOR = 2.5f;
+    // Movement sensitivity - adjusted for better control
+    private static final float MOVEMENT_FACTOR = 1.5f;
     
     // StringBuilder for log entries
     private StringBuilder logEntries = new StringBuilder();
@@ -392,25 +393,33 @@ public class SimpleMouseActivity extends AppCompatActivity {
                     // Only send movement if it's significant
                     if (Math.abs(deltaX) > 1 || Math.abs(deltaY) > 1) {
                         // Convert to relative movement values (-127 to 127)
+                        // Use more natural movement values without forced minimums
                         int moveX = (int)(deltaX * MOVEMENT_FACTOR);
                         int moveY = (int)(deltaY * MOVEMENT_FACTOR);
                         
-                        // Force movement to be at least 5 units if any movement is detected
-                        if (moveX != 0 && Math.abs(moveX) < 5) {
-                            moveX = moveX > 0 ? 5 : -5;
+                        // Ensure small movements aren't lost but don't force large jumps
+                        if (moveX != 0 && Math.abs(moveX) < 2) {
+                            moveX = moveX > 0 ? 2 : -2;
                         }
-                        if (moveY != 0 && Math.abs(moveY) < 5) {
-                            moveY = moveY > 0 ? 5 : -5;
+                        if (moveY != 0 && Math.abs(moveY) < 2) {
+                            moveY = moveY > 0 ? 2 : -2;
                         }
                         
                         // Clamp values
                         moveX = Math.max(-127, Math.min(127, moveX));
                         moveY = Math.max(-127, Math.min(127, moveY));
                         
+                        // Log the original delta values for debugging
+                        Log.d(TAG, "TOUCH DELTA - Original: (" + deltaX + ", " + deltaY + ")");
+                        
+                        // Log before sending to HID service
+                        Log.d(TAG, "SENDING TO HID - moveX: " + moveX + ", moveY: " + moveY);
+                        
                         // Send mouse movement with debug info
                         boolean result = bleHidManager.moveMouse(moveX, moveY);
                         if (result) {
-                            addLogEntry("MOUSE MOVE: (" + moveX + ", " + moveY + ")");
+                            addLogEntry("MOUSE MOVE: deltaXY(" + deltaX + ", " + deltaY + 
+                                       ") → moveXY(" + moveX + ", " + moveY + ")");
                             
                             // Add small delay to avoid overwhelming the connection
                             try {

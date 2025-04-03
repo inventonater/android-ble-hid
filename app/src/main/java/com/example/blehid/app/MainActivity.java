@@ -17,7 +17,6 @@ import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 
-import com.example.blehid.app.ui.SimpleKeyboardActivity;
 import com.example.blehid.app.ui.SimpleMouseActivity;
 import com.example.blehid.core.BleHidManager;
 
@@ -46,7 +45,6 @@ public class MainActivity extends AppCompatActivity {
     
     private BleHidManager bleHidManager;
     private TextView statusText;
-    private Button startKeyboardButton;
     private Button startMouseButton;
     
     @Override
@@ -55,7 +53,6 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
         
         statusText = findViewById(R.id.statusText);
-        startKeyboardButton = findViewById(R.id.startKeyboardButton);
         startMouseButton = findViewById(R.id.startMouseButton);
         
         // Initialize the BLE HID manager
@@ -64,18 +61,9 @@ public class MainActivity extends AppCompatActivity {
         // Check if BLE peripheral mode is supported
         if (!bleHidManager.isBlePeripheralSupported()) {
             statusText.setText(R.string.ble_peripheral_not_supported);
-            startKeyboardButton.setEnabled(false);
             startMouseButton.setEnabled(false);
             return;
         }
-        
-        // Set up keyboard button click listener
-        startKeyboardButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                launchKeyboardActivity();
-            }
-        });
         
         // Set up mouse button click listener
         startMouseButton.setOnClickListener(new View.OnClickListener() {
@@ -170,7 +158,7 @@ public class MainActivity extends AppCompatActivity {
             } else {
                 // Some permissions denied
                 statusText.setText(R.string.permissions_required);
-                startKeyboardButton.setEnabled(false);
+                startMouseButton.setEnabled(false);
             }
         }
     }
@@ -186,7 +174,7 @@ public class MainActivity extends AppCompatActivity {
             } else {
                 // User declined to enable Bluetooth
                 statusText.setText(R.string.bluetooth_disabled);
-                startKeyboardButton.setEnabled(false);
+                startMouseButton.setEnabled(false);
             }
         }
     }
@@ -201,31 +189,19 @@ public class MainActivity extends AppCompatActivity {
             if (bluetoothAdapter != null && bluetoothAdapter.isEnabled()) {
                 if (bleHidManager.isBlePeripheralSupported()) {
                     statusText.setText(R.string.ready_to_start);
-                    startKeyboardButton.setEnabled(true);
                     startMouseButton.setEnabled(true);
                 } else {
                     statusText.setText(R.string.ble_peripheral_not_supported);
-                    startKeyboardButton.setEnabled(false);
                     startMouseButton.setEnabled(false);
                 }
             } else {
                 statusText.setText(R.string.bluetooth_disabled);
-                startKeyboardButton.setEnabled(false);
                 startMouseButton.setEnabled(false);
             }
         } else {
             statusText.setText(R.string.bluetooth_not_supported);
-            startKeyboardButton.setEnabled(false);
             startMouseButton.setEnabled(false);
         }
-    }
-    
-    /**
-     * Launches the SimpleKeyboardActivity.
-     */
-    private void launchKeyboardActivity() {
-        Intent intent = new Intent(this, SimpleKeyboardActivity.class);
-        startActivity(intent);
     }
     
     /**

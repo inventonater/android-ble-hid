@@ -38,8 +38,8 @@ public class HidKeyboardService {
     private static final byte CONTROL_POINT_SUSPEND = 0x00;
     private static final byte CONTROL_POINT_EXIT_SUSPEND = 0x01;
     
-    // Report sizes
-    private static final int KEYBOARD_REPORT_SIZE = 8;
+    // Report sizes - changed from 8 to 8 (original) or 7 (without report ID)
+    private static final int KEYBOARD_REPORT_SIZE = 7; // No report ID in standard format
     
     // Keyboard modifier byte bit masks (byte 0 of report)
     private static final byte KEYBOARD_MODIFIER_LEFT_CTRL = (byte)0x01;
@@ -71,7 +71,7 @@ public class HidKeyboardService {
         
         // Initialize keyboard report state (all zeros)
         Arrays.fill(keyboardState, (byte)0);
-        keyboardState[0] = KEYBOARD_REPORT_ID; // Report ID as first byte
+        // No report ID in standard format
     }
     
     /**
@@ -133,8 +133,8 @@ public class HidKeyboardService {
                 BluetoothGattCharacteristic.PROPERTY_READ |
                 BluetoothGattCharacteristic.PROPERTY_NOTIFY,
                 BluetoothGattCharacteristic.PERMISSION_READ);
-        // Set initial state (all keys up)
-        inputReportChar.setValue(new byte[] { KEYBOARD_REPORT_ID, 0, 0, 0, 0, 0, 0, 0 });
+        // Set initial state (all keys up) - without Report ID
+        inputReportChar.setValue(new byte[] { 0, 0, 0, 0, 0, 0, 0 });
         
         // Add Client Characteristic Configuration descriptor for enabling notifications
         BluetoothGattDescriptor inputReportCccDesc = new BluetoothGattDescriptor(
@@ -143,12 +143,8 @@ public class HidKeyboardService {
         inputReportCccDesc.setValue(BluetoothGattDescriptor.DISABLE_NOTIFICATION_VALUE);
         inputReportChar.addDescriptor(inputReportCccDesc);
         
-        // Add Report Reference descriptor 
-        BluetoothGattDescriptor inputReportRefDesc = new BluetoothGattDescriptor(
-                REPORT_REFERENCE_UUID,
-                BluetoothGattDescriptor.PERMISSION_READ);
-        inputReportRefDesc.setValue(new byte[] { KEYBOARD_REPORT_ID, REPORT_TYPE_INPUT });
-        inputReportChar.addDescriptor(inputReportRefDesc);
+        // We're not using Report Reference descriptors since we don't use report IDs in our standard descriptor
+        // The standard HID keyboard format doesn't use report IDs
         
         // 5. HID Report characteristic for keyboard output reports (LED states)
         BluetoothGattCharacteristic outputReportChar = new BluetoothGattCharacteristic(
@@ -159,12 +155,7 @@ public class HidKeyboardService {
                 BluetoothGattCharacteristic.PERMISSION_READ |
                 BluetoothGattCharacteristic.PERMISSION_WRITE);
         
-        // Add Report Reference descriptor for output report
-        BluetoothGattDescriptor outputReportRefDesc = new BluetoothGattDescriptor(
-                REPORT_REFERENCE_UUID,
-                BluetoothGattDescriptor.PERMISSION_READ);
-        outputReportRefDesc.setValue(new byte[] { KEYBOARD_REPORT_ID, REPORT_TYPE_OUTPUT });
-        outputReportChar.addDescriptor(outputReportRefDesc);
+        // We're not using Report Reference descriptors since we don't use report IDs in our standard descriptor
         
         // Add all characteristics to the service
         service.addCharacteristic(hidInfoChar);
@@ -183,81 +174,39 @@ public class HidKeyboardService {
      * @return The report map byte array
      */
     public byte[] getReportMap() {
-        // HID report descriptor for a standard keyboard
+        // More standard HID report descriptor for a keyboard
         return new byte[] {
-            // Usage Page (Generic Desktop)
-            (byte)0x05, (byte)0x01,
-            // Usage (Keyboard)
-            (byte)0x09, (byte)0x06,
-            // Collection (Application)
-            (byte)0xA1, (byte)0x01,
+            (byte) 0x05, 0x01,  // Usage Page (Generic Desktop)
+            (byte) 0x09, 0x06,  // Usage (Keyboard)
+            (byte) 0xA1, 0x01,  // Collection (Application)
             
-            // Report ID (1)
-            (byte)0x85, (byte)0x01,
+            // Report ID is removed in this more standard format
             
-            // Usage Page (Key Codes)
-            (byte)0x05, (byte)0x07,
-            // Usage Minimum (Keyboard Left Control)
-            (byte)0x19, (byte)0xE0,
-            // Usage Maximum (Keyboard Right GUI)
-            (byte)0x29, (byte)0xE7,
-            // Logical Minimum (0)
-            (byte)0x15, (byte)0x00,
-            // Logical Maximum (1)
-            (byte)0x25, (byte)0x01,
-            // Report Size (1)
-            (byte)0x75, (byte)0x01,
-            // Report Count (8)
-            (byte)0x95, (byte)0x08,
-            // Input (Data, Variable, Absolute): Modifier byte
-            (byte)0x81, (byte)0x02,
+            (byte) 0x05, 0x07,  //   Usage Page (Key Codes)
+            (byte) 0x19, (byte) 0xE0, // Usage Min (224)
+            (byte) 0x29, (byte) 0xE7, // Usage Max (231)
+            (byte) 0x15, 0x00,  // Logical Min (0)
+            (byte) 0x25, 0x01,  // Logical Max (1)
+            (byte) 0x75, 0x01,  // Report Size (1)
+            (byte) 0x95, 0x08,  // Report Count (8)
+            (byte) 0x81, 0x02,  // Input (Data, Var, Abs) ; Modifier byte
             
-            // Report Count (1)
-            (byte)0x95, (byte)0x01,
-            // Report Size (8)
-            (byte)0x75, (byte)0x08,
-            // Input (Constant): Reserved byte
-            (byte)0x81, (byte)0x01,
+            (byte) 0x95, 0x01,  // Report Count (1)
+            (byte) 0x75, 0x08,  // Report Size (8)
+            (byte) 0x81, 0x01,  // Input (Const) ; Reserved byte
             
-            // Report Count (5)
-            (byte)0x95, (byte)0x05,
-            // Report Size (1)
-            (byte)0x75, (byte)0x01,
-            // Usage Page (LEDs)
-            (byte)0x05, (byte)0x08,
-            // Usage Minimum (Num Lock)
-            (byte)0x19, (byte)0x01,
-            // Usage Maximum (Kana)
-            (byte)0x29, (byte)0x05,
-            // Output (Data, Variable, Absolute): LED report
-            (byte)0x91, (byte)0x02,
+            // LED output section is removed in this more standard format
             
-            // Report Count (1)
-            (byte)0x95, (byte)0x01,
-            // Report Size (3)
-            (byte)0x75, (byte)0x03,
-            // Output (Constant): LED report padding
-            (byte)0x91, (byte)0x01,
+            (byte) 0x95, 0x06,  // Report Count (6)
+            (byte) 0x75, 0x08,  // Report Size (8)
+            (byte) 0x15, 0x00,  // Logical Min (0)
+            (byte) 0x25, 0x65,  // Logical Max (101) - Standard keys only, not 255
+            (byte) 0x05, 0x07,  // Usage Page (Key codes)
+            (byte) 0x19, 0x00,  // Usage Min (0)
+            (byte) 0x29, 0x65,  // Usage Max (101) - Standard keys only, not 255
+            (byte) 0x81, 0x00,  // Input (Data, Array)
             
-            // Report Count (6)
-            (byte)0x95, (byte)0x06,
-            // Report Size (8)
-            (byte)0x75, (byte)0x08,
-            // Logical Minimum (0)
-            (byte)0x15, (byte)0x00,
-            // Logical Maximum (255)
-            (byte)0x25, (byte)0xFF,
-            // Usage Page (Key Codes)
-            (byte)0x05, (byte)0x07,
-            // Usage Minimum (0)
-            (byte)0x19, (byte)0x00,
-            // Usage Maximum (255)
-            (byte)0x29, (byte)0xFF,
-            // Input (Data, Array): Key array (6 keys)
-            (byte)0x81, (byte)0x00,
-            
-            // End Collection
-            (byte)0xC0
+            (byte) 0xC0         // End Collection
         };
     }
     
@@ -275,10 +224,9 @@ public class HidKeyboardService {
         
         // Reset report state
         Arrays.fill(keyboardState, (byte)0);
-        keyboardState[0] = KEYBOARD_REPORT_ID;
         
-        // Set the key in the first key slot
-        keyboardState[2] = (byte)(keyCode & 0xFF);
+        // Set the key in the first key slot (index 1 when no report ID)
+        keyboardState[1] = (byte)(keyCode & 0xFF);
         
         // Send the report
         return sendReport(keyboardState);
@@ -299,11 +247,10 @@ public class HidKeyboardService {
         
         // Reset report state
         Arrays.fill(keyboardState, (byte)0);
-        keyboardState[0] = KEYBOARD_REPORT_ID;
         
-        // Set modifiers and key
-        keyboardState[1] = modifiers;
-        keyboardState[2] = (byte)(keyCode & 0xFF);
+        // Set modifiers and key (index 0 for modifiers when no report ID)
+        keyboardState[0] = modifiers;
+        keyboardState[1] = (byte)(keyCode & 0xFF);
         
         // Send the report
         return sendReport(keyboardState);
@@ -327,12 +274,11 @@ public class HidKeyboardService {
         
         // Reset report state
         Arrays.fill(keyboardState, (byte)0);
-        keyboardState[0] = KEYBOARD_REPORT_ID;
         
-        // Add keys (up to 6)
+        // Add keys (up to 6) starting at index 1 (after modifier byte)
         int numKeys = Math.min(keyCodes.length, MAX_KEYS);
         for (int i = 0; i < numKeys; i++) {
-            keyboardState[i + 2] = (byte)(keyCodes[i] & 0xFF);
+            keyboardState[i + 1] = (byte)(keyCodes[i] & 0xFF);
         }
         
         // Send the report
@@ -354,16 +300,15 @@ public class HidKeyboardService {
         
         // Reset report state
         Arrays.fill(keyboardState, (byte)0);
-        keyboardState[0] = KEYBOARD_REPORT_ID;
         
-        // Set modifiers
-        keyboardState[1] = modifiers;
+        // Set modifiers at index 0
+        keyboardState[0] = modifiers;
         
         if (keyCodes != null && keyCodes.length > 0) {
-            // Add keys (up to 6)
+            // Add keys (up to 6) starting at index 1
             int numKeys = Math.min(keyCodes.length, MAX_KEYS);
             for (int i = 0; i < numKeys; i++) {
-                keyboardState[i + 2] = (byte)(keyCodes[i] & 0xFF);
+                keyboardState[i + 1] = (byte)(keyCodes[i] & 0xFF);
             }
         }
         
@@ -384,7 +329,6 @@ public class HidKeyboardService {
         
         // Reset report state (all zeros means no keys pressed)
         Arrays.fill(keyboardState, (byte)0);
-        keyboardState[0] = KEYBOARD_REPORT_ID;
         
         // Send the report
         return sendReport(keyboardState);
@@ -434,20 +378,18 @@ public class HidKeyboardService {
      */
     public boolean handleCharacteristicWrite(UUID charUuid, byte[] value) {
         // Handle output report (LED status from host)
-        if (charUuid.equals(HID_REPORT_UUID) && value.length > 0 && value[0] == KEYBOARD_REPORT_ID) {
+        if (charUuid.equals(HID_REPORT_UUID) && value.length > 0) {
             // Output report contains LED state (num lock, caps lock, etc.)
-            // In a real implementation, we might update UI based on this
-            if (value.length > 1) {
-                byte ledState = value[1];
-                Log.d(TAG, "Received LED state: " + ledState);
-                
-                // Process LED state if needed
-                // bit 0: Num Lock
-                // bit 1: Caps Lock
-                // bit 2: Scroll Lock
-                // bit 3: Compose
-                // bit 4: Kana
-            }
+            // In standard format without Report ID, it's directly in first byte
+            byte ledState = value[0];
+            Log.d(TAG, "Received LED state: " + ledState);
+            
+            // Process LED state if needed
+            // bit 0: Num Lock
+            // bit 1: Caps Lock
+            // bit 2: Scroll Lock
+            // bit 3: Compose
+            // bit 4: Kana
             return true;
         }
         
@@ -462,13 +404,8 @@ public class HidKeyboardService {
      * @return The descriptor value, or null if not handled
      */
     public byte[] handleDescriptorRead(UUID descUuid, UUID charUuid) {
-        if (descUuid.equals(REPORT_REFERENCE_UUID)) {
-            // Report Reference descriptor - return the report ID and type
-            if (charUuid.equals(HID_REPORT_UUID)) {
-                return new byte[] { KEYBOARD_REPORT_ID, REPORT_TYPE_INPUT };
-            }
-        }
-        
+        // We're not using Report Reference descriptors anymore
+        // All descriptors are handled by BleGattServerManager
         return null;
     }
     
