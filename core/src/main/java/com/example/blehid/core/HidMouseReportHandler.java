@@ -2,7 +2,6 @@ package com.example.blehid.core;
 
 import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothGattCharacteristic;
-import android.bluetooth.BluetoothGattDescriptor;
 import android.util.Log;
 import java.util.UUID;
 
@@ -13,18 +12,16 @@ import static com.example.blehid.core.HidMouseConstants.*;
  * This class encapsulates the logic for generating and sending mouse reports
  * in both report protocol and boot protocol modes.
  */
-public class HidMouseReportHandler {
+public class HidMouseReportHandler extends AbstractReportHandler {
     private static final String TAG = "HidMouseReportHandler";
     
-    // Mouse report: [buttons, x, y, wheel] - 4-byte format without report ID
-    private final byte[] mouseReport = new byte[4];
+    // Mouse report: [reportId, buttons, x, y, wheel] - 5-byte format with report ID
+    private final byte[] mouseReport = new byte[5];
     
-    private final BleGattServerManager gattServerManager;
     private final BluetoothGattCharacteristic reportCharacteristic;
     private final BluetoothGattCharacteristic bootMouseInputReportCharacteristic;
     
     private byte currentProtocolMode = PROTOCOL_MODE_REPORT;
-    private boolean notificationsEnabled = false;
     
     /**
      * Creates a new HID Mouse Report Handler.
@@ -37,9 +34,12 @@ public class HidMouseReportHandler {
             BleGattServerManager gattServerManager,
             BluetoothGattCharacteristic reportCharacteristic,
             BluetoothGattCharacteristic bootMouseInputReportChar) {
-        this.gattServerManager = gattServerManager;
+        super(gattServerManager);
         this.reportCharacteristic = reportCharacteristic;
         this.bootMouseInputReportCharacteristic = bootMouseInputReportChar;
+        
+        // Initialize report with mouse report ID
+        mouseReport[0] = REPORT_ID_MOUSE;
     }
     
     /**
@@ -73,16 +73,17 @@ public class HidMouseReportHandler {
         wheel = Math.max(-127, Math.min(127, wheel));
         
         // Update report data
-        mouseReport[0] = (byte) (buttons & 0x07);  // Buttons (3 bits)
-        mouseReport[1] = (byte) x;                 // X movement
-        mouseReport[2] = (byte) y;                 // Y movement
-        mouseReport[3] = (byte) wheel;             // Wheel movement
+        mouseReport[0] = REPORT_ID_MOUSE;          // Report ID (1)
+        mouseReport[1] = (byte) (buttons & 0x07);  // Buttons (3 bits)
+        mouseReport[2] = (byte) x;                 // X movement
+        mouseReport[3] = (byte) y;                 // Y movement
+        mouseReport[4] = (byte) wheel;             // Wheel movement
         
         // Log more detailed report information
-        Log.d(TAG, String.format("MOUSE REPORT DATA - X: %d (%02X), Y: %d (%02X), buttons=%d, wheel=%d",
-                x, (byte)x & 0xFF, y, (byte)y & 0xFF, buttons, wheel));
-        Log.d(TAG, String.format("MOUSE REPORT BYTES - [%02X, %02X, %02X, %02X]",
-                mouseReport[0], mouseReport[1], mouseReport[2], mouseReport[3]));
+        Log.d(TAG, String.format("MOUSE REPORT DATA - ID: %d, X: %d (%02X), Y: %d (%02X), buttons=%d, wheel=%d",
+                REPORT_ID_MOUSE, x, (byte)x & 0xFF, y, (byte)y & 0xFF, buttons, wheel));
+        Log.d(TAG, String.format("MOUSE REPORT BYTES - [%02X, %02X, %02X, %02X, %02X]",
+                mouseReport[0], mouseReport[1], mouseReport[2], mouseReport[3], mouseReport[4]));
         
         boolean success = false;
         
@@ -112,23 +113,15 @@ public class HidMouseReportHandler {
     }
     
     /**
-     * Helper method to send notification with retry.
+     * Determines if this handler should handle the given characteristic.
+     * 
+     * @param characteristicUuid The characteristic UUID to check
+     * @return true if this handler should handle the characteristic
      */
-    private boolean sendNotificationWithRetry(UUID charUuid, byte[] value) {
-        boolean success = false;
-        for (int retry = 0; retry < 2 && !success; retry++) {
-            success = gattServerManager.sendNotification(charUuid, value);
-            
-            if (!success && retry == 0) {
-                Log.w(TAG, "First notification attempt failed, retrying after delay");
-                try {
-                    Thread.sleep(10); // Small delay before retry
-                } catch (InterruptedException e) {
-                    // Ignore
-                }
-            }
-        }
-        return success;
+    @Override
+    protected boolean shouldHandleCharacteristic(UUID characteristicUuid) {
+        return (characteristicUuid.equals(HID_REPORT_UUID) && currentProtocolMode == PROTOCOL_MODE_REPORT) ||
+               (characteristicUuid.equals(HID_BOOT_MOUSE_INPUT_REPORT_UUID) && currentProtocolMode == PROTOCOL_MODE_BOOT);
     }
     
     /**
@@ -202,7 +195,8 @@ public class HidMouseReportHandler {
     /**
      * Enables notifications for the appropriate characteristic based on the current protocol mode.
      */
-    private void enableNotifications() {
+    @Override
+    protected void enableNotifications() {
         if (currentProtocolMode == PROTOCOL_MODE_REPORT) {
             enableReportModeNotifications();
         } else {
@@ -221,10 +215,11 @@ public class HidMouseReportHandler {
             Log.d(TAG, "Set report characteristic descriptor value to enable notifications");
             
             // Send a zero report to initialize the connection
-            mouseReport[0] = 0; // No buttons
-            mouseReport[1] = 0; // No X movement
-            mouseReport[2] = 0; // No Y movement
-            mouseReport[3] = 0; // No wheel
+            mouseReport[0] = REPORT_ID_MOUSE; // Report ID
+            mouseReport[1] = 0;              // No buttons
+            mouseReport[2] = 0;              // No X movement
+            mouseReport[3] = 0;              // No Y movement
+            mouseReport[4] = 0;              // No wheel
             reportCharacteristic.setValue(mouseReport);
             
             // Send two initial reports - one is sometimes not enough
@@ -250,7 +245,7 @@ public class HidMouseReportHandler {
             descriptor.setValue(BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE);
             Log.d(TAG, "Set boot mouse characteristic descriptor value to enable notifications");
             
-            // Send a zero boot report to initialize the connection
+            // Send a zero boot report to initialize the connection - boot protocol doesn't use report ID
             byte[] bootReport = new byte[3];
             bootReport[0] = 0; // No buttons
             bootReport[1] = 0; // No X movement

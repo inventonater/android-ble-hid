@@ -19,9 +19,9 @@ public class BleHidManager {
     private final BluetoothAdapter bluetoothAdapter;
     private final BleAdvertiser advertiser;
     private final BleGattServerManager gattServerManager;
-    private final BlePairingManager pairingManager;
-    // Only using mouse service - removing keyboard for simplicity
-    private final HidMouseService hidMouseService;
+    private final IPairingManager pairingManager;
+    // Combined service for mouse, keyboard, and consumer controls
+    private final HidMouseService hidCombinedService;
 
     private boolean isInitialized = false;
     private BluetoothDevice connectedDevice = null;
@@ -46,9 +46,13 @@ public class BleHidManager {
         // Initialize components
         advertiser = new BleAdvertiser(this);
         gattServerManager = new BleGattServerManager(this);
-        pairingManager = new BlePairingManager(this);
-        // Only initialize mouse service
-        hidMouseService = new HidMouseService(this);
+        // Use consolidated pairing manager 
+        pairingManager = new PairingManager(this);
+        
+        // Configure retry settings
+        pairingManager.setMaxPairingRetries(3);
+        // Initialize the combined service
+        hidCombinedService = new HidMouseService(this);
     }
 
     /**
@@ -84,16 +88,16 @@ public class BleHidManager {
             return false;
         }
         
-        // Initialize only the mouse service
-        boolean hidInitialized = hidMouseService.initialize();
+        // Initialize the combined service
+        boolean hidInitialized = hidCombinedService.initialize();
         if (!hidInitialized) {
-            Log.e(TAG, "Failed to initialize HID mouse service");
+            Log.e(TAG, "Failed to initialize HID combined service");
             gattServerManager.close();
             return false;
         }
         
         isInitialized = true;
-        Log.i(TAG, "BLE HID Manager initialized successfully with mouse service");
+        Log.i(TAG, "BLE HID Manager initialized successfully with combined HID service");
         return true;
     }
 
@@ -119,8 +123,6 @@ public class BleHidManager {
             advertiser.stopAdvertising();
         }
     }
-
-    // Removed all keyboard-related methods to simplify the codebase
 
     /**
      * Checks if the device supports BLE peripheral mode.
@@ -173,8 +175,8 @@ public class BleHidManager {
         return gattServerManager;
     }
 
-    public HidMouseService getHidMouseService() {
-        return hidMouseService;
+    public HidMouseService getHidCombinedService() {
+        return hidCombinedService;
     }
     
     /**
@@ -194,7 +196,7 @@ public class BleHidManager {
             return false;
         }
         
-        return hidMouseService.movePointer(x, y);
+        return hidCombinedService.movePointer(x, y);
     }
     
     /**
@@ -209,7 +211,7 @@ public class BleHidManager {
             return false;
         }
         
-        return hidMouseService.scroll(amount);
+        return hidCombinedService.scroll(amount);
     }
     
     /**
@@ -224,7 +226,7 @@ public class BleHidManager {
             return false;
         }
         
-        return hidMouseService.click(button);
+        return hidCombinedService.click(button);
     }
     
     /**
@@ -239,7 +241,7 @@ public class BleHidManager {
             return false;
         }
         
-        return hidMouseService.pressButton(button);
+        return hidCombinedService.pressButton(button);
     }
     
     /**
@@ -253,7 +255,186 @@ public class BleHidManager {
             return false;
         }
         
-        return hidMouseService.releaseButtons();
+        return hidCombinedService.releaseButtons();
+    }
+    
+    // --------------- Keyboard API ---------------
+    
+    /**
+     * Sends a keyboard key press.
+     * 
+     * @param keyCode Key code to send (see HidKeyboardConstants)
+     * @return true if the report was sent successfully, false otherwise
+     */
+    public boolean sendKey(byte keyCode) {
+        if (!isInitialized || connectedDevice == null) {
+            Log.e(TAG, "Not connected or initialized");
+            return false;
+        }
+        
+        return hidCombinedService.sendKey(keyCode);
+    }
+    
+    /**
+     * Sends a keyboard key press with modifiers.
+     * 
+     * @param keyCode Key code to send
+     * @param modifiers Modifier keys (ctrl, shift, alt, etc.)
+     * @return true if the report was sent successfully, false otherwise
+     */
+    public boolean sendKeyWithModifiers(byte keyCode, byte modifiers) {
+        if (!isInitialized || connectedDevice == null) {
+            Log.e(TAG, "Not connected or initialized");
+            return false;
+        }
+        
+        return hidCombinedService.sendKeyWithModifiers(keyCode, modifiers);
+    }
+    
+    /**
+     * Sends multiple keyboard key presses.
+     * 
+     * @param keyCodes Array of key codes to send (up to 6)
+     * @return true if the report was sent successfully, false otherwise
+     */
+    public boolean sendKeys(byte[] keyCodes) {
+        if (!isInitialized || connectedDevice == null) {
+            Log.e(TAG, "Not connected or initialized");
+            return false;
+        }
+        
+        return hidCombinedService.sendKeys(keyCodes);
+    }
+    
+    /**
+     * Sends multiple keyboard key presses with modifiers.
+     * 
+     * @param keyCodes Array of key codes to send (up to 6)
+     * @param modifiers Modifier keys (ctrl, shift, alt, etc.)
+     * @return true if the report was sent successfully, false otherwise
+     */
+    public boolean sendKeysWithModifiers(byte[] keyCodes, byte modifiers) {
+        if (!isInitialized || connectedDevice == null) {
+            Log.e(TAG, "Not connected or initialized");
+            return false;
+        }
+        
+        return hidCombinedService.sendKeysWithModifiers(keyCodes, modifiers);
+    }
+    
+    /**
+     * Releases all keyboard keys.
+     * 
+     * @return true if the report was sent successfully, false otherwise
+     */
+    public boolean releaseAllKeys() {
+        if (!isInitialized || connectedDevice == null) {
+            Log.e(TAG, "Not connected or initialized");
+            return false;
+        }
+        
+        return hidCombinedService.releaseAllKeys();
+    }
+    
+    // --------------- Consumer Control (Media Keys) API ---------------
+    
+    /**
+     * Sends a media play/pause control.
+     * 
+     * @return true if the report was sent successfully, false otherwise
+     */
+    public boolean sendPlayPause() {
+        if (!isInitialized || connectedDevice == null) {
+            Log.e(TAG, "Not connected or initialized");
+            return false;
+        }
+        
+        return hidCombinedService.sendPlayPause();
+    }
+    
+    /**
+     * Sends a media next track control.
+     * 
+     * @return true if the report was sent successfully, false otherwise
+     */
+    public boolean sendNextTrack() {
+        if (!isInitialized || connectedDevice == null) {
+            Log.e(TAG, "Not connected or initialized");
+            return false;
+        }
+        
+        return hidCombinedService.sendNextTrack();
+    }
+    
+    /**
+     * Sends a media previous track control.
+     * 
+     * @return true if the report was sent successfully, false otherwise
+     */
+    public boolean sendPrevTrack() {
+        if (!isInitialized || connectedDevice == null) {
+            Log.e(TAG, "Not connected or initialized");
+            return false;
+        }
+        
+        return hidCombinedService.sendPrevTrack();
+    }
+    
+    /**
+     * Sends a media volume up control.
+     * 
+     * @return true if the report was sent successfully, false otherwise
+     */
+    public boolean sendVolumeUp() {
+        if (!isInitialized || connectedDevice == null) {
+            Log.e(TAG, "Not connected or initialized");
+            return false;
+        }
+        
+        return hidCombinedService.sendVolumeUp();
+    }
+    
+    /**
+     * Sends a media volume down control.
+     * 
+     * @return true if the report was sent successfully, false otherwise
+     */
+    public boolean sendVolumeDown() {
+        if (!isInitialized || connectedDevice == null) {
+            Log.e(TAG, "Not connected or initialized");
+            return false;
+        }
+        
+        return hidCombinedService.sendVolumeDown();
+    }
+    
+    /**
+     * Sends a media mute control.
+     * 
+     * @return true if the report was sent successfully, false otherwise
+     */
+    public boolean sendMute() {
+        if (!isInitialized || connectedDevice == null) {
+            Log.e(TAG, "Not connected or initialized");
+            return false;
+        }
+        
+        return hidCombinedService.sendMute();
+    }
+    
+    /**
+     * Sends a generic consumer control.
+     * 
+     * @param controlBit The consumer control bit (see HidConsumerConstants)
+     * @return true if the report was sent successfully, false otherwise
+     */
+    public boolean sendConsumerControl(byte controlBit) {
+        if (!isInitialized || connectedDevice == null) {
+            Log.e(TAG, "Not connected or initialized");
+            return false;
+        }
+        
+        return hidCombinedService.sendConsumerControl(controlBit);
     }
 
     // Connection management
@@ -321,11 +502,24 @@ public class BleHidManager {
     }
     
     /**
-     * Returns the BlePairingManager instance.
+     * Returns the pairing manager instance.
      * 
-     * @return The BlePairingManager instance
+     * @return The IPairingManager instance
      */
-    public BlePairingManager getBlePairingManager() {
+    public IPairingManager getPairingManager() {
+        return pairingManager;
+    }
+    
+    /**
+     * Returns the BlePairingManager interface for backward compatibility.
+     * This method is deprecated and will be removed in future versions.
+     * Use getPairingManager() instead.
+     * 
+     * @return The IPairingManager instance 
+     * @deprecated Use getPairingManager() instead
+     */
+    @Deprecated
+    public IPairingManager getBlePairingManager() {
         return pairingManager;
     }
 }

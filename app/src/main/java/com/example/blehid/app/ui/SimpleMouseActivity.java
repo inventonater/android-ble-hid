@@ -14,16 +14,25 @@ import android.text.format.DateFormat;
 import android.util.Log;
 import android.view.MotionEvent;
 import android.view.View;
+import android.view.ViewParent;
 import android.widget.Button;
+import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.Toast;
+
+import androidx.core.widget.NestedScrollView;
 
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.example.blehid.app.R;
 import com.example.blehid.core.BleHidManager;
 import com.example.blehid.core.BlePairingManager;
+import com.example.blehid.core.EnhancedBlePairingManager;
+import com.example.blehid.core.PairingManagerAdapter;
 import com.example.blehid.core.HidMouseService;
+import com.example.blehid.core.HidKeyboardService;
+import com.example.blehid.core.HidKeyboardConstants;
+import com.example.blehid.core.HidConsumerConstants;
 
 import java.util.Date;
 
@@ -53,6 +62,28 @@ public class SimpleMouseActivity extends AppCompatActivity {
     private Button scrollUpButton;
     private Button scrollDownButton;
     
+    // Keyboard controls
+    private Button keyCtrl;
+    private Button keyShift;
+    private Button keyAlt;
+    private Button keyMeta;
+    private Button keyA;
+    private Button keyB;
+    private Button keyC;
+    private Button keySpace;
+    private Button keyEsc;
+    private Button keyEnter;
+    private Button keyDelete;
+    private Button keyTab;
+    
+    // Media controls
+    private Button mediaPlayPause;
+    private Button mediaPrev;
+    private Button mediaNext;
+    private Button mediaVolDown;
+    private Button mediaMute;
+    private Button mediaVolUp;
+    
     // Touch processing
     private float lastTouchX;
     private float lastTouchY;
@@ -63,6 +94,26 @@ public class SimpleMouseActivity extends AppCompatActivity {
     
     // StringBuilder for log entries
     private StringBuilder logEntries = new StringBuilder();
+    
+    /**
+     * Adds a timestamped entry to the log.
+     */
+    private void addLogEntry(String entry) {
+        String timestamp = DateFormat.format("HH:mm:ss", new Date()).toString();
+        String logEntry = timestamp + " - " + entry + "\n";
+        
+        logEntries.insert(0, logEntry); // Add to the beginning
+        
+        // Trim if too long
+        if (logEntries.length() > 2000) {
+            logEntries.setLength(2000);
+        }
+        
+        logText.setText(logEntries.toString());
+    }
+    
+    // Action button for pairing operations
+    private Button pairingActionButton;
     
     // Bluetooth state receiver
     private final BroadcastReceiver bluetoothReceiver = new BroadcastReceiver() {
@@ -165,45 +216,75 @@ public class SimpleMouseActivity extends AppCompatActivity {
         scrollUpButton = findViewById(R.id.scrollUpButton);
         scrollDownButton = findViewById(R.id.scrollDownButton);
         
+        // Touch handling will be set up in setupMouseControls()
+        
+        // Initialize keyboard controls
+        keyCtrl = findViewById(R.id.keyCtrl);
+        keyShift = findViewById(R.id.keyShift);
+        keyAlt = findViewById(R.id.keyAlt);
+        keyMeta = findViewById(R.id.keyMeta);
+        keyA = findViewById(R.id.keyA);
+        keyB = findViewById(R.id.keyB);
+        keyC = findViewById(R.id.keyC);
+        keySpace = findViewById(R.id.keySpace);
+        keyEsc = findViewById(R.id.keyEsc);
+        keyEnter = findViewById(R.id.keyEnter);
+        keyDelete = findViewById(R.id.keyDelete);
+        keyTab = findViewById(R.id.keyTab);
+        
+        // Initialize media controls
+        mediaPlayPause = findViewById(R.id.mediaPlayPause);
+        mediaPrev = findViewById(R.id.mediaPrev);
+        mediaNext = findViewById(R.id.mediaNext);
+        mediaVolDown = findViewById(R.id.mediaVolDown);
+        mediaMute = findViewById(R.id.mediaMute);
+        mediaVolUp = findViewById(R.id.mediaVolUp);
+        
         // Initialize BLE HID manager
         bleHidManager = new BleHidManager(this);
         
-    // Set up advertising button
-    advertisingButton.setOnClickListener(new View.OnClickListener() {
-        @Override
-        public void onClick(View v) {
-            toggleAdvertising();
-            
-            // Update diagnostic info after advertising toggle
-            updateDiagnosticInfo();
-        }
-    });
-    
-    // Set up timer to refresh diagnostic info every 2 seconds
-    new Handler().postDelayed(new Runnable() {
-        @Override
-        public void run() {
-            updateDiagnosticInfo();
-            new Handler().postDelayed(this, 2000);
-        }
-    }, 2000);
+        // Set up advertising button
+        advertisingButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                toggleAdvertising();
+                
+                // Update diagnostic info after advertising toggle
+                updateDiagnosticInfo();
+            }
+        });
         
-        // Set up pairing callback
-        bleHidManager.getBlePairingManager().setPairingCallback(new BlePairingManager.PairingCallback() {
+        // Set up timer to refresh diagnostic info every 2 seconds
+        new Handler().postDelayed(new Runnable() {
+            @Override
+            public void run() {
+                updateDiagnosticInfo();
+                new Handler().postDelayed(this, 2000);
+            }
+        }, 2000);
+            
+        // Initialize new pairing action button
+        pairingActionButton = findViewById(R.id.pairingActionButton);
+        
+        // Set up pairing callback using standard interface
+        bleHidManager.getPairingManager().setPairingCallback(new BlePairingManager.PairingCallback() {
             @Override
             public void onPairingRequested(BluetoothDevice device, int variant) {
                 runOnUiThread(new Runnable() {
                     @Override
                     public void run() {
                         String message = "Pairing requested by " + device.getAddress() + 
-                                         ", variant: " + variant;
+                                        ", variant: " + variant;
                         
                         Toast.makeText(SimpleMouseActivity.this, message, Toast.LENGTH_SHORT).show();
                         addLogEntry("PAIRING REQUESTED: " + message);
                         updatePairingState("REQUESTED");
                         
                         // Auto-accept pairing requests for testing
-                        bleHidManager.getBlePairingManager().setPairingConfirmation(device, true);
+                        bleHidManager.getPairingManager().setPairingConfirmation(device, true);
+                        
+                        // Update pairing action button 
+                        updatePairingActionButton();
                     }
                 });
             }
@@ -221,19 +302,211 @@ public class SimpleMouseActivity extends AppCompatActivity {
                         updatePairingState(result);
                         updateConnectionStatus();
                         updateDeviceInfo();
+                        
+                        // Update pairing action button
+                        updatePairingActionButton();
                     }
                 });
             }
         });
         
-        // Set up mouse controls
+        // Set up pairing action button
+        setupPairingActionButton();
+        
+        // Set up all controls
         setupMouseControls();
+        setupKeyboardControls();
+        setupMediaControls();
         
         // Initialize BLE HID functionality
         initializeBleHid();
         
         // Show device info
         updateDeviceInfo();
+    }
+    
+    /**
+     * Sets up the keyboard control elements.
+     */
+    private void setupKeyboardControls() {
+        // Modifier Keys
+        keyCtrl.setOnClickListener(v -> sendKeyboardKey(HidKeyboardConstants.MODIFIER_LEFT_CTRL, (byte)0));
+        keyShift.setOnClickListener(v -> sendKeyboardKey(HidKeyboardConstants.MODIFIER_LEFT_SHIFT, (byte)0));
+        keyAlt.setOnClickListener(v -> sendKeyboardKey(HidKeyboardConstants.MODIFIER_LEFT_ALT, (byte)0));
+        keyMeta.setOnClickListener(v -> sendKeyboardKey(HidKeyboardConstants.MODIFIER_LEFT_GUI, (byte)0));
+        
+        // Letter Keys
+        keyA.setOnClickListener(v -> sendKeyboardKey((byte)0, HidKeyboardConstants.KEY_A));
+        keyB.setOnClickListener(v -> sendKeyboardKey((byte)0, HidKeyboardConstants.KEY_B));
+        keyC.setOnClickListener(v -> sendKeyboardKey((byte)0, HidKeyboardConstants.KEY_C));
+        
+        // Function Keys
+        keySpace.setOnClickListener(v -> sendKeyboardKey((byte)0, HidKeyboardConstants.KEY_SPACE));
+        keyEsc.setOnClickListener(v -> sendKeyboardKey((byte)0, HidKeyboardConstants.KEY_ESCAPE));
+        keyEnter.setOnClickListener(v -> sendKeyboardKey((byte)0, HidKeyboardConstants.KEY_RETURN));
+        keyDelete.setOnClickListener(v -> sendKeyboardKey((byte)0, HidKeyboardConstants.KEY_DELETE));
+        keyTab.setOnClickListener(v -> sendKeyboardKey((byte)0, HidKeyboardConstants.KEY_TAB));
+    }
+    
+    /**
+     * Sets up the media control elements.
+     */
+    private void setupMediaControls() {
+        // Media Keys
+        mediaPlayPause.setOnClickListener(v -> sendMediaKey(HidConsumerConstants.CONSUMER_PLAY_PAUSE));
+        mediaPrev.setOnClickListener(v -> sendMediaKey(HidConsumerConstants.CONSUMER_PREV_TRACK));
+        mediaNext.setOnClickListener(v -> sendMediaKey(HidConsumerConstants.CONSUMER_NEXT_TRACK));
+        mediaVolDown.setOnClickListener(v -> sendMediaKey(HidConsumerConstants.CONSUMER_VOLUME_DOWN));
+        mediaMute.setOnClickListener(v -> sendMediaKey(HidConsumerConstants.CONSUMER_MUTE));
+        mediaVolUp.setOnClickListener(v -> sendMediaKey(HidConsumerConstants.CONSUMER_VOLUME_UP));
+    }
+    
+    /**
+     * Sends a keyboard key press and release.
+     * 
+     * @param modifiers The modifier keys (shift, ctrl, etc.)
+     * @param key The key code
+     */
+    private void sendKeyboardKey(byte modifiers, byte key) {
+        if (!bleHidManager.isConnected()) {
+            Toast.makeText(this, R.string.not_connected, Toast.LENGTH_SHORT).show();
+            addLogEntry("KEYBOARD KEY IGNORED: No connected device");
+            return;
+        }
+        
+        String keyName = getKeyName(modifiers, key);
+        
+        // Press the key
+        boolean pressResult = bleHidManager.sendKeyWithModifiers(key, modifiers);
+        
+        // Add a delay for the key press to register
+        try {
+            Thread.sleep(50);
+        } catch (InterruptedException e) {
+            // Ignore
+        }
+        
+        // Release the key (send empty report)
+        boolean releaseResult = bleHidManager.releaseAllKeys();
+        boolean result = pressResult && releaseResult;
+        
+        addLogEntry("KEYBOARD KEY: " + keyName + (result ? " pressed" : " FAILED"));
+    }
+    
+    /**
+     * Sends a media key press and release.
+     * 
+     * @param mediaKey The media key code
+     */
+    private void sendMediaKey(byte mediaKey) {
+        if (!bleHidManager.isConnected()) {
+            Toast.makeText(this, R.string.not_connected, Toast.LENGTH_SHORT).show();
+            addLogEntry("MEDIA KEY IGNORED: No connected device");
+            return;
+        }
+        
+        String keyName = getMediaKeyName(mediaKey);
+        
+        // Press the media key
+        boolean pressResult = bleHidManager.sendConsumerControl(mediaKey);
+        
+        // Add a delay for the key press to register
+        try {
+            Thread.sleep(50);
+        } catch (InterruptedException e) {
+            // Ignore
+        }
+        
+        // Release the key by sending a zero control code
+        boolean releaseResult = bleHidManager.sendConsumerControl((byte)0);
+        boolean result = pressResult && releaseResult;
+        
+        addLogEntry("MEDIA KEY: " + keyName + (result ? " pressed" : " FAILED"));
+    }
+    
+    /**
+     * Gets a human-readable name for a keyboard key.
+     */
+    private String getKeyName(byte modifiers, byte key) {
+        StringBuilder name = new StringBuilder();
+        
+        // Add modifiers
+        if ((modifiers & HidKeyboardConstants.MODIFIER_LEFT_CTRL) != 0) {
+            name.append("CTRL+");
+        }
+        if ((modifiers & HidKeyboardConstants.MODIFIER_LEFT_SHIFT) != 0) {
+            name.append("SHIFT+");
+        }
+        if ((modifiers & HidKeyboardConstants.MODIFIER_LEFT_ALT) != 0) {
+            name.append("ALT+");
+        }
+        if ((modifiers & HidKeyboardConstants.MODIFIER_LEFT_GUI) != 0) {
+            name.append("META+");
+        }
+        
+        // Add the key name
+        switch (key) {
+            case HidKeyboardConstants.KEY_A:
+                name.append("A");
+                break;
+            case HidKeyboardConstants.KEY_B:
+                name.append("B");
+                break;
+            case HidKeyboardConstants.KEY_C:
+                name.append("C");
+                break;
+            case HidKeyboardConstants.KEY_SPACE:
+                name.append("SPACE");
+                break;
+            case HidKeyboardConstants.KEY_ESCAPE:
+                name.append("ESC");
+                break;
+            case HidKeyboardConstants.KEY_RETURN:
+                name.append("ENTER");
+                break;
+            case HidKeyboardConstants.KEY_DELETE:
+                name.append("DELETE");
+                break;
+            case HidKeyboardConstants.KEY_TAB:
+                name.append("TAB");
+                break;
+            case 0:
+                // Just a modifier
+                if (name.length() > 0) {
+                    name.setLength(name.length() - 1); // Remove the trailing '+'
+                } else {
+                    name.append("NONE");
+                }
+                break;
+            default:
+                name.append("KEY_0x" + Integer.toHexString(key & 0xFF));
+        }
+        
+        return name.toString();
+    }
+    
+    /**
+     * Gets a human-readable name for a media key.
+     */
+    private String getMediaKeyName(byte mediaKey) {
+        switch (mediaKey) {
+            case HidConsumerConstants.CONSUMER_PLAY_PAUSE:
+                return "PLAY/PAUSE";
+            case HidConsumerConstants.CONSUMER_NEXT_TRACK:
+                return "NEXT";
+            case HidConsumerConstants.CONSUMER_PREV_TRACK:
+                return "PREV";
+            case HidConsumerConstants.CONSUMER_VOLUME_UP:
+                return "VOLUME UP";
+            case HidConsumerConstants.CONSUMER_VOLUME_DOWN:
+                return "VOLUME DOWN";
+            case HidConsumerConstants.CONSUMER_MUTE:
+                return "MUTE";
+            case 0:
+                return "NONE";
+            default:
+                return "MEDIA_0x" + Integer.toHexString(mediaKey & 0xFF);
+        }
     }
     
     @Override
@@ -319,13 +592,28 @@ public class SimpleMouseActivity extends AppCompatActivity {
      * Sets up the mouse control elements.
      */
     private void setupMouseControls() {
-        // Set up touchpad area
-        touchpadArea.setOnTouchListener(new View.OnTouchListener() {
-            @Override
-            public boolean onTouch(View v, MotionEvent event) {
-                return handleTouchpad(event);
+    // Set up touchpad area with enhanced scroll prevention
+    touchpadArea.setOnTouchListener(new View.OnTouchListener() {
+        @Override
+        public boolean onTouch(View v, MotionEvent event) {
+            // Always prevent ANY parent view from intercepting touch events
+            // This ensures the app doesn't scroll while using the mouse movement area
+            disableParentScrolling(v);
+            
+            // For ACTION_DOWN, ensure we capture this touch sequence
+            if (event.getAction() == MotionEvent.ACTION_DOWN) {
+                // Re-apply the disallow intercept to ensure it sticks
+                disableParentScrolling(v);
             }
-        });
+            
+            // Process the touch event for mouse movement
+            boolean handled = handleTouchpad(event);
+            
+            // Return true to indicate we've handled this touch event
+            // This is important to maintain control of the entire touch sequence
+            return true;
+        }
+    });
         
         // Set up mouse buttons
         leftButton.setOnClickListener(new View.OnClickListener() {
@@ -534,51 +822,206 @@ public class SimpleMouseActivity extends AppCompatActivity {
     }
     
     /**
-     * Updates the pairing state text.
+     * Updates the pairing state text with details from the enhanced manager.
      */
     private void updatePairingState(String state) {
-        pairingStateText.setText("Pairing State: " + state);
+        // Get more detailed pairing information if available
+        if (bleHidManager != null && bleHidManager.getPairingManager() != null) {
+            // Cast to PairingManagerAdapter to access enhanced methods
+            PairingManagerAdapter adapter = (PairingManagerAdapter)bleHidManager.getPairingManager();
+            String detailedInfo = adapter.getPairingStatusInfo();
+            pairingStateText.setText("Pairing State: " + state + "\n" + detailedInfo);
+        } else {
+            pairingStateText.setText("Pairing State: " + state);
+        }
+    }
+    
+    /**
+     * Sets up the pairing action button.
+     */
+    private void setupPairingActionButton() {
+        if (pairingActionButton != null) {
+            pairingActionButton.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    handlePairingAction();
+                }
+            });
+            
+            // Initial state
+            updatePairingActionButton();
+        }
+    }
+    
+    /**
+     * Updates the pairing action button text and action
+     * based on the current pairing state.
+     */
+    private void updatePairingActionButton() {
+        if (pairingActionButton == null || bleHidManager == null || 
+            bleHidManager.getPairingManager() == null) {
+            return;
+        }
+        
+        // Cast to PairingManagerAdapter to access enhanced methods
+        PairingManagerAdapter adapter = (PairingManagerAdapter)bleHidManager.getPairingManager();
+        EnhancedBlePairingManager.PairingState state = adapter.getPairingState();
+        
+        switch (state) {
+            case IDLE:
+                if (bleHidManager.isConnected()) {
+                    // Show remove bond button for connected device
+                    pairingActionButton.setText("Remove Bond");
+                    pairingActionButton.setEnabled(true);
+                } else {
+                    // No action when idle and not connected
+                    pairingActionButton.setText("No Pairing Action");
+                    pairingActionButton.setEnabled(false);
+                }
+                break;
+                
+            case PAIRING_REQUESTED:
+            case PAIRING_STARTED:
+            case WAITING_FOR_BOND:
+                // Show cancel button during active pairing
+                pairingActionButton.setText("Cancel Pairing");
+                pairingActionButton.setEnabled(true);
+                break;
+                
+            case BONDED:
+                // Show remove bond button
+                pairingActionButton.setText("Remove Bond");
+                pairingActionButton.setEnabled(true);
+                break;
+                
+            case PAIRING_FAILED:
+                // Show retry button
+                pairingActionButton.setText("Retry Pairing");
+                pairingActionButton.setEnabled(true);
+                break;
+                
+            case UNPAIRING:
+                // Disable button during unpairing
+                pairingActionButton.setText("Unpairing...");
+                pairingActionButton.setEnabled(false);
+                break;
+                
+            default:
+                pairingActionButton.setText("Unknown State");
+                pairingActionButton.setEnabled(false);
+                break;
+        }
+    }
+    
+    /**
+     * Handles pairing action button clicks based on current state.
+     */
+    private void handlePairingAction() {
+        if (bleHidManager == null || bleHidManager.getPairingManager() == null) {
+            return;
+        }
+        
+        // Cast to PairingManagerAdapter to access enhanced methods
+        PairingManagerAdapter adapter = (PairingManagerAdapter)bleHidManager.getPairingManager();
+        EnhancedBlePairingManager.PairingState state = adapter.getPairingState();
+        
+        switch (state) {
+            case PAIRING_REQUESTED:
+            case PAIRING_STARTED:
+            case WAITING_FOR_BOND:
+                // Cancel the pairing
+                boolean cancelled = adapter.cancelPairing();
+                if (cancelled) {
+                    addLogEntry("PAIRING: Cancelled by user");
+                    Toast.makeText(this, "Pairing cancelled", Toast.LENGTH_SHORT).show();
+                } else {
+                    addLogEntry("PAIRING: Failed to cancel");
+                }
+                break;
+                
+            case BONDED:
+            case IDLE:
+                // If connected, remove the bond
+                if (bleHidManager.isConnected()) {
+                    BluetoothDevice device = bleHidManager.getConnectedDevice();
+                    if (device != null) {
+                        boolean removed = bleHidManager.getPairingManager().removeBond(device);
+                        if (removed) {
+                            addLogEntry("PAIRING: Bond removal initiated for " + device.getAddress());
+                            Toast.makeText(this, "Removing bond...", Toast.LENGTH_SHORT).show();
+                        } else {
+                            addLogEntry("PAIRING: Failed to remove bond");
+                        }
+                    }
+                }
+                break;
+                
+            case PAIRING_FAILED:
+                // Retry pairing if we have a connected device
+                if (bleHidManager.isConnected()) {
+                    BluetoothDevice device = bleHidManager.getConnectedDevice();
+                    if (device != null) {
+                        boolean initiated = bleHidManager.getPairingManager().createBond(device);
+                        if (initiated) {
+                            addLogEntry("PAIRING: Retry initiated for " + device.getAddress());
+                            Toast.makeText(this, "Retrying pairing...", Toast.LENGTH_SHORT).show();
+                        } else {
+                            addLogEntry("PAIRING: Failed to retry");
+                        }
+                    }
+                }
+                break;
+        }
+        
+        // Update button state after action
+        updatePairingActionButton();
     }
     
     /**
      * Updates the diagnostic information display.
      */
     private void updateDiagnosticInfo() {
-        if (bleHidManager != null && bleHidManager.getAdvertiser() != null) {
-            // Get diagnostic info from the advertiser
-            String diagnosticInfo = bleHidManager.getAdvertiser().getDiagnosticInfo();
+        if (bleHidManager != null) {
+            StringBuilder diagnosticInfo = new StringBuilder();
             
-            // Add diagnostic info to the top of the log
-            addLogEntry("DIAGNOSTIC INFO:\n" + diagnosticInfo);
-            
-            // Update device capability info
-            BluetoothAdapter adapter = BluetoothAdapter.getDefaultAdapter();
-            boolean peripheralSupported = bleHidManager.getAdvertiser().getDeviceReportedPeripheralSupport();
-            
-            if (adapter != null) {
-                deviceNameText.setText("Device Name: " + adapter.getName() +
-                                  " (Peripheral Mode: " + (peripheralSupported ? "✅" : "❌") + ")");
+            // Get advertiser diagnostic info
+            if (bleHidManager.getAdvertiser() != null) {
+                diagnosticInfo.append(bleHidManager.getAdvertiser().getDiagnosticInfo());
+                diagnosticInfo.append("\n");
+                
+                // Update device capability info
+                BluetoothAdapter adapter = BluetoothAdapter.getDefaultAdapter();
+                boolean peripheralSupported = bleHidManager.getAdvertiser().getDeviceReportedPeripheralSupport();
+                
+                if (adapter != null) {
+                    deviceNameText.setText("Device Name: " + adapter.getName() +
+                                      " (Peripheral Mode: " + (peripheralSupported ? "✅" : "❌") + ")");
+                }
             }
+            
+            // Get enhanced pairing manager info
+            if (bleHidManager.getPairingManager() != null) {
+                diagnosticInfo.append("\nPAIRING STATUS:\n");
+                // Cast to PairingManagerAdapter to access enhanced methods
+                PairingManagerAdapter adapter = (PairingManagerAdapter)bleHidManager.getPairingManager();
+                diagnosticInfo.append("Current State: ")
+                             .append(adapter.getPairingState())
+                             .append("\n");
+                
+                // Get bonded devices info
+                String bondedDevicesInfo = adapter.getPairingStatusInfo();
+                diagnosticInfo.append(bondedDevicesInfo);
+            }
+            
+            // Add diagnostic info to the log
+            addLogEntry("DIAGNOSTIC INFO:\n" + diagnosticInfo.toString());
+            
+            // Refresh UI state for controls
+            updatePairingActionButton();
+            updateConnectionStatus();
         }
     }
-    
-    /**
-     * Adds a timestamped entry to the log.
-     */
-    private void addLogEntry(String entry) {
-        String timestamp = DateFormat.format("HH:mm:ss", new Date()).toString();
-        String logEntry = timestamp + " - " + entry + "\n";
-        
-        logEntries.insert(0, logEntry); // Add to the beginning
-        
-        // Trim if too long
-        if (logEntries.length() > 2000) {
-            logEntries.setLength(2000);
-        }
-        
-        logText.setText(logEntries.toString());
-    }
-    
+
     /**
      * Toggles BLE advertising on/off.
      */
@@ -636,6 +1079,34 @@ public class SimpleMouseActivity extends AppCompatActivity {
             checkHidProfileStatus(device);
         } else {
             connectionText.setText(R.string.not_connected);
+        }
+    }
+    
+    /**
+     * Helper method to disable scrolling in all parent scroll views.
+     * This prevents the app from scrolling when using the touchpad area.
+     * 
+     * @param view The view whose parents should have scrolling disabled
+     */
+    private void disableParentScrolling(View view) {
+        if (view == null) return;
+        
+        // Request the immediate parent to not intercept touch events
+        ViewParent parent = view.getParent();
+        if (parent != null) {
+            parent.requestDisallowInterceptTouchEvent(true);
+            
+            // Recursively apply to all parent scroll views
+            if (parent instanceof View) {
+                ViewParent grandParent = parent.getParent();
+                while (grandParent != null) {
+                    if (grandParent instanceof ScrollView || 
+                        grandParent instanceof NestedScrollView) {
+                        grandParent.requestDisallowInterceptTouchEvent(true);
+                    }
+                    grandParent = grandParent.getParent();
+                }
+            }
         }
     }
     

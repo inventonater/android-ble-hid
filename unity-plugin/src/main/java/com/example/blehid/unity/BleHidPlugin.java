@@ -124,7 +124,7 @@ public class BleHidPlugin {
             return false;
         }
         
-        boolean result = bleHidManager.sendKey(keyCode);
+        boolean result = bleHidManager.sendKey((byte)keyCode);
         
         if (result) {
             Log.d(TAG, "Key sent: " + keyCode);
@@ -149,7 +149,13 @@ public class BleHidPlugin {
             return false;
         }
         
-        boolean result = bleHidManager.sendKeys(keyCodes);
+        // Convert int[] to byte[]
+        byte[] byteKeyCodes = new byte[keyCodes.length];
+        for (int i = 0; i < keyCodes.length; i++) {
+            byteKeyCodes[i] = (byte)keyCodes[i];
+        }
+        
+        boolean result = bleHidManager.sendKeys(byteKeyCodes);
         
         if (result) {
             Log.d(TAG, "Keys sent: " + keyCodes.length + " keys");
@@ -173,7 +179,7 @@ public class BleHidPlugin {
             return false;
         }
         
-        boolean result = bleHidManager.releaseKeys();
+        boolean result = bleHidManager.releaseAllKeys();
         
         if (result) {
             Log.d(TAG, "Keys released");

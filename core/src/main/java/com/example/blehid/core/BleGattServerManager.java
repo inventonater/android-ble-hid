@@ -249,8 +249,8 @@ public class BleGattServerManager {
             else if (charUuid.equals(HID_REPORT_MAP_UUID)) {
                 // Get the report map from the mouse service only
                 byte[] reportMap = null;
-                if (bleHidManager.getHidMouseService() != null) {
-                    reportMap = bleHidManager.getHidMouseService().getReportMap();
+                if (bleHidManager.getHidCombinedService() != null) {
+                    reportMap = bleHidManager.getHidCombinedService().getReportMap();
                 }
                 
                 if (reportMap != null) {
@@ -277,8 +277,8 @@ public class BleGattServerManager {
             else {
                 // Try the mouse service only
                 byte[] response = null;
-                if (bleHidManager.getHidMouseService() != null) {
-                    response = bleHidManager.getHidMouseService().handleCharacteristicRead(charUuid, offset);
+                if (bleHidManager.getHidCombinedService() != null) {
+                    response = bleHidManager.getHidCombinedService().handleCharacteristicRead(charUuid, offset);
                 }
                 
                 if (response != null) {
@@ -322,7 +322,7 @@ public class BleGattServerManager {
             } 
             else {
                 // Delegate other characteristics to the mouse service handler - fixed comma issue
-                success = bleHidManager.getHidMouseService()
+                success = bleHidManager.getHidCombinedService()
                         .handleCharacteristicWrite(charUuid, value);
             }
             
@@ -350,7 +350,7 @@ public class BleGattServerManager {
                         0, value);
             } else {
                 // Get descriptor value from mouse service handler - fixed comma issue
-                byte[] response = bleHidManager.getHidMouseService()
+                byte[] response = bleHidManager.getHidCombinedService()
                         .handleDescriptorRead(descriptor.getUuid(), descriptor.getCharacteristic().getUuid());
                 
                 if (response != null) {
@@ -407,7 +407,7 @@ public class BleGattServerManager {
                 }
             } else {
                 // Delegate to mouse service handler for other descriptors - fixed comma and params
-                success = bleHidManager.getHidMouseService()
+                success = bleHidManager.getHidCombinedService()
                         .handleDescriptorWrite(descriptor.getUuid(), 
                                 descriptor.getCharacteristic().getUuid(), 
                                 value);

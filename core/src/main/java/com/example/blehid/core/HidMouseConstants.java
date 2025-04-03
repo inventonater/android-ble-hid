@@ -47,82 +47,99 @@ public class HidMouseConstants {
     public static final int BUTTON_RIGHT = 0x02;
     public static final int BUTTON_MIDDLE = 0x04;
     
-    // HID Report Map descriptor for a standard mouse
-    // 4-byte mouse report: [buttons, x, y, wheel] without report ID
+    // Report IDs
+    public static final byte REPORT_ID_MOUSE = 0x01;
+    public static final byte REPORT_ID_KEYBOARD = 0x02;
+    public static final byte REPORT_ID_CONSUMER = 0x03;
+    
+    // Combined HID Report Map descriptor for all interfaces (using Report IDs)
     public static final byte[] REPORT_MAP = new byte[] {
-        // USAGE_PAGE (Generic Desktop)
-        (byte)0x05, (byte)0x01,
-        // USAGE (Mouse)
-        (byte)0x09, (byte)0x02,
-        // COLLECTION (Application)
-        (byte)0xA1, (byte)0x01,
-        // USAGE (Pointer)
-        (byte)0x09, (byte)0x01,
-        // COLLECTION (Physical)
-        (byte)0xA1, (byte)0x00,
+        // Mouse (Report ID 1)
+        (byte)0x05, (byte)0x01,        // Usage Page (Generic Desktop)
+        (byte)0x09, (byte)0x02,        // Usage (Mouse)
+        (byte)0xA1, (byte)0x01,        // Collection (Application)
+        (byte)0x85, (byte)0x01,        // Report ID (1) - MOUSE
+        (byte)0x09, (byte)0x01,        // Usage (Pointer)
+        (byte)0xA1, (byte)0x00,        // Collection (Physical)
         
         // Buttons (3 buttons: left, right, middle)
-        // USAGE_PAGE (Button)
-        (byte)0x05, (byte)0x09,
-        // USAGE_MINIMUM (Button 1)
-        (byte)0x19, (byte)0x01,
-        // USAGE_MAXIMUM (Button 3)
-        (byte)0x29, (byte)0x03,
-        // LOGICAL_MINIMUM (0)
-        (byte)0x15, (byte)0x00,
-        // LOGICAL_MAXIMUM (1)
-        (byte)0x25, (byte)0x01,
-        // REPORT_COUNT (3)
-        (byte)0x95, (byte)0x03,
-        // REPORT_SIZE (1)
-        (byte)0x75, (byte)0x01,
-        // INPUT (Data,Var,Abs)
-        (byte)0x81, (byte)0x02,
+        (byte)0x05, (byte)0x09,        // Usage Page (Button)
+        (byte)0x19, (byte)0x01,        // Usage Minimum (Button 1)
+        (byte)0x29, (byte)0x03,        // Usage Maximum (Button 3)
+        (byte)0x15, (byte)0x00,        // Logical Minimum (0)
+        (byte)0x25, (byte)0x01,        // Logical Maximum (1)
+        (byte)0x95, (byte)0x03,        // Report Count (3)
+        (byte)0x75, (byte)0x01,        // Report Size (1)
+        (byte)0x81, (byte)0x02,        // Input (Data, Var, Abs)
         
         // Reserved padding (5 bits)
-        // REPORT_COUNT (1)
-        (byte)0x95, (byte)0x01,
-        // REPORT_SIZE (5)
-        (byte)0x75, (byte)0x05,
-        // INPUT (Const,Array,Abs) - Padding (matches the sample)
-        (byte)0x81, (byte)0x01,
+        (byte)0x95, (byte)0x01,        // Report Count (1)
+        (byte)0x75, (byte)0x05,        // Report Size (5)
+        (byte)0x81, (byte)0x01,        // Input (Const, Array, Abs) - Padding
         
-        // X and Y movement (-127 to 127 range)
-        // USAGE_PAGE (Generic Desktop)
-        (byte)0x05, (byte)0x01,
-        // USAGE (X)
-        (byte)0x09, (byte)0x30,
-        // USAGE (Y)
-        (byte)0x09, (byte)0x31,
-        // LOGICAL_MINIMUM (-127)
-        (byte)0x15, (byte)0x81,
-        // LOGICAL_MAXIMUM (127)
-        (byte)0x25, (byte)0x7F,
-        // REPORT_SIZE (8)
-        (byte)0x75, (byte)0x08,
-        // REPORT_COUNT (2)
-        (byte)0x95, (byte)0x02,
-        // INPUT (Data,Var,Rel)
-        (byte)0x81, (byte)0x06,
+        // X, Y, and wheel movement (-127 to 127 range)
+        (byte)0x05, (byte)0x01,        // Usage Page (Generic Desktop)
+        (byte)0x09, (byte)0x30,        // Usage (X)
+        (byte)0x09, (byte)0x31,        // Usage (Y)
+        (byte)0x09, (byte)0x38,        // Usage (Wheel)
+        (byte)0x15, (byte)0x81,        // Logical Minimum (-127)
+        (byte)0x25, (byte)0x7F,        // Logical Maximum (127)
+        (byte)0x75, (byte)0x08,        // Report Size (8)
+        (byte)0x95, (byte)0x03,        // Report Count (3)
+        (byte)0x81, (byte)0x06,        // Input (Data, Var, Rel)
         
-        // Vertical wheel
-        // USAGE (Wheel)
-        (byte)0x09, (byte)0x38,
-        // LOGICAL_MINIMUM (-127)
-        (byte)0x15, (byte)0x81,
-        // LOGICAL_MAXIMUM (127)
-        (byte)0x25, (byte)0x7F,
-        // REPORT_SIZE (8)
-        (byte)0x75, (byte)0x08,
-        // REPORT_COUNT (1)
-        (byte)0x95, (byte)0x01,
-        // INPUT (Data,Var,Rel)
-        (byte)0x81, (byte)0x06,
+        (byte)0xC0,                    // End Collection (Physical)
+        (byte)0xC0,                    // End Collection (Application)
         
-        // END_COLLECTION (Physical)
-        (byte)0xC0,
-        // END_COLLECTION (Application)
-        (byte)0xC0
+        // Keyboard (Report ID 2)
+        (byte)0x05, (byte)0x01,        // Usage Page (Generic Desktop)
+        (byte)0x09, (byte)0x06,        // Usage (Keyboard)
+        (byte)0xA1, (byte)0x01,        // Collection (Application)
+        (byte)0x85, (byte)0x02,        // Report ID (2) - KEYBOARD
+        
+        // Modifier keys (shift, ctrl, alt, etc)
+        (byte)0x05, (byte)0x07,        // Usage Page (Key Codes)
+        (byte)0x19, (byte)0xE0,        // Usage Minimum (224)
+        (byte)0x29, (byte)0xE7,        // Usage Maximum (231)
+        (byte)0x15, (byte)0x00,        // Logical Minimum (0)
+        (byte)0x25, (byte)0x01,        // Logical Maximum (1)
+        (byte)0x75, (byte)0x01,        // Report Size (1)
+        (byte)0x95, (byte)0x08,        // Report Count (8)
+        (byte)0x81, (byte)0x02,        // Input (Data, Var, Abs) - Modifier byte
+        
+        // Reserved byte
+        (byte)0x95, (byte)0x01,        // Report Count (1)
+        (byte)0x75, (byte)0x08,        // Report Size (8)
+        (byte)0x81, (byte)0x01,        // Input (Const) - Reserved byte
+        
+        // Key array (6 keys)
+        (byte)0x95, (byte)0x06,        // Report Count (6)
+        (byte)0x75, (byte)0x08,        // Report Size (8)
+        (byte)0x15, (byte)0x00,        // Logical Minimum (0)
+        (byte)0x25, (byte)0x65,        // Logical Maximum (101)
+        (byte)0x05, (byte)0x07,        // Usage Page (Key Codes)
+        (byte)0x19, (byte)0x00,        // Usage Minimum (0)
+        (byte)0x29, (byte)0x65,        // Usage Maximum (101)
+        (byte)0x81, (byte)0x00,        // Input (Data, Array)
+        
+        (byte)0xC0,                    // End Collection
+        
+        // Consumer Control (Report ID 3)
+        (byte)0x05, (byte)0x0C,        // Usage Page (Consumer)
+        (byte)0x09, (byte)0x01,        // Usage (Consumer Control)
+        (byte)0xA1, (byte)0x01,        // Collection (Application)
+        (byte)0x85, (byte)0x03,        // Report ID (3) - CONSUMER
+        
+        // Consumer Control data (16-bit value)
+        (byte)0x15, (byte)0x00,        // Logical Minimum (0)
+        (byte)0x26, (byte)0xFF, (byte)0x03, // Logical Maximum (1023)
+        (byte)0x19, (byte)0x00,        // Usage Minimum (0)
+        (byte)0x2A, (byte)0xFF, (byte)0x03, // Usage Maximum (1023)
+        (byte)0x75, (byte)0x10,        // Report Size (16)
+        (byte)0x95, (byte)0x01,        // Report Count (1)
+        (byte)0x81, (byte)0x00,        // Input (Data, Array)
+        
+        (byte)0xC0         // End Collection
     };
     
     /**
