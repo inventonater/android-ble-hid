@@ -146,14 +146,23 @@
             android:backgroundTint="#3F51B5"
             android:textColor="#FFFFFF" />
             
-        <Button
-            android:id="@+id/mouseTabButton"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:text="MOUSE"
-            android:backgroundTint="#9E9E9E"
-            android:textColor="#FFFFFF" />
+    <Button
+        android:id="@+id/mouseTabButton"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:text="MOUSE"
+        android:backgroundTint="#9E9E9E"
+        android:textColor="#FFFFFF" />
+        
+    <Button
+        android:id="@+id/keyboardTabButton"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:text="KEYBOARD"
+        android:backgroundTint="#9E9E9E"
+        android:textColor="#FFFFFF" />
     </LinearLayout>
     
     <!-- Container for tab content -->
@@ -340,6 +349,96 @@
                     android:text="RIGHT"
                     android:textSize="12sp" />
             </LinearLayout>
+        </LinearLayout>
+        
+        <!-- Keyboard Panel -->
+        <LinearLayout
+            android:id="@+id/keyboardPanel"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:orientation="vertical"
+            android:visibility="gone">
+            
+            <!-- Keyboard Layout -->
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Keyboard"
+                android:textStyle="bold"
+                android:textAlignment="center"
+                android:layout_marginTop="16dp"
+                android:layout_marginBottom="16dp" />
+                
+            <!-- Text Input Field -->
+            <EditText
+                android:id="@+id/textInputField"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="Type here, then send"
+                android:padding="12dp"
+                android:background="#EEEEEE"
+                android:layout_marginBottom="12dp" />
+                
+            <Button
+                android:id="@+id/sendTextButton"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="SEND TEXT"
+                android:layout_marginBottom="16dp" />
+            
+            <!-- Letter Keys -->
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Common Keys"
+                android:textStyle="bold"
+                android:textAlignment="center"
+                android:layout_marginBottom="8dp" />
+                
+            <GridLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:columnCount="7"
+                android:rowCount="4"
+                android:alignmentMode="alignMargins"
+                android:layout_marginBottom="12dp">
+                
+                <!-- Row 1: 1-7 -->
+                <Button android:id="@+id/key_1" android:text="1" style="@style/KeyboardButton" />
+                <Button android:id="@+id/key_2" android:text="2" style="@style/KeyboardButton" />
+                <Button android:id="@+id/key_3" android:text="3" style="@style/KeyboardButton" />
+                <Button android:id="@+id/key_4" android:text="4" style="@style/KeyboardButton" />
+                <Button android:id="@+id/key_5" android:text="5" style="@style/KeyboardButton" />
+                <Button android:id="@+id/key_6" android:text="6" style="@style/KeyboardButton" />
+                <Button android:id="@+id/key_7" android:text="7" style="@style/KeyboardButton" />
+                
+                <!-- Row 2: 8-0, common symbols -->
+                <Button android:id="@+id/key_8" android:text="8" style="@style/KeyboardButton" />
+                <Button android:id="@+id/key_9" android:text="9" style="@style/KeyboardButton" />
+                <Button android:id="@+id/key_0" android:text="0" style="@style/KeyboardButton" />
+                <Button android:id="@+id/key_dash" android:text="-" style="@style/KeyboardButton" />
+                <Button android:id="@+id/key_equal" android:text="=" style="@style/KeyboardButton" />
+                <Button android:id="@+id/key_backspace" android:text="⌫" style="@style/KeyboardButton" />
+                <Button android:id="@+id/key_tab" android:text="Tab" style="@style/KeyboardButton" />
+                
+                <!-- Row 3: Function keys and special keys -->
+                <Button android:id="@+id/key_esc" android:text="Esc" style="@style/KeyboardButton" />
+                <Button android:id="@+id/key_space" android:text="Space" style="@style/KeyboardButton" android:layout_columnSpan="2" />
+                <Button android:id="@+id/key_enter" android:text="Enter" style="@style/KeyboardButton" />
+                <Button android:id="@+id/key_up" android:text="↑" style="@style/KeyboardButton" />
+                <Button android:id="@+id/key_down" android:text="↓" style="@style/KeyboardButton" />
+                <Button android:id="@+id/key_left" android:text="←" style="@style/KeyboardButton" />
+                <Button android:id="@+id/key_right" android:text="→" style="@style/KeyboardButton" />
+                
+                <!-- Row 4: Modifier keys -->
+                <Button android:id="@+id/key_ctrl" android:text="Ctrl" style="@style/KeyboardButton" />
+                <Button android:id="@+id/key_alt" android:text="Alt" style="@style/KeyboardButton" />
+                <Button android:id="@+id/key_shift" android:text="Shift" style="@style/KeyboardButton" />
+                <Button android:id="@+id/key_meta" android:text="Meta" style="@style/KeyboardButton" />
+                <Button android:id="@+id/key_home" android:text="Home" style="@style/KeyboardButton" />
+                <Button android:id="@+id/key_end" android:text="End" style="@style/KeyboardButton" />
+                <Button android:id="@+id/key_del" android:text="Del" style="@style/KeyboardButton" />
+            </GridLayout>
         </LinearLayout>
     </FrameLayout>
 </androidx.constraintlayout.widget.ConstraintLayout>
