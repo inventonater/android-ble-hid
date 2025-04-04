@@ -3,15 +3,13 @@
     <string name="app_name">Inventonater HID</string>
     
     <!-- Main Activity -->
-    <string name="ready_to_start">Ready! Click a button below to start the BLE HID device.</string>
+    <string name="ready_to_start">Ready! Click the button below to start the BLE HID device.</string>
     <string name="bluetooth_disabled">Bluetooth is disabled. Please enable Bluetooth to continue.</string>
     <string name="bluetooth_not_supported">Bluetooth is not supported on this device.</string>
     <string name="bluetooth_permission_required">Bluetooth permission required.</string>
     <string name="ble_peripheral_not_supported">BLE Peripheral mode is not supported on this device.</string>
     <string name="permissions_required">Required permissions were not granted.</string>
-    <string name="start_keyboard">Start BLE Keyboard</string>
-    <string name="start_mouse">Start BLE Mouse</string>
-    <string name="start_unified">Unified BLE Controller</string>
+    <string name="start_hid_device">Start BLE HID Device</string>
     
     <!-- Keyboard Activity -->
     <string name="ready">Ready to start advertising</string>

@@ -53,6 +53,7 @@ public class MainActivity extends AppCompatActivity {
         
         statusText = findViewById(R.id.statusText);
         startButton = findViewById(R.id.startButton);
+        startButton.setText(R.string.start_hid_device);
         
         // Set up button click listener
         startButton.setOnClickListener(new View.OnClickListener() {
