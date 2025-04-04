@@ -46,6 +46,12 @@ public class SimpleMediaActivity extends AppCompatActivity {
     private TextView pairingStateText;
     private TextView logText;
     
+    // Tab controls
+    private Button mediaTabButton;
+    private Button mouseTabButton;
+    private View mediaPanel;
+    private View mousePanel;
+    
     // Media controls
     private Button playPauseButton;
     private Button previousButton;
@@ -174,11 +180,20 @@ public class SimpleMediaActivity extends AppCompatActivity {
         volumeDownButton = findViewById(R.id.volumeDownButton);
         muteButton = findViewById(R.id.muteButton);
         
+        // Initialize tab controls
+        mediaTabButton = findViewById(R.id.mediaTabButton);
+        mouseTabButton = findViewById(R.id.mouseTabButton);
+        mediaPanel = findViewById(R.id.mediaPanel);
+        mousePanel = findViewById(R.id.mousePanel);
+        
         // Initialize mouse controls
         touchpadArea = findViewById(R.id.touchpadArea);
         leftButton = findViewById(R.id.leftButton);
         middleButton = findViewById(R.id.middleButton);
         rightButton = findViewById(R.id.rightButton);
+        
+        // Set up tab switching
+        setupTabSwitching();
         
         // Initialize BLE HID manager
         bleHidManager = new BleHidManager(this);
@@ -331,6 +346,39 @@ public class SimpleMediaActivity extends AppCompatActivity {
             advertisingButton.setEnabled(false);
             addLogEntry("BLE HID initialization FAILED");
         }
+    }
+    
+    /**
+     * Sets up tab switching functionality.
+     */
+    private void setupTabSwitching() {
+        // Media tab click listener
+        mediaTabButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                // Show media panel, hide mouse panel
+                mediaPanel.setVisibility(View.VISIBLE);
+                mousePanel.setVisibility(View.GONE);
+                
+                // Update tab button styling
+                mediaTabButton.setBackgroundTintList(getColorStateList(android.R.color.holo_blue_dark));
+                mouseTabButton.setBackgroundTintList(getColorStateList(android.R.color.darker_gray));
+            }
+        });
+        
+        // Mouse tab click listener
+        mouseTabButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                // Show mouse panel, hide media panel
+                mousePanel.setVisibility(View.VISIBLE);
+                mediaPanel.setVisibility(View.GONE);
+                
+                // Update tab button styling
+                mouseTabButton.setBackgroundTintList(getColorStateList(android.R.color.holo_blue_dark));
+                mediaTabButton.setBackgroundTintList(getColorStateList(android.R.color.darker_gray));
+            }
+        });
     }
     
     /**
