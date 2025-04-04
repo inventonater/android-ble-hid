@@ -12,7 +12,9 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.text.format.DateFormat;
 import android.util.Log;
+import android.view.MotionEvent;
 import android.view.View;
+import android.widget.FrameLayout;
 import android.widget.Button;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -51,6 +53,17 @@ public class SimpleMediaActivity extends AppCompatActivity {
     private Button volumeUpButton;
     private Button volumeDownButton;
     private Button muteButton;
+    
+    // Mouse controls
+    private FrameLayout touchpadArea;
+    private Button leftButton;
+    private Button middleButton;
+    private Button rightButton;
+    
+    // Touchpad state tracking
+    private float lastTouchX;
+    private float lastTouchY;
+    private boolean isMoving = false;
     
     // StringBuilder for log entries
     private StringBuilder logEntries = new StringBuilder();
@@ -161,6 +174,12 @@ public class SimpleMediaActivity extends AppCompatActivity {
         volumeDownButton = findViewById(R.id.volumeDownButton);
         muteButton = findViewById(R.id.muteButton);
         
+        // Initialize mouse controls
+        touchpadArea = findViewById(R.id.touchpadArea);
+        leftButton = findViewById(R.id.leftButton);
+        middleButton = findViewById(R.id.middleButton);
+        rightButton = findViewById(R.id.rightButton);
+        
         // Initialize BLE HID manager
         bleHidManager = new BleHidManager(this);
         
@@ -224,6 +243,9 @@ public class SimpleMediaActivity extends AppCompatActivity {
         
         // Set up media controls
         setupMediaControls();
+        
+        // Set up mouse controls
+        setupMouseControls();
         
         // Initialize BLE HID functionality
         initializeBleHid();
@@ -309,6 +331,137 @@ public class SimpleMediaActivity extends AppCompatActivity {
             advertisingButton.setEnabled(false);
             addLogEntry("BLE HID initialization FAILED");
         }
+    }
+    
+    /**
+     * Sets up the mouse control buttons and touchpad.
+     */
+    private void setupMouseControls() {
+        // Set up touchpad area for mouse movement
+        touchpadArea.setOnTouchListener(new View.OnTouchListener() {
+            @Override
+            public boolean onTouch(View v, MotionEvent event) {
+                return handleTouchpadEvent(event);
+            }
+        });
+        
+        // Left mouse button
+        leftButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                addLogEntry("MOUSE: Left click");
+                if (bleHidManager.isConnected()) {
+                    boolean result = bleHidManager.clickMouseButton(HidMediaService.BUTTON_LEFT);
+                    if (!result) {
+                        Toast.makeText(SimpleMediaActivity.this, 
+                                "Failed to send left click", Toast.LENGTH_SHORT).show();
+                    }
+                } else {
+                    Toast.makeText(SimpleMediaActivity.this, 
+                            R.string.not_connected, Toast.LENGTH_SHORT).show();
+                }
+            }
+        });
+        
+        // Middle mouse button
+        middleButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                addLogEntry("MOUSE: Middle click");
+                if (bleHidManager.isConnected()) {
+                    boolean result = bleHidManager.clickMouseButton(HidMediaService.BUTTON_MIDDLE);
+                    if (!result) {
+                        Toast.makeText(SimpleMediaActivity.this, 
+                                "Failed to send middle click", Toast.LENGTH_SHORT).show();
+                    }
+                } else {
+                    Toast.makeText(SimpleMediaActivity.this, 
+                            R.string.not_connected, Toast.LENGTH_SHORT).show();
+                }
+            }
+        });
+        
+        // Right mouse button
+        rightButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                addLogEntry("MOUSE: Right click");
+                if (bleHidManager.isConnected()) {
+                    boolean result = bleHidManager.clickMouseButton(HidMediaService.BUTTON_RIGHT);
+                    if (!result) {
+                        Toast.makeText(SimpleMediaActivity.this, 
+                                "Failed to send right click", Toast.LENGTH_SHORT).show();
+                    }
+                } else {
+                    Toast.makeText(SimpleMediaActivity.this, 
+                            R.string.not_connected, Toast.LENGTH_SHORT).show();
+                }
+            }
+        });
+    }
+    
+    /**
+     * Handles touch events on the touchpad area.
+     * 
+     * @param event The MotionEvent
+     * @return true if the event was handled, false otherwise
+     */
+    private boolean handleTouchpadEvent(MotionEvent event) {
+        if (!bleHidManager.isConnected()) {
+            return false;
+        }
+        
+        switch (event.getAction()) {
+            case MotionEvent.ACTION_DOWN:
+                lastTouchX = event.getX();
+                lastTouchY = event.getY();
+                isMoving = true;
+                return true;
+                
+            case MotionEvent.ACTION_MOVE:
+                if (isMoving) {
+                    float currentX = event.getX();
+                    float currentY = event.getY();
+                    
+                    // Calculate movement delta
+                    float deltaX = currentX - lastTouchX;
+                    float deltaY = currentY - lastTouchY;
+                    
+                    // Scale movement (adjust sensitivity as needed)
+                    int scaledDeltaX = (int)(deltaX * 0.8);
+                    int scaledDeltaY = (int)(deltaY * 0.8);
+                    
+                    // Only send if there's significant movement
+                    if (Math.abs(scaledDeltaX) > 0 || Math.abs(scaledDeltaY) > 0) {
+                        // Clamp to valid range (-127 to 127)
+                        scaledDeltaX = Math.max(-127, Math.min(127, scaledDeltaX));
+                        scaledDeltaY = Math.max(-127, Math.min(127, scaledDeltaY));
+                        
+                        // Send the mouse movement
+                        boolean result = bleHidManager.moveMouse(scaledDeltaX, scaledDeltaY);
+                        
+                        if (result) {
+                            // Update last position if the movement was sent successfully
+                            lastTouchX = currentX;
+                            lastTouchY = currentY;
+                            
+                            // Log only for significant movements to avoid spam
+                            if (Math.abs(scaledDeltaX) > 5 || Math.abs(scaledDeltaY) > 5) {
+                                addLogEntry("MOUSE: Move X:" + scaledDeltaX + " Y:" + scaledDeltaY);
+                            }
+                        }
+                    }
+                    return true;
+                }
+                break;
+                
+            case MotionEvent.ACTION_UP:
+            case MotionEvent.ACTION_CANCEL:
+                isMoving = false;
+                return true;
+        }
+        
+        return false;
     }
     
     /**

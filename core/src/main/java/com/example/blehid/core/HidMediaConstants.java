@@ -39,7 +39,7 @@ public class HidMediaConstants {
     // Protocol Mode
     public static final byte PROTOCOL_MODE_REPORT = 0x01;
     
-    // Media control constants
+    // Media control constants (first byte of report)
     public static final int BUTTON_PLAY_PAUSE = 0x01;
     public static final int BUTTON_NEXT_TRACK = 0x02;
     public static final int BUTTON_PREVIOUS_TRACK = 0x04;
@@ -47,8 +47,14 @@ public class HidMediaConstants {
     public static final int BUTTON_VOLUME_DOWN = 0x10;
     public static final int BUTTON_MUTE = 0x20;
     
-    // HID Report Map descriptor for a consumer control device (media player)
+    // Mouse button constants (second byte of report)
+    public static final int BUTTON_LEFT = 0x01;
+    public static final int BUTTON_RIGHT = 0x02;
+    public static final int BUTTON_MIDDLE = 0x04;
+    
+    // Combined HID Report Map descriptor for both consumer control (media player) and mouse
     public static final byte[] REPORT_MAP = new byte[] {
+        // === First part: Consumer Controls ===
         // USAGE_PAGE (Consumer)
         (byte)0x05, (byte)0x0C,
         // USAGE (Consumer Control)
@@ -85,7 +91,68 @@ public class HidMediaConstants {
         // INPUT (Const,Var,Abs)
         (byte)0x81, (byte)0x01,
         
-        // END_COLLECTION
+        // === Second part: Mouse Controls ===
+        // USAGE_PAGE (Generic Desktop)
+        (byte)0x05, (byte)0x01,
+        // USAGE (Mouse)
+        (byte)0x09, (byte)0x02,
+        // COLLECTION (Application)
+        (byte)0xA1, (byte)0x01,
+        // USAGE (Pointer)
+        (byte)0x09, (byte)0x01,
+        // COLLECTION (Physical)
+        (byte)0xA1, (byte)0x00,
+        
+        // Buttons (3 buttons: left, right, middle)
+        // USAGE_PAGE (Button)
+        (byte)0x05, (byte)0x09,
+        // USAGE_MINIMUM (Button 1)
+        (byte)0x19, (byte)0x01,
+        // USAGE_MAXIMUM (Button 3)
+        (byte)0x29, (byte)0x03,
+        // LOGICAL_MINIMUM (0)
+        (byte)0x15, (byte)0x00,
+        // LOGICAL_MAXIMUM (1)
+        (byte)0x25, (byte)0x01,
+        // REPORT_COUNT (3)
+        (byte)0x95, (byte)0x03,
+        // REPORT_SIZE (1)
+        (byte)0x75, (byte)0x01,
+        // INPUT (Data,Var,Abs)
+        (byte)0x81, (byte)0x02,
+        
+        // Reserved padding (5 bits)
+        // REPORT_COUNT (1)
+        (byte)0x95, (byte)0x01,
+        // REPORT_SIZE (5)
+        (byte)0x75, (byte)0x05,
+        // INPUT (Const,Array,Abs) - Padding
+        (byte)0x81, (byte)0x01,
+        
+        // X and Y movement (-127 to 127 range)
+        // USAGE_PAGE (Generic Desktop)
+        (byte)0x05, (byte)0x01,
+        // USAGE (X)
+        (byte)0x09, (byte)0x30,
+        // USAGE (Y)
+        (byte)0x09, (byte)0x31,
+        // LOGICAL_MINIMUM (-127)
+        (byte)0x15, (byte)0x81,
+        // LOGICAL_MAXIMUM (127)
+        (byte)0x25, (byte)0x7F,
+        // REPORT_SIZE (8)
+        (byte)0x75, (byte)0x08,
+        // REPORT_COUNT (2)
+        (byte)0x95, (byte)0x02,
+        // INPUT (Data,Var,Rel)
+        (byte)0x81, (byte)0x06,
+        
+        // END_COLLECTION (Physical)
+        (byte)0xC0,
+        // END_COLLECTION (Application)
+        (byte)0xC0,
+        
+        // END_COLLECTION (Consumer Control Application)
         (byte)0xC0
     };
     

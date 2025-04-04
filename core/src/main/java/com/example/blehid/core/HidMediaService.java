@@ -17,13 +17,18 @@ import static com.example.blehid.core.HidMediaConstants.*;
 public class HidMediaService {
     private static final String TAG = "HidMediaService";
     
-    // Media control button constants (duplicated from HidMediaConstants for convenience)
+    // Media control button constants (duplicated for convenience)
     public static final int BUTTON_PLAY_PAUSE = HidMediaConstants.BUTTON_PLAY_PAUSE;
     public static final int BUTTON_NEXT_TRACK = HidMediaConstants.BUTTON_NEXT_TRACK;
     public static final int BUTTON_PREVIOUS_TRACK = HidMediaConstants.BUTTON_PREVIOUS_TRACK;
     public static final int BUTTON_VOLUME_UP = HidMediaConstants.BUTTON_VOLUME_UP;
     public static final int BUTTON_VOLUME_DOWN = HidMediaConstants.BUTTON_VOLUME_DOWN;
     public static final int BUTTON_MUTE = HidMediaConstants.BUTTON_MUTE;
+    
+    // Mouse button constants (duplicated for convenience)
+    public static final int BUTTON_LEFT = HidMediaConstants.BUTTON_LEFT;
+    public static final int BUTTON_RIGHT = HidMediaConstants.BUTTON_RIGHT;
+    public static final int BUTTON_MIDDLE = HidMediaConstants.BUTTON_MIDDLE;
     
     private final BleHidManager bleHidManager;
     private final BleGattServerManager gattServerManager;
@@ -144,8 +149,8 @@ public class HidMediaService {
                 BluetoothGattCharacteristic.PERMISSION_READ_ENCRYPTED | 
                 BluetoothGattCharacteristic.PERMISSION_WRITE_ENCRYPTED);
         
-        // Set initial report value for 1-byte format (buttons)
-        byte[] initialReport = new byte[1];
+        // Set initial report value for 4-byte combined format
+        byte[] initialReport = new byte[4];
         characteristic.setValue(initialReport);
         
         // Add Report Reference descriptor to help hosts identify the report type
@@ -169,6 +174,24 @@ public class HidMediaService {
     // --------------- Public API ---------------
     
     /**
+     * Sends a combined media and mouse report.
+     */
+    public boolean sendCombinedReport(int mediaButtons, int mouseButtons, int x, int y) {
+        if (!isInitialized) {
+            Log.e(TAG, "HID service not initialized");
+            return false;
+        }
+        
+        connectedDevice = bleHidManager.getConnectedDevice();
+        if (connectedDevice == null) {
+            Log.e(TAG, "No connected device");
+            return false;
+        }
+        
+        return reportHandler.sendCombinedReport(connectedDevice, mediaButtons, mouseButtons, x, y);
+    }
+    
+    /**
      * Sends a media control report.
      */
     public boolean sendMediaReport(int buttons) {
@@ -184,6 +207,62 @@ public class HidMediaService {
         }
         
         return reportHandler.sendMediaReport(connectedDevice, buttons);
+    }
+    
+    /**
+     * Sends a mouse movement report.
+     */
+    public boolean movePointer(int x, int y) {
+        Log.d(TAG, "HID movePointer ENTRY - x: " + x + ", y: " + y);
+        
+        connectedDevice = bleHidManager.getConnectedDevice();
+        if (connectedDevice == null) {
+            Log.e(TAG, "No connected device");
+            return false;
+        }
+        
+        boolean result = reportHandler.movePointer(connectedDevice, x, y);
+        Log.d(TAG, "HID movePointer EXIT - result: " + result);
+        return result;
+    }
+    
+    /**
+     * Sends a mouse button report.
+     */
+    public boolean pressButton(int button) {
+        connectedDevice = bleHidManager.getConnectedDevice();
+        if (connectedDevice == null) {
+            Log.e(TAG, "No connected device");
+            return false;
+        }
+        
+        return reportHandler.sendMouseButtons(connectedDevice, button);
+    }
+    
+    /**
+     * Releases all mouse buttons.
+     */
+    public boolean releaseButtons() {
+        connectedDevice = bleHidManager.getConnectedDevice();
+        if (connectedDevice == null) {
+            Log.e(TAG, "No connected device");
+            return false;
+        }
+        
+        return reportHandler.sendMouseButtons(connectedDevice, 0);
+    }
+    
+    /**
+     * Performs a click with the specified button.
+     */
+    public boolean click(int button) {
+        connectedDevice = bleHidManager.getConnectedDevice();
+        if (connectedDevice == null) {
+            Log.e(TAG, "No connected device");
+            return false;
+        }
+        
+        return reportHandler.click(connectedDevice, button);
     }
     
     /**

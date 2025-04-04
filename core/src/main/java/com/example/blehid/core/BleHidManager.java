@@ -20,7 +20,7 @@ public class BleHidManager {
     private final BleAdvertiser advertiser;
     private final BleGattServerManager gattServerManager;
     private final BlePairingManager pairingManager;
-    // Only using media service - removing keyboard/mouse for simplicity
+    // Using media service with combined mouse functionality
     private final HidMediaService hidMediaService;
 
     private boolean isInitialized = false;
@@ -265,6 +265,106 @@ public class BleHidManager {
         return hidMediaService.mute();
     }
 
+    /**
+     * Mouse control methods
+     */
+    
+    /**
+     * Moves the mouse pointer by the specified amount.
+     *
+     * @param x The X movement amount (-127 to 127)
+     * @param y The Y movement amount (-127 to 127)
+     * @return true if the command was sent successfully, false otherwise
+     */
+    public boolean moveMouse(int x, int y) {
+        if (!isInitialized || connectedDevice == null) {
+            Log.e(TAG, "Not connected or initialized");
+            return false;
+        }
+        
+        return hidMediaService.movePointer(x, y);
+    }
+    
+    /**
+     * Presses a mouse button.
+     *
+     * @param button The button to press (BUTTON_LEFT, BUTTON_RIGHT, BUTTON_MIDDLE)
+     * @return true if the command was sent successfully, false otherwise
+     */
+    public boolean pressMouseButton(int button) {
+        if (!isInitialized || connectedDevice == null) {
+            Log.e(TAG, "Not connected or initialized");
+            return false;
+        }
+        
+        return hidMediaService.pressButton(button);
+    }
+    
+    /**
+     * Releases all mouse buttons.
+     *
+     * @return true if the command was sent successfully, false otherwise
+     */
+    public boolean releaseMouseButtons() {
+        if (!isInitialized || connectedDevice == null) {
+            Log.e(TAG, "Not connected or initialized");
+            return false;
+        }
+        
+        return hidMediaService.releaseButtons();
+    }
+    
+    /**
+     * Performs a click with the specified button.
+     *
+     * @param button The button to click (BUTTON_LEFT, BUTTON_RIGHT, BUTTON_MIDDLE)
+     * @return true if the command was sent successfully, false otherwise
+     */
+    public boolean clickMouseButton(int button) {
+        if (!isInitialized || connectedDevice == null) {
+            Log.e(TAG, "Not connected or initialized");
+            return false;
+        }
+        
+        return hidMediaService.click(button);
+    }
+    
+    /**
+     * Scrolls the mouse wheel.
+     *
+     * @param amount The scroll amount (-127 to 127)
+     * @return true if the command was sent successfully, false otherwise
+     */
+    public boolean scrollMouseWheel(int amount) {
+        if (!isInitialized || connectedDevice == null) {
+            Log.e(TAG, "Not connected or initialized");
+            return false;
+        }
+        
+        // Vertical scrolling is often implemented as mouse movement along the Y axis
+        // while holding a special key or using a specific report format.
+        // We'll simulate it with vertical movement for simplicity
+        return hidMediaService.movePointer(0, amount);
+    }
+    
+    /**
+     * Send a combined media and mouse report.
+     * 
+     * @param mediaButtons Media button flags (BUTTON_PLAY_PAUSE, etc.)
+     * @param mouseButtons Mouse button flags (BUTTON_LEFT, etc.)
+     * @param x X-axis movement (-127 to 127)
+     * @param y Y-axis movement (-127 to 127)
+     * @return true if successful, false otherwise
+     */
+    public boolean sendCombinedReport(int mediaButtons, int mouseButtons, int x, int y) {
+        if (!isInitialized || connectedDevice == null) {
+            Log.e(TAG, "Not connected or initialized");
+            return false;
+        }
+        
+        return hidMediaService.sendCombinedReport(mediaButtons, mouseButtons, x, y);
+    }
+    
     // Connection management
 
     /**

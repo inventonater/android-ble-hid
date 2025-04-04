@@ -142,95 +142,202 @@
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="match_parent"
-            android:orientation="vertical"
-            android:padding="16dp"
-            android:gravity="center">
+            android:orientation="vertical">
 
-            <!-- Media Control Buttons -->
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="Media Controls"
-                android:textAlignment="center"
-                android:textStyle="bold"
-                android:layout_marginBottom="16dp" />
-
-            <!-- Play Controls -->
+            <!-- Tab controls -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="horizontal"
-                android:gravity="center"
-                android:layout_marginBottom="24dp">
-
+                android:layout_marginBottom="8dp">
+                
                 <Button
-                    android:id="@+id/previousButton"
+                    android:id="@+id/mediaTabButton"
                     android:layout_width="0dp"
-                    android:layout_height="70dp"
+                    android:layout_height="wrap_content"
                     android:layout_weight="1"
-                    android:text="PREVIOUS"
-                    android:textSize="12sp"
-                    android:layout_marginEnd="8dp" />
-
+                    android:text="MEDIA"
+                    android:backgroundTint="#3F51B5"
+                    android:textColor="#FFFFFF" />
+                    
                 <Button
-                    android:id="@+id/playPauseButton"
+                    android:id="@+id/mouseTabButton"
                     android:layout_width="0dp"
-                    android:layout_height="70dp"
+                    android:layout_height="wrap_content"
                     android:layout_weight="1"
-                    android:text="PLAY/PAUSE"
-                    android:textSize="12sp"
-                    android:layout_marginEnd="8dp" />
-
-                <Button
-                    android:id="@+id/nextButton"
-                    android:layout_width="0dp"
-                    android:layout_height="70dp"
-                    android:layout_weight="1"
-                    android:text="NEXT"
-                    android:textSize="12sp" />
+                    android:text="MOUSE"
+                    android:backgroundTint="#9E9E9E"
+                    android:textColor="#FFFFFF" />
             </LinearLayout>
-
-            <!-- Volume Controls -->
-            <TextView
+            
+            <!-- Content container -->
+            <FrameLayout
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="Volume Controls"
-                android:textAlignment="center"
-                android:textStyle="bold"
-                android:layout_marginBottom="16dp" />
-
+                android:layout_height="match_parent">
+            
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="horizontal"
+                android:orientation="vertical"
+                android:padding="16dp"
                 android:gravity="center">
 
-                <Button
-                    android:id="@+id/volumeDownButton"
-                    android:layout_width="0dp"
-                    android:layout_height="70dp"
-                    android:layout_weight="1"
-                    android:text="VOLUME -"
-                    android:textSize="12sp"
-                    android:layout_marginEnd="8dp" />
+                <!-- Media Control Buttons -->
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Media Controls"
+                    android:textAlignment="center"
+                    android:textStyle="bold"
+                    android:layout_marginBottom="16dp" />
 
-                <Button
-                    android:id="@+id/muteButton"
-                    android:layout_width="0dp"
-                    android:layout_height="70dp"
-                    android:layout_weight="1"
-                    android:text="MUTE"
-                    android:textSize="12sp"
-                    android:layout_marginEnd="8dp" />
+                <!-- Play Controls -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center"
+                    android:layout_marginBottom="24dp">
 
-                <Button
-                    android:id="@+id/volumeUpButton"
-                    android:layout_width="0dp"
-                    android:layout_height="70dp"
-                    android:layout_weight="1"
-                    android:text="VOLUME +"
-                    android:textSize="12sp" />
+                    <Button
+                        android:id="@+id/previousButton"
+                        android:layout_width="0dp"
+                        android:layout_height="70dp"
+                        android:layout_weight="1"
+                        android:text="PREVIOUS"
+                        android:textSize="12sp"
+                        android:layout_marginEnd="8dp" />
+
+                    <Button
+                        android:id="@+id/playPauseButton"
+                        android:layout_width="0dp"
+                        android:layout_height="70dp"
+                        android:layout_weight="1"
+                        android:text="PLAY/PAUSE"
+                        android:textSize="12sp"
+                        android:layout_marginEnd="8dp" />
+
+                    <Button
+                        android:id="@+id/nextButton"
+                        android:layout_width="0dp"
+                        android:layout_height="70dp"
+                        android:layout_weight="1"
+                        android:text="NEXT"
+                        android:textSize="12sp" />
+                </LinearLayout>
+
+                <!-- Volume Controls -->
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Volume Controls"
+                    android:textAlignment="center"
+                    android:textStyle="bold"
+                    android:layout_marginBottom="16dp" />
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center"
+                    android:layout_marginBottom="24dp">
+
+                    <Button
+                        android:id="@+id/volumeDownButton"
+                        android:layout_width="0dp"
+                        android:layout_height="70dp"
+                        android:layout_weight="1"
+                        android:text="VOLUME -"
+                        android:textSize="12sp"
+                        android:layout_marginEnd="8dp" />
+
+                    <Button
+                        android:id="@+id/muteButton"
+                        android:layout_width="0dp"
+                        android:layout_height="70dp"
+                        android:layout_weight="1"
+                        android:text="MUTE"
+                        android:textSize="12sp"
+                        android:layout_marginEnd="8dp" />
+
+                    <Button
+                        android:id="@+id/volumeUpButton"
+                        android:layout_width="0dp"
+                        android:layout_height="70dp"
+                        android:layout_weight="1"
+                        android:text="VOLUME +"
+                        android:textSize="12sp" />
+                </LinearLayout>
+                
+                <!-- Mouse Control Section -->
+                <View
+                    android:layout_width="match_parent"
+                    android:layout_height="1dp"
+                    android:background="#DDDDDD"
+                    android:layout_marginTop="8dp"
+                    android:layout_marginBottom="24dp"/>
+                
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Mouse Controls"
+                    android:textAlignment="center"
+                    android:textStyle="bold"
+                    android:layout_marginBottom="16dp" />
+                
+                <!-- Touchpad area -->
+                <FrameLayout
+                    android:id="@+id/touchpadArea"
+                    android:layout_width="match_parent"
+                    android:layout_height="200dp"
+                    android:background="#EEEEEE"
+                    android:layout_marginBottom="16dp">
+                    
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_gravity="center"
+                        android:text="TOUCHPAD"
+                        android:textStyle="bold"
+                        android:alpha="0.3"
+                        android:textSize="24sp"/>
+                </FrameLayout>
+                
+                <!-- Mouse Buttons -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center"
+                    android:layout_marginBottom="16dp">
+                    
+                    <Button
+                        android:id="@+id/leftButton"
+                        android:layout_width="0dp"
+                        android:layout_height="70dp"
+                        android:layout_weight="1"
+                        android:text="LEFT"
+                        android:textSize="12sp"
+                        android:layout_marginEnd="8dp" />
+                        
+                    <Button
+                        android:id="@+id/middleButton"
+                        android:layout_width="0dp"
+                        android:layout_height="70dp"
+                        android:layout_weight="1"
+                        android:text="MIDDLE"
+                        android:textSize="12sp"
+                        android:layout_marginEnd="8dp" />
+                        
+                    <Button
+                        android:id="@+id/rightButton"
+                        android:layout_width="0dp"
+                        android:layout_height="70dp"
+                        android:layout_weight="1"
+                        android:text="RIGHT"
+                        android:textSize="12sp" />
+                </LinearLayout>
             </LinearLayout>
-        </LinearLayout>
+        </ScrollView>
     </androidx.cardview.widget.CardView>
 </androidx.constraintlayout.widget.ConstraintLayout>
