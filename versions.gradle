@@ -6,7 +6,7 @@
 ext {
     // SDK versions
     compileSdkVersion = 34
-    minSdkVersion = 21
+    minSdkVersion = 28  // Updated to Android 9 for BluetoothHidDevice API
     targetSdkVersion = 34
     
     // App version

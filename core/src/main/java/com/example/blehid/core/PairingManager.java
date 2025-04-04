@@ -341,7 +341,9 @@ public class PairingManager implements IPairingManager {
         if (newState == BluetoothDevice.BOND_BONDING) {
             // Device is now bonding - update state and start timeout
             updatePairingState(PairingState.WAITING_FOR_BOND, device, "Bonding in progress");
-            startTimeout(BOND_STATE_CHANGE_TIMEOUT, "Bonding process timed out", device);
+            
+            // Use a longer timeout for the actual bonding process
+            startTimeout(BOND_STATE_CHANGE_TIMEOUT * 2, "Bonding process timed out", device);
         }
         else if (newState == BluetoothDevice.BOND_BONDED) {
             // Successfully bonded
@@ -349,6 +351,18 @@ public class PairingManager implements IPairingManager {
             
             Log.i(TAG, "Device bonded: " + deviceInfo);
             notifyPairingComplete(device, true, "Pairing completed successfully");
+            
+            // For Android-to-Android pairing, we need to ensure the device stays connected
+            // so add a slight delay to make sure the bonding process completes fully
+            new Handler(Looper.getMainLooper()).postDelayed(new Runnable() {
+                @Override
+                public void run() {
+                    // If we're still bonded, we can consider this a successful pairing
+                    if (device.getBondState() == BluetoothDevice.BOND_BONDED) {
+                        Log.d(TAG, "Bond has remained stable for " + deviceInfo);
+                    }
+                }
+            }, 1000);
         } 
         else if (previousState == BluetoothDevice.BOND_BONDING && 
                  newState == BluetoothDevice.BOND_NONE) {
@@ -359,14 +373,21 @@ public class PairingManager implements IPairingManager {
             if (shouldRetryPairing(device)) {
                 Log.i(TAG, "Retrying pairing after bonding failure");
                 
-                // Wait briefly before retrying
+                // Wait a bit longer before retrying for Android devices
                 final BluetoothDevice retryDevice = device;
                 new Handler(Looper.getMainLooper()).postDelayed(new Runnable() {
                     @Override
                     public void run() {
-                        createBond(retryDevice);
+                        Log.i(TAG, "Executing pairing retry for: " + BluetoothUtils.getDeviceInfo(retryDevice));
+                        // Only retry if we're still in a pairing state
+                        if (currentState == PairingState.PAIRING_STARTED || 
+                            currentState == PairingState.PAIRING_REQUESTED || 
+                            currentState == PairingState.WAITING_FOR_BOND ||
+                            currentState == PairingState.PAIRING_FAILED) {
+                            createBond(retryDevice);
+                        }
                     }
-                }, 1000);
+                }, 2000); // 2 seconds delay for Android device pairing
             } else {
                 // No more retries, mark as failed
                 updatePairingState(PairingState.PAIRING_FAILED, device, "Bonding failed");
@@ -663,6 +684,39 @@ public class PairingManager implements IPairingManager {
         if (bluetoothAdapter.getBondedDevices().isEmpty()) {
             info.append("(No bonded devices)");
         }
+        
+        return info.toString();
+    }
+    
+    /**
+     * Gets comprehensive information about the current pairing status.
+     * 
+     * @return Detailed information about pairing status
+     */
+    public String getPairingStatusInfo() {
+        StringBuilder info = new StringBuilder();
+        
+        // Current state
+        info.append("Pairing State: ").append(currentState).append("\n");
+        
+        // Pending device info
+        if (pendingPairingDevice != null) {
+            info.append("Pairing with: ").append(BluetoothUtils.getDeviceInfo(pendingPairingDevice)).append("\n");
+            info.append("Bond state: ").append(BluetoothUtils.bondStateToString(pendingPairingDevice.getBondState())).append("\n");
+        } else {
+            info.append("No pending pairing\n");
+        }
+        
+        // Add retry counts for debugging
+        if (!devicePairingRetryCount.isEmpty()) {
+            info.append("Retry counts:\n");
+            for (Map.Entry<String, Integer> entry : devicePairingRetryCount.entrySet()) {
+                info.append("- ").append(entry.getKey()).append(": ").append(entry.getValue()).append("/").append(maxPairingRetries).append("\n");
+            }
+        }
+        
+        // Add bonded devices info
+        info.append("\n").append(getBondedDevicesInfo());
         
         return info.toString();
     }

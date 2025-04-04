@@ -33,25 +33,39 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/titleText" />
 
-    <Button
-        android:id="@+id/startMouseButton"
+    <LinearLayout
+        android:id="@+id/buttonLayout"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginTop="32dp"
-        android:text="@string/start_mouse"
+        android:orientation="vertical"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/statusText" />
+        app:layout_constraintTop_toBottomOf="@+id/statusText">
+
+        <Button
+            android:id="@+id/startUnifiedButton"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="8dp"
+            android:text="@string/start_unified" />
+
+        <Button
+            android:id="@+id/startModernButton"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Modern BLE HID (API 28+)" />
+    </LinearLayout>
 
     <TextView
         android:id="@+id/infoText"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_marginTop="32dp"
-        android:text="This application acts as a BLE HID peripheral. You can pair it with another device to use it as a mouse controller."
+        android:text="This application acts as a BLE HID peripheral. You can pair it with another device to use it as a keyboard, mouse, and media controller."
         android:textAlignment="center"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/startMouseButton" />
+        app:layout_constraintTop_toBottomOf="@+id/buttonLayout" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>

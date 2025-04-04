@@ -29,10 +29,14 @@ dependencies {
     implementation rootProject.ext.deps.core
     testImplementation rootProject.ext.deps.junit
     androidTestImplementation rootProject.ext.deps.androidxTestJunit
-    
+
     // Add explicit Kotlin dependencies with consistent versions
     implementation 'org.jetbrains.kotlin:kotlin-stdlib:1.8.10'
     implementation 'org.jetbrains.kotlin:kotlin-stdlib-jdk7:1.8.10'
     implementation 'org.jetbrains.kotlin:kotlin-stdlib-jdk8:1.8.10'
     implementation 'org.jetbrains.kotlin:kotlin-stdlib-common:1.8.10'
+    
+    // Explicitly include the Android Bluetooth HID device API
+    // This is part of the Android framework but explicitly including it can help resolve issues
+    implementation 'androidx.core:core:1.10.1'
 }

@@ -7,6 +7,12 @@ import android.content.Context;
 import android.os.Build;
 import android.util.Log;
 
+import com.example.blehid.core.config.BleHidConfig;
+import com.example.blehid.core.manager.BleAdvertisingManager;
+import com.example.blehid.core.manager.BleConnectionManager;
+import com.example.blehid.core.manager.BleGattServiceRegistry;
+import com.example.blehid.core.manager.BleLifecycleManager;
+
 /**
  * Central manager class for BLE HID functionality.
  * Coordinates between the advertiser, GATT server, and pairing components.
@@ -15,16 +21,13 @@ public class BleHidManager {
     private static final String TAG = "BleHidManager";
 
     private final Context context;
-    private final BluetoothManager bluetoothManager;
-    private final BluetoothAdapter bluetoothAdapter;
-    private final BleAdvertiser advertiser;
-    private final BleGattServerManager gattServerManager;
+    private final BleLifecycleManager lifecycleManager;
     private final IPairingManager pairingManager;
+    
     // Combined service for mouse, keyboard, and consumer controls
-    private final HidMouseService hidCombinedService;
+    private BleHidService hidCombinedService;
 
     private boolean isInitialized = false;
-    private BluetoothDevice connectedDevice = null;
 
     /**
      * Creates a new BLE HID Manager
@@ -34,25 +37,15 @@ public class BleHidManager {
     public BleHidManager(Context context) {
         this.context = context.getApplicationContext(); // Use application context to prevent leaks
         
-        // Get Bluetooth adapter
-        bluetoothManager = (BluetoothManager) context.getSystemService(Context.BLUETOOTH_SERVICE);
-        if (bluetoothManager == null) {
-            Log.e(TAG, "Bluetooth manager not found");
-            bluetoothAdapter = null;
-        } else {
-            bluetoothAdapter = bluetoothManager.getAdapter();
-        }
+        // Initialize lifecycle manager with configuration
+        BleHidConfig config = new BleHidConfig();
+        lifecycleManager = new BleLifecycleManager(context, config);
         
-        // Initialize components
-        advertiser = new BleAdvertiser(this);
-        gattServerManager = new BleGattServerManager(this);
         // Use consolidated pairing manager 
         pairingManager = new PairingManager(this);
         
         // Configure retry settings
         pairingManager.setMaxPairingRetries(3);
-        // Initialize the combined service
-        hidCombinedService = new HidMouseService(this);
     }
 
     /**
@@ -66,12 +59,12 @@ public class BleHidManager {
             return true;
         }
         
-        if (bluetoothAdapter == null) {
+        if (getBluetoothAdapter() == null) {
             Log.e(TAG, "Bluetooth not supported");
             return false;
         }
         
-        if (!bluetoothAdapter.isEnabled()) {
+        if (!getBluetoothAdapter().isEnabled()) {
             Log.e(TAG, "Bluetooth is not enabled");
             return false;
         }
@@ -81,18 +74,28 @@ public class BleHidManager {
             return false;
         }
         
-        // Initialize components
-        boolean gattInitialized = gattServerManager.initialize();
-        if (!gattInitialized) {
-            Log.e(TAG, "Failed to initialize GATT server");
+        // Initialize the lifecycle manager
+        boolean lifecycleInitialized = lifecycleManager.initialize();
+        if (!lifecycleInitialized) {
+            Log.e(TAG, "Failed to initialize BLE lifecycle manager");
             return false;
         }
+        
+        // Start the GATT server
+        boolean gattStarted = getGattServiceRegistry().start();
+        if (!gattStarted) {
+            Log.e(TAG, "Failed to start GATT service registry");
+            return false;
+        }
+        
+        // Use mouse-only service for simplicity and better compatibility
+        hidCombinedService = BleHidServiceBuilder.createMouseService(this);
         
         // Initialize the combined service
         boolean hidInitialized = hidCombinedService.initialize();
         if (!hidInitialized) {
             Log.e(TAG, "Failed to initialize HID combined service");
-            gattServerManager.close();
+            getGattServiceRegistry().close();
             return false;
         }
         
@@ -112,7 +115,7 @@ public class BleHidManager {
             return false;
         }
         
-        return advertiser.startAdvertising();
+        return getAdvertisingManager().startAdvertising();
     }
 
     /**
@@ -120,7 +123,7 @@ public class BleHidManager {
      */
     public void stopAdvertising() {
         if (isInitialized) {
-            advertiser.stopAdvertising();
+            getAdvertisingManager().stopAdvertising();
         }
     }
 
@@ -130,15 +133,7 @@ public class BleHidManager {
      * @return true if peripheral mode is supported, false otherwise
      */
     public boolean isBlePeripheralSupported() {
-        if (bluetoothAdapter == null) {
-            return false;
-        }
-        
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-            return bluetoothAdapter.isMultipleAdvertisementSupported();
-        }
-        
-        return false;
+        return lifecycleManager.isBlePeripheralSupported();
     }
 
     /**
@@ -147,11 +142,10 @@ public class BleHidManager {
     public void close() {
         stopAdvertising();
         
-        if (gattServerManager != null) {
-            gattServerManager.close();
+        if (lifecycleManager != null) {
+            lifecycleManager.close();
         }
         
-        connectedDevice = null;
         isInitialized = false;
         
         Log.i(TAG, "BLE HID Manager closed");
@@ -164,19 +158,31 @@ public class BleHidManager {
     }
 
     public BluetoothManager getBluetoothManager() {
-        return bluetoothManager;
+        return lifecycleManager.getBluetoothManager();
     }
 
     public BluetoothAdapter getBluetoothAdapter() {
-        return bluetoothAdapter;
+        return lifecycleManager.getBluetoothAdapter();
     }
 
-    public BleGattServerManager getGattServerManager() {
-        return gattServerManager;
+    public BleGattServiceRegistry getGattServiceRegistry() {
+        return lifecycleManager.getServiceRegistry();
     }
 
-    public HidMouseService getHidCombinedService() {
+    public BleHidService getHidCombinedService() {
         return hidCombinedService;
+    }
+    
+    public BleAdvertisingManager getAdvertisingManager() {
+        return lifecycleManager.getAdvertisingManager();
+    }
+    
+    public BleConnectionManager getConnectionManager() {
+        return lifecycleManager.getConnectionManager();
+    }
+    
+    public BleLifecycleManager getLifecycleManager() {
+        return lifecycleManager;
     }
     
     /**
@@ -191,7 +197,7 @@ public class BleHidManager {
      * @return true if the report was sent successfully, false otherwise
      */
     public boolean moveMouse(int x, int y) {
-        if (!isInitialized || connectedDevice == null) {
+        if (!isInitialized || getConnectedDevice() == null) {
             Log.e(TAG, "Not connected or initialized");
             return false;
         }
@@ -206,7 +212,7 @@ public class BleHidManager {
      * @return true if the report was sent successfully, false otherwise
      */
     public boolean scrollMouseWheel(int amount) {
-        if (!isInitialized || connectedDevice == null) {
+        if (!isInitialized || getConnectedDevice() == null) {
             Log.e(TAG, "Not connected or initialized");
             return false;
         }
@@ -221,7 +227,7 @@ public class BleHidManager {
      * @return true if the report was sent successfully, false otherwise
      */
     public boolean clickMouseButton(int button) {
-        if (!isInitialized || connectedDevice == null) {
+        if (!isInitialized || getConnectedDevice() == null) {
             Log.e(TAG, "Not connected or initialized");
             return false;
         }
@@ -236,7 +242,7 @@ public class BleHidManager {
      * @return true if the report was sent successfully, false otherwise
      */
     public boolean pressMouseButton(int button) {
-        if (!isInitialized || connectedDevice == null) {
+        if (!isInitialized || getConnectedDevice() == null) {
             Log.e(TAG, "Not connected or initialized");
             return false;
         }
@@ -250,7 +256,7 @@ public class BleHidManager {
      * @return true if the report was sent successfully, false otherwise
      */
     public boolean releaseMouseButtons() {
-        if (!isInitialized || connectedDevice == null) {
+        if (!isInitialized || getConnectedDevice() == null) {
             Log.e(TAG, "Not connected or initialized");
             return false;
         }
@@ -267,7 +273,7 @@ public class BleHidManager {
      * @return true if the report was sent successfully, false otherwise
      */
     public boolean sendKey(byte keyCode) {
-        if (!isInitialized || connectedDevice == null) {
+        if (!isInitialized || getConnectedDevice() == null) {
             Log.e(TAG, "Not connected or initialized");
             return false;
         }
@@ -283,7 +289,7 @@ public class BleHidManager {
      * @return true if the report was sent successfully, false otherwise
      */
     public boolean sendKeyWithModifiers(byte keyCode, byte modifiers) {
-        if (!isInitialized || connectedDevice == null) {
+        if (!isInitialized || getConnectedDevice() == null) {
             Log.e(TAG, "Not connected or initialized");
             return false;
         }
@@ -298,7 +304,7 @@ public class BleHidManager {
      * @return true if the report was sent successfully, false otherwise
      */
     public boolean sendKeys(byte[] keyCodes) {
-        if (!isInitialized || connectedDevice == null) {
+        if (!isInitialized || getConnectedDevice() == null) {
             Log.e(TAG, "Not connected or initialized");
             return false;
         }
@@ -314,7 +320,7 @@ public class BleHidManager {
      * @return true if the report was sent successfully, false otherwise
      */
     public boolean sendKeysWithModifiers(byte[] keyCodes, byte modifiers) {
-        if (!isInitialized || connectedDevice == null) {
+        if (!isInitialized || getConnectedDevice() == null) {
             Log.e(TAG, "Not connected or initialized");
             return false;
         }
@@ -328,7 +334,7 @@ public class BleHidManager {
      * @return true if the report was sent successfully, false otherwise
      */
     public boolean releaseAllKeys() {
-        if (!isInitialized || connectedDevice == null) {
+        if (!isInitialized || getConnectedDevice() == null) {
             Log.e(TAG, "Not connected or initialized");
             return false;
         }
@@ -344,7 +350,7 @@ public class BleHidManager {
      * @return true if the report was sent successfully, false otherwise
      */
     public boolean sendPlayPause() {
-        if (!isInitialized || connectedDevice == null) {
+        if (!isInitialized || getConnectedDevice() == null) {
             Log.e(TAG, "Not connected or initialized");
             return false;
         }
@@ -358,7 +364,7 @@ public class BleHidManager {
      * @return true if the report was sent successfully, false otherwise
      */
     public boolean sendNextTrack() {
-        if (!isInitialized || connectedDevice == null) {
+        if (!isInitialized || getConnectedDevice() == null) {
             Log.e(TAG, "Not connected or initialized");
             return false;
         }
@@ -372,7 +378,7 @@ public class BleHidManager {
      * @return true if the report was sent successfully, false otherwise
      */
     public boolean sendPrevTrack() {
-        if (!isInitialized || connectedDevice == null) {
+        if (!isInitialized || getConnectedDevice() == null) {
             Log.e(TAG, "Not connected or initialized");
             return false;
         }
@@ -386,7 +392,7 @@ public class BleHidManager {
      * @return true if the report was sent successfully, false otherwise
      */
     public boolean sendVolumeUp() {
-        if (!isInitialized || connectedDevice == null) {
+        if (!isInitialized || getConnectedDevice() == null) {
             Log.e(TAG, "Not connected or initialized");
             return false;
         }
@@ -400,7 +406,7 @@ public class BleHidManager {
      * @return true if the report was sent successfully, false otherwise
      */
     public boolean sendVolumeDown() {
-        if (!isInitialized || connectedDevice == null) {
+        if (!isInitialized || getConnectedDevice() == null) {
             Log.e(TAG, "Not connected or initialized");
             return false;
         }
@@ -414,7 +420,7 @@ public class BleHidManager {
      * @return true if the report was sent successfully, false otherwise
      */
     public boolean sendMute() {
-        if (!isInitialized || connectedDevice == null) {
+        if (!isInitialized || getConnectedDevice() == null) {
             Log.e(TAG, "Not connected or initialized");
             return false;
         }
@@ -429,7 +435,7 @@ public class BleHidManager {
      * @return true if the report was sent successfully, false otherwise
      */
     public boolean sendConsumerControl(byte controlBit) {
-        if (!isInitialized || connectedDevice == null) {
+        if (!isInitialized || getConnectedDevice() == null) {
             Log.e(TAG, "Not connected or initialized");
             return false;
         }
@@ -445,7 +451,6 @@ public class BleHidManager {
      * @param device The connected device
      */
     void onDeviceConnected(BluetoothDevice device) {
-        connectedDevice = device;
         Log.i(TAG, "Device connected: " + device.getAddress());
         
         // Stop advertising once connected
@@ -459,7 +464,6 @@ public class BleHidManager {
      */
     void onDeviceDisconnected(BluetoothDevice device) {
         Log.i(TAG, "Device disconnected: " + device.getAddress());
-        connectedDevice = null;
         
         // Restart advertising after disconnect
         startAdvertising();
@@ -471,7 +475,8 @@ public class BleHidManager {
      * @return true if a device is connected, false otherwise
      */
     public boolean isConnected() {
-        return connectedDevice != null;
+        BleConnectionManager connectionManager = getConnectionManager();
+        return connectionManager != null && connectionManager.getConnectedDevice() != null;
     }
 
     /**
@@ -480,16 +485,8 @@ public class BleHidManager {
      * @return The connected BluetoothDevice, or null if not connected
      */
     public BluetoothDevice getConnectedDevice() {
-        return connectedDevice;
-    }
-    
-    /**
-     * Returns the BleAdvertiser instance.
-     * 
-     * @return The BleAdvertiser instance
-     */
-    public BleAdvertiser getAdvertiser() {
-        return advertiser;
+        BleConnectionManager connectionManager = getConnectionManager();
+        return connectionManager != null ? connectionManager.getConnectedDevice() : null;
     }
     
     /**
@@ -498,7 +495,7 @@ public class BleHidManager {
      * @return true if advertising, false otherwise
      */
     public boolean isAdvertising() {
-        return advertiser != null && advertiser.isAdvertising();
+        return getAdvertisingManager() != null && getAdvertisingManager().isAdvertising();
     }
     
     /**

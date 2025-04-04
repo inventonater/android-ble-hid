@@ -2,109 +2,139 @@ package com.example.blehid.core;
 
 import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothGattCharacteristic;
-import android.bluetooth.BluetoothGattDescriptor;
+import android.bluetooth.BluetoothGattServer;
 import android.util.Log;
+
+import com.example.blehid.core.manager.BleGattServiceRegistry;
+import com.example.blehid.core.report.Report;
+import com.example.blehid.core.report.ReportVisitor;
+
 import java.util.UUID;
 
 /**
  * Abstract base class for HID report handlers.
  * Provides common functionality for different types of HID reports.
+ * 
+ * @param <T> The type of report this handler processes
  */
-public abstract class AbstractReportHandler {
+public abstract class AbstractReportHandler<T extends Report> {
     private static final String TAG = "AbstractReportHandler";
     
-    protected final BleGattServerManager gattServerManager;
-    protected boolean notificationsEnabled = false;
-    
-    // Common UUIDs for all HID services
-    protected static final UUID CLIENT_CONFIG_UUID = UUID.fromString("00002902-0000-1000-8000-00805f9b34fb");
+    protected final BleGattServiceRegistry gattServerManager;
+    protected final BleNotifier notifier;
+    protected final BluetoothGattCharacteristic primaryCharacteristic;
+    protected byte protocolMode = HidConstants.PROTOCOL_MODE_REPORT;
     
     /**
      * Creates a new HID Report Handler.
      *
-     * @param gattServerManager The GATT server manager
+     * @param gattServerManager The GATT service registry
+     * @param notifier The BLE notifier
+     * @param primaryCharacteristic The primary characteristic for this report type
      */
-    public AbstractReportHandler(BleGattServerManager gattServerManager) {
+    public AbstractReportHandler(
+            BleGattServiceRegistry gattServerManager,
+            BleNotifier notifier,
+            BluetoothGattCharacteristic primaryCharacteristic) {
         this.gattServerManager = gattServerManager;
+        this.notifier = notifier;
+        this.primaryCharacteristic = primaryCharacteristic;
     }
     
     /**
-     * Helper method to send notification with retry.
-     * 
-     * @param charUuid The characteristic UUID
-     * @param value The value to send
-     * @return true if the notification was sent successfully, false otherwise
+     * Creates and initializes a report of the appropriate type.
+     * Subclasses should implement this to create the specific report type.
+     *
+     * @return A new report instance
      */
-    protected boolean sendNotificationWithRetry(UUID charUuid, byte[] value) {
-        boolean success = false;
-        for (int retry = 0; retry < 2 && !success; retry++) {
-            success = gattServerManager.sendNotification(charUuid, value);
-            
-            if (!success && retry == 0) {
-                Log.w(TAG, "First notification attempt failed, retrying after delay");
-                try {
-                    Thread.sleep(10); // Small delay before retry
-                } catch (InterruptedException e) {
-                    // Ignore
+    protected abstract T createEmptyReport();
+    
+    /**
+     * Gets the report ID for this handler.
+     *
+     * @return The report ID
+     */
+    public abstract byte getReportId();
+    
+    /**
+     * Sends a report to the connected device.
+     *
+     * @param device The connected device
+     * @param report The report to send
+     * @return true if the report was sent successfully, false otherwise
+     */
+    protected boolean sendReport(BluetoothDevice device, T report) {
+        if (device == null) {
+            Log.e(TAG, "Cannot send report: No device connected");
+            return false;
+        }
+        
+        byte[] reportData = report.format();
+        UUID charUuid = primaryCharacteristic.getUuid();
+        
+        Log.d(TAG, "Sending report: " + HidConstants.bytesToHex(reportData) + 
+              " to characteristic: " + charUuid);
+        
+        // Try direct notification first for higher reliability
+        try {
+            if (device.getBondState() == BluetoothDevice.BOND_BONDED) {
+                primaryCharacteristic.setValue(reportData);
+                
+                // Get the GATT server directly
+                BluetoothGattServer gattServer = gattServerManager.getGattServer();
+                if (gattServer != null) {
+                    boolean success = false;
+                    
+                    // Try both notification and indication if needed
+                    try {
+                        success = gattServer.notifyCharacteristicChanged(device, primaryCharacteristic, false);
+                        Log.d(TAG, "Direct notification result: " + success);
+                    } catch (Exception e) {
+                        Log.w(TAG, "Regular notification failed, trying indication", e);
+                    }
+                    
+                    if (!success) {
+                        try {
+                            // Try indication as fallback (some Android HID implementations might need this)
+                            success = gattServer.notifyCharacteristicChanged(device, primaryCharacteristic, true);
+                            Log.d(TAG, "Direct indication result: " + success);
+                        } catch (Exception e) {
+                            Log.w(TAG, "Indication failed too", e);
+                        }
+                    }
+                    
+                    if (success) {
+                        return true;
+                    }
                 }
             }
+        } catch (Exception e) {
+            Log.e(TAG, "Error with direct notification", e);
         }
-        return success;
+        
+        // Fall back to using the notifier (which may have its own retry logic)
+        return notifier.sendNotificationWithRetry(charUuid, reportData);
     }
     
     /**
-     * Enables notifications for a characteristic.
-     * 
-     * @param characteristic The characteristic to enable notifications for
-     * @param initialValue The initial value to send
-     * @return true if notifications were enabled, false otherwise
+     * Called when notifications are enabled or disabled for a characteristic.
+     *
+     * @param enabled Whether notifications are enabled or disabled
      */
-    protected boolean enableNotificationsForCharacteristic(
-            BluetoothGattCharacteristic characteristic, byte[] initialValue) {
-        
-        if (characteristic == null) {
-            Log.e(TAG, "Null characteristic provided");
-            return false;
-        }
-        
-        BluetoothGattDescriptor descriptor = characteristic.getDescriptor(CLIENT_CONFIG_UUID);
-        if (descriptor == null) {
-            Log.e(TAG, "Missing Client Configuration Descriptor (CCCD) for characteristic: " 
-                    + characteristic.getUuid());
-            return false;
-        }
-        
-        // Enable notifications (0x01, 0x00)
-        descriptor.setValue(BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE);
-        Log.d(TAG, "Set descriptor value to enable notifications for " + characteristic.getUuid());
-        
-        // Set initial value
-        characteristic.setValue(initialValue);
-        
-        // Send two initial reports - one is sometimes not enough for reliable connection
-        try {
-            gattServerManager.sendNotification(characteristic.getUuid(), initialValue);
-            Thread.sleep(20); // Small delay
-            gattServerManager.sendNotification(characteristic.getUuid(), initialValue);
-            return true;
-        } catch (Exception e) {
-            Log.e(TAG, "Error sending initial report", e);
-            return false;
+    public void setNotificationsEnabled(boolean enabled) {
+        if (primaryCharacteristic != null) {
+            notifier.setNotificationsEnabled(primaryCharacteristic.getUuid(), enabled);
         }
     }
     
     /**
      * Called when notifications are enabled or disabled for a characteristic.
-     * 
+     *
      * @param characteristicUuid The UUID of the characteristic
      * @param enabled Whether notifications are enabled or disabled
      */
     public void setNotificationsEnabled(UUID characteristicUuid, boolean enabled) {
-        if (shouldHandleCharacteristic(characteristicUuid)) {
-            this.notificationsEnabled = enabled;
-            Log.d(TAG, "Notifications " + (enabled ? "enabled" : "disabled") + 
-                      " for " + characteristicUuid);
-        }
+        notifier.setNotificationsEnabled(characteristicUuid, enabled);
     }
     
     /**
@@ -113,8 +143,31 @@ public abstract class AbstractReportHandler {
      * @param mode The new protocol mode
      */
     public void setProtocolMode(byte mode) {
-        // Default implementation does nothing
-        // Override in subclasses if needed
+        this.protocolMode = mode;
+        Log.d(TAG, "Protocol mode set to " + 
+              (mode == HidConstants.PROTOCOL_MODE_REPORT ? "Report" : "Boot"));
+    }
+    
+    /**
+     * Enables notifications for the primary characteristic.
+     */
+    protected void enableNotifications() {
+        if (primaryCharacteristic != null) {
+            byte[] initialReport = createEmptyReport().format();
+            notifier.enableNotificationsForCharacteristic(primaryCharacteristic, initialReport);
+        }
+    }
+    
+    /**
+     * Process a report using a visitor.
+     *
+     * @param report The report to process
+     * @param visitor The visitor to apply
+     * @param <R> The return type of the visitor operation
+     * @return The result of the visitor operation
+     */
+    protected <R> R processWithVisitor(T report, ReportVisitor<R> visitor) {
+        return report.accept(visitor);
     }
     
     /**
@@ -123,10 +176,8 @@ public abstract class AbstractReportHandler {
      * @param characteristicUuid The UUID of the characteristic
      * @return true if this handler should handle the characteristic, false otherwise
      */
-    protected abstract boolean shouldHandleCharacteristic(UUID characteristicUuid);
-    
-    /**
-     * Enables notifications for the appropriate characteristic.
-     */
-    protected abstract void enableNotifications();
+    protected boolean shouldHandleCharacteristic(UUID characteristicUuid) {
+        return primaryCharacteristic != null && 
+               primaryCharacteristic.getUuid().equals(characteristicUuid);
+    }
 }

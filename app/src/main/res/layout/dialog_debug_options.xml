@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="16dp">
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Logging Options"
+        android:textStyle="bold"
+        android:textSize="16sp"
+        android:layout_marginBottom="8dp" />
+
+    <Switch
+        android:id="@+id/switch_verbose_logging"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Enable Verbose Logging"
+        android:layout_marginBottom="8dp" />
+
+    <Switch
+        android:id="@+id/switch_file_logging"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Enable Log to File"
+        android:layout_marginBottom="16dp" />
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Analysis Tools"
+        android:textStyle="bold"
+        android:textSize="16sp"
+        android:layout_marginBottom="8dp" />
+
+    <Button
+        android:id="@+id/btn_analyze_environment"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Analyze Environment"
+        android:layout_marginBottom="8dp" />
+
+    <Button
+        android:id="@+id/btn_analyze_descriptor"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Analyze HID Descriptor"
+        android:layout_marginBottom="8dp" />
+
+    <Button
+        android:id="@+id/btn_show_statistics"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Show Report Statistics"
+        android:layout_marginBottom="8dp" />
+
+</LinearLayout>

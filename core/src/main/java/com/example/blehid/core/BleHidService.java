@@ -6,9 +6,14 @@ import android.bluetooth.BluetoothGattDescriptor;
 import android.bluetooth.BluetoothGattService;
 import android.util.Log;
 
-import java.util.UUID;
+import com.example.blehid.core.handler.ConsumerReportHandler;
+import com.example.blehid.core.handler.KeyboardReportHandler;
+import com.example.blehid.core.handler.MouseReportHandler;
+import com.example.blehid.core.manager.BleGattServiceRegistry;
+import com.example.blehid.core.report.ReportRegistry;
 
-import static com.example.blehid.core.HidMouseConstants.*;
+import java.util.UUID;
+import java.util.function.Function;
 
 /**
  * Combined HID service providing mouse, keyboard, and consumer control functionality.
@@ -17,43 +22,62 @@ import static com.example.blehid.core.HidMouseConstants.*;
 public class BleHidService {
     private static final String TAG = "BleHidService";
     
-    // Mouse button constants (duplicated from HidMouseConstants for backward compatibility)
-    public static final int BUTTON_LEFT = HidMouseConstants.BUTTON_LEFT;
-    public static final int BUTTON_RIGHT = HidMouseConstants.BUTTON_RIGHT;
-    public static final int BUTTON_MIDDLE = HidMouseConstants.BUTTON_MIDDLE;
+    // Expose constants for backward compatibility
+    public static final int BUTTON_LEFT = HidConstants.Mouse.BUTTON_LEFT;
+    public static final int BUTTON_RIGHT = HidConstants.Mouse.BUTTON_RIGHT;
+    public static final int BUTTON_MIDDLE = HidConstants.Mouse.BUTTON_MIDDLE;
     
     private final BleHidManager bleHidManager;
-    private final BleGattServerManager gattServerManager;
-    private BluetoothGattService hidService;
+    private final BleGattServiceRegistry gattServerManager;
+    private final BluetoothGattService hidService;
+    private final BleNotifier notifier;
+    private final String deviceName;
     
-    // Mouse characteristics
-    private BluetoothGattCharacteristic mouseReportCharacteristic;
-    private BluetoothGattCharacteristic bootMouseInputReportCharacteristic;
-    private BluetoothGattCharacteristic protocolModeCharacteristic;
+    // Report registry and handlers
+    private final ReportRegistry reportRegistry = new ReportRegistry();
+    private MouseReportHandler mouseReportHandler;
+    private KeyboardReportHandler keyboardReportHandler;
+    private ConsumerReportHandler consumerReportHandler;
     
-    // Keyboard characteristic
-    private BluetoothGattCharacteristic keyboardReportCharacteristic;
+    // Configuration
+    private final boolean enableMouse;
+    private final boolean enableKeyboard;
+    private final boolean enableConsumer;
     
-    // Consumer control characteristic
-    private BluetoothGattCharacteristic consumerReportCharacteristic;
-    
-    private BluetoothDevice connectedDevice;
+    // State
     private boolean isInitialized = false;
-    private byte currentProtocolMode = PROTOCOL_MODE_REPORT;
-    
-    // Report handlers
-    private HidMouseReportHandler mouseReportHandler;
-    private HidKeyboardReportHandler keyboardReportHandler;
-    private HidConsumerReportHandler consumerReportHandler;
+    private BluetoothDevice connectedDevice = null;
+    private byte currentProtocolMode = HidConstants.PROTOCOL_MODE_REPORT;
     
     /**
      * Creates a new BLE HID Service.
      *
      * @param bleHidManager The BLE HID manager
+     * @param gattServerManager The GATT service registry
+     * @param hidService The HID service
+     * @param notifier The BLE notifier for characteristic notifications
+     * @param deviceName The device name
+     * @param enableMouse Whether to enable mouse functionality
+     * @param enableKeyboard Whether to enable keyboard functionality
+     * @param enableConsumer Whether to enable consumer control functionality
      */
-    public BleHidService(BleHidManager bleHidManager) {
+    public BleHidService(
+            BleHidManager bleHidManager,
+            BleGattServiceRegistry gattServerManager,
+            BluetoothGattService hidService,
+            BleNotifier notifier,
+            String deviceName,
+            boolean enableMouse,
+            boolean enableKeyboard,
+            boolean enableConsumer) {
         this.bleHidManager = bleHidManager;
-        this.gattServerManager = bleHidManager.getGattServerManager();
+        this.gattServerManager = gattServerManager;
+        this.hidService = hidService;
+        this.notifier = notifier;
+        this.deviceName = deviceName;
+        this.enableMouse = enableMouse;
+        this.enableKeyboard = enableKeyboard;
+        this.enableConsumer = enableConsumer;
     }
     
     /**
@@ -72,219 +96,160 @@ public class BleHidService {
             return false;
         }
         
-        // Create HID service
-        hidService = new BluetoothGattService(
-                HID_SERVICE_UUID,
-                BluetoothGattService.SERVICE_TYPE_PRIMARY);
-        
-        setupCharacteristics();
-        
         // Add service to GATT server
-        boolean success = gattServerManager.addHidService(hidService);
+        boolean success = gattServerManager.addService(hidService);
         
         if (success) {
-            // Create the report handlers
-            mouseReportHandler = new HidMouseReportHandler(
-                    gattServerManager, 
-                    mouseReportCharacteristic, 
-                    bootMouseInputReportCharacteristic);
-            
-            keyboardReportHandler = new HidKeyboardReportHandler(
-                    gattServerManager,
-                    keyboardReportCharacteristic);
-                    
-            consumerReportHandler = new HidConsumerReportHandler(
-                    gattServerManager,
-                    consumerReportCharacteristic);
+            // Create report handlers
+            setupReportHandlers();
             
             isInitialized = true;
-            Log.i(TAG, "HID combined service initialized with mouse, keyboard, and consumer controls");
+            Log.i(TAG, "HID service initialized: " + 
+                  "mouse=" + enableMouse + ", " + 
+                  "keyboard=" + enableKeyboard + ", " + 
+                  "consumer=" + enableConsumer);
         } else {
-            Log.e(TAG, "Failed to initialize HID service");
+            Log.e(TAG, "Failed to add HID service to GATT server");
         }
         
         return success;
     }
     
     /**
-     * Sets up all the GATT characteristics for the HID service.
+     * Sets up report handlers based on configuration.
      */
-    private void setupCharacteristics() {
-        // HID Information characteristic
-        BluetoothGattCharacteristic hidInfoCharacteristic = new BluetoothGattCharacteristic(
-                HID_INFORMATION_UUID,
-                BluetoothGattCharacteristic.PROPERTY_READ,
-                BluetoothGattCharacteristic.PERMISSION_READ_ENCRYPTED);
-        hidInfoCharacteristic.setValue(HID_INFORMATION);
+    private void setupReportHandlers() {
+        if (enableMouse) {
+            setupMouseHandler();
+        }
         
-        // Report Map characteristic
-        BluetoothGattCharacteristic reportMapCharacteristic = new BluetoothGattCharacteristic(
-                HID_REPORT_MAP_UUID,
-                BluetoothGattCharacteristic.PROPERTY_READ,
-                BluetoothGattCharacteristic.PERMISSION_READ_ENCRYPTED);
-        reportMapCharacteristic.setValue(REPORT_MAP);
+        if (enableKeyboard) {
+            setupKeyboardHandler();
+        }
         
-        // HID Control Point characteristic
-        BluetoothGattCharacteristic hidControlCharacteristic = new BluetoothGattCharacteristic(
-                HID_CONTROL_POINT_UUID,
-                BluetoothGattCharacteristic.PROPERTY_WRITE_NO_RESPONSE,
-                BluetoothGattCharacteristic.PERMISSION_WRITE_ENCRYPTED);
-        
-        // Protocol Mode characteristic
-        protocolModeCharacteristic = new BluetoothGattCharacteristic(
-                HID_PROTOCOL_MODE_UUID,
-                BluetoothGattCharacteristic.PROPERTY_READ | 
-                BluetoothGattCharacteristic.PROPERTY_WRITE_NO_RESPONSE,
-                BluetoothGattCharacteristic.PERMISSION_READ_ENCRYPTED | 
-                BluetoothGattCharacteristic.PERMISSION_WRITE_ENCRYPTED);
-        protocolModeCharacteristic.setValue(new byte[] { PROTOCOL_MODE_REPORT });
-        
-        // Boot Mouse Input Report characteristic
-        bootMouseInputReportCharacteristic = setupBootMouseInputReportCharacteristic();
-        
-        // Mouse Report characteristic (for mouse input reports)
-        mouseReportCharacteristic = setupMouseReportCharacteristic();
-        
-        // Keyboard Report characteristic
-        keyboardReportCharacteristic = setupKeyboardReportCharacteristic();
-        
-        // Consumer Control Report characteristic
-        consumerReportCharacteristic = setupConsumerReportCharacteristic();
-        
-        // Add characteristics to service
-        hidService.addCharacteristic(hidInfoCharacteristic);
-        hidService.addCharacteristic(reportMapCharacteristic);
-        hidService.addCharacteristic(hidControlCharacteristic);
-        hidService.addCharacteristic(protocolModeCharacteristic);
-        hidService.addCharacteristic(bootMouseInputReportCharacteristic);
-        hidService.addCharacteristic(mouseReportCharacteristic);
-        hidService.addCharacteristic(keyboardReportCharacteristic);
-        hidService.addCharacteristic(consumerReportCharacteristic);
+        if (enableConsumer) {
+            setupConsumerHandler();
+        }
     }
     
     /**
-     * Sets up the Boot Mouse Input Report characteristic.
+     * Sets up the mouse report handler.
      */
-    private BluetoothGattCharacteristic setupBootMouseInputReportCharacteristic() {
-        BluetoothGattCharacteristic characteristic = new BluetoothGattCharacteristic(
-                HID_BOOT_MOUSE_INPUT_REPORT_UUID,
-                BluetoothGattCharacteristic.PROPERTY_READ | 
-                BluetoothGattCharacteristic.PROPERTY_NOTIFY,
-                BluetoothGattCharacteristic.PERMISSION_READ_ENCRYPTED);
+    private void setupMouseHandler() {
+        // Find characteristics for mouse reports
+        BluetoothGattCharacteristic mouseReportChar = findCharacteristicByType(
+                HidConstants.HID_REPORT_UUID, HidConstants.REPORT_ID_MOUSE);
         
-        // Add CCCD to Boot Mouse Input Report
-        BluetoothGattDescriptor bootMouseCccd = new BluetoothGattDescriptor(
-                CLIENT_CONFIG_UUID,
-                BluetoothGattDescriptor.PERMISSION_READ_ENCRYPTED | 
-                BluetoothGattDescriptor.PERMISSION_WRITE_ENCRYPTED);
-        characteristic.addDescriptor(bootMouseCccd);
+        BluetoothGattCharacteristic bootMouseChar = findCharacteristicByUuid(
+                HidConstants.Mouse.BOOT_MOUSE_INPUT_REPORT_UUID);
         
-        // Set initial boot mouse report value (3 bytes: buttons, x, y)
-        byte[] initialBootReport = new byte[3];
-        characteristic.setValue(initialBootReport);
-        
-        return characteristic;
+        if (mouseReportChar != null) {
+            mouseReportHandler = new MouseReportHandler(
+                    gattServerManager, notifier, mouseReportChar, bootMouseChar);
+            
+            reportRegistry.registerHandler(HidConstants.REPORT_ID_MOUSE, mouseReportHandler);
+            Log.d(TAG, "Mouse report handler registered");
+        } else {
+            Log.e(TAG, "Missing mouse report characteristic");
+        }
     }
     
     /**
-     * Sets up the Mouse Report characteristic.
+     * Sets up the keyboard report handler.
      */
-    private BluetoothGattCharacteristic setupMouseReportCharacteristic() {
-        BluetoothGattCharacteristic characteristic = new BluetoothGattCharacteristic(
-                HID_REPORT_UUID,
-                BluetoothGattCharacteristic.PROPERTY_READ | 
-                BluetoothGattCharacteristic.PROPERTY_NOTIFY |
-                BluetoothGattCharacteristic.PROPERTY_WRITE,
-                BluetoothGattCharacteristic.PERMISSION_READ_ENCRYPTED | 
-                BluetoothGattCharacteristic.PERMISSION_WRITE_ENCRYPTED);
+    private void setupKeyboardHandler() {
+        // Find characteristic for keyboard reports
+        BluetoothGattCharacteristic keyboardReportChar = findCharacteristicByType(
+                HidConstants.HID_REPORT_UUID, HidConstants.REPORT_ID_KEYBOARD);
         
-        // Set initial report value for 5-byte format [reportId, buttons, x, y, wheel]
-        byte[] initialReport = new byte[5];
-        initialReport[0] = REPORT_ID_MOUSE;  // Set report ID
-        characteristic.setValue(initialReport);
-        
-        // Add Report Reference descriptor to help hosts identify the report type
-        // Using Report ID 1 for Mouse
-        BluetoothGattDescriptor reportRefDescriptor = new BluetoothGattDescriptor(
-                REPORT_REFERENCE_UUID,
-                BluetoothGattDescriptor.PERMISSION_READ_ENCRYPTED);
-        reportRefDescriptor.setValue(new byte[] { REPORT_ID_MOUSE, 0x01 });  // Report ID 1, Input report
-        characteristic.addDescriptor(reportRefDescriptor);
-        
-        // Add Client Characteristic Configuration Descriptor (CCCD) to enable notifications
-        BluetoothGattDescriptor descriptor = new BluetoothGattDescriptor(
-                CLIENT_CONFIG_UUID,
-                BluetoothGattDescriptor.PERMISSION_READ_ENCRYPTED | 
-                BluetoothGattDescriptor.PERMISSION_WRITE_ENCRYPTED);
-        characteristic.addDescriptor(descriptor);
-        
-        return characteristic;
+        if (keyboardReportChar != null) {
+            keyboardReportHandler = new KeyboardReportHandler(
+                    gattServerManager, notifier, keyboardReportChar);
+            
+            reportRegistry.registerHandler(HidConstants.REPORT_ID_KEYBOARD, keyboardReportHandler);
+            Log.d(TAG, "Keyboard report handler registered");
+        } else {
+            Log.e(TAG, "Missing keyboard report characteristic");
+        }
     }
     
     /**
-     * Sets up the Keyboard Report characteristic.
+     * Sets up the consumer report handler.
      */
-    private BluetoothGattCharacteristic setupKeyboardReportCharacteristic() {
-        BluetoothGattCharacteristic characteristic = new BluetoothGattCharacteristic(
-                HID_REPORT_UUID,  // Using standard UUID instead of custom UUID
-                BluetoothGattCharacteristic.PROPERTY_READ | 
-                BluetoothGattCharacteristic.PROPERTY_NOTIFY,
-                BluetoothGattCharacteristic.PERMISSION_READ_ENCRYPTED);
+    private void setupConsumerHandler() {
+        // Find characteristic for consumer reports
+        BluetoothGattCharacteristic consumerReportChar = findCharacteristicByType(
+                HidConstants.HID_REPORT_UUID, HidConstants.REPORT_ID_CONSUMER);
         
-        // Set initial keyboard report value (with report ID at the beginning)
-        byte[] initialReport = new byte[HidKeyboardConstants.KEYBOARD_REPORT_SIZE + 1];
-        initialReport[0] = REPORT_ID_KEYBOARD;  // Set report ID
-        characteristic.setValue(initialReport);
-        
-        // Add Report Reference descriptor to help hosts identify the report type
-        // Using Report ID 2 for Keyboard
-        BluetoothGattDescriptor reportRefDescriptor = new BluetoothGattDescriptor(
-                REPORT_REFERENCE_UUID,
-                BluetoothGattDescriptor.PERMISSION_READ_ENCRYPTED);
-        reportRefDescriptor.setValue(new byte[] { REPORT_ID_KEYBOARD, 0x01 });  // Report ID 2, Input report
-        characteristic.addDescriptor(reportRefDescriptor);
-        
-        // Add Client Characteristic Configuration Descriptor (CCCD) to enable notifications
-        BluetoothGattDescriptor descriptor = new BluetoothGattDescriptor(
-                CLIENT_CONFIG_UUID,
-                BluetoothGattDescriptor.PERMISSION_READ_ENCRYPTED | 
-                BluetoothGattDescriptor.PERMISSION_WRITE_ENCRYPTED);
-        characteristic.addDescriptor(descriptor);
-        
-        return characteristic;
+        if (consumerReportChar != null) {
+            consumerReportHandler = new ConsumerReportHandler(
+                    gattServerManager, notifier, consumerReportChar);
+            
+            reportRegistry.registerHandler(HidConstants.REPORT_ID_CONSUMER, consumerReportHandler);
+            Log.d(TAG, "Consumer report handler registered");
+        } else {
+            Log.e(TAG, "Missing consumer report characteristic");
+        }
     }
     
     /**
-     * Sets up the Consumer Control Report characteristic.
+     * Finds a characteristic by UUID.
+     *
+     * @param uuid The UUID to find
+     * @return The characteristic, or null if not found
      */
-    private BluetoothGattCharacteristic setupConsumerReportCharacteristic() {
-        BluetoothGattCharacteristic characteristic = new BluetoothGattCharacteristic(
-                HID_REPORT_UUID,  // Using standard UUID instead of custom UUID
-                BluetoothGattCharacteristic.PROPERTY_READ | 
-                BluetoothGattCharacteristic.PROPERTY_NOTIFY,
-                BluetoothGattCharacteristic.PERMISSION_READ_ENCRYPTED);
+    private BluetoothGattCharacteristic findCharacteristicByUuid(UUID uuid) {
+        return hidService.getCharacteristic(uuid);
+    }
+    
+    /**
+     * Finds a report characteristic by its report type.
+     *
+     * @param uuid The characteristic UUID
+     * @param reportId The report ID to find
+     * @return The characteristic, or null if not found
+     */
+    private BluetoothGattCharacteristic findCharacteristicByType(UUID uuid, byte reportId) {
+        for (BluetoothGattCharacteristic characteristic : hidService.getCharacteristics()) {
+            if (characteristic.getUuid().equals(uuid)) {
+                // Check if this characteristic has the right report ID
+                BluetoothGattDescriptor reportRefDescriptor = characteristic.getDescriptor(
+                        HidConstants.REPORT_REFERENCE_UUID);
+                
+                if (reportRefDescriptor != null && reportRefDescriptor.getValue() != null &&
+                        reportRefDescriptor.getValue().length > 0) {
+                    byte charReportId = reportRefDescriptor.getValue()[0];
+                    if (charReportId == reportId) {
+                        return characteristic;
+                    }
+                }
+            }
+        }
+        return null;
+    }
+    
+    /**
+     * Executes an operation with a connected device.
+     * This helper method centralizes connection validation.
+     *
+     * @param operation The operation to execute
+     * @param defaultValue The default value to return if the device is not connected
+     * @param <T> The return type of the operation
+     * @return The result of the operation, or the default value if not connected
+     */
+    private <T> T withConnectedDevice(Function<BluetoothDevice, T> operation, T defaultValue) {
+        if (!isInitialized) {
+            Log.e(TAG, "HID service not initialized");
+            return defaultValue;
+        }
         
-        // Set initial consumer report value (with report ID at the beginning)
-        byte[] initialReport = new byte[HidConsumerConstants.CONSUMER_REPORT_SIZE + 1];
-        initialReport[0] = REPORT_ID_CONSUMER;  // Set report ID
-        characteristic.setValue(initialReport);
+        connectedDevice = bleHidManager.getConnectedDevice();
+        if (connectedDevice == null) {
+            Log.e(TAG, "No connected device");
+            return defaultValue;
+        }
         
-        // Add Report Reference descriptor to help hosts identify the report type
-        // Using Report ID 3 for Consumer Control
-        BluetoothGattDescriptor reportRefDescriptor = new BluetoothGattDescriptor(
-                REPORT_REFERENCE_UUID,
-                BluetoothGattDescriptor.PERMISSION_READ_ENCRYPTED);
-        reportRefDescriptor.setValue(new byte[] { REPORT_ID_CONSUMER, 0x01 });  // Report ID 3, Input report
-        characteristic.addDescriptor(reportRefDescriptor);
-        
-        // Add Client Characteristic Configuration Descriptor (CCCD) to enable notifications
-        BluetoothGattDescriptor descriptor = new BluetoothGattDescriptor(
-                CLIENT_CONFIG_UUID,
-                BluetoothGattDescriptor.PERMISSION_READ_ENCRYPTED | 
-                BluetoothGattDescriptor.PERMISSION_WRITE_ENCRYPTED);
-        characteristic.addDescriptor(descriptor);
-        
-        return characteristic;
+        return operation.apply(connectedDevice);
     }
     
     // --------------- MOUSE API ---------------
@@ -293,18 +258,10 @@ public class BleHidService {
      * Sends a mouse movement report.
      */
     public boolean sendMouseReport(int buttons, int x, int y, int wheel) {
-        if (!isInitialized) {
-            Log.e(TAG, "HID service not initialized");
-            return false;
-        }
-        
-        connectedDevice = bleHidManager.getConnectedDevice();
-        if (connectedDevice == null) {
-            Log.e(TAG, "No connected device");
-            return false;
-        }
-        
-        return mouseReportHandler.sendMouseReport(connectedDevice, buttons, x, y, wheel);
+        return withConnectedDevice(
+                device -> mouseReportHandler != null && 
+                          mouseReportHandler.sendMouseReport(device, buttons, x, y, wheel),
+                false);
     }
     
     /**
@@ -326,14 +283,10 @@ public class BleHidService {
      */
     public boolean movePointer(int x, int y) {
         Log.d(TAG, "HID movePointer ENTRY - x: " + x + ", y: " + y);
-        
-        connectedDevice = bleHidManager.getConnectedDevice();
-        if (connectedDevice == null) {
-            Log.e(TAG, "No connected device");
-            return false;
-        }
-        
-        boolean result = mouseReportHandler.movePointer(connectedDevice, x, y);
+        boolean result = withConnectedDevice(
+                device -> mouseReportHandler != null && 
+                          mouseReportHandler.movePointer(device, x, y),
+                false);
         Log.d(TAG, "HID movePointer EXIT - result: " + result);
         return result;
     }
@@ -342,26 +295,20 @@ public class BleHidService {
      * Sends a mouse wheel scroll report.
      */
     public boolean scroll(int amount) {
-        connectedDevice = bleHidManager.getConnectedDevice();
-        if (connectedDevice == null) {
-            Log.e(TAG, "No connected device");
-            return false;
-        }
-        
-        return mouseReportHandler.scroll(connectedDevice, amount);
+        return withConnectedDevice(
+                device -> mouseReportHandler != null && 
+                          mouseReportHandler.scroll(device, amount),
+                false);
     }
     
     /**
      * Performs a click with the specified button.
      */
     public boolean click(int button) {
-        connectedDevice = bleHidManager.getConnectedDevice();
-        if (connectedDevice == null) {
-            Log.e(TAG, "No connected device");
-            return false;
-        }
-        
-        return mouseReportHandler.click(connectedDevice, button);
+        return withConnectedDevice(
+                device -> mouseReportHandler != null && 
+                          mouseReportHandler.click(device, button),
+                false);
     }
     
     // --------------- KEYBOARD API ---------------
@@ -369,17 +316,14 @@ public class BleHidService {
     /**
      * Sends a key press.
      * 
-     * @param keyCode The key code to send (see HidKeyboardConstants)
+     * @param keyCode The key code to send (see HidConstants.Keyboard)
      * @return true if the report was sent successfully, false otherwise
      */
     public boolean sendKey(byte keyCode) {
-        connectedDevice = bleHidManager.getConnectedDevice();
-        if (connectedDevice == null) {
-            Log.e(TAG, "No connected device");
-            return false;
-        }
-        
-        return keyboardReportHandler.sendKey(connectedDevice, keyCode);
+        return withConnectedDevice(
+                device -> keyboardReportHandler != null && 
+                          keyboardReportHandler.sendKey(device, keyCode),
+                false);
     }
     
     /**
@@ -390,13 +334,10 @@ public class BleHidService {
      * @return true if the report was sent successfully, false otherwise
      */
     public boolean sendKeyWithModifiers(byte keyCode, byte modifiers) {
-        connectedDevice = bleHidManager.getConnectedDevice();
-        if (connectedDevice == null) {
-            Log.e(TAG, "No connected device");
-            return false;
-        }
-        
-        return keyboardReportHandler.sendKeyWithModifiers(connectedDevice, keyCode, modifiers);
+        return withConnectedDevice(
+                device -> keyboardReportHandler != null && 
+                          keyboardReportHandler.sendKeyWithModifiers(device, keyCode, modifiers),
+                false);
     }
     
     /**
@@ -406,13 +347,10 @@ public class BleHidService {
      * @return true if the report was sent successfully, false otherwise
      */
     public boolean sendKeys(byte[] keyCodes) {
-        connectedDevice = bleHidManager.getConnectedDevice();
-        if (connectedDevice == null) {
-            Log.e(TAG, "No connected device");
-            return false;
-        }
-        
-        return keyboardReportHandler.sendKeys(connectedDevice, keyCodes);
+        return withConnectedDevice(
+                device -> keyboardReportHandler != null && 
+                          keyboardReportHandler.sendKeys(device, keyCodes),
+                false);
     }
     
     /**
@@ -423,13 +361,10 @@ public class BleHidService {
      * @return true if the report was sent successfully, false otherwise
      */
     public boolean sendKeysWithModifiers(byte[] keyCodes, byte modifiers) {
-        connectedDevice = bleHidManager.getConnectedDevice();
-        if (connectedDevice == null) {
-            Log.e(TAG, "No connected device");
-            return false;
-        }
-        
-        return keyboardReportHandler.sendKeysWithModifiers(connectedDevice, keyCodes, modifiers);
+        return withConnectedDevice(
+                device -> keyboardReportHandler != null && 
+                          keyboardReportHandler.sendKeysWithModifiers(device, keyCodes, modifiers),
+                false);
     }
     
     /**
@@ -438,13 +373,23 @@ public class BleHidService {
      * @return true if the report was sent successfully, false otherwise
      */
     public boolean releaseAllKeys() {
-        connectedDevice = bleHidManager.getConnectedDevice();
-        if (connectedDevice == null) {
-            Log.e(TAG, "No connected device");
-            return false;
-        }
-        
-        return keyboardReportHandler.releaseAllKeys(connectedDevice);
+        return withConnectedDevice(
+                device -> keyboardReportHandler != null && 
+                          keyboardReportHandler.releaseAllKeys(device),
+                false);
+    }
+    
+    /**
+     * Types a text string by sending key presses for each character.
+     * 
+     * @param text The text to type
+     * @return true if all key reports were sent successfully, false otherwise
+     */
+    public boolean typeText(String text) {
+        return withConnectedDevice(
+                device -> keyboardReportHandler != null && 
+                          keyboardReportHandler.typeText(device, text),
+                false);
     }
     
     // --------------- CONSUMER CONTROL API ---------------
@@ -455,13 +400,10 @@ public class BleHidService {
      * @return true if the report was sent successfully, false otherwise
      */
     public boolean sendPlayPause() {
-        connectedDevice = bleHidManager.getConnectedDevice();
-        if (connectedDevice == null) {
-            Log.e(TAG, "No connected device");
-            return false;
-        }
-        
-        return consumerReportHandler.sendPlayPause(connectedDevice);
+        return withConnectedDevice(
+                device -> consumerReportHandler != null && 
+                          consumerReportHandler.sendPlayPause(device),
+                false);
     }
     
     /**
@@ -470,13 +412,10 @@ public class BleHidService {
      * @return true if the report was sent successfully, false otherwise
      */
     public boolean sendNextTrack() {
-        connectedDevice = bleHidManager.getConnectedDevice();
-        if (connectedDevice == null) {
-            Log.e(TAG, "No connected device");
-            return false;
-        }
-        
-        return consumerReportHandler.sendNextTrack(connectedDevice);
+        return withConnectedDevice(
+                device -> consumerReportHandler != null && 
+                          consumerReportHandler.sendNextTrack(device),
+                false);
     }
     
     /**
@@ -485,13 +424,10 @@ public class BleHidService {
      * @return true if the report was sent successfully, false otherwise
      */
     public boolean sendPrevTrack() {
-        connectedDevice = bleHidManager.getConnectedDevice();
-        if (connectedDevice == null) {
-            Log.e(TAG, "No connected device");
-            return false;
-        }
-        
-        return consumerReportHandler.sendPrevTrack(connectedDevice);
+        return withConnectedDevice(
+                device -> consumerReportHandler != null && 
+                          consumerReportHandler.sendPrevTrack(device),
+                false);
     }
     
     /**
@@ -500,13 +436,10 @@ public class BleHidService {
      * @return true if the report was sent successfully, false otherwise
      */
     public boolean sendVolumeUp() {
-        connectedDevice = bleHidManager.getConnectedDevice();
-        if (connectedDevice == null) {
-            Log.e(TAG, "No connected device");
-            return false;
-        }
-        
-        return consumerReportHandler.sendVolumeUp(connectedDevice);
+        return withConnectedDevice(
+                device -> consumerReportHandler != null && 
+                          consumerReportHandler.sendVolumeUp(device),
+                false);
     }
     
     /**
@@ -515,13 +448,10 @@ public class BleHidService {
      * @return true if the report was sent successfully, false otherwise
      */
     public boolean sendVolumeDown() {
-        connectedDevice = bleHidManager.getConnectedDevice();
-        if (connectedDevice == null) {
-            Log.e(TAG, "No connected device");
-            return false;
-        }
-        
-        return consumerReportHandler.sendVolumeDown(connectedDevice);
+        return withConnectedDevice(
+                device -> consumerReportHandler != null && 
+                          consumerReportHandler.sendVolumeDown(device),
+                false);
     }
     
     /**
@@ -530,29 +460,23 @@ public class BleHidService {
      * @return true if the report was sent successfully, false otherwise
      */
     public boolean sendMute() {
-        connectedDevice = bleHidManager.getConnectedDevice();
-        if (connectedDevice == null) {
-            Log.e(TAG, "No connected device");
-            return false;
-        }
-        
-        return consumerReportHandler.sendMute(connectedDevice);
+        return withConnectedDevice(
+                device -> consumerReportHandler != null && 
+                          consumerReportHandler.sendMute(device),
+                false);
     }
     
     /**
      * Sends a generic consumer control.
      * 
-     * @param controlBit The control bit to set (see HidConsumerConstants)
+     * @param controlBit The control bit to set (see HidConstants.Consumer)
      * @return true if the report was sent successfully, false otherwise
      */
     public boolean sendConsumerControl(byte controlBit) {
-        connectedDevice = bleHidManager.getConnectedDevice();
-        if (connectedDevice == null) {
-            Log.e(TAG, "No connected device");
-            return false;
-        }
-        
-        return consumerReportHandler.sendConsumerControl(connectedDevice, controlBit);
+        return withConnectedDevice(
+                device -> consumerReportHandler != null && 
+                          consumerReportHandler.sendConsumerControl(device, controlBit),
+                false);
     }
     
     // --------------- GATT Server Callbacks ---------------
@@ -561,41 +485,55 @@ public class BleHidService {
      * Gets the HID Report Map descriptor.
      */
     public byte[] getReportMap() {
-        return REPORT_MAP;
+        return HidConstants.REPORT_MAP;
     }
     
     /**
      * Handles characteristic read requests.
      */
     public byte[] handleCharacteristicRead(UUID charUuid, int offset) {
-        if (charUuid.equals(HID_REPORT_UUID)) {
-            // For Report Protocol mode, we need to determine which report is being accessed
-            // This would typically be determined by the Report Reference descriptor,
-            // but we can check the Report ID in the report data directly
-            
-            // First try to get the report reference descriptor value from the characteristic if available
-            BluetoothGattCharacteristic characteristic = hidService.getCharacteristic(charUuid);
+        if (charUuid.equals(HidConstants.HID_REPORT_UUID)) {
+            // For Report UUID, try to determine which report based on the characteristic
+            BluetoothGattCharacteristic characteristic = findCharacteristicByUuid(charUuid);
             if (characteristic != null) {
-                BluetoothGattDescriptor reportRefDescriptor = characteristic.getDescriptor(REPORT_REFERENCE_UUID);
-                if (reportRefDescriptor != null && reportRefDescriptor.getValue() != null && reportRefDescriptor.getValue().length > 0) {
+                // Get the report ID from the report reference descriptor
+                BluetoothGattDescriptor reportRefDescriptor = characteristic.getDescriptor(
+                        HidConstants.REPORT_REFERENCE_UUID);
+                
+                if (reportRefDescriptor != null && reportRefDescriptor.getValue() != null && 
+                        reportRefDescriptor.getValue().length > 0) {
                     byte reportId = reportRefDescriptor.getValue()[0];
+                    AbstractReportHandler<?> handler = reportRegistry.getHandler(reportId);
                     
-                    if (reportId == REPORT_ID_MOUSE) {
-                        return handleReportRead(offset, mouseReportHandler.getMouseReport());
-                    } else if (reportId == REPORT_ID_KEYBOARD) {
-                        return handleReportRead(offset, keyboardReportHandler.getKeyboardReport());
-                    } else if (reportId == REPORT_ID_CONSUMER) {
-                        return handleReportRead(offset, consumerReportHandler.getConsumerReport());
+                    if (handler != null) {
+                        // Get the report data from the handler
+                        byte[] report = null;
+                        
+                        if (reportId == HidConstants.REPORT_ID_MOUSE && mouseReportHandler != null) {
+                            report = mouseReportHandler.getMouseReport();
+                        } else if (reportId == HidConstants.REPORT_ID_KEYBOARD && keyboardReportHandler != null) {
+                            report = keyboardReportHandler.getKeyboardReport();
+                        } else if (reportId == HidConstants.REPORT_ID_CONSUMER && consumerReportHandler != null) {
+                            report = consumerReportHandler.getConsumerReport();
+                        }
+                        
+                        if (report != null) {
+                            return handleReportRead(offset, report);
+                        }
                     }
                 }
             }
             
-            // Fallback: Return the mouse report by default
-            return handleReportRead(offset, mouseReportHandler.getMouseReport());
-        } else if (charUuid.equals(HID_BOOT_MOUSE_INPUT_REPORT_UUID)) {
+            // If we couldn't determine which report, default to mouse
+            if (mouseReportHandler != null) {
+                return handleReportRead(offset, mouseReportHandler.getMouseReport());
+            }
+        } else if (charUuid.equals(HidConstants.Mouse.BOOT_MOUSE_INPUT_REPORT_UUID)) {
             // Boot mouse report (doesn't use Report ID)
-            return handleReportRead(offset, mouseReportHandler.getBootMouseReport());
-        } else if (charUuid.equals(HID_PROTOCOL_MODE_UUID)) {
+            if (mouseReportHandler != null) {
+                return handleReportRead(offset, mouseReportHandler.getBootMouseReport());
+            }
+        } else if (charUuid.equals(HidConstants.HID_PROTOCOL_MODE_UUID)) {
             // Return the current protocol mode
             return new byte[] { currentProtocolMode };
         }
@@ -625,37 +563,48 @@ public class BleHidService {
      * Handles characteristic write requests.
      */
     public boolean handleCharacteristicWrite(UUID charUuid, byte[] value) {
-        if (charUuid.equals(HID_REPORT_UUID)) {
+        if (charUuid.equals(HidConstants.HID_REPORT_UUID)) {
             // For Report UUID, determine which report based on the report ID
             if (value != null && value.length > 0) {
                 byte reportId = value[0];
                 
-                if (reportId == REPORT_ID_MOUSE) {
-                    Log.d(TAG, "Received write to mouse report characteristic: " + HidMouseConstants.bytesToHex(value));
-                } else if (reportId == REPORT_ID_KEYBOARD) {
-                    Log.d(TAG, "Received write to keyboard report characteristic: " + HidMouseConstants.bytesToHex(value));
-                } else if (reportId == REPORT_ID_CONSUMER) {
-                    Log.d(TAG, "Received write to consumer report characteristic: " + HidMouseConstants.bytesToHex(value));
+                if (reportId == HidConstants.REPORT_ID_MOUSE) {
+                    Log.d(TAG, "Received write to mouse report characteristic: " + 
+                          HidConstants.bytesToHex(value));
+                } else if (reportId == HidConstants.REPORT_ID_KEYBOARD) {
+                    Log.d(TAG, "Received write to keyboard report characteristic: " + 
+                          HidConstants.bytesToHex(value));
+                } else if (reportId == HidConstants.REPORT_ID_CONSUMER) {
+                    Log.d(TAG, "Received write to consumer report characteristic: " + 
+                          HidConstants.bytesToHex(value));
                 } else {
-                    Log.d(TAG, "Received write to unknown report ID " + reportId + ": " + HidMouseConstants.bytesToHex(value));
+                    Log.d(TAG, "Received write to unknown report ID " + reportId + ": " + 
+                          HidConstants.bytesToHex(value));
                 }
             } else {
                 Log.d(TAG, "Received empty write to report characteristic");
             }
             return true;
-        } else if (charUuid.equals(HID_PROTOCOL_MODE_UUID)) {
+        } else if (charUuid.equals(HidConstants.HID_PROTOCOL_MODE_UUID)) {
             // Handle write to protocol mode characteristic
             if (value != null && value.length > 0) {
                 byte newMode = value[0];
-                if (newMode == PROTOCOL_MODE_BOOT || newMode == PROTOCOL_MODE_REPORT) {
+                if (newMode == HidConstants.PROTOCOL_MODE_BOOT || 
+                        newMode == HidConstants.PROTOCOL_MODE_REPORT) {
                     Log.d(TAG, "Protocol mode changed to: " + 
-                          (newMode == PROTOCOL_MODE_REPORT ? "Report Protocol" : "Boot Protocol"));
+                          (newMode == HidConstants.PROTOCOL_MODE_REPORT ? 
+                           "Report Protocol" : "Boot Protocol"));
                     currentProtocolMode = newMode;
-                    protocolModeCharacteristic.setValue(new byte[] { currentProtocolMode });
                     
-                    // Update the report handler
+                    // Update the protocol mode in the handlers
                     if (mouseReportHandler != null) {
                         mouseReportHandler.setProtocolMode(newMode);
+                    }
+                    if (keyboardReportHandler != null) {
+                        keyboardReportHandler.setProtocolMode(newMode);
+                    }
+                    if (consumerReportHandler != null) {
+                        consumerReportHandler.setProtocolMode(newMode);
                     }
                     
                     return true;
@@ -664,7 +613,7 @@ public class BleHidService {
                 }
             }
             return true;
-        } else if (charUuid.equals(HID_CONTROL_POINT_UUID)) {
+        } else if (charUuid.equals(HidConstants.HID_CONTROL_POINT_UUID)) {
             // Handle write to control point characteristic
             if (value != null && value.length > 0) {
                 byte controlPoint = value[0];
@@ -682,17 +631,19 @@ public class BleHidService {
      * Handles descriptor read requests.
      */
     public byte[] handleDescriptorRead(UUID descriptorUuid, UUID characteristicUuid) {
-        if (descriptorUuid.equals(REPORT_REFERENCE_UUID)) {
-            if (characteristicUuid.equals(HID_REPORT_UUID)) {
-                // Since we're now using the same UUID for all report characteristics,
+        if (descriptorUuid.equals(HidConstants.REPORT_REFERENCE_UUID)) {
+            if (characteristicUuid.equals(HidConstants.HID_REPORT_UUID)) {
+                // Since we're using the same UUID for all report characteristics,
                 // we need to figure out which one is being accessed
                 
                 // Try to get the actual characteristic instance and check its properties
-                BluetoothGattCharacteristic characteristic = hidService.getCharacteristic(characteristicUuid);
+                BluetoothGattCharacteristic characteristic = findCharacteristicByUuid(characteristicUuid);
                 if (characteristic != null) {
                     // Get the Report Reference descriptor to see which report it is
-                    BluetoothGattDescriptor reportRefDescriptor = characteristic.getDescriptor(REPORT_REFERENCE_UUID);
-                    if (reportRefDescriptor != null && reportRefDescriptor.getValue() != null && reportRefDescriptor.getValue().length > 0) {
+                    BluetoothGattDescriptor reportRefDescriptor = characteristic.getDescriptor(
+                            HidConstants.REPORT_REFERENCE_UUID);
+                    if (reportRefDescriptor != null && reportRefDescriptor.getValue() != null && 
+                            reportRefDescriptor.getValue().length > 0) {
                         // Return the descriptor value that was set when creating the characteristic
                         return reportRefDescriptor.getValue();
                     }
@@ -707,7 +658,7 @@ public class BleHidService {
                 }
                 
                 // Default to mouse report if we can't determine
-                return new byte[] { REPORT_ID_MOUSE, 0x01 };  // Mouse report ID, Input report
+                return new byte[] { HidConstants.REPORT_ID_MOUSE, 0x01 };  // Mouse report ID, Input report
             }
         }
         
@@ -719,32 +670,33 @@ public class BleHidService {
      * Handles descriptor write requests.
      */
     public boolean handleDescriptorWrite(UUID descriptorUuid, UUID characteristicUuid, byte[] value) {
-        if (descriptorUuid.equals(CLIENT_CONFIG_UUID)) {
+        if (descriptorUuid.equals(HidConstants.CLIENT_CONFIG_UUID)) {
             if (value.length == 2) {
                 boolean enabled = (value[0] == 0x01 && value[1] == 0x00);
                 String state = enabled ? "enabled" : "disabled";
                 
-                if (characteristicUuid.equals(HID_REPORT_UUID)) {
-                    // For our combined implementation, need to determine which report type
-                    // Try to identify which report characteristic this is
-                    BluetoothGattCharacteristic characteristic = hidService.getCharacteristic(characteristicUuid);
+                if (characteristicUuid.equals(HidConstants.HID_REPORT_UUID)) {
+                    // For combined implementation, need to determine which report type
+                    BluetoothGattCharacteristic characteristic = findCharacteristicByUuid(characteristicUuid);
                     if (characteristic != null) {
-                        // Check if we can determine which report from descriptor
-                        BluetoothGattDescriptor reportRefDescriptor = characteristic.getDescriptor(REPORT_REFERENCE_UUID);
-                        if (reportRefDescriptor != null && reportRefDescriptor.getValue() != null && reportRefDescriptor.getValue().length > 0) {
+                        // Try to determine which report from descriptor
+                        BluetoothGattDescriptor reportRefDescriptor = characteristic.getDescriptor(
+                                HidConstants.REPORT_REFERENCE_UUID);
+                        if (reportRefDescriptor != null && reportRefDescriptor.getValue() != null && 
+                                reportRefDescriptor.getValue().length > 0) {
                             byte reportId = reportRefDescriptor.getValue()[0];
                             
-                            if (reportId == REPORT_ID_MOUSE) {
+                            if (reportId == HidConstants.REPORT_ID_MOUSE) {
                                 Log.d(TAG, "Notifications " + state + " for mouse report characteristic");
                                 if (mouseReportHandler != null) {
                                     mouseReportHandler.setNotificationsEnabled(characteristicUuid, enabled);
                                 }
-                            } else if (reportId == REPORT_ID_KEYBOARD) {
+                            } else if (reportId == HidConstants.REPORT_ID_KEYBOARD) {
                                 Log.d(TAG, "Notifications " + state + " for keyboard report characteristic");
                                 if (keyboardReportHandler != null) {
                                     keyboardReportHandler.setNotificationsEnabled(enabled);
                                 }
-                            } else if (reportId == REPORT_ID_CONSUMER) {
+                            } else if (reportId == HidConstants.REPORT_ID_CONSUMER) {
                                 Log.d(TAG, "Notifications " + state + " for consumer report characteristic");
                                 if (consumerReportHandler != null) {
                                     consumerReportHandler.setNotificationsEnabled(enabled);
@@ -759,17 +711,17 @@ public class BleHidService {
                             // First byte should be the report ID
                             byte reportId = charValue[0];
                             
-                            if (reportId == REPORT_ID_MOUSE) {
+                            if (reportId == HidConstants.REPORT_ID_MOUSE) {
                                 Log.d(TAG, "Notifications " + state + " for mouse report characteristic");
                                 if (mouseReportHandler != null) {
                                     mouseReportHandler.setNotificationsEnabled(characteristicUuid, enabled);
                                 }
-                            } else if (reportId == REPORT_ID_KEYBOARD) {
+                            } else if (reportId == HidConstants.REPORT_ID_KEYBOARD) {
                                 Log.d(TAG, "Notifications " + state + " for keyboard report characteristic");
                                 if (keyboardReportHandler != null) {
                                     keyboardReportHandler.setNotificationsEnabled(enabled);
                                 }
-                            } else if (reportId == REPORT_ID_CONSUMER) {
+                            } else if (reportId == HidConstants.REPORT_ID_CONSUMER) {
                                 Log.d(TAG, "Notifications " + state + " for consumer report characteristic");
                                 if (consumerReportHandler != null) {
                                     consumerReportHandler.setNotificationsEnabled(enabled);
@@ -778,7 +730,7 @@ public class BleHidService {
                             return true;
                         }
                     }
-                } else if (characteristicUuid.equals(HID_BOOT_MOUSE_INPUT_REPORT_UUID)) {
+                } else if (characteristicUuid.equals(HidConstants.Mouse.BOOT_MOUSE_INPUT_REPORT_UUID)) {
                     Log.d(TAG, "Notifications " + state + " for boot mouse report characteristic");
                     if (mouseReportHandler != null) {
                         mouseReportHandler.setNotificationsEnabled(characteristicUuid, enabled);
@@ -790,6 +742,51 @@ public class BleHidService {
         
         // Unhandled descriptor
         return false;
+    }
+    
+    /**
+     * Gets the device name.
+     *
+     * @return The device name
+     */
+    public String getDeviceName() {
+        return deviceName;
+    }
+    
+    /**
+     * Gets the report registry.
+     *
+     * @return The report registry
+     */
+    public ReportRegistry getReportRegistry() {
+        return reportRegistry;
+    }
+    
+    /**
+     * Gets the mouse report handler.
+     *
+     * @return The mouse report handler, or null if not enabled
+     */
+    public MouseReportHandler getMouseReportHandler() {
+        return mouseReportHandler;
+    }
+    
+    /**
+     * Gets the keyboard report handler.
+     *
+     * @return The keyboard report handler, or null if not enabled
+     */
+    public KeyboardReportHandler getKeyboardReportHandler() {
+        return keyboardReportHandler;
+    }
+    
+    /**
+     * Gets the consumer report handler.
+     *
+     * @return The consumer report handler, or null if not enabled
+     */
+    public ConsumerReportHandler getConsumerReportHandler() {
+        return consumerReportHandler;
     }
     
     /**

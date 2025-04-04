@@ -11,6 +11,7 @@
     <string name="permissions_required">Required permissions were not granted.</string>
     <string name="start_keyboard">Start BLE Keyboard</string>
     <string name="start_mouse">Start BLE Mouse</string>
+    <string name="start_unified">Unified BLE Controller</string>
     
     <!-- Keyboard Activity -->
     <string name="ready">Ready to start advertising</string>

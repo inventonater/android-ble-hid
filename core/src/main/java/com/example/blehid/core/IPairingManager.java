@@ -134,6 +134,13 @@ public interface IPairingManager {
     String getBondedDevicesInfo();
     
     /**
+     * Gets comprehensive information about the current pairing status.
+     * 
+     * @return Detailed information about pairing status
+     */
+    String getPairingStatusInfo();
+    
+    /**
      * Gets the current pairing state.
      * 
      * @return The current pairing state
