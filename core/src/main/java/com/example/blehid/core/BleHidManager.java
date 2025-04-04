@@ -20,8 +20,8 @@ public class BleHidManager {
     private final BleAdvertiser advertiser;
     private final BleGattServerManager gattServerManager;
     private final BlePairingManager pairingManager;
-    // Only using mouse service - removing keyboard for simplicity
-    private final HidMouseService hidMouseService;
+    // Only using media service - removing keyboard/mouse for simplicity
+    private final HidMediaService hidMediaService;
 
     private boolean isInitialized = false;
     private BluetoothDevice connectedDevice = null;
@@ -47,8 +47,8 @@ public class BleHidManager {
         advertiser = new BleAdvertiser(this);
         gattServerManager = new BleGattServerManager(this);
         pairingManager = new BlePairingManager(this);
-        // Only initialize mouse service
-        hidMouseService = new HidMouseService(this);
+        // Only initialize media service
+        hidMediaService = new HidMediaService(this);
     }
 
     /**
@@ -84,16 +84,16 @@ public class BleHidManager {
             return false;
         }
         
-        // Initialize only the mouse service
-        boolean hidInitialized = hidMouseService.initialize();
+        // Initialize only the media service
+        boolean hidInitialized = hidMediaService.initialize();
         if (!hidInitialized) {
-            Log.e(TAG, "Failed to initialize HID mouse service");
+            Log.e(TAG, "Failed to initialize HID media service");
             gattServerManager.close();
             return false;
         }
         
         isInitialized = true;
-        Log.i(TAG, "BLE HID Manager initialized successfully with mouse service");
+        Log.i(TAG, "BLE HID Manager initialized successfully with media service");
         return true;
     }
 
@@ -173,87 +173,96 @@ public class BleHidManager {
         return gattServerManager;
     }
 
-    public HidMouseService getHidMouseService() {
-        return hidMouseService;
+    public HidMediaService getHidMediaService() {
+        return hidMediaService;
     }
     
     /**
-     * Mouse control methods
+     * Media control methods
      */
     
     /**
-     * Moves the mouse pointer by the specified amount.
-     * 
-     * @param x Horizontal movement (-127 to 127)
-     * @param y Vertical movement (-127 to 127)
-     * @return true if the report was sent successfully, false otherwise
-     */
-    public boolean moveMouse(int x, int y) {
-        if (!isInitialized || connectedDevice == null) {
-            Log.e(TAG, "Not connected or initialized");
-            return false;
-        }
-        
-        return hidMouseService.movePointer(x, y);
-    }
-    
-    /**
-     * Scrolls the mouse wheel.
+     * Sends a play/pause control.
      *
-     * @param amount Scroll amount (-127 to 127, positive for up, negative for down)
-     * @return true if the report was sent successfully, false otherwise
+     * @return true if the command was sent successfully, false otherwise
      */
-    public boolean scrollMouseWheel(int amount) {
+    public boolean playPause() {
         if (!isInitialized || connectedDevice == null) {
             Log.e(TAG, "Not connected or initialized");
             return false;
         }
         
-        return hidMouseService.scroll(amount);
+        return hidMediaService.playPause();
     }
     
     /**
-     * Clicks a mouse button.
+     * Sends a next track control.
      *
-     * @param button Button to click (BUTTON_LEFT, BUTTON_RIGHT, BUTTON_MIDDLE)
-     * @return true if the report was sent successfully, false otherwise
+     * @return true if the command was sent successfully, false otherwise
      */
-    public boolean clickMouseButton(int button) {
+    public boolean nextTrack() {
         if (!isInitialized || connectedDevice == null) {
             Log.e(TAG, "Not connected or initialized");
             return false;
         }
         
-        return hidMouseService.click(button);
+        return hidMediaService.nextTrack();
     }
     
     /**
-     * Presses a mouse button down.
-     * 
-     * @param button Button to press (BUTTON_LEFT, BUTTON_RIGHT, BUTTON_MIDDLE)
-     * @return true if the report was sent successfully, false otherwise
+     * Sends a previous track control.
+     *
+     * @return true if the command was sent successfully, false otherwise
      */
-    public boolean pressMouseButton(int button) {
+    public boolean previousTrack() {
         if (!isInitialized || connectedDevice == null) {
             Log.e(TAG, "Not connected or initialized");
             return false;
         }
         
-        return hidMouseService.pressButton(button);
+        return hidMediaService.previousTrack();
     }
     
     /**
-     * Releases all mouse buttons.
-     * 
-     * @return true if the report was sent successfully, false otherwise
+     * Sends a volume up control.
+     *
+     * @return true if the command was sent successfully, false otherwise
      */
-    public boolean releaseMouseButtons() {
+    public boolean volumeUp() {
         if (!isInitialized || connectedDevice == null) {
             Log.e(TAG, "Not connected or initialized");
             return false;
         }
         
-        return hidMouseService.releaseButtons();
+        return hidMediaService.volumeUp();
+    }
+    
+    /**
+     * Sends a volume down control.
+     *
+     * @return true if the command was sent successfully, false otherwise
+     */
+    public boolean volumeDown() {
+        if (!isInitialized || connectedDevice == null) {
+            Log.e(TAG, "Not connected or initialized");
+            return false;
+        }
+        
+        return hidMediaService.volumeDown();
+    }
+    
+    /**
+     * Sends a mute control.
+     *
+     * @return true if the command was sent successfully, false otherwise
+     */
+    public boolean mute() {
+        if (!isInitialized || connectedDevice == null) {
+            Log.e(TAG, "Not connected or initialized");
+            return false;
+        }
+        
+        return hidMediaService.mute();
     }
 
     // Connection management

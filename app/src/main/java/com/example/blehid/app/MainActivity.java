@@ -17,7 +17,7 @@ import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 
-import com.example.blehid.app.ui.SimpleMouseActivity;
+import com.example.blehid.app.ui.SimpleMediaActivity;
 import com.example.blehid.core.BleHidManager;
 
 /**
@@ -45,7 +45,7 @@ public class MainActivity extends AppCompatActivity {
     
     private BleHidManager bleHidManager;
     private TextView statusText;
-    private Button startMouseButton;
+    private Button startMediaButton;
     
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -53,7 +53,7 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
         
         statusText = findViewById(R.id.statusText);
-        startMouseButton = findViewById(R.id.startMouseButton);
+        startMediaButton = findViewById(R.id.startMediaButton);
         
         // Initialize the BLE HID manager
         bleHidManager = new BleHidManager(this);
@@ -61,15 +61,15 @@ public class MainActivity extends AppCompatActivity {
         // Check if BLE peripheral mode is supported
         if (!bleHidManager.isBlePeripheralSupported()) {
             statusText.setText(R.string.ble_peripheral_not_supported);
-            startMouseButton.setEnabled(false);
+            startMediaButton.setEnabled(false);
             return;
         }
         
-        // Set up mouse button click listener
-        startMouseButton.setOnClickListener(new View.OnClickListener() {
+        // Set up media button click listener
+        startMediaButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                launchMouseActivity();
+                launchMediaActivity();
             }
         });
         
@@ -158,7 +158,7 @@ public class MainActivity extends AppCompatActivity {
             } else {
                 // Some permissions denied
                 statusText.setText(R.string.permissions_required);
-                startMouseButton.setEnabled(false);
+                startMediaButton.setEnabled(false);
             }
         }
     }
@@ -174,7 +174,7 @@ public class MainActivity extends AppCompatActivity {
             } else {
                 // User declined to enable Bluetooth
                 statusText.setText(R.string.bluetooth_disabled);
-                startMouseButton.setEnabled(false);
+                startMediaButton.setEnabled(false);
             }
         }
     }
@@ -189,26 +189,26 @@ public class MainActivity extends AppCompatActivity {
             if (bluetoothAdapter != null && bluetoothAdapter.isEnabled()) {
                 if (bleHidManager.isBlePeripheralSupported()) {
                     statusText.setText(R.string.ready_to_start);
-                    startMouseButton.setEnabled(true);
+                    startMediaButton.setEnabled(true);
                 } else {
                     statusText.setText(R.string.ble_peripheral_not_supported);
-                    startMouseButton.setEnabled(false);
+                    startMediaButton.setEnabled(false);
                 }
             } else {
                 statusText.setText(R.string.bluetooth_disabled);
-                startMouseButton.setEnabled(false);
+                startMediaButton.setEnabled(false);
             }
         } else {
             statusText.setText(R.string.bluetooth_not_supported);
-            startMouseButton.setEnabled(false);
+            startMediaButton.setEnabled(false);
         }
     }
     
     /**
-     * Launches the SimpleMouseActivity.
+     * Launches the SimpleMediaActivity.
      */
-    private void launchMouseActivity() {
-        Intent intent = new Intent(this, SimpleMouseActivity.class);
+    private void launchMediaActivity() {
+        Intent intent = new Intent(this, SimpleMediaActivity.class);
         startActivity(intent);
     }
 }

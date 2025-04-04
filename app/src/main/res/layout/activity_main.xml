@@ -34,11 +34,11 @@
         app:layout_constraintTop_toBottomOf="@+id/titleText" />
 
     <Button
-        android:id="@+id/startMouseButton"
+        android:id="@+id/startMediaButton"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginTop="32dp"
-        android:text="@string/start_mouse"
+        android:text="@string/start_media"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/statusText" />
@@ -48,10 +48,10 @@
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_marginTop="32dp"
-        android:text="This application acts as a BLE HID peripheral. You can pair it with another device to use it as a mouse controller."
+        android:text="This application acts as a BLE HID peripheral. You can pair it with another device to use it as a media controller."
         android:textAlignment="center"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/startMouseButton" />
+        app:layout_constraintTop_toBottomOf="@+id/startMediaButton" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>
