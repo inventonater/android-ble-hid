@@ -1,155 +1,117 @@
-# Inventonater HID
+# Android BLE HID Device
 
-This project implements an Android application that functions as a Bluetooth Low Energy (BLE) Human Interface Device (HID), allowing your Android device to be used as a wireless mouse or keyboard for other devices like computers, tablets, or smart TVs.
-
-## Prerequisites
-
-- Android device running Android 5.0 (API level 21) or higher
-- Device with BLE hardware that supports peripheral/advertiser mode
-- Host device (computer, tablet, etc.) with Bluetooth capabilities
+This project allows an Android device to act as a Bluetooth HID peripheral (keyboard, mouse, and media controller) using the BluetoothHidDevice API introduced in Android 9 (API 28).
 
 ## Features
 
-- BLE HID Mouse functionality
-- BLE HID Keyboard functionality (basic)
-- BLE advertisement and GATT server management
-- Simple touch interface for mouse movement and buttons
-- Basic keyboard input
+- Emulate HID peripherals (keyboard, mouse, media controller)
+- Built on the modern BluetoothHidDevice API
+- Debug UI for testing and troubleshooting
+- Unity integration for game developers
 
-## Setup
+## Requirements
 
-1. Connect your Android device to your computer via USB
-2. Enable USB debugging on your Android device
-3. Clone this repository
-4. Build and install the application:
+- Android 9.0 (API 28) or higher
+- Device with Bluetooth HID Device profile support
+- Bluetooth and location permissions
 
-```bash
-./gradlew installDebug
-```
+## Project Structure
 
-5. Grant the necessary Bluetooth permissions when prompted
+The project is organized into several modules:
+
+- **app**: Main Android application with UI
+- **core**: Core BLE HID implementation using BluetoothHidDevice API
+- **unity-plugin**: Java wrapper for Unity integration
+- **unity-test**: Sample Unity project demonstrating integration
+
+## Core Components
+
+### HidManager
+
+The central component that handles:
+- Connecting to the HID Service
+- Registering as a HID Device
+- Connecting with host devices
+- Sending HID reports
+
+### HID Reporters
+
+- **KeyboardReporter**: For keyboard input (keys, modifiers, typing text)
+- **MouseReporter**: For mouse input (movement, buttons, scrolling)
+- **MediaReporter**: For media control (play/pause, volume, etc.)
 
 ## Usage
 
-1. On the Android device, open the BLE HID app
-2. Choose either "Mouse" or "Keyboard" mode
-3. Tap "Start Advertising" to begin advertising as a BLE HID device
-4. On your host device (e.g., a computer), go to Bluetooth settings and look for "Android BLE Mouse" or "Android BLE Keyboard"
-5. Pair with the device
-6. Use the touchpad area to control the mouse cursor or the keyboard interface to send keystrokes
+### Basic Usage (Android App)
 
-## Troubleshooting
+1. Launch the app
+2. Grant necessary permissions
+3. Click "Start BLE HID Device"
+4. Pair with a host device (computer, tablet, etc.)
+5. Use the UI to send keyboard, mouse, or media commands
 
-If you're experiencing issues, try the following:
+### Unity Integration
 
-### Basic Troubleshooting
+To use in Unity projects:
 
-1. Make sure your Android device supports BLE peripheral mode (run `./ble-tools.sh check`)
-2. Ensure Bluetooth is enabled on both devices
-3. Try restarting both devices
-4. Grant all requested permissions to the app
+1. Add the BleHidPlugin.aar file to your Unity project's Assets/Plugins/Android folder
+2. Use the ModernBleHidManager component to access HID functionality:
 
-### Advanced Troubleshooting
+```csharp
+// Example: Type text via HID keyboard
+ModernBleHidManager.Instance.TypeString("Hello from Unity!");
 
-We provide a unified tool with several commands for diagnosing and fixing issues:
+// Example: Move mouse
+ModernBleHidManager.Instance.MoveMouseRelative(10, 5);
 
-```bash
-./ble-tools.sh [command]
+// Example: Click mouse button
+ModernBleHidManager.Instance.ClickMouseButton(ModernBleHidManager.MouseButton.LEFT);
+
+// Example: Send media key
+ModernBleHidManager.Instance.SendMediaKey(ModernBleHidManager.MediaKey.PLAY_PAUSE);
 ```
 
-Available commands:
+## Building & Development
 
-* `check` - Check if your device supports BLE peripheral mode
-* `debug` - Basic BLE debugging information
-* `debug --enhanced` - Comprehensive BLE HID debugging tool
-* `run` - Build, install, and run the app in one step
-* `test` - Test mouse connectivity on host devices
-* `help` - Show available commands and options
+This project includes comprehensive developer tools in the `developer-tools/` directory 
+to simplify building, testing, and debugging.
 
-### Mac-Specific Issues
+### Interactive Developer Tools Launcher
 
-If connecting to a Mac:
+The easiest way to access all developer tools is through the interactive launcher:
 
-1. Make sure "Input Monitoring" permission is granted to Bluetooth in System Preferences > Security & Privacy > Privacy
-2. Try using LightBlue Explorer (available on Mac App Store) to check if your device is advertising properly
-3. If device appears in Bluetooth settings but pairing gets stuck, try these steps:
-   - Ensure the Android device reports "Device connected" in the app UI
-   - Check System Information > Bluetooth on Mac to see if the device is listed
-   - Make sure notifications are enabled for HID report characteristics
+```bash
+./dev-hid.sh
+```
 
-### Common Issues
+This will present a menu with all available tools organized by category:
+- Build tools (all components, app only, Unity plugin)
+- Testing & debugging tools (device compatibility, connection diagnostics)
+- Deployment tools (build, install, and run)
 
-1. **Device pairs but doesn't work**
-   - This often indicates notification issues. The HID reports may not be properly configured.
+### Individual Tool Scripts
 
-2. **Device appears in Bluetooth but won't connect**
-   - Verify peripheral mode support on your Android device
-   - Check advertising settings and permissions
+You can also run individual tool scripts directly:
 
-3. **Mouse movement is detected but not sent to the host**
-   - Check for GATT notifications in logs
-   - Verify input monitoring permissions on Mac
+```bash
+./developer-tools/build-all.sh     # Build all components
+./developer-tools/check-device.sh  # Check device compatibility
+./developer-tools/run-app.sh       # Build, install and run the app
+```
 
-## Debugging Log Analysis
+For more details, see the [Developer Tools README](developer-tools/README.md).
 
-When running the enhanced debugging tool, look for these key indicators:
+## Debugging
 
-1. Connection establishment:
-   ```
-   Device connected: XX:XX:XX:XX:XX:XX
-   ```
+The ModernHidActivity includes extensive debugging capabilities:
+- Connection state monitoring
+- HID report logging
+- Bluetooth event tracking
+- Device compatibility analysis
 
-2. HID Service registration:
-   ```
-   Added HID service to GATT server
-   Service added: 00001812-0000-1000-8000-00805f9b34fb
-   ```
+## Permissions
 
-3. Characteristic read requests:
-   ```
-   Read request for characteristic: 00002a4a-0000-1000-8000-00805f9b34fb
-   ```
-
-4. Notification status:
-   ```
-   Notification sent successfully: [...]
-   ```
-
-## Technical Components
-
-- `BleHidManager`: Central coordinator for all BLE HID functionality
-- `BleAdvertiser`: Handles BLE advertising
-- `BleGattServerManager`: Manages GATT server and services
-- `HidMouseService`: Implements the HID mouse service
-- `HidKeyboardService`: Implements the HID keyboard service
-
-## License
-
-This project is licensed under the MIT License - see the LICENSE file for details.
-
-## Development Guide
-
-### Project Structure
-
-The project is organized into three modules:
-- `app`: Main Android application with UI and user interactions
-- `core`: Core BLE HID functionality library that can be reused in other projects
-- `unity-plugin`: Unity integration for using BLE HID in Unity games/apps
-
-### Build Configuration
-
-The build configuration has been consolidated for maintainability:
-- `versions.gradle`: Central configuration file for SDK versions, dependencies, and other build settings
-- Module build files reference this central configuration to ensure consistency
-
-### Development Tools
-
-Development tools have been consolidated into a single script:
-- `ble-tools.sh`: Unified script with multiple commands for debugging, setup, and testing
-  - `./ble-tools.sh check`: Check device BLE peripheral capability
-  - `./ble-tools.sh debug [--enhanced]`: Debug BLE issues with optional enhanced mode
-  - `./ble-tools.sh run`: Build, install, and run the app
-  - `./ble-tools.sh test`: Test mouse connectivity
-  - `./ble-tools.sh help`: Show usage information
-
-This centralized approach simplifies development, ensures consistency, and reduces code duplication.
+The app requires the following permissions:
+- Bluetooth (BLUETOOTH, BLUETOOTH_ADMIN) for Android < 12
+- Bluetooth (BLUETOOTH_CONNECT, BLUETOOTH_ADVERTISE) for Android 12+
+- Location (ACCESS_FINE_LOCATION) for Android 6-11 (required for BLE operations)

@@ -32,7 +32,7 @@ import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import androidx.core.widget.NestedScrollView;
 
-import com.example.blehid.app.R;
+import com.inventonater.blehid.app.R;
 import com.inventonater.blehid.debug.BleHidDebugger;
 
 import java.util.Date;

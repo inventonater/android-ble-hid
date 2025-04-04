@@ -1,7 +1,7 @@
 apply plugin: 'com.android.library'
 
 android {
-    namespace 'com.example.blehid.core'
+    namespace 'com.inventonater.blehid.core'
     compileSdk rootProject.ext.compileSdkVersion
     
     defaultConfig {

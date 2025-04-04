@@ -23,7 +23,7 @@
         android:theme="@style/Theme.BleHidApp">
         
         <activity
-            android:name=".MainActivity"
+            android:name="com.inventonater.blehid.app.MainActivity"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -32,15 +32,10 @@
         </activity>
         
         <activity
-            android:name=".ui.UnifiedHidActivity"
-            android:exported="false"
-            android:screenOrientation="portrait" />
-            
-        <activity
             android:name="com.inventonater.blehid.ModernHidActivity"
             android:exported="false"
             android:screenOrientation="portrait"
-            android:label="Modern BLE HID" />
+            android:label="BLE HID Device" />
     </application>
 
 </manifest>
