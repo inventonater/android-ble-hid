@@ -35,23 +35,33 @@
 
     <Button
         android:id="@+id/startMediaButton"
-        android:layout_width="wrap_content"
+        android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_marginTop="32dp"
         android:text="@string/start_media"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/statusText" />
+        
+    <Button
+        android:id="@+id/startTvRemoteButton"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
+        android:text="Start TV Remote"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/startMediaButton" />
 
     <TextView
         android:id="@+id/infoText"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_marginTop="32dp"
-        android:text="This application acts as a BLE HID peripheral. You can pair it with another device to use it as a media controller."
+        android:text="This application acts as a BLE HID peripheral. You can pair it with another device to use it as a media controller or TV remote."
         android:textAlignment="center"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/startMediaButton" />
+        app:layout_constraintTop_toBottomOf="@+id/startTvRemoteButton" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>

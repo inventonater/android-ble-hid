@@ -1,15 +1,17 @@
 /**
  * Project Settings for Inventonater HID
  * 
- * This project is structured into four modules:
+ * This project is structured into these modules:
  * - app: Main Android application module with UI and user interactions
  * - core: Core BLE HID functionality library (can be reused in other projects)
+ * - tv-modules: TV-specific HID implementations (LG, Samsung, etc.)
  * - unity-plugin: Unity integration for using BLE HID in Unity games/apps
  * - ble-diagnostic: Diagnostic app for monitoring and troubleshooting BLE HID connections
  */
 rootProject.name = 'inventonater-hid'
 include ':app'
 include ':core'
+include ':tv-modules'
 // Commenting out these modules as they haven't been updated for media player functionality
 // include ':unity-plugin'
 // include ':ble-diagnostic'

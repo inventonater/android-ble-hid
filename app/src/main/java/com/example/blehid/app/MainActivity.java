@@ -18,6 +18,7 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 
 import com.example.blehid.app.ui.SimpleMediaActivity;
+import com.example.blehid.app.ui.TvRemoteActivity;
 import com.example.blehid.core.BleHidManager;
 
 /**
@@ -46,6 +47,7 @@ public class MainActivity extends AppCompatActivity {
     private BleHidManager bleHidManager;
     private TextView statusText;
     private Button startMediaButton;
+    private Button startTvRemoteButton;
     
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -54,6 +56,7 @@ public class MainActivity extends AppCompatActivity {
         
         statusText = findViewById(R.id.statusText);
         startMediaButton = findViewById(R.id.startMediaButton);
+        startTvRemoteButton = findViewById(R.id.startTvRemoteButton);
         
         // Initialize the BLE HID manager
         bleHidManager = new BleHidManager(this);
@@ -70,6 +73,14 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onClick(View v) {
                 launchMediaActivity();
+            }
+        });
+        
+        // Set up TV remote button click listener
+        startTvRemoteButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                launchTvRemoteActivity();
             }
         });
         
@@ -209,6 +220,14 @@ public class MainActivity extends AppCompatActivity {
      */
     private void launchMediaActivity() {
         Intent intent = new Intent(this, SimpleMediaActivity.class);
+        startActivity(intent);
+    }
+    
+    /**
+     * Launches the TvRemoteActivity.
+     */
+    private void launchTvRemoteActivity() {
+        Intent intent = new Intent(this, TvRemoteActivity.class);
         startActivity(intent);
     }
 }

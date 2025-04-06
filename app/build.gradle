@@ -44,6 +44,7 @@ android {
 
 dependencies {
     implementation project(':core')
+    implementation project(':tv-modules')
     implementation rootProject.ext.deps.appcompat
     implementation rootProject.ext.deps.material
     implementation rootProject.ext.deps.constraintlayout

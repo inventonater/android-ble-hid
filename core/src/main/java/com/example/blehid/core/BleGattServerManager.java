@@ -19,6 +19,24 @@ import java.util.UUID;
  * Manages the GATT server for BLE HID functionality.
  */
 public class BleGattServerManager {
+    /**
+     * Interface for device connection callbacks.
+     */
+    public interface DeviceConnectionCallback {
+        void onDeviceConnected(BluetoothDevice device);
+        void onDeviceDisconnected(BluetoothDevice device);
+    }
+    
+    private DeviceConnectionCallback connectionCallback;
+    
+    /**
+     * Sets the device connection callback.
+     * 
+     * @param callback The callback to be notified of device connection events
+     */
+    public void setDeviceConnectionCallback(DeviceConnectionCallback callback) {
+        this.connectionCallback = callback;
+    }
     private static final String TAG = "BleGattServerManager";
     
     // Standard UUIDs for HID service required characteristics
@@ -165,6 +183,46 @@ public class BleGattServerManager {
     }
     
     /**
+     * Sends a notification for a characteristic to a specific device.
+     *
+     * @param device The device to send the notification to
+     * @param characteristic The characteristic to send
+     * @param indicate Whether to send as an indication (true) or notification (false)
+     * @return true if the notification was sent, false otherwise
+     */
+    public boolean sendNotification(BluetoothDevice device, BluetoothGattCharacteristic characteristic, boolean indicate) {
+        if (gattServer == null || device == null || characteristic == null) {
+            Log.e(TAG, "Cannot send notification: gattServer, device, or characteristic is null");
+            return false;
+        }
+        
+        try {
+            // Simple retry once if it fails
+            boolean success = gattServer.notifyCharacteristicChanged(device, characteristic, indicate);
+            if (!success) {
+                Log.w(TAG, "First notification attempt failed, retrying once");
+                try {
+                    Thread.sleep(10); // Small delay before retry
+                } catch (InterruptedException e) {
+                    // Ignore
+                }
+                success = gattServer.notifyCharacteristicChanged(device, characteristic, indicate);
+            }
+            
+            if (success) {
+                Log.d(TAG, "HID notification sent successfully");
+            } else {
+                Log.e(TAG, "Failed to send HID notification after retry");
+            }
+            
+            return success;
+        } catch (Exception e) {
+            Log.e(TAG, "Error sending notification", e);
+            return false;
+        }
+    }
+
+    /**
      * Utility method to convert byte array to hex string for logging
      */
     private String bytesToHex(byte[] bytes) {
@@ -205,10 +263,22 @@ public class BleGattServerManager {
             if (status == BluetoothGatt.GATT_SUCCESS) {
                 if (newState == BluetoothProfile.STATE_CONNECTED) {
                     Log.i(TAG, "Device connected: " + device.getAddress());
-                    bleHidManager.onDeviceConnected(device);
+                    
+                    // Use connection callback if available, fall back to bleHidManager otherwise
+                    if (connectionCallback != null) {
+                        connectionCallback.onDeviceConnected(device);
+                    } else {
+                        bleHidManager.onDeviceConnected(device);
+                    }
                 } else if (newState == BluetoothProfile.STATE_DISCONNECTED) {
                     Log.i(TAG, "Device disconnected: " + device.getAddress());
-                    bleHidManager.onDeviceDisconnected(device);
+                    
+                    // Use connection callback if available, fall back to bleHidManager otherwise
+                    if (connectionCallback != null) {
+                        connectionCallback.onDeviceDisconnected(device);
+                    } else {
+                        bleHidManager.onDeviceDisconnected(device);
+                    }
                 }
             } else {
                 Log.e(TAG, "Error in connection state change: " + status);
