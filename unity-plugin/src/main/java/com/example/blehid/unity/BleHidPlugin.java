@@ -1,19 +1,20 @@
 package com.example.blehid.unity;
 
+import android.bluetooth.BluetoothAdapter;
+import android.bluetooth.BluetoothDevice;
+import android.content.BroadcastReceiver;
 import android.content.Context;
+import android.content.Intent;
+import android.content.IntentFilter;
 import android.util.Log;
-import java.util.ArrayList;
-import java.util.function.Supplier;
 
 import com.example.blehid.core.BleHidManager;
-import com.example.blehid.core.HidMediaConstants;
+import com.example.blehid.core.BlePairingManager;
 import com.example.blehid.plugin.BuildConfig;
-import com.example.blehid.unity.events.AdvertisingStateChangedEvent;
-import com.example.blehid.unity.events.EventRegistry;
 
 /**
  * Static interface for Unity to access BLE HID functionality.
- * Provides methods for initializing, controlling advertising, and sending media and mouse events.
+ * Simplified to follow Android app implementation patterns.
  */
 public class BleHidPlugin {
     private static final String TAG = "BleHidPlugin";
@@ -21,43 +22,46 @@ public class BleHidPlugin {
     private static BleHidManager bleHidManager;
     private static UnityCallback callback;
     private static boolean isInitialized = false;
+    private static boolean isRegistered = false;
     
-    /**
-     * Gets the plugin version string.
-     * 
-     * @return The plugin version string
-     */
+    // Version information methods - these are simple and direct
     public static String getPluginVersion() {
         return BuildConfig.PLUGIN_VERSION;
     }
     
-    /**
-     * Gets the plugin build number.
-     * 
-     * @return The plugin build number
-     */
     public static long getPluginBuildNumber() {
         return BuildConfig.PLUGIN_BUILD_NUMBER;
     }
     
-    /**
-     * Gets the build timestamp string.
-     * 
-     * @return The build timestamp string
-     */
     public static String getBuildTimestamp() {
         return BuildConfig.BUILD_TIMESTAMP;
     }
     
     /**
-     * Initializes the BLE HID plugin with the given context.
+     * Auto-accepts a pairing request for the given device.
+     * Used by DirectPairingCallback to simplify pairing.
      * 
-     * @param context The application context
-     * @return true if initialization was successful, false otherwise
+     * @param device The device requesting pairing
+     */
+    public static void autoAcceptPairing(BluetoothDevice device) {
+        if (bleHidManager != null) {
+            try {
+                bleHidManager.getBlePairingManager().setPairingConfirmation(device, true);
+                Log.i(TAG, "Auto-accepted pairing for " + device.getAddress());
+            } catch (Exception e) {
+                Log.e(TAG, "Error auto-accepting pairing", e);
+            }
+        } else {
+            Log.e(TAG, "Cannot auto-accept pairing, BleHidManager is null");
+        }
+    }
+    
+    /**
+     * Initializes the BLE HID plugin with the given context.
      */
     public static boolean initialize(Context context) {
         if (isInitialized) {
-            Log.w(TAG, "BLE HID Plugin already initialized");
+            Log.i(TAG, "BLE HID Plugin already initialized");
             return true;
         }
         
@@ -70,8 +74,7 @@ public class BleHidPlugin {
             // Store the application context to prevent leaks
             Context appContext = context.getApplicationContext();
             
-            // Check for Android 12+ permissions - the Unity side will handle requesting them
-            // This just logs the status for debugging purposes
+            // Log permission status for diagnostics
             if (android.os.Build.VERSION.SDK_INT >= 31) { // Android 12
                 Log.i(TAG, "Running on Android 12+, checking permissions status");
                 boolean hasAdvertisePermission = hasPermission(appContext, "android.permission.BLUETOOTH_ADVERTISE");
@@ -90,6 +93,14 @@ public class BleHidPlugin {
             if (result) {
                 isInitialized = true;
                 Log.i(TAG, "BLE HID Plugin initialized successfully");
+                
+                // Register for Bluetooth state changes, mirroring the Android app
+                registerBluetoothReceiver(appContext);
+                
+                // Set up connection callback
+                if (callback != null) {
+                    bleHidManager.getBlePairingManager().setPairingCallback(new DirectPairingCallback(callback));
+                }
             } else {
                 Log.e(TAG, "Failed to initialize BLE HID Manager");
                 bleHidManager = null;
@@ -103,6 +114,65 @@ public class BleHidPlugin {
     }
     
     /**
+     * Registers a broadcast receiver for Bluetooth state changes.
+     */
+    private static void registerBluetoothReceiver(Context context) {
+        if (isRegistered) return;
+        
+        try {
+            IntentFilter filter = new IntentFilter();
+            filter.addAction(BluetoothAdapter.ACTION_STATE_CHANGED);
+            filter.addAction(BluetoothDevice.ACTION_BOND_STATE_CHANGED);
+            filter.addAction(BluetoothDevice.ACTION_ACL_CONNECTED);
+            filter.addAction(BluetoothDevice.ACTION_ACL_DISCONNECTED);
+            filter.addAction(BluetoothDevice.ACTION_PAIRING_REQUEST);
+            
+            context.registerReceiver(bluetoothReceiver, filter);
+            isRegistered = true;
+            Log.i(TAG, "Bluetooth broadcast receiver registered");
+        } catch (Exception e) {
+            Log.e(TAG, "Failed to register Bluetooth receiver", e);
+        }
+    }
+    
+    /**
+     * Bluetooth state receiver, similar to the Android app implementation.
+     */
+    private static final BroadcastReceiver bluetoothReceiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            String action = intent.getAction();
+            BluetoothDevice device = intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE);
+            
+            if (action == null) return;
+            
+            switch (action) {
+                case BluetoothDevice.ACTION_ACL_CONNECTED:
+                    if (device != null && callback != null) {
+                        Log.i(TAG, "Device connected: " + device.getAddress());
+                        callback.onDeviceConnected(device.getAddress());
+                    }
+                    break;
+                    
+                case BluetoothDevice.ACTION_ACL_DISCONNECTED:
+                    if (device != null && callback != null) {
+                        Log.i(TAG, "Device disconnected: " + device.getAddress());
+                        callback.onDeviceDisconnected(device.getAddress());
+                    }
+                    break;
+                    
+                case BluetoothDevice.ACTION_BOND_STATE_CHANGED:
+                    int bondState = intent.getIntExtra(BluetoothDevice.EXTRA_BOND_STATE, BluetoothDevice.ERROR);
+                    if (device != null && bondState == BluetoothDevice.BOND_NONE && callback != null) {
+                        Log.i(TAG, "Bond removed: " + device.getAddress());
+                        callback.onDeviceDisconnected(device.getAddress());
+                    }
+                    break;
+            }
+        }
+    };
+    
+    /**
      * Helper method to check if a permission is granted
      */
     private static boolean hasPermission(Context context, String permission) {
@@ -114,8 +184,6 @@ public class BleHidPlugin {
     
     /**
      * Checks if BLE peripheral mode is supported on this device.
-     * 
-     * @return true if BLE peripheral mode is supported, false otherwise
      */
     public static boolean isBlePeripheralSupported() {
         if (bleHidManager == null) {
@@ -128,245 +196,290 @@ public class BleHidPlugin {
     
     /**
      * Starts advertising the BLE HID device.
-     * 
-     * @return true if advertising started successfully, false otherwise
      */
-public static boolean startAdvertising() {
-        Boolean result = executeCommand("Start Advertising", false, 
-            () -> {
-                boolean success = bleHidManager.startAdvertising();
-                if (success) {
-                    // Use Log.i to maintain the same log level as before
-                    Log.i(TAG, "BLE advertising started");
-                }
-                return success;
-            }, false);
+    public static boolean startAdvertising() {
+        if (!checkInitialized()) return false;
         
-        return result;
+        try {
+            boolean success = bleHidManager.startAdvertising();
+            if (success) {
+                Log.i(TAG, "BLE advertising started");
+                // Notify Unity of state change
+                if (callback != null) {
+                    callback.onAdvertisingStateChanged(true);
+                }
+            } else {
+                Log.e(TAG, "Failed to start advertising");
+            }
+            return success;
+        } catch (Exception e) {
+            Log.e(TAG, "Error starting advertising", e);
+            return false;
+        }
     }
     
     /**
      * Stops advertising the BLE HID device.
      */
     public static void stopAdvertising() {
-        // Execute as a command for consistent logging and error handling
-        executeCommand("Stop Advertising", false, 
-            () -> {
-                bleHidManager.stopAdvertising();
-                // Use Log.i to maintain the same log level as before
-                Log.i(TAG, "BLE advertising stopped");
-                return true; // Return success
-            }, false);
+        if (!checkInitialized()) return;
+        
+        try {
+            bleHidManager.stopAdvertising();
+            Log.i(TAG, "BLE advertising stopped");
+            // Notify Unity of state change
+            if (callback != null) {
+                callback.onAdvertisingStateChanged(false);
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "Error stopping advertising", e);
+        }
     }
     
     /**
      * Checks if the device is connected to a host.
-     * 
-     * @return true if connected, false otherwise
      */
     public static boolean isConnected() {
-        return executeCommand("Check Connection", false,
-            () -> bleHidManager.isConnected(), false);
+        if (!checkInitialized()) return false;
+        
+        try {
+            return bleHidManager.isConnected();
+        } catch (Exception e) {
+            Log.e(TAG, "Error checking connection", e);
+            return false;
+        }
     }
     
     /**
-     * Media Control Methods
+     * Checks if the device is currently advertising.
      */
+    public static boolean isAdvertising() {
+        if (!checkInitialized()) return false;
+        
+        try {
+            return bleHidManager.isAdvertising();
+        } catch (Exception e) {
+            Log.e(TAG, "Error checking advertising state", e);
+            return false;
+        }
+    }
     
-    /**
-     * Sends a play/pause control command.
-     * 
-     * @return true if the command was sent successfully, false otherwise
-     */
+    // Media Control Methods - direct calls with minimal error handling
+    
     public static boolean playPause() {
-        return executeCommand("Play/Pause", true, 
-            () -> bleHidManager.playPause(), false);
+        if (!checkConnection()) return false;
+        
+        try {
+            return bleHidManager.playPause();
+        } catch (Exception e) {
+            Log.e(TAG, "Error sending play/pause command", e);
+            return false;
+        }
     }
     
-    /**
-     * Sends a next track control command.
-     * 
-     * @return true if the command was sent successfully, false otherwise
-     */
     public static boolean nextTrack() {
-        return executeCommand("Next Track", true, 
-            () -> bleHidManager.nextTrack(), false);
+        if (!checkConnection()) return false;
+        
+        try {
+            return bleHidManager.nextTrack();
+        } catch (Exception e) {
+            Log.e(TAG, "Error sending next track command", e);
+            return false;
+        }
     }
     
-    /**
-     * Sends a previous track control command.
-     * 
-     * @return true if the command was sent successfully, false otherwise
-     */
     public static boolean previousTrack() {
-        return executeCommand("Previous Track", true, 
-            () -> bleHidManager.previousTrack(), false);
+        if (!checkConnection()) return false;
+        
+        try {
+            return bleHidManager.previousTrack();
+        } catch (Exception e) {
+            Log.e(TAG, "Error sending previous track command", e);
+            return false;
+        }
     }
     
-    /**
-     * Sends a volume up control command.
-     * 
-     * @return true if the command was sent successfully, false otherwise
-     */
     public static boolean volumeUp() {
-        return executeCommand("Volume Up", true, 
-            () -> bleHidManager.volumeUp(), false);
+        if (!checkConnection()) return false;
+        
+        try {
+            return bleHidManager.volumeUp();
+        } catch (Exception e) {
+            Log.e(TAG, "Error sending volume up command", e);
+            return false;
+        }
     }
     
-    /**
-     * Sends a volume down control command.
-     * 
-     * @return true if the command was sent successfully, false otherwise
-     */
     public static boolean volumeDown() {
-        return executeCommand("Volume Down", true, 
-            () -> bleHidManager.volumeDown(), false);
+        if (!checkConnection()) return false;
+        
+        try {
+            return bleHidManager.volumeDown();
+        } catch (Exception e) {
+            Log.e(TAG, "Error sending volume down command", e);
+            return false;
+        }
     }
     
-    /**
-     * Sends a mute control command.
-     * 
-     * @return true if the command was sent successfully, false otherwise
-     */
     public static boolean mute() {
-        return executeCommand("Mute", true, 
-            () -> bleHidManager.mute(), false);
+        if (!checkConnection()) return false;
+        
+        try {
+            return bleHidManager.mute();
+        } catch (Exception e) {
+            Log.e(TAG, "Error sending mute command", e);
+            return false;
+        }
     }
     
-    /**
-     * Mouse Control Methods
-     */
+    // Mouse Control Methods - direct calls with minimal error handling
     
-    /**
-     * Moves the mouse pointer by the specified amount.
-     *
-     * @param x The X movement amount (-127 to 127)
-     * @param y The Y movement amount (-127 to 127)
-     * @return true if the command was sent successfully, false otherwise
-     */
     public static boolean moveMouse(int x, int y) {
-        // Clamp values to valid range
-        final int clampedX = Math.max(-127, Math.min(127, x));
-        final int clampedY = Math.max(-127, Math.min(127, y));
+        if (!checkConnection()) return false;
         
-        return executeCommand("Move Mouse (x=" + clampedX + ", y=" + clampedY + ")", true, 
-            () -> bleHidManager.moveMouse(clampedX, clampedY), false);
+        try {
+            // Clamp values to valid range
+            x = Math.max(-127, Math.min(127, x));
+            y = Math.max(-127, Math.min(127, y));
+            
+            return bleHidManager.moveMouse(x, y);
+        } catch (Exception e) {
+            Log.e(TAG, "Error moving mouse", e);
+            return false;
+        }
     }
     
-    /**
-     * Presses a mouse button.
-     *
-     * @param button The button to press (HidMediaConstants.BUTTON_LEFT, BUTTON_RIGHT, BUTTON_MIDDLE)
-     * @return true if the command was sent successfully, false otherwise
-     */
     public static boolean pressMouseButton(int button) {
-        return executeCommand("Press Mouse Button " + button, true, 
-            () -> bleHidManager.pressMouseButton(button), false);
+        if (!checkConnection()) return false;
+        
+        try {
+            return bleHidManager.pressMouseButton(button);
+        } catch (Exception e) {
+            Log.e(TAG, "Error pressing mouse button", e);
+            return false;
+        }
     }
     
-    /**
-     * Releases all mouse buttons.
-     *
-     * @return true if the command was sent successfully, false otherwise
-     */
     public static boolean releaseMouseButtons() {
-        return executeCommand("Release Mouse Buttons", true, 
-            () -> bleHidManager.releaseMouseButtons(), false);
+        if (!checkConnection()) return false;
+        
+        try {
+            return bleHidManager.releaseMouseButtons();
+        } catch (Exception e) {
+            Log.e(TAG, "Error releasing mouse buttons", e);
+            return false;
+        }
     }
     
-    /**
-     * Performs a click with the specified button.
-     *
-     * @param button The button to click (HidMediaConstants.BUTTON_LEFT, BUTTON_RIGHT, BUTTON_MIDDLE)
-     * @return true if the command was sent successfully, false otherwise
-     */
     public static boolean clickMouseButton(int button) {
-        return executeCommand("Click Mouse Button " + button, true, 
-            () -> bleHidManager.clickMouseButton(button), false);
+        if (!checkConnection()) return false;
+        
+        try {
+            return bleHidManager.clickMouseButton(button);
+        } catch (Exception e) {
+            Log.e(TAG, "Error clicking mouse button", e);
+            return false;
+        }
     }
     
-    /**
-     * Scrolls the mouse wheel.
-     *
-     * @param amount The scroll amount (-127 to 127)
-     * @return true if the command was sent successfully, false otherwise
-     */
     public static boolean scrollMouseWheel(int amount) {
-        // Clamp value to valid range
-        final int clampedAmount = Math.max(-127, Math.min(127, amount));
+        if (!checkConnection()) return false;
         
-        return executeCommand("Scroll Mouse Wheel " + clampedAmount, true, 
-            () -> bleHidManager.scrollMouseWheel(clampedAmount), false);
+        try {
+            // Clamp value to valid range
+            amount = Math.max(-127, Math.min(127, amount));
+            
+            return bleHidManager.scrollMouseWheel(amount);
+        } catch (Exception e) {
+            Log.e(TAG, "Error scrolling mouse wheel", e);
+            return false;
+        }
     }
     
-    /**
-     * Combined Media and Mouse Control
-     */
+    // Combined Media and Mouse Control
     
-    /**
-     * Sends a combined media and mouse report.
-     * 
-     * @param mediaButtons Media button flags (HidMediaConstants.BUTTON_PLAY_PAUSE, etc.)
-     * @param mouseButtons Mouse button flags (HidMediaConstants.BUTTON_LEFT, etc.)
-     * @param x X-axis movement (-127 to 127)
-     * @param y Y-axis movement (-127 to 127)
-     * @return true if successful, false otherwise
-     */
     public static boolean sendCombinedReport(int mediaButtons, int mouseButtons, int x, int y) {
-        // Clamp values to valid range
-        final int clampedX = Math.max(-127, Math.min(127, x));
-        final int clampedY = Math.max(-127, Math.min(127, y));
+        if (!checkConnection()) return false;
         
-        String commandDesc = String.format("Send Combined Report (media=0x%02X, mouse=0x%02X, x=%d, y=%d)", 
-                                          mediaButtons, mouseButtons, clampedX, clampedY);
-        
-        return executeCommand(commandDesc, true, 
-            () -> bleHidManager.sendCombinedReport(mediaButtons, mouseButtons, clampedX, clampedY), false);
+        try {
+            // Clamp values to valid range
+            x = Math.max(-127, Math.min(127, x));
+            y = Math.max(-127, Math.min(127, y));
+            
+            return bleHidManager.sendCombinedReport(mediaButtons, mouseButtons, x, y);
+        } catch (Exception e) {
+            Log.e(TAG, "Error sending combined report", e);
+            return false;
+        }
     }
     
     /**
      * Sets the Unity callback for BLE HID events.
-     * 
-     * @param callback The callback to set
      */
     public static void setCallback(UnityCallback callback) {
         BleHidPlugin.callback = callback;
         
-        // Register with the event system as well
-        if (callback instanceof UnityEventBridge) {
-            // The UnityEventBridge is already integrated with the event system
-            // Just make sure it's registered for all events
-            EventRegistry.getInstance().registerListener(
-                event -> {
-                    Log.d(TAG, "Event received in BleHidPlugin: " + event);
-                    // We don't need to do anything here since UnityEventBridge already handles events
-                }
-            );
-        }
-        
         if (bleHidManager != null) {
-            // Set up connection callback
-            ConnectionCallback connectionCallback = new ConnectionCallback(callback);
-            bleHidManager.getBlePairingManager().setPairingCallback(connectionCallback);
+            bleHidManager.getBlePairingManager().setPairingCallback(new DirectPairingCallback(callback));
         }
     }
     
     /**
      * Gets the address of the connected device.
-     * 
-     * @return The MAC address of the connected device, or null if not connected
      */
     public static String getConnectedDeviceAddress() {
-        return executeCommand("Get Connected Device Address", true, 
-            () -> bleHidManager.getConnectedDevice().getAddress(), null);
+        if (!checkConnection()) return null;
+        
+        try {
+            return bleHidManager.getConnectedDevice().getAddress();
+        } catch (Exception e) {
+            Log.e(TAG, "Error getting connected device address", e);
+            return null;
+        }
+    }
+    
+    /**
+     * Gets the current system state as a set of flags.
+     */
+    public static byte getSystemState() {
+        byte state = 0;
+        
+        if (isInitialized && bleHidManager != null) {
+            state |= BleHidProtocol.State.INITIALIZED;
+            
+            try {
+                if (bleHidManager.isConnected()) {
+                    state |= BleHidProtocol.State.CONNECTED;
+                }
+                
+                if (bleHidManager.isAdvertising()) {
+                    state |= BleHidProtocol.State.ADVERTISING;
+                }
+                
+                if (bleHidManager.isBlePeripheralSupported()) {
+                    state |= BleHidProtocol.State.PERIPHERAL_SUPPORTED;
+                }
+            } catch (Exception e) {
+                Log.e(TAG, "Error getting system state", e);
+            }
+        }
+        
+        return state;
+    }
+    
+    /**
+     * Verifies that a particular aspect of the system state is active.
+     */
+    public static boolean verifyState(byte stateFlag) {
+        byte currentState = getSystemState();
+        return (currentState & stateFlag) == stateFlag;
     }
     
     /**
      * Cleans up resources when the plugin is no longer needed.
      */
     public static void close() {
-        // Using executeCommand with special handling since isInitialized will be set to false
-        // We don't want to check initialization since we're in the process of closing
+        // Basic cleanup without executeCommand wrapper
         if (bleHidManager != null) {
             try {
                 bleHidManager.close();
@@ -377,96 +490,25 @@ public static boolean startAdvertising() {
                 bleHidManager = null;
                 callback = null;
                 isInitialized = false;
-                Log.i(TAG, "BLE HID Plugin closed");
-            }
-        } else {
-            // Already closed or never initialized
-            callback = null;
-            isInitialized = false;
-        }
-    }
-    
-    /**
-     * Executes a BLE HID command with standard error checking and logging.
-     * 
-     * @param <T> Return type of the command
-     * @param commandName Name of the command for logging
-     * @param requiresConnection Whether the command requires an active connection
-     * @param command The command to execute
-     * @param defaultValue Value to return if prerequisites fail
-     * @return The result of the command, or defaultValue if prerequisites fail
-     */
-    private static <T> T executeCommand(String commandName, boolean requiresConnection, 
-                                      Supplier<T> command, T defaultValue) {
-        if (!checkInitialized()) return defaultValue;
-        
-        if (requiresConnection && !bleHidManager.isConnected()) {
-            Log.w(TAG, "Not connected to a host, cannot execute: " + commandName);
-            return defaultValue;
-        }
-        
-        try {
-            T result = command.get();
-            if (result instanceof Boolean) {
-                Boolean boolResult = (Boolean)result;
-                if (boolResult) {
-                    Log.d(TAG, commandName + " succeeded");
-                } else {
-                    Log.e(TAG, "Failed to " + commandName);
+                
+                // Unregister the broadcast receiver
+                try {
+                    if (isRegistered) {
+                        Context context = UnityEventBridge.getUnityActivity();
+                        if (context != null) {
+                            context.unregisterReceiver(bluetoothReceiver);
+                            isRegistered = false;
+                        }
+                    }
+                } catch (Exception e) {
+                    Log.e(TAG, "Error unregistering receiver", e);
                 }
-            } else {
-                Log.d(TAG, commandName + " executed, result: " + result);
-            }
-            return result;
-        } catch (Exception e) {
-            Log.e(TAG, "Error executing " + commandName, e);
-            return defaultValue;
-        }
-    }
-    
-    /**
-     * Gets the current system state as a set of flags.
-     * Used to verify system state across language boundaries.
-     * 
-     * @return Byte with appropriate state flags set
-     */
-    public static byte getSystemState() {
-        byte state = 0;
-        
-        if (isInitialized && bleHidManager != null) {
-            state |= BleHidProtocol.State.INITIALIZED;
-            
-            if (bleHidManager.isConnected()) {
-                state |= BleHidProtocol.State.CONNECTED;
-            }
-            
-            if (bleHidManager.isAdvertising()) {
-                state |= BleHidProtocol.State.ADVERTISING;
-            }
-            
-            if (bleHidManager.isBlePeripheralSupported()) {
-                state |= BleHidProtocol.State.PERIPHERAL_SUPPORTED;
             }
         }
-        
-        return state;
-    }
-    
-    /**
-     * Verifies that a particular aspect of the system state is active.
-     * 
-     * @param stateFlag The state flag to verify
-     * @return true if the state flag is active, false otherwise
-     */
-    public static boolean verifyState(byte stateFlag) {
-        byte currentState = getSystemState();
-        return (currentState & stateFlag) == stateFlag;
     }
     
     /**
      * Checks if the BLE HID Manager is initialized.
-     * 
-     * @return true if initialized, false otherwise
      */
     private static boolean checkInitialized() {
         if (!isInitialized || bleHidManager == null) {
@@ -477,174 +519,21 @@ public static boolean startAdvertising() {
         return true;
     }
     
-    // Command batch fields and methods
-    
     /**
-     * Represents a single command in a batch operation
+     * Checks if connected to a device.
      */
-    private static class BatchCommand {
-        final int commandId;
-        final Object[] params;
+    private static boolean checkConnection() {
+        if (!checkInitialized()) return false;
         
-        BatchCommand(int commandId, Object... params) {
-            this.commandId = commandId;
-            this.params = params;
-        }
-    }
-    
-    /**
-     * Batch of commands to be executed together
-     */
-    private static final ArrayList<BatchCommand> commandBatch = new ArrayList<>();
-    
-    /**
-     * Starts a new command batch.
-     * Call this before adding commands to the batch.
-     */
-    public static void startBatch() {
-        commandBatch.clear();
-        Log.d(TAG, "Command batch started");
-    }
-    
-    /**
-     * Adds a media command to the current batch.
-     * 
-     * @param mediaButtonFlag Media button flag (BleHidProtocol.MediaButton constants)
-     */
-    public static void addMediaCommand(int mediaButtonFlag) {
-        commandBatch.add(new BatchCommand(
-            BleHidProtocol.Command.SEND_COMBINED_REPORT,
-            mediaButtonFlag, // mediaButtons
-            0,               // mouseButtons
-            0,               // x
-            0                // y
-        ));
-        Log.d(TAG, "Media command added to batch: 0x" + Integer.toHexString(mediaButtonFlag));
-    }
-    
-    /**
-     * Adds a mouse movement command to the current batch.
-     * 
-     * @param x X-axis movement (-127 to 127)
-     * @param y Y-axis movement (-127 to 127)
-     */
-    public static void addMouseMove(int x, int y) {
-        // Clamp values to valid range
-        final int clampedX = Math.max(-127, Math.min(127, x));
-        final int clampedY = Math.max(-127, Math.min(127, y));
-        
-        commandBatch.add(new BatchCommand(
-            BleHidProtocol.Command.SEND_COMBINED_REPORT,
-            0,               // mediaButtons
-            0,               // mouseButtons
-            clampedX,        // x
-            clampedY         // y
-        ));
-        Log.d(TAG, "Mouse move added to batch: x=" + clampedX + ", y=" + clampedY);
-    }
-    
-    /**
-     * Adds a mouse button command to the current batch.
-     * 
-     * @param mouseButtonFlag Mouse button flag (BleHidProtocol.MouseButton constants)
-     * @param pressed True for press, false for release
-     */
-    public static void addMouseButton(int mouseButtonFlag, boolean pressed) {
-        commandBatch.add(new BatchCommand(
-            BleHidProtocol.Command.SEND_COMBINED_REPORT,
-            0,                          // mediaButtons
-            pressed ? mouseButtonFlag : 0, // mouseButtons
-            0,                          // x
-            0                           // y
-        ));
-        Log.d(TAG, "Mouse button added to batch: button=0x" + Integer.toHexString(mouseButtonFlag) 
-            + ", pressed=" + pressed);
-    }
-    
-    /**
-     * Executes all commands in the current batch.
-     * 
-     * @return True if all commands were executed successfully, false otherwise
-     */
-    public static boolean executeBatch() {
-        if (commandBatch.isEmpty()) {
-            Log.w(TAG, "Batch is empty, nothing to execute");
-            return true; // Nothing to do, but not an error
-        }
-        
-        return executeCommand("Execute Batch (" + commandBatch.size() + " commands)", true, 
-            () -> {
-                boolean success = true;
-                int commandCount = 0;
-                
-                for (BatchCommand cmd : commandBatch) {
-                    commandCount++;
-                    boolean cmdResult = false;
-                    
-                    try {
-                        switch (cmd.commandId) {
-                            case BleHidProtocol.Command.SEND_COMBINED_REPORT:
-                                int mediaButtons = (int)cmd.params[0];
-                                int mouseButtons = (int)cmd.params[1];
-                                int x = (int)cmd.params[2];
-                                int y = (int)cmd.params[3];
-                                cmdResult = bleHidManager.sendCombinedReport(mediaButtons, mouseButtons, x, y);
-                                break;
-                                
-                            // Add more command types as needed
-                            
-                            default:
-                                Log.e(TAG, "Unknown command ID in batch: " + cmd.commandId);
-                                cmdResult = false;
-                                break;
-                        }
-                    } catch (Exception e) {
-                        Log.e(TAG, "Error executing batch command #" + commandCount, e);
-                        cmdResult = false;
-                    }
-                    
-                    // We continue executing even if one command fails, but track overall success
-                    success = success && cmdResult;
-                }
-                
-                // Clear the batch after execution
-                int batchSize = commandBatch.size();
-                commandBatch.clear();
-                
-                Log.d(TAG, "Batch execution completed: " + batchSize + " commands, success=" + success);
-                return success;
-            }, false);
-    }
-    
-    /**
-     * Inner class for handling connection callbacks and forwarding them to Unity.
-     */
-    private static class ConnectionCallback implements com.example.blehid.core.BlePairingManager.PairingCallback {
-        private final UnityCallback unityCallback;
-        
-        ConnectionCallback(UnityCallback callback) {
-            this.unityCallback = callback;
-        }
-        
-        @Override
-        public void onPairingRequested(android.bluetooth.BluetoothDevice device, int variant) {
-            if (unityCallback != null) {
-                unityCallback.onPairingRequested(device.getAddress(), variant);
+        try {
+            if (!bleHidManager.isConnected()) {
+                Log.w(TAG, "Not connected to a host");
+                return false;
             }
-            
-            // Auto-accept pairing requests
-            bleHidManager.getBlePairingManager().setPairingConfirmation(device, true);
-        }
-        
-        @Override
-        public void onPairingComplete(android.bluetooth.BluetoothDevice device, boolean success) {
-            if (unityCallback != null) {
-                if (success) {
-                    unityCallback.onDeviceConnected(device.getAddress());
-                } else {
-                    unityCallback.onPairingFailed(device.getAddress());
-                }
-            }
+            return true;
+        } catch (Exception e) {
+            Log.e(TAG, "Error checking connection", e);
+            return false;
         }
     }
 }

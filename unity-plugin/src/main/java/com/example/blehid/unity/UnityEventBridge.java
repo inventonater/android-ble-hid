@@ -13,8 +13,10 @@ import com.example.blehid.unity.events.PairingFailedEvent.PairingFailureReason;
 import com.example.blehid.unity.events.PairingRequestedEvent;
 import com.example.blehid.unity.stubs.UnityPlayerStub;
 
+import java.lang.reflect.Field;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import android.app.Activity;
 
 /**
  * Bridge between the Java event system and Unity.
@@ -249,5 +251,24 @@ public class UnityEventBridge implements UnityCallback {
      */
     public static void clearEventStatic(String eventIdStr) {
         getInstance().clearEvent(eventIdStr);
+    }
+    
+    /**
+     * Gets the Unity activity context.
+     * Used for operations that require a context like unregistering receivers.
+     * 
+     * @return The Unity activity or null if it can't be retrieved
+     */
+    public static Activity getUnityActivity() {
+        try {
+            // Try to get the currentActivity field from UnityPlayer
+            Class<?> unityPlayerClass = Class.forName("com.unity3d.player.UnityPlayer");
+            Field currentActivityField = unityPlayerClass.getDeclaredField("currentActivity");
+            currentActivityField.setAccessible(true);
+            return (Activity) currentActivityField.get(null);
+        } catch (Exception e) {
+            Log.e(TAG, "Error getting Unity activity", e);
+            return null;
+        }
     }
 }
