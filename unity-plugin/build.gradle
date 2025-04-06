@@ -32,6 +32,13 @@ task copyToUnity(type: Copy, dependsOn: 'assembleRelease') {
     rename { String fileName ->
         fileName.replace("unity-plugin-release.aar", "BleHidPlugin.aar")
     }
+    doLast {
+        // Execute the timestamp script to make Git detect changes
+        exec {
+            workingDir "${projectDir}/scripts"
+            commandLine "./stamp-aar.sh"
+        }
+    }
 }
 
 dependencies {
