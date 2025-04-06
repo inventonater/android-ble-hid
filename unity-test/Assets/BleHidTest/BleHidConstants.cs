@@ -7,10 +7,12 @@ namespace BleHid
     /// </summary>
     public static class BleHidConstants
     {
-        // Mouse buttons
-        public const int BUTTON_LEFT = 0;
-        public const int BUTTON_RIGHT = 1;
-        public const int BUTTON_MIDDLE = 2;
+        // Mouse buttons - using bit flags to match Android implementation
+        // These values represent individual bits rather than indices:
+        // 0x01 = 00000001, 0x02 = 00000010, 0x04 = 00000100
+        public const int BUTTON_LEFT = 0x01;
+        public const int BUTTON_RIGHT = 0x02;
+        public const int BUTTON_MIDDLE = 0x04;
         
         // Keyboard modifier keys
         public const byte KEY_MOD_LCTRL = 0x01;
@@ -114,5 +116,6 @@ namespace BleHid
         public const int ERROR_PERIPHERAL_NOT_SUPPORTED = 1005;
         public const int ERROR_ADVERTISING_FAILED = 1006;
         public const int ERROR_INVALID_PARAMETER = 1007;
+        public const int ERROR_PERMISSIONS_NOT_GRANTED = 1008;
     }
 }

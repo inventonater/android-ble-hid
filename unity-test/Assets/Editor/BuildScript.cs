@@ -10,9 +10,9 @@ public class Build
     {
         Debug.Log("Starting Android build...");
 
-        string[] scenes = { "Assets/BleHidTest/BleHidExampleScene.unity" };
+        string[] scenes = { "Assets/BleHidTest/BleHidSimpleScene.unity" };
         string buildPath = Path.Combine(Application.dataPath, "../Build/BleHidTest.apk");
-        
+
         // Make sure the Build directory exists
         Directory.CreateDirectory(Path.GetDirectoryName(buildPath));
 
