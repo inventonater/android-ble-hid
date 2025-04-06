@@ -68,13 +68,27 @@ android {
 
 // No longer copying core classes - using dependency approach instead
 
-// Custom task to copy the AAR to Unity project
-task copyToUnity(type: Copy, dependsOn: 'assembleRelease') {
+// Custom task to copy the plugin AAR to Unity project
+task copyPluginToUnity(type: Copy, dependsOn: 'assembleRelease') {
     from "${buildDir}/outputs/aar/unity-plugin-release.aar"
     into "../unity-test/Assets/Plugins/Android"
     rename { String fileName ->
         fileName.replace("unity-plugin-release.aar", "BleHidPlugin.aar")
     }
+}
+
+// Custom task to copy the core AAR to Unity project
+task copyCoreToUnity(type: Copy, dependsOn: ':core:assembleRelease') {
+    from "../core/build/outputs/aar/core-release.aar"
+    into "../unity-test/Assets/Plugins/Android"
+    rename { String fileName ->
+        fileName.replace("core-release.aar", "BleHidCore.aar")
+    }
+}
+
+// Task to copy both AARs to Unity
+task copyToUnity(dependsOn: [copyPluginToUnity, copyCoreToUnity]) {
+    description = 'Copies both the plugin and core AARs to the Unity project'
 }
 
 dependencies {

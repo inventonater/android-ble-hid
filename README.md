@@ -51,9 +51,9 @@ This approach offers several advantages:
 
 ### Unity Plugin
 ```
-./gradlew :unity-plugin:assembleRelease :unity-plugin:copyToUnity
+./gradlew :unity-plugin:copyToUnity
 ```
-This will build the AAR and copy it to the Unity project's Plugins/Android folder. 
+This will build both the plugin and core AARs and copy them to the Unity project's Plugins/Android folder. The build process has been updated to ensure both the core BLE functionality (BleHidCore.aar) and the Unity wrapper (BleHidPlugin.aar) are properly included in the Unity project.
 
 The build process automatically increments the build number each time the plugin is compiled, allowing you to always know which version is currently deployed to your Unity project. The build number is visible in the Unity app UI.
 
