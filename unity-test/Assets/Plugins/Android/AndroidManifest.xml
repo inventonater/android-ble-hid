@@ -2,38 +2,85 @@
 <manifest
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
+    package="com.example.blehid"
     android:installLocation="preferExternal">
 
-    <!-- Basic Bluetooth permissions (for all Android versions) -->
-    <uses-permission android:name="android.permission.BLUETOOTH" />
-    <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" />
-    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
-    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
-    
-    <!-- Android 12+ Bluetooth permissions -->
-    <uses-permission android:name="android.permission.BLUETOOTH_ADVERTISE" />
-    <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
-    <uses-permission android:name="android.permission.BLUETOOTH_SCAN" android:usesPermissionFlags="neverForLocation" tools:targetApi="s" />
+    <!-- Screen support: adjust as needed for your target devices -->
+    <supports-screens
+        android:smallScreens="true"
+        android:normalScreens="true"
+        android:largeScreens="true"
+        android:xlargeScreens="true"
+        android:anyDensity="true" />
 
-    <!-- Feature declarations -->
+    <!-- ================== PERMISSIONS ================== -->
+    <!-- For Bluetooth on older Android versions (<= 30): -->
+    <uses-permission
+        android:name="android.permission.BLUETOOTH"
+        android:maxSdkVersion="30" />
+    <uses-permission
+        android:name="android.permission.BLUETOOTH_ADMIN"
+        android:maxSdkVersion="30" />
+    <!-- For BLE scanning on Android < 12, you generally also need location permission: -->
+    <uses-permission
+        android:name="android.permission.ACCESS_FINE_LOCATION"
+        android:maxSdkVersion="30" />
+    <uses-permission
+        android:name="android.permission.ACCESS_COARSE_LOCATION"
+        android:maxSdkVersion="30" />
+
+    <!-- For Android 12+ (API 31+). 
+         If you support scanning that reveals location-like info, remove the "neverForLocation" flag. 
+         Tools attributes are used to handle merges/versions. -->
+    <uses-permission
+        android:name="android.permission.BLUETOOTH_SCAN"
+        tools:targetApi="s" />
+    <uses-permission
+        android:name="android.permission.BLUETOOTH_ADVERTISE"
+        tools:targetApi="s" />
+    <uses-permission
+        android:name="android.permission.BLUETOOTH_CONNECT"
+        tools:targetApi="s" />
+
+    <!-- =============== FEATURES ===================== -->
+    <!-- If your app absolutely requires BLE, set required="true". Otherwise, "false" lets non-BLE devices install. -->
     <uses-feature android:name="android.hardware.bluetooth" android:required="true" />
     <uses-feature android:name="android.hardware.bluetooth_le" android:required="true" />
 
-    <application>
-        <!-- Unity's default activity -->
-        <activity android:name="com.unity3d.player.UnityPlayerActivity"
-                  android:theme="@style/UnityThemeSelector"
-                  android:launchMode="singleTask"
-                  android:configChanges="mcc|mnc|locale|touchscreen|keyboard|keyboardHidden|navigation|orientation|screenLayout|uiMode|screenSize|smallestScreenSize|fontScale|layoutDirection|density"
-                  android:hardwareAccelerated="false"
-                  android:screenOrientation="fullSensor"
-                  android:exported="true">
+    <!-- =============== APPLICATION =================== -->
+    <application
+        android:icon="@mipmap/app_icon"
+        android:label="@string/app_name"
+        android:theme="@style/UnityThemeSelector"
+        android:isGame="true"
+        tools:replace="android:label">
+
+        <!-- =============== MAIN ACTIVITY (Unity) ================ -->
+        <activity
+            android:name="com.unity3d.player.UnityPlayerActivity"
+            android:label="@string/app_name"
+            android:screenOrientation="fullSensor"
+            android:launchMode="singleTask"
+            android:configChanges="mcc|mnc|locale|touchscreen|keyboard|keyboardHidden|
+                                   navigation|orientation|screenLayout|uiMode|
+                                   screenSize|smallestScreenSize|fontScale|
+                                   layoutDirection|density"
+            android:hardwareAccelerated="false"
+            android:exported="true">
+
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
+                <!-- Optional: If you want TV / Leanback support -->
+                <category android:name="android.intent.category.LEANBACK_LAUNCHER" />
+                <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
+
+            <!-- Unity-specific metadata -->
             <meta-data android:name="unityplayer.UnityActivity" android:value="true" />
             <meta-data android:name="android.app.lib_name" android:value="unity" />
         </activity>
+
     </application>
+
 </manifest>

@@ -22,6 +22,25 @@ The following changes were made to address the `Duplicate class com.unity3d.play
    - Used compileOnly for Unity dependencies to prevent them from being included in the AAR
    - Added explicit Kotlin dependency versions to ensure compatibility
 
+## Additional Fixes
+
+### Android Manifest Structure
+
+We updated the AndroidManifest.xml to properly follow Unity's manifest requirements:
+
+- Changed the package name to `com.example.blehid.unity`
+- Added proper application configuration with hardcoded labels instead of resource references
+- Fixed the activity element structure and attributes
+- Added LEANBACK_LAUNCHER category for TV support
+- Set proper SDK version requirements for Bluetooth permissions
+- Organized permissions by Android version compatibility
+
+### Android Resources
+
+Removed direct Android resources in favor of including them in the AAR file:
+- Removed `res/values/strings.xml` and associated meta files
+- Updated manifest to use hardcoded strings instead of resource references
+
 ## How to Test
 
 1. The modified AAR has been placed in the Assets/Plugins/Android directory
@@ -29,4 +48,4 @@ The following changes were made to address the `Duplicate class com.unity3d.play
 3. Select Android as the target platform
 4. Click "Build" or "Build And Run"
 
-The build should now complete without the previous error about duplicate classes.
+The app should now build successfully without any duplicate class errors and launch properly on the device.
