@@ -1,80 +1,37 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest
     xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:tools="http://schemas.android.com/tools"
-    package="com.example.blehid.unity"
-    android:installLocation="preferExternal"
-    tools:overrideLibrary="com.example.blehid.plugin">
-
-    <!-- Screen support: adjust as needed for your target devices -->
-    <supports-screens
-        android:smallScreens="true"
-        android:normalScreens="true"
-        android:largeScreens="true"
-        android:xlargeScreens="true"
-        android:anyDensity="true" />
-
-    <!-- ================== PERMISSIONS ================== -->
-    <!-- For Bluetooth on older Android versions (<= 30): -->
-    <uses-permission
-        android:name="android.permission.BLUETOOTH"
-        android:maxSdkVersion="30" />
-    <uses-permission
-        android:name="android.permission.BLUETOOTH_ADMIN"
-        android:maxSdkVersion="30" />
-    <!-- For BLE scanning on Android < 12, you generally also need location permission: -->
-    <uses-permission
-        android:name="android.permission.ACCESS_FINE_LOCATION"
-        android:maxSdkVersion="30" />
-    <uses-permission
-        android:name="android.permission.ACCESS_COARSE_LOCATION"
-        android:maxSdkVersion="30" />
-
-    <!-- For Android 12+ (API 31+). 
-         If you support scanning that reveals location-like info, remove the "neverForLocation" flag. -->
-    <uses-permission
-        android:name="android.permission.BLUETOOTH_SCAN" />
-    <uses-permission
-        android:name="android.permission.BLUETOOTH_ADVERTISE" />
-    <uses-permission
-        android:name="android.permission.BLUETOOTH_CONNECT" />
-
-    <!-- =============== FEATURES ===================== -->
-    <!-- If your app absolutely requires BLE, set required="true". Otherwise, "false" lets non-BLE devices install. -->
-    <uses-feature android:name="android.hardware.bluetooth" android:required="true" />
-    <uses-feature android:name="android.hardware.bluetooth_le" android:required="true" />
-
-    <!-- =============== APPLICATION =================== -->
-    <application
-        android:icon="@mipmap/app_icon"
-        android:label="@string/app_name"
-        android:theme="@style/UnityThemeSelector"
-        android:isGame="true"
-        tools:replace="android:label,android:theme,android:icon">
-
-        <!-- =============== MAIN ACTIVITY (Unity) ================ -->
-        <activity
-            android:name="com.unity3d.player.UnityPlayerActivity"
-            android:label="@string/app_name"
-            android:screenOrientation="fullSensor"
-            android:launchMode="singleTask"
-            android:configChanges="mcc|mnc|locale|touchscreen|keyboard|keyboardHidden|navigation|orientation|screenLayout|uiMode|screenSize|smallestScreenSize|fontScale|layoutDirection|density"
-            android:hardwareAccelerated="false"
-            android:exported="true"
-            tools:node="replace">
-
+    xmlns:tools="http://schemas.android.com/tools">
+    <application>
+        <!--Used when Application Entry is set to Activity, otherwise remove this activity block-->
+        <activity android:name="com.unity3d.player.UnityPlayerActivity"
+                  android:theme="@style/UnityThemeSelector">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
-                <!-- Optional: If you want TV / Leanback support -->
-                <category android:name="android.intent.category.LEANBACK_LAUNCHER" />
             </intent-filter>
-
-            <!-- Unity-specific metadata -->
             <meta-data android:name="unityplayer.UnityActivity" android:value="true" />
-            <meta-data android:name="android.app.lib_name" android:value="unity" />
         </activity>
-
+        <!--Used when Application Entry is set to GameActivity, otherwise remove this activity block-->
+        <activity android:name="com.unity3d.player.UnityPlayerGameActivity"
+                  android:theme="@style/BaseUnityGameActivityTheme">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+            <meta-data android:name="unityplayer.UnityActivity" android:value="true" />
+            <meta-data android:name="android.app.lib_name" android:value="game" />
+        </activity>
     </application>
+
+    <uses-permission android:name="android.permission.BLUETOOTH" android:maxSdkVersion="30" />
+    <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" android:maxSdkVersion="30" />
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" android:maxSdkVersion="30" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" android:maxSdkVersion="30" />
+    <uses-permission android:name="android.permission.BLUETOOTH_SCAN" />
+    <uses-permission android:name="android.permission.BLUETOOTH_ADVERTISE" />
+    <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
+    <uses-feature android:name="android.hardware.bluetooth" android:required="true" />
+    <uses-feature android:name="android.hardware.bluetooth_le" android:required="true" />
 
 </manifest>
