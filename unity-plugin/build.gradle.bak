@@ -10,11 +10,6 @@ android {
         
         testInstrumentationRunner rootProject.ext.testInstrumentationRunner
         consumerProguardFiles "consumer-rules.pro"
-        
-        // Plugin-specific version info
-        buildConfigField "String", "PLUGIN_VERSION", "\"1.0.0\""
-        buildConfigField "int", "PLUGIN_BUILD_NUMBER", "${(int)(System.currentTimeMillis() / 1000)}"
-        buildConfigField "String", "BUILD_TIMESTAMP", "\"${new Date().format('yyyy-MM-dd HH:mm:ss')}\""
     }
     
     // Temporarily disable lint to verify our consolidation changes
@@ -39,11 +34,6 @@ android {
         exclude 'META-INF/NOTICE.txt'
         pickFirst 'classes.jar'
         doNotStrip '**/*.so'
-    }
-    
-    // Enable buildConfig generation
-    buildFeatures {
-        buildConfig = true
     }
 }
 

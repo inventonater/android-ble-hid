@@ -7,6 +7,7 @@ import java.util.function.Supplier;
 
 import com.example.blehid.core.BleHidManager;
 import com.example.blehid.core.HidMediaConstants;
+import com.example.blehid.plugin.BuildConfig;
 import com.example.blehid.unity.events.AdvertisingStateChangedEvent;
 import com.example.blehid.unity.events.EventRegistry;
 
@@ -20,6 +21,33 @@ public class BleHidPlugin {
     private static BleHidManager bleHidManager;
     private static UnityCallback callback;
     private static boolean isInitialized = false;
+    
+    /**
+     * Gets the plugin version string.
+     * 
+     * @return The plugin version string
+     */
+    public static String getPluginVersion() {
+        return BuildConfig.PLUGIN_VERSION;
+    }
+    
+    /**
+     * Gets the plugin build number.
+     * 
+     * @return The plugin build number
+     */
+    public static long getPluginBuildNumber() {
+        return BuildConfig.PLUGIN_BUILD_NUMBER;
+    }
+    
+    /**
+     * Gets the build timestamp string.
+     * 
+     * @return The build timestamp string
+     */
+    public static String getBuildTimestamp() {
+        return BuildConfig.BUILD_TIMESTAMP;
+    }
     
     /**
      * Initializes the BLE HID plugin with the given context.
@@ -103,7 +131,7 @@ public class BleHidPlugin {
      * 
      * @return true if advertising started successfully, false otherwise
      */
-    public static boolean startAdvertising() {
+public static boolean startAdvertising() {
         Boolean result = executeCommand("Start Advertising", false, 
             () -> {
                 boolean success = bleHidManager.startAdvertising();
@@ -137,7 +165,7 @@ public class BleHidPlugin {
      * @return true if connected, false otherwise
      */
     public static boolean isConnected() {
-        return executeCommand("Check Connection", false, 
+        return executeCommand("Check Connection", false,
             () -> bleHidManager.isConnected(), false);
     }
     

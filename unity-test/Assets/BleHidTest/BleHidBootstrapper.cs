@@ -20,12 +20,13 @@ namespace BleHid
 
         [Header("UI Settings")]
         [SerializeField] private bool createConnectionPanel = true;
-
         [SerializeField] private bool createMediaPanel = true;
         [SerializeField] private bool createMousePanel = true;
+        [SerializeField] private bool createVersionDisplay = true;
         [SerializeField] private Color panelColor = new Color(0.1f, 0.1f, 0.1f, 0.8f);
         [SerializeField] private Color buttonColor = new Color(0.2f, 0.2f, 0.2f, 1f);
         [SerializeField] private Color textColor = Color.white;
+        [SerializeField] private Color versionTextColor = new Color(0.7f, 0.7f, 0.7f, 1f);
 
         [Header("Positioning")]
         [SerializeField] private float topPadding = 50f;
@@ -48,6 +49,7 @@ namespace BleHid
         private Button advertiseButton;
         private Text statusText;
         private Image connectionIndicator;
+        private Text versionText;
 
         private Button playPauseButton;
         private Button nextTrackButton;
@@ -242,6 +244,40 @@ namespace BleHid
                 // Create mouse control elements
                 CreateMouseControls(mousePanel);
             }
+            
+            // Create version display
+            if (createVersionDisplay)
+            {
+                CreateVersionDisplay();
+            }
+        }
+        
+        /// <summary>
+        /// Creates a version display UI element
+        /// </summary>
+        private void CreateVersionDisplay()
+        {
+            if (mainCanvas == null) return;
+            
+            // Create version text object
+            GameObject versionObj = new GameObject("Version_Text");
+            versionObj.transform.SetParent(mainCanvas.transform, false);
+            
+            // Set up rect transform to position at bottom left
+            RectTransform versionRect = versionObj.AddComponent<RectTransform>();
+            versionRect.sizeDelta = new Vector2(400f, 40f);
+            versionRect.anchorMin = new Vector2(0f, 0f);
+            versionRect.anchorMax = new Vector2(0f, 0f);
+            versionRect.pivot = new Vector2(0f, 0f);
+            versionRect.anchoredPosition = new Vector2(10f, 10f); // 10px padding from bottom left
+            
+            // Add text component
+            versionText = versionObj.AddComponent<Text>();
+            versionText.text = "Loading version info...";
+            versionText.font = Resources.GetBuiltinResource<Font>("Arial.ttf");
+            versionText.fontSize = 16;
+            versionText.alignment = TextAnchor.MiddleLeft;
+            versionText.color = versionTextColor;
         }
 
         /// <summary>
@@ -567,6 +603,12 @@ namespace BleHid
                 // Set UI references
                 bleManager.SetStatusText(statusText);
                 bleManager.SetConnectionIndicator(connectionIndicator);
+                
+                // Set version text if available
+                if (versionText != null)
+                {
+                    bleManager.SetVersionText(versionText);
+                }
                 
                 // Check if initialization succeeded
                 if (!bleManager.IsInitialized() && bleManager.CurrentInitState != BleHidManager.InitState.Initializing)

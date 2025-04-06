@@ -30,23 +30,34 @@ namespace BleHid
             public const int BUTTON_MIDDLE = 0x04;
         }
 
-        // Inspector-configurable fields
-        [Header("Status UI")]
-        [SerializeField] private Text statusText;
-        [SerializeField] private Image connectionIndicator;
-        [SerializeField] private Color connectedColor = Color.green;
-        [SerializeField] private Color disconnectedColor = Color.red;
-        [SerializeField] private Color notSupportedColor = Color.gray;
-        
-        // Public methods to set UI references
-        public void SetStatusText(Text text)
+    // Inspector-configurable fields
+    [Header("Status UI")]
+    [SerializeField] private Text statusText;
+    [SerializeField] private Image connectionIndicator;
+    [SerializeField] private Color connectedColor = Color.green;
+    [SerializeField] private Color disconnectedColor = Color.red;
+    [SerializeField] private Color notSupportedColor = Color.gray;
+    
+    [Header("Version Information")]
+    [SerializeField] private Text versionText;  // New dedicated field for version info
+    [SerializeField] private bool showDetailedVersionInfo = true;  // Option to show detailed build info
+    
+    // Public methods to set UI references
+    public void SetStatusText(Text text)
+    {
+        statusText = text;
+        if (statusText != null && _isInitialized)
         {
-            statusText = text;
-            if (statusText != null && _isInitialized)
-            {
-                UpdateStatusText(_isConnected ? "Connected" : (_isAdvertising ? "Advertising..." : "Ready - Not advertising"));
-            }
+            UpdateStatusText(_isConnected ? "Connected" : (_isAdvertising ? "Advertising..." : "Ready - Not advertising"));
         }
+    }
+    
+    // Method to set version text UI reference
+    public void SetVersionText(Text text)
+    {
+        versionText = text;
+        UpdateVersionUI();  // Update immediately if we have version info
+    }
         
         public void SetConnectionIndicator(Image indicator)
         {
@@ -70,6 +81,11 @@ namespace BleHid
         private bool _isConnected = false;
         private bool _isBleSupported = false;
         private bool _isAdvertising = false;
+        
+        // Version information
+        public string PluginVersion { get; private set; } = "Unknown";
+        public long PluginBuildNumber { get; private set; } = 0;
+        public string BuildTimestamp { get; private set; } = "Unknown";
 
         // Singleton pattern
         private static BleHidManager _instance;
@@ -366,6 +382,24 @@ namespace BleHid
     }
         
         /// <summary>
+        /// Updates the version UI with current version info
+        /// </summary>
+        private void UpdateVersionUI()
+        {
+            if (versionText != null)
+            {
+                if (showDetailedVersionInfo)
+                {
+                    versionText.text = $"v{PluginVersion} (Build {PluginBuildNumber})\nBuilt: {BuildTimestamp}";
+                }
+                else
+                {
+                    versionText.text = $"v{PluginVersion}";
+                }
+            }
+        }
+        
+        /// <summary>
         /// Initializes the BLE HID plugin with improved error handling and state management.
         /// </summary>
         /// <returns>True if initialization was successful or in progress, false if it failed permanently.</returns>
@@ -390,6 +424,24 @@ namespace BleHid
                 // Get the Unity Activity
                 AndroidJavaClass unityPlayer = new AndroidJavaClass("com.unity3d.player.UnityPlayer");
                 _activity = unityPlayer.GetStatic<AndroidJavaObject>("currentActivity");
+                
+                // Get the plugin class - we need this for version info even before initialization
+                _pluginClass = new AndroidJavaClass("com.example.blehid.unity.BleHidPlugin");
+                
+                // Retrieve version information - these methods are available without requiring full initialization
+                try
+                {
+                    PluginVersion = _pluginClass.CallStatic<string>("getPluginVersion");
+                    PluginBuildNumber = _pluginClass.CallStatic<long>("getPluginBuildNumber");
+                    BuildTimestamp = _pluginClass.CallStatic<string>("getBuildTimestamp");
+                    
+                    Debug.Log($"[BleHidManager] Plugin Version: {PluginVersion}, Build: {PluginBuildNumber}, Built: {BuildTimestamp}");
+                    UpdateVersionUI();
+                }
+                catch (Exception e)
+                {
+                    Debug.LogError($"[BleHidManager] Failed to get version info: {e.Message}");
+                }
                 
                 // Check Android version
                 AndroidJavaClass buildVersionClass = new AndroidJavaClass("android.os.Build$VERSION");
