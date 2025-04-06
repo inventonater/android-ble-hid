@@ -37,28 +37,30 @@ namespace BleHid
         [SerializeField] public float mouseSensitivity = 5f;
 
         // Reference to BLE HID manager
-        public BleHidManager bleManager;
+        [HideInInspector] public BleHidManager bleManager;
+        
+        // Flag to control auto-initialization
+        [Header("Initialization")]
+        [Tooltip("If true, will automatically initialize the BleHidPlugin")]
+        public bool autoInitialize = false;
 
         private void Start()
         {
-            // Setup BleHidManager with UI references
-            GameObject managerObject = new GameObject("BleHidManager");
-            bleManager = managerObject.AddComponent<BleHidManager>();
-
-            // Pass UI references to the manager
-            if (statusText != null && connectionIndicator != null)
+            // Get reference to BleHidManager singleton instance
+            if (bleManager == null)
             {
-                // Set private fields through reflection for demo purposes
-                var statusField = typeof(BleHidManager).GetField("statusText",
-                    System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
-                var indicatorField = typeof(BleHidManager).GetField("connectionIndicator",
-                    System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
-
-                if (statusField != null && indicatorField != null)
-                {
-                    statusField.SetValue(bleManager, statusText);
-                    indicatorField.SetValue(bleManager, connectionIndicator);
-                }
+                bleManager = BleHidManager.Instance;
+            }
+            
+            // Pass UI references to the manager using public methods
+            if (statusText != null)
+            {
+                bleManager.SetStatusText(statusText);
+            }
+            
+            if (connectionIndicator != null)
+            {
+                bleManager.SetConnectionIndicator(connectionIndicator);
             }
 
             // Setup touchpad mouse control
@@ -76,7 +78,11 @@ namespace BleHid
             bleManager.OnDisconnected += OnDeviceDisconnected;
 
             // Initialize automatically if desired
-            // bleManager.InitializePlugin();
+            if (autoInitialize)
+            {
+                bleManager.InitializePlugin();
+                SetControlButtonsInteractable(bleManager.IsInitialized() && bleManager.IsBlePeripheralSupported());
+            }
         }
 
         private void SetupButtons()

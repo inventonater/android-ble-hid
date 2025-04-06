@@ -35,6 +35,25 @@ namespace BleHid
         [SerializeField] private Color connectedColor = Color.green;
         [SerializeField] private Color disconnectedColor = Color.red;
         [SerializeField] private Color notSupportedColor = Color.gray;
+        
+        // Public methods to set UI references
+        public void SetStatusText(Text text)
+        {
+            statusText = text;
+            if (statusText != null && _isInitialized)
+            {
+                UpdateStatusText(_isConnected ? "Connected" : (_isAdvertising ? "Advertising..." : "Ready - Not advertising"));
+            }
+        }
+        
+        public void SetConnectionIndicator(Image indicator)
+        {
+            connectionIndicator = indicator;
+            if (connectionIndicator != null)
+            {
+                UpdateConnectionUI();
+            }
+        }
 
         // Events
         public event Action OnConnected;
@@ -140,6 +159,23 @@ namespace BleHid
             }
         }
 
+        // Android 12+ permission strings
+        private readonly string[] _requiredPermissions = new string[]
+        {
+            "android.permission.BLUETOOTH_SCAN",
+            "android.permission.BLUETOOTH_ADVERTISE",
+            "android.permission.BLUETOOTH_CONNECT"
+        };
+        
+        // Permission handling
+        private bool _permissionsRequested = false;
+        private bool _permissionsGranted = false;
+        
+        // Service availability flags
+        private bool _isMediaServiceAvailable = true;  // Media service always available in our implementation
+        private bool _isMouseServiceAvailable = true;  // Mouse functionality is included in the Media service
+        private bool _isKeyboardServiceAvailable = false; // Keyboard service might not be available
+
         /// <summary>
         /// Initializes the BLE HID plugin.
         /// </summary>
@@ -165,6 +201,16 @@ namespace BleHid
                 // Get the Unity Activity
                 AndroidJavaClass unityPlayer = new AndroidJavaClass("com.unity3d.player.UnityPlayer");
                 _activity = unityPlayer.GetStatic<AndroidJavaObject>("currentActivity");
+                
+                // Check and request permissions for Android 12+
+                if (Build.VERSION.SDK_INT >= 31) // Android 12 (SDK 31+)
+                {
+                    if (!CheckAndRequestPermissions())
+                    {
+                        UpdateStatusText("Waiting for permissions...");
+                        return false;
+                    }
+                }
 
                 // Get the plugin class
                 _pluginClass = new AndroidJavaClass("com.example.blehid.unity.BleHidPlugin");
@@ -189,6 +235,11 @@ namespace BleHid
                     }
                     else
                     {
+                        // Log available services for debugging
+                        Debug.Log("[BleHidManager] Media service available: " + _isMediaServiceAvailable);
+                        Debug.Log("[BleHidManager] Mouse functionality available: " + _isMouseServiceAvailable);
+                        Debug.Log("[BleHidManager] Keyboard service available: " + _isKeyboardServiceAvailable);
+                        
                         UpdateStatusText("Ready - Not advertising");
                     }
                 }
@@ -209,6 +260,104 @@ namespace BleHid
                 Debug.LogError("[BleHidManager] Error initializing plugin: " + e.Message);
                 UpdateStatusText("Error: " + e.Message);
                 return false;
+            }
+        }
+        
+        /// <summary>
+        /// Checks and requests required Android permissions
+        /// </summary>
+        /// <returns>True if all permissions are granted, false otherwise</returns>
+        private bool CheckAndRequestPermissions()
+        {
+            // Skip if not on Android
+            if (Application.platform != RuntimePlatform.Android)
+                return true;
+                
+            try
+            {
+                // Get the current Android API level
+                AndroidJavaClass buildVersionClass = new AndroidJavaClass("android.os.Build$VERSION");
+                int sdkInt = buildVersionClass.GetStatic<int>("SDK_INT");
+                
+                // For Android 12+ we need the new Bluetooth permissions
+                if (sdkInt >= 31)
+                {
+                    // Check if all required permissions are already granted
+                    bool allPermissionsGranted = true;
+                    foreach (string permission in _requiredPermissions)
+                    {
+                        int permissionStatus = _activity.Call<int>("checkSelfPermission", permission);
+                        if (permissionStatus != 0) // 0 is PERMISSION_GRANTED
+                        {
+                            allPermissionsGranted = false;
+                            break;
+                        }
+                    }
+                    
+                    if (allPermissionsGranted)
+                    {
+                        Debug.Log("[BleHidManager] All permissions already granted");
+                        _permissionsGranted = true;
+                        return true;
+                    }
+                    
+                    // If permissions aren't granted and we haven't requested them yet
+                    if (!_permissionsRequested)
+                    {
+                        Debug.Log("[BleHidManager] Requesting permissions...");
+                        _activity.Call("requestPermissions", _requiredPermissions, 1);
+                        _permissionsRequested = true;
+                        StartCoroutine(CheckPermissionsAfterDelay());
+                        return false;
+                    }
+                    
+                    return _permissionsGranted;
+                }
+                
+                // For older Android versions, permissions are granted at install time
+                return true;
+            }
+            catch (Exception e)
+            {
+                Debug.LogError("[BleHidManager] Error checking permissions: " + e.Message);
+                return false;
+            }
+        }
+        
+        /// <summary>
+        /// Coroutine to check permissions after a delay to let the user respond
+        /// </summary>
+        private IEnumerator CheckPermissionsAfterDelay()
+        {
+            // Wait a bit for user to respond to permission dialogs
+            yield return new WaitForSeconds(1.0f);
+            
+            // Check if permissions have been granted
+            bool allGranted = true;
+            foreach (string permission in _requiredPermissions)
+            {
+                int permissionStatus = _activity.Call<int>("checkSelfPermission", permission);
+                if (permissionStatus != 0) // 0 is PERMISSION_GRANTED
+                {
+                    allGranted = false;
+                    break;
+                }
+            }
+            
+            _permissionsGranted = allGranted;
+            
+            if (_permissionsGranted)
+            {
+                Debug.Log("[BleHidManager] All permissions granted");
+                UpdateStatusText("Permissions granted, initializing...");
+                
+                // Try to initialize again now that we have permissions
+                InitializePlugin();
+            }
+            else
+            {
+                Debug.LogWarning("[BleHidManager] Not all permissions were granted");
+                UpdateStatusText("Bluetooth permissions denied");
             }
         }
 

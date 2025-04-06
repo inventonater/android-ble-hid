@@ -447,23 +447,12 @@ namespace BleHid
         /// </summary>
         private void SetupBleManager()
         {
-            GameObject managerObject = new GameObject("BleHidManager");
-            bleManager = managerObject.AddComponent<BleHidManager>();
-
-            // Set UI references via reflection since they're private fields
-            if (statusText != null && connectionIndicator != null)
-            {
-                var statusField = typeof(BleHidManager).GetField("statusText",
-                    System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
-                var indicatorField = typeof(BleHidManager).GetField("connectionIndicator",
-                    System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
-
-                if (statusField != null && indicatorField != null)
-                {
-                    statusField.SetValue(bleManager, statusText);
-                    indicatorField.SetValue(bleManager, connectionIndicator);
-                }
-            }
+            // Get reference to the singleton instance instead of creating a new one
+            bleManager = BleHidManager.Instance;
+            
+            // Set UI references directly via public methods rather than using reflection
+            bleManager.SetStatusText(statusText);
+            bleManager.SetConnectionIndicator(connectionIndicator);
         }
 
         /// <summary>
@@ -473,6 +462,12 @@ namespace BleHid
         {
             GameObject controllerObject = new GameObject("BleHidDemoController");
             demoController = controllerObject.AddComponent<BleHidDemoController>();
+
+            // Set the BleHidManager reference first (important for initialization order)
+            demoController.bleManager = bleManager;
+            
+            // Set autoInitialize property directly
+            demoController.autoInitialize = true;
 
             // Set public fields
             demoController.initButton = initButton;

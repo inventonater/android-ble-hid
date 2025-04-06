@@ -38,6 +38,19 @@ public class BleHidPlugin {
             // Store the application context to prevent leaks
             Context appContext = context.getApplicationContext();
             
+            // Check for Android 12+ permissions - the Unity side will handle requesting them
+            // This just logs the status for debugging purposes
+            if (android.os.Build.VERSION.SDK_INT >= 31) { // Android 12
+                Log.i(TAG, "Running on Android 12+, checking permissions status");
+                boolean hasAdvertisePermission = hasPermission(appContext, "android.permission.BLUETOOTH_ADVERTISE");
+                boolean hasConnectPermission = hasPermission(appContext, "android.permission.BLUETOOTH_CONNECT");
+                boolean hasScanPermission = hasPermission(appContext, "android.permission.BLUETOOTH_SCAN");
+                
+                Log.i(TAG, "BLUETOOTH_ADVERTISE permission: " + (hasAdvertisePermission ? "Granted" : "Not granted"));
+                Log.i(TAG, "BLUETOOTH_CONNECT permission: " + (hasConnectPermission ? "Granted" : "Not granted"));
+                Log.i(TAG, "BLUETOOTH_SCAN permission: " + (hasScanPermission ? "Granted" : "Not granted"));
+            }
+            
             // Create and initialize the BLE HID manager
             bleHidManager = new BleHidManager(appContext);
             boolean result = bleHidManager.initialize();
@@ -55,6 +68,16 @@ public class BleHidPlugin {
             Log.e(TAG, "Error initializing BLE HID Plugin", e);
             return false;
         }
+    }
+    
+    /**
+     * Helper method to check if a permission is granted
+     */
+    private static boolean hasPermission(Context context, String permission) {
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M) {
+            return context.checkSelfPermission(permission) == android.content.pm.PackageManager.PERMISSION_GRANTED;
+        }
+        return true; // On older versions, permissions are granted at install time
     }
     
     /**
