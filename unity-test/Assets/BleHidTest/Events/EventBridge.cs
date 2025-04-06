@@ -249,24 +249,5 @@ namespace BleHid.Events
                 Debug.LogError($"Error processing {eventType} event: {ex.Message}\nData: {data}\n{ex.StackTrace}");
             }
         }
-        
-        /// <summary>
-        /// Gets additional details about an event from the native plugin.
-        /// </summary>
-        /// <param name="eventId">ID of the event</param>
-        /// <returns>Event details as a string</returns>
-        public string GetEventDetails(string eventId)
-        {
-            return BleHidPlugin.GetEventDetailsStatic(eventId);
-        }
-        
-        /// <summary>
-        /// Clears an event from the native plugin's pending events.
-        /// </summary>
-        /// <param name="eventId">ID of the event</param>
-        public void ClearEvent(string eventId)
-        {
-            BleHidPlugin.ClearEventStatic(eventId);
-        }
     }
 }

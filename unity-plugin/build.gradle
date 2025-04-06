@@ -23,6 +23,11 @@ android {
         sourceCompatibility rootProject.ext.javaVersion
         targetCompatibility rootProject.ext.javaVersion
     }
+    
+    // Exclude UnityPlayer class to avoid conflicts with Unity's own implementation
+    packagingOptions {
+        exclude '**/com/unity3d/player/UnityPlayer.class'
+    }
 }
 
 // Custom task to copy the AAR to Unity project
@@ -51,4 +56,6 @@ dependencies {
     implementation 'org.jetbrains.kotlin:kotlin-stdlib-jdk7:1.8.10'
     implementation 'org.jetbrains.kotlin:kotlin-stdlib-jdk8:1.8.10'
     implementation 'org.jetbrains.kotlin:kotlin-stdlib-common:1.8.10'
+    
+    // Unity classes are stubbed out in the source code
 }

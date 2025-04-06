@@ -93,8 +93,7 @@ public class UnityEventBridge implements UnityCallback {
 
     @Override
     public void onPairingRequested(String deviceAddress, int variant) {
-        PairingRequestedEvent event = new PairingRequestedEvent(
-                BluetoothDevice.getRemoteDevice(deviceAddress), variant);
+        PairingRequestedEvent event = new PairingRequestedEvent(deviceAddress, variant);
         
         // Store event in pending events
         pendingEvents.put(event.getEventId(), "PairingRequested");

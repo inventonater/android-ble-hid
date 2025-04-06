@@ -20,6 +20,17 @@ public class PairingRequestedEvent extends DeviceEvent {
     }
     
     /**
+     * Creates a new pairing requested event.
+     * 
+     * @param deviceAddress The address of the device requesting pairing
+     * @param pairingVariant The pairing variant requested (PIN, passkey, etc.)
+     */
+    public PairingRequestedEvent(String deviceAddress, int pairingVariant) {
+        super(EventType.PAIRING_REQUESTED, deviceAddress);
+        this.pairingVariant = pairingVariant;
+    }
+    
+    /**
      * Gets the pairing variant requested.
      * 
      * @return Pairing variant

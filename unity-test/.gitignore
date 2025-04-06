@@ -96,3 +96,4 @@ screenshots/*
 /csharp/.idea
 
 Packages/com.unity.searcher@4.9.3
+.utmp/*
