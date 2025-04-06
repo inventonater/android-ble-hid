@@ -409,8 +409,8 @@ namespace BleHid
                 _pluginClass = new AndroidJavaClass("com.example.blehid.unity.BleHidPlugin");
 
                 // Register the callback handler
-                AndroidJavaClass callbackClass = new AndroidJavaClass("com.example.blehid.unity.UnityCallback");
-                callbackClass.CallStatic("setUnityGameObject", gameObject.name);
+                AndroidJavaClass callbackClass = new AndroidJavaClass("com.example.blehid.unity.UnityEventBridge");
+                callbackClass.CallStatic("setUnityGameObjectStatic", gameObject.name);
 
                 // Initialize the plugin
                 bool result = _pluginClass.CallStatic<bool>("initialize", _activity);
@@ -442,8 +442,9 @@ namespace BleHid
                     UpdateStatusText("Initialization failed");
                 }
 
-                // Set up the Java to Unity callback
-                _pluginClass.CallStatic("setCallback", callbackClass);
+                // Set up the Java to Unity callback - get the singleton instance that's implementing UnityCallback
+                AndroidJavaObject callbackInstance = callbackClass.CallStatic<AndroidJavaObject>("getInstance");
+                _pluginClass.CallStatic("setCallback", callbackInstance);
 
                 UpdateConnectionUI();
                 return result;

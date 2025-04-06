@@ -14,8 +14,7 @@ android {
     
     buildTypes {
         release {
-            minifyEnabled true
-            proguardFiles getDefaultProguardFile(rootProject.ext.defaultProguardFile), 'proguard-rules.pro'
+            minifyEnabled false
         }
     }
     
@@ -24,15 +23,25 @@ android {
         targetCompatibility rootProject.ext.javaVersion
     }
     
-    // Don't exclude Unity classes as it may interfere with the manifest
-    // Instead only exclude specific problematic files if needed
     packagingOptions {
-        // Allow Unity3D classes to be included, needed for proper manifest merging
         exclude 'META-INF/MANIFEST.MF'
         exclude 'META-INF/LICENSE.txt'
         exclude 'META-INF/NOTICE.txt'
+        pickFirst 'classes.jar'
+        doNotStrip '**/*.so'
     }
 }
+
+// Task to copy core classes directly into the unity-plugin module
+task copyCoreClasses(type: Copy) {
+    from "../core/src/main/java"
+    into "src/main/java"
+    // Exclude any files that might already exist in unity-plugin
+    exclude "**/BuildConfig.java"
+}
+
+// Run the copy task before compilation
+preBuild.dependsOn copyCoreClasses
 
 // Custom task to copy the AAR to Unity project
 task copyToUnity(type: Copy, dependsOn: 'assembleRelease') {
@@ -41,26 +50,18 @@ task copyToUnity(type: Copy, dependsOn: 'assembleRelease') {
     rename { String fileName ->
         fileName.replace("unity-plugin-release.aar", "BleHidPlugin.aar")
     }
-    doLast {
-        // Execute the timestamp script to make Git detect changes
-        exec {
-            workingDir "${projectDir}/scripts"
-            commandLine "./stamp-aar.sh"
-        }
-    }
 }
 
 dependencies {
-    implementation project(':core')
+    // Use api instead of implementation to ensure core classes are included
+    api project(':core')
+    
     testImplementation rootProject.ext.deps.junit
     androidTestImplementation rootProject.ext.deps.androidxTestJunit
     
-    // Add explicit Kotlin dependencies with consistent versions
+    // Kotlin dependencies
     implementation 'org.jetbrains.kotlin:kotlin-stdlib:1.8.10'
-    implementation 'org.jetbrains.kotlin:kotlin-stdlib-jdk7:1.8.10'
-    implementation 'org.jetbrains.kotlin:kotlin-stdlib-jdk8:1.8.10'
-    implementation 'org.jetbrains.kotlin:kotlin-stdlib-common:1.8.10'
     
-    // Unity classes should be provided by Unity at runtime, not included in the plugin
+    // Unity classes are provided at runtime
     compileOnly fileTree(dir: '../unity-test/Assets/Plugins/Android', include: ['*.jar'], exclude: ['BleHidPlugin.aar'])
 }
