@@ -1,7 +1,7 @@
 apply plugin: 'com.android.library'
 
 android {
-    namespace 'com.example.blehid.unity'
+    namespace 'com.example.blehid.plugin'
     compileSdk rootProject.ext.compileSdkVersion
     
     defaultConfig {
@@ -14,7 +14,7 @@ android {
     
     buildTypes {
         release {
-            minifyEnabled false
+            minifyEnabled true
             proguardFiles getDefaultProguardFile(rootProject.ext.defaultProguardFile), 'proguard-rules.pro'
         }
     }
@@ -24,9 +24,10 @@ android {
         targetCompatibility rootProject.ext.javaVersion
     }
     
-    // Exclude UnityPlayer class to avoid conflicts with Unity's own implementation
+    // Exclude all Unity classes to avoid conflicts with Unity's own implementation
     packagingOptions {
-        exclude '**/com/unity3d/player/UnityPlayer.class'
+        exclude '**/com/unity3d/player/**'
+        exclude '**/com/unity3d/**'
     }
 }
 
@@ -57,5 +58,6 @@ dependencies {
     implementation 'org.jetbrains.kotlin:kotlin-stdlib-jdk8:1.8.10'
     implementation 'org.jetbrains.kotlin:kotlin-stdlib-common:1.8.10'
     
-    // Unity classes are stubbed out in the source code
+    // Unity classes should be provided by Unity at runtime, not included in the plugin
+    compileOnly fileTree(dir: '../unity-test/Assets/Plugins/Android', include: ['*.jar'], exclude: ['BleHidPlugin.aar'])
 }

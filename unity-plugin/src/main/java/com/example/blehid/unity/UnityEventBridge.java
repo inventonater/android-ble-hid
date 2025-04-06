@@ -11,7 +11,7 @@ import com.example.blehid.unity.events.EventRegistry;
 import com.example.blehid.unity.events.PairingFailedEvent;
 import com.example.blehid.unity.events.PairingFailedEvent.PairingFailureReason;
 import com.example.blehid.unity.events.PairingRequestedEvent;
-import com.unity3d.player.UnityPlayer;
+import com.example.blehid.unity.stubs.UnityPlayerStub;
 
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
@@ -84,7 +84,7 @@ public class UnityEventBridge implements UnityCallback {
         }
         
         try {
-            UnityPlayer.UnitySendMessage(gameObjectName, methodName, message);
+            UnityPlayerStub.UnitySendMessage(gameObjectName, methodName, message);
             Log.d(TAG, "Sent to Unity: " + methodName + " - " + message);
         } catch (Exception e) {
             Log.e(TAG, "Error sending to Unity", e);

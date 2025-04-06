@@ -19,9 +19,6 @@
     <uses-feature android:name="android.hardware.bluetooth" android:required="true" />
     <uses-feature android:name="android.hardware.bluetooth_le" android:required="true" />
 
-    <!-- App is not usable without Bluetooth -->
-    <uses-feature android:name="android.hardware.bluetooth_le" android:required="true" />
-
     <application>
         <!-- Unity's default activity -->
         <activity android:name="com.unity3d.player.UnityPlayerActivity"

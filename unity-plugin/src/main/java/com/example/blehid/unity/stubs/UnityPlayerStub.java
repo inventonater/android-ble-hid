@@ -1,10 +1,10 @@
-package com.unity3d.player;
+package com.example.blehid.unity.stubs;
 
 /**
  * Stub implementation of UnityPlayer for compilation only.
  * This class will be replaced by the real Unity implementation at runtime.
  */
-public class UnityPlayer {
+public class UnityPlayerStub {
     /**
      * Sends a message to a GameObject in Unity.
      * 

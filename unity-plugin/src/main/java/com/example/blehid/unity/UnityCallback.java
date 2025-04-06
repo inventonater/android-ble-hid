@@ -1,5 +1,7 @@
 package com.example.blehid.unity;
 
+import com.example.blehid.unity.stubs.UnityPlayerStub;
+
 /**
  * Interface for Unity to receive callbacks from the BLE HID plugin.
  * Unity code can implement this interface to handle connection and pairing events.
