@@ -59,44 +59,147 @@ namespace BleHid
         private Button rightClickButton;
         private Slider scrollSlider;
 
+        // Initialization state enum
+        public enum BootstrapState 
+        {
+            NotStarted,
+            SettingUpCanvas,
+            CreatingUI,
+            InitializingBleManager,
+            ConfiguringControllers,
+            Ready,
+            Failed
+        }
+        
+        // Current bootstrap state
+        private BootstrapState _currentState = BootstrapState.NotStarted;
+        public BootstrapState CurrentState => _currentState;
+        
+        // Initialization retry settings
+        [Header("Initialization")]
+        [SerializeField] private int maxInitRetries = 3;
+        [SerializeField] private float retryDelay = 2.0f;
+        private int _retryCount = 0;
+        private bool _initializationInProgress = false;
+        
         private void Start()
         {
-            SetupCanvas();
+            // Begin initialization sequence using coroutine for better error handling
+            StartCoroutine(InitializationSequence());
+        }
+        
+        /// <summary>
+        /// Coroutine to handle the full initialization sequence with proper error handling and retries
+        /// </summary>
+        private IEnumerator InitializationSequence()
+        {
+            _initializationInProgress = true;
+            _currentState = BootstrapState.NotStarted;
+            
+            // Setup canvas with error handling
+            _currentState = BootstrapState.SettingUpCanvas;
+            if (!SetupCanvas())
+            {
+                // Fatal error - can't proceed without canvas
+                Debug.LogError("[BleHidBootstrapper] Failed to set up canvas - cannot continue");
+                _currentState = BootstrapState.Failed;
+                _initializationInProgress = false;
+                yield break;
+            }
+            
+            // Setup UI panels
+            _currentState = BootstrapState.CreatingUI;
             CreatePanels();
-            SetupBleManager();
+            
+            // Wait a frame to ensure UI is properly set up
+            yield return null;
+            
+            // Initialize BLE Manager with retries
+            _currentState = BootstrapState.InitializingBleManager;
+            bool bleManagerReady = false;
+            _retryCount = 0;
+            
+            while (!bleManagerReady && _retryCount < maxInitRetries)
+            {
+                bleManagerReady = SetupBleManager();
+                
+                if (!bleManagerReady)
+                {
+                    _retryCount++;
+                    if (_retryCount < maxInitRetries)
+                    {
+                        Debug.Log($"[BleHidBootstrapper] BLE Manager initialization failed. Retrying ({_retryCount}/{maxInitRetries})");
+                        // Wait before retrying
+                        yield return new WaitForSeconds(retryDelay);
+                    }
+                }
+            }
+            
+            if (!bleManagerReady)
+            {
+                Debug.LogError("[BleHidBootstrapper] Failed to initialize BLE Manager after multiple attempts");
+                // Non-fatal error - can set up UI but BLE functionality won't work
+                if (statusText != null)
+                {
+                    statusText.text = "BLE initialization failed. Please restart the app.";
+                }
+                _currentState = BootstrapState.Failed;
+                _initializationInProgress = false;
+                yield break;
+            }
+            
+            // Setup demo controller
+            _currentState = BootstrapState.ConfiguringControllers;
             SetupDemoController();
+            
+            // All done
+            _currentState = BootstrapState.Ready;
+            _initializationInProgress = false;
+            
+            Debug.Log("[BleHidBootstrapper] Initialization sequence completed successfully");
         }
 
         /// <summary>
-        /// Sets up the main canvas for UI elements
+        /// Sets up the main canvas for UI elements with error handling
         /// </summary>
-        private void SetupCanvas()
+        /// <returns>True if canvas was set up successfully, false otherwise</returns>
+        private bool SetupCanvas()
         {
-            if (createCanvas)
+            try
             {
-                // Create canvas GameObject
-                GameObject canvasObject = new GameObject("BleHid_Canvas");
-                mainCanvas = canvasObject.AddComponent<Canvas>();
-                mainCanvas.renderMode = RenderMode.ScreenSpaceOverlay;
-
-                // Add canvas scaler
-                CanvasScaler scaler = canvasObject.AddComponent<CanvasScaler>();
-                scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
-                scaler.referenceResolution = referenceResolution;
-                scaler.screenMatchMode = CanvasScaler.ScreenMatchMode.MatchWidthOrHeight;
-                scaler.matchWidthOrHeight = 0.5f; // Match both width and height equally
-
-                // Add graphic raycaster for input
-                canvasObject.AddComponent<GraphicRaycaster>();
+                if (createCanvas)
+                {
+                    // Create canvas GameObject
+                    GameObject canvasObject = new GameObject("BleHid_Canvas");
+                    mainCanvas = canvasObject.AddComponent<Canvas>();
+                    mainCanvas.renderMode = RenderMode.ScreenSpaceOverlay;
+    
+                    // Add canvas scaler
+                    CanvasScaler scaler = canvasObject.AddComponent<CanvasScaler>();
+                    scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
+                    scaler.referenceResolution = referenceResolution;
+                    scaler.screenMatchMode = CanvasScaler.ScreenMatchMode.MatchWidthOrHeight;
+                    scaler.matchWidthOrHeight = 0.5f; // Match both width and height equally
+    
+                    // Add graphic raycaster for input
+                    canvasObject.AddComponent<GraphicRaycaster>();
+                }
+                else if (existingCanvas != null)
+                {
+                    mainCanvas = existingCanvas;
+                }
+                else
+                {
+                    Debug.LogError("[BleHidBootstrapper] No canvas provided. Please either enable 'Create Canvas' or assign an 'Existing Canvas'.");
+                    return false;
+                }
+                
+                return (mainCanvas != null);
             }
-            else if (existingCanvas != null)
+            catch (Exception e)
             {
-                mainCanvas = existingCanvas;
-            }
-            else
-            {
-                Debug.LogError("[BleHidBootstrapper] No canvas provided. Please either enable 'Create Canvas' or assign an 'Existing Canvas'.");
-                return;
+                Debug.LogError($"[BleHidBootstrapper] Error setting up canvas: {e.Message}");
+                return false;
             }
         }
 
@@ -443,49 +546,117 @@ namespace BleHid
         }
 
         /// <summary>
-        /// Sets up the BleHidManager
+        /// Sets up the BleHidManager with dependency injection and error handling
         /// </summary>
-        private void SetupBleManager()
+        /// <returns>True if successful, false otherwise</returns>
+        private bool SetupBleManager()
         {
-            // Get reference to the singleton instance instead of creating a new one
-            bleManager = BleHidManager.Instance;
-            
-            // Set UI references directly via public methods rather than using reflection
-            bleManager.SetStatusText(statusText);
-            bleManager.SetConnectionIndicator(connectionIndicator);
+            try
+            {
+                // Get reference to the singleton instance
+                bleManager = BleHidManager.Instance;
+                
+                if (bleManager == null)
+                {
+                    Debug.LogError("[BleHidBootstrapper] Failed to get BleHidManager instance");
+                    return false;
+                }
+                
+                // Set UI references
+                bleManager.SetStatusText(statusText);
+                bleManager.SetConnectionIndicator(connectionIndicator);
+                
+                // Check if initialization succeeded
+                if (!bleManager.IsInitialized() && bleManager.CurrentInitState != BleHidManager.InitState.Initializing)
+                {
+                    // Try to initialize if not already initializing
+                    if (!bleManager.InitializePlugin())
+                    {
+                        if (bleManager.CurrentInitState == BleHidManager.InitState.InitializationFailed)
+                        {
+                            Debug.LogError("[BleHidBootstrapper] BleHidManager initialization failed");
+                            return false;
+                        }
+                        else if (bleManager.CurrentInitState == BleHidManager.InitState.Unsupported)
+                        {
+                            Debug.LogWarning("[BleHidBootstrapper] BLE peripheral mode not supported on this device");
+                            // We consider this a 'success' as we've detected the limitation properly
+                            return true;
+                        }
+                        else if (bleManager.CurrentInitState == BleHidManager.InitState.WaitingForPermissions)
+                        {
+                            Debug.Log("[BleHidBootstrapper] Waiting for permission response");
+                            // This is not a failure, just waiting
+                            return false;
+                        }
+                    }
+                }
+                
+                return true;
+            }
+            catch (Exception e)
+            {
+                Debug.LogError($"[BleHidBootstrapper] Error setting up BleHidManager: {e.Message}");
+                return false;
+            }
         }
 
         /// <summary>
-        /// Sets up the BleHidDemoController
+        /// Sets up the BleHidDemoController with error handling
         /// </summary>
         private void SetupDemoController()
         {
-            GameObject controllerObject = new GameObject("BleHidDemoController");
-            demoController = controllerObject.AddComponent<BleHidDemoController>();
-
-            // Set the BleHidManager reference first (important for initialization order)
-            demoController.bleManager = bleManager;
-            
-            // Set autoInitialize property directly
-            demoController.autoInitialize = true;
-
-            // Set public fields
-            demoController.initButton = initButton;
-            demoController.advertiseButton = advertiseButton;
-            demoController.statusText = statusText;
-            demoController.connectionIndicator = connectionIndicator;
-
-            demoController.playPauseButton = playPauseButton;
-            demoController.nextTrackButton = nextTrackButton;
-            demoController.prevTrackButton = prevTrackButton;
-            demoController.volumeUpButton = volumeUpButton;
-            demoController.volumeDownButton = volumeDownButton;
-            demoController.muteButton = muteButton;
-
-            demoController.mouseTouchpad = mouseTouchpad;
-            demoController.leftClickButton = leftClickButton;
-            demoController.rightClickButton = rightClickButton;
-            demoController.scrollSlider = scrollSlider;
+            try
+            {
+                // Check if a controller already exists to avoid duplicates
+                BleHidDemoController existingController = FindObjectOfType<BleHidDemoController>();
+                if (existingController != null)
+                {
+                    Debug.Log("[BleHidBootstrapper] Using existing BleHidDemoController");
+                    demoController = existingController;
+                }
+                else
+                {
+                    GameObject controllerObject = new GameObject("BleHidDemoController");
+                    demoController = controllerObject.AddComponent<BleHidDemoController>();
+                }
+    
+                // Configure the controller with dependencies
+                if (demoController != null)
+                {
+                    // Set the BleHidManager reference first (important for initialization order)
+                    demoController.bleManager = bleManager;
+                    
+                    // Set autoInitialize property to false since we're handling init here
+                    demoController.autoInitialize = false;
+                    
+                    // Configure controller with UI elements
+                    demoController.initButton = initButton;
+                    demoController.advertiseButton = advertiseButton;
+                    demoController.statusText = statusText;
+                    demoController.connectionIndicator = connectionIndicator;
+    
+                    demoController.playPauseButton = playPauseButton;
+                    demoController.nextTrackButton = nextTrackButton;
+                    demoController.prevTrackButton = prevTrackButton;
+                    demoController.volumeUpButton = volumeUpButton;
+                    demoController.volumeDownButton = volumeDownButton;
+                    demoController.muteButton = muteButton;
+    
+                    demoController.mouseTouchpad = mouseTouchpad;
+                    demoController.leftClickButton = leftClickButton;
+                    demoController.rightClickButton = rightClickButton;
+                    demoController.scrollSlider = scrollSlider;
+                }
+                else
+                {
+                    Debug.LogError("[BleHidBootstrapper] Failed to create BleHidDemoController");
+                }
+            }
+            catch (Exception e)
+            {
+                Debug.LogError($"[BleHidBootstrapper] Error setting up BleHidDemoController: {e.Message}");
+            }
         }
     }
 }

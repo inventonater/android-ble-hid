@@ -167,19 +167,206 @@ namespace BleHid
             "android.permission.BLUETOOTH_CONNECT"
         };
         
-        // Permission handling
+        // Permission handling 
         private bool _permissionsRequested = false;
         private bool _permissionsGranted = false;
+        private int _permissionRetryCount = 0;
+        private const int MAX_PERMISSION_RETRIES = 3;
         
         // Service availability flags
         private bool _isMediaServiceAvailable = true;  // Media service always available in our implementation
         private bool _isMouseServiceAvailable = true;  // Mouse functionality is included in the Media service
         private bool _isKeyboardServiceAvailable = false; // Keyboard service might not be available
-
+        
+        // Initialization state enum
+        public enum InitState 
+        {
+            NotInitialized,
+            CheckingPermissions,
+            RequestingPermissions,
+            WaitingForPermissions,
+            Initializing,
+            InitializedSuccessfully,
+            InitializationFailed,
+            Unsupported
+        }
+        
+        private InitState _currentInitState = InitState.NotInitialized;
+        
+    // Public property to check initialization state
+    public InitState CurrentInitState => _currentInitState;
+    
+    /// <summary>
+    /// Gets the current system state as a set of flags.
+    /// </summary>
+    /// <returns>Byte with state flags matching the BleHidProtocol.State constants</returns>
+    public byte GetSystemState()
+    {
+        if (_pluginClass != null)
+        {
+            return _pluginClass.CallStatic<byte>("getSystemState");
+        }
+        return 0;
+    }
+    
+    /// <summary>
+    /// Verifies that a particular aspect of the system state is active.
+    /// </summary>
+    /// <param name="stateFlag">The state flag to verify from BleHidProtocol.State</param>
+    /// <returns>True if the state is active, false otherwise</returns>
+    public bool VerifyState(byte stateFlag)
+    {
+        if (_pluginClass != null)
+        {
+            return _pluginClass.CallStatic<bool>("verifyState", stateFlag);
+        }
+        return false;
+    }
+    
+    /// <summary>
+    /// Checks if the protocol version is compatible with the current version.
+    /// </summary>
+    /// <returns>True if compatible, false otherwise</returns>
+    public bool CheckProtocolVersion()
+    {
+        // For now, we only check if the Java side is initialized
+        // In the future, this could retrieve and verify the actual protocol version
+        return VerifyState(BleHidProtocol.State.Initialized);
+    }
+    
+    /// <summary>
+    /// Command batching functionality for efficient operations
+    /// </summary>
+    
+    /// <summary>
+    /// Starts a new command batch.
+    /// Call this before adding commands to the batch.
+    /// </summary>
+    public void StartBatch()
+    {
+        if (!CheckConnection()) return;
+        
+        try
+        {
+            _pluginClass.CallStatic("startBatch");
+            Debug.Log("[BleHidManager] Command batch started");
+        }
+        catch (Exception e)
+        {
+            Debug.LogError("[BleHidManager] Error starting batch: " + e.Message);
+        }
+    }
+    
+    /// <summary>
+    /// Adds a media command to the current batch.
+    /// </summary>
+    /// <param name="mediaButtonFlag">Media button flag (BleHidProtocol.MediaButton constants)</param>
+    public void AddMediaCommand(int mediaButtonFlag)
+    {
+        if (!CheckConnection()) return;
+        
+        try
+        {
+            _pluginClass.CallStatic("addMediaCommand", mediaButtonFlag);
+            Debug.Log("[BleHidManager] Media command added to batch: 0x" + mediaButtonFlag.ToString("X"));
+        }
+        catch (Exception e)
+        {
+            Debug.LogError("[BleHidManager] Error adding media command to batch: " + e.Message);
+        }
+    }
+    
+    /// <summary>
+    /// Adds a mouse movement command to the current batch.
+    /// </summary>
+    /// <param name="x">X-axis movement (-127 to 127)</param>
+    /// <param name="y">Y-axis movement (-127 to 127)</param>
+    public void AddMouseMove(int x, int y)
+    {
+        if (!CheckConnection()) return;
+        
+        // Clamp values to valid range (although Java side will do this too)
+        x = Mathf.Clamp(x, -127, 127);
+        y = Mathf.Clamp(y, -127, 127);
+        
+        try
+        {
+            _pluginClass.CallStatic("addMouseMove", x, y);
+            Debug.Log("[BleHidManager] Mouse move added to batch: x=" + x + ", y=" + y);
+        }
+        catch (Exception e)
+        {
+            Debug.LogError("[BleHidManager] Error adding mouse move to batch: " + e.Message);
+        }
+    }
+    
+    /// <summary>
+    /// Adds a mouse movement command to the current batch using Vector2.
+    /// </summary>
+    /// <param name="movement">Vector2 representing mouse movement</param>
+    /// <param name="sensitivity">Sensitivity multiplier</param>
+    public void AddMouseMove(Vector2 movement, float sensitivity = 1.0f)
+    {
+        int x = Mathf.Clamp(Mathf.RoundToInt(movement.x * sensitivity), -127, 127);
+        int y = Mathf.Clamp(Mathf.RoundToInt(movement.y * sensitivity), -127, 127);
+        AddMouseMove(x, y);
+    }
+    
+    /// <summary>
+    /// Adds a mouse button command to the current batch.
+    /// </summary>
+    /// <param name="mouseButtonFlag">Mouse button flag (BleHidProtocol.MouseButton constants)</param>
+    /// <param name="pressed">True for press, false for release</param>
+    public void AddMouseButton(int mouseButtonFlag, bool pressed)
+    {
+        if (!CheckConnection()) return;
+        
+        try
+        {
+            _pluginClass.CallStatic("addMouseButton", mouseButtonFlag, pressed);
+            Debug.Log("[BleHidManager] Mouse button added to batch: button=0x" + 
+                mouseButtonFlag.ToString("X") + ", pressed=" + pressed);
+        }
+        catch (Exception e)
+        {
+            Debug.LogError("[BleHidManager] Error adding mouse button to batch: " + e.Message);
+        }
+    }
+    
+    /// <summary>
+    /// Executes all commands in the current batch.
+    /// </summary>
+    /// <returns>True if all commands were executed successfully, false otherwise</returns>
+    public bool ExecuteBatch()
+    {
+        if (!CheckConnection()) return false;
+        
+        try
+        {
+            bool result = _pluginClass.CallStatic<bool>("executeBatch");
+            
+            if (result)
+            {
+                Debug.Log("[BleHidManager] Batch executed successfully");
+            }
+            else
+            {
+                Debug.LogError("[BleHidManager] Failed to execute batch");
+            }
+            
+            return result;
+        }
+        catch (Exception e)
+        {
+            Debug.LogError("[BleHidManager] Error executing batch: " + e.Message);
+            return false;
+        }
+    }
+        
         /// <summary>
-        /// Initializes the BLE HID plugin.
+        /// Initializes the BLE HID plugin with improved error handling and state management.
         /// </summary>
-        /// <returns>True if initialization was successful, false otherwise.</returns>
+        /// <returns>True if initialization was successful or in progress, false if it failed permanently.</returns>
         public bool InitializePlugin()
         {
             if (_isInitialized)
@@ -268,7 +455,7 @@ namespace BleHid
         }
         
         /// <summary>
-        /// Checks and requests required Android permissions
+        /// Checks and requests required Android permissions with improved user feedback
         /// </summary>
         /// <returns>True if all permissions are granted, false otherwise</returns>
         private bool CheckAndRequestPermissions()
@@ -283,12 +470,15 @@ namespace BleHid
                 AndroidJavaClass buildVersionClass = new AndroidJavaClass("android.os.Build$VERSION");
                 int sdkInt = buildVersionClass.GetStatic<int>("SDK_INT");
                 
+                // Update the initialization state
+                _currentInitState = InitState.CheckingPermissions;
+                
                 // For Android 12+ we need the new Bluetooth permissions
                 if (sdkInt >= 31)
                 {
                     // Check if all permissions are already granted
                     bool allPermissionsGranted = true;
-                    string missingPermissions = "";
+                    List<string> missingPermissionsList = new List<string>();
                     
                     foreach (string permission in _requiredPermissions)
                     {
@@ -296,7 +486,7 @@ namespace BleHid
                         if (permissionStatus != 0) // 0 is PERMISSION_GRANTED
                         {
                             allPermissionsGranted = false;
-                            missingPermissions += permission.Replace("android.permission.", "") + " ";
+                            missingPermissionsList.Add(permission.Replace("android.permission.", ""));
                         }
                     }
                     
@@ -304,17 +494,41 @@ namespace BleHid
                     {
                         Debug.Log("[BleHidManager] All permissions already granted");
                         _permissionsGranted = true;
+                        _currentInitState = InitState.Initializing;
                         return true;
                     }
                     
-                    // If permissions aren't granted and we haven't requested them yet
-                    if (!_permissionsRequested)
+                    string missingPermissions = string.Join(", ", missingPermissionsList.ToArray());
+                    
+                    // If permissions aren't granted and we haven't requested them yet or we're retrying
+                    if (!_permissionsRequested || _permissionRetryCount < MAX_PERMISSION_RETRIES)
                     {
-                        Debug.Log("[BleHidManager] Requesting permissions: " + missingPermissions);
-                        UpdateStatusText("Requesting Bluetooth permissions...");
+                        _currentInitState = InitState.RequestingPermissions;
+                        
+                        if (_permissionRetryCount > 0) {
+                            Debug.Log("[BleHidManager] Retrying permission request (" + _permissionRetryCount + "/" + MAX_PERMISSION_RETRIES + ")");
+                            UpdateStatusText("Please grant Bluetooth permissions\nRetry " + _permissionRetryCount + "/" + MAX_PERMISSION_RETRIES);
+                        } else {
+                            Debug.Log("[BleHidManager] Requesting permissions: " + missingPermissions);
+                            UpdateStatusText("Requesting Bluetooth permissions:\n" + missingPermissions);
+                        }
+                        
                         _activity.Call("requestPermissions", _requiredPermissions, 1);
                         _permissionsRequested = true;
+                        _permissionRetryCount++;
+                        _currentInitState = InitState.WaitingForPermissions;
                         StartCoroutine(CheckPermissionsAfterDelay());
+                        return false;
+                    }
+                    
+                    // If we've exceeded retry attempts
+                    if (_permissionRetryCount >= MAX_PERMISSION_RETRIES && !_permissionsGranted) {
+                        Debug.LogError("[BleHidManager] Failed to get permissions after " + MAX_PERMISSION_RETRIES + " attempts");
+                        UpdateStatusText("Error: Cannot function without Bluetooth permissions.\nPlease enable them in Settings.");
+                        _currentInitState = InitState.InitializationFailed;
+                        
+                        // Try to guide the user to settings
+                        TryOpenAppSettings();
                         return false;
                     }
                     
@@ -327,18 +541,46 @@ namespace BleHid
             catch (Exception e)
             {
                 Debug.LogError("[BleHidManager] Error checking permissions: " + e.Message);
-                UpdateStatusText("Error: Can't check permissions. " + e.Message);
+                UpdateStatusText("Error: Can't check permissions.\n" + e.Message);
+                _currentInitState = InitState.InitializationFailed;
                 return false;
             }
         }
         
         /// <summary>
-        /// Coroutine to check permissions after a delay to let the user respond
+        /// Attempts to open the app settings page so the user can enable permissions manually
+        /// </summary>
+        private void TryOpenAppSettings()
+        {
+            try
+            {
+                if (Application.platform == RuntimePlatform.Android && _activity != null)
+                {
+                    AndroidJavaObject intent = new AndroidJavaObject("android.content.Intent", 
+                        "android.settings.APPLICATION_DETAILS_SETTINGS");
+                    AndroidJavaClass uriClass = new AndroidJavaClass("android.net.Uri");
+                    
+                    AndroidJavaObject packageNameUri = uriClass.CallStatic<AndroidJavaObject>(
+                        "fromParts", "package", Application.identifier, null);
+                    intent.Call<AndroidJavaObject>("setData", packageNameUri);
+                    
+                    _activity.Call("startActivity", intent);
+                    Debug.Log("[BleHidManager] Opened app settings for user to grant permissions");
+                }
+            }
+            catch (Exception e)
+            {
+                Debug.LogError("[BleHidManager] Failed to open app settings: " + e.Message);
+            }
+        }
+        
+        /// <summary>
+        /// Coroutine to check permissions after a delay with improved retry logic
         /// </summary>
         private IEnumerator CheckPermissionsAfterDelay()
         {
             // Wait a bit for user to respond to permission dialogs
-            yield return new WaitForSeconds(1.5f);
+            yield return new WaitForSeconds(2.0f);
             
             // Check if permissions have been granted
             bool allGranted = true;
@@ -360,6 +602,7 @@ namespace BleHid
             {
                 Debug.Log("[BleHidManager] All permissions granted");
                 UpdateStatusText("Permissions granted, initializing...");
+                _currentInitState = InitState.Initializing;
                 
                 // Try to initialize again now that we have permissions
                 InitializePlugin();
@@ -368,13 +611,24 @@ namespace BleHid
             {
                 string permissionList = string.Join(", ", missingPermissions.ToArray());
                 Debug.LogWarning("[BleHidManager] Missing permissions: " + permissionList);
-                UpdateStatusText("Error: Bluetooth permissions denied. Cannot function without " + permissionList);
                 
-                // Check if Bluetooth is enabled as well
-                bool isBluetoothEnabled = IsBluetoothEnabled();
-                if (!isBluetoothEnabled)
-                {
-                    UpdateStatusText("Error: Bluetooth is disabled and permissions denied");
+                // If we haven't reached max retries, we'll auto-retry in the next InitializePlugin call
+                if (_permissionRetryCount < MAX_PERMISSION_RETRIES) {
+                    UpdateStatusText("Waiting for permissions...\n" + 
+                                     "Missing: " + permissionList);
+                    
+                    // Wait a bit and try initializing again
+                    yield return new WaitForSeconds(2.0f);
+                    InitializePlugin();
+                } else {
+                    UpdateStatusText("Error: Bluetooth permissions denied.\nCannot function without: " + permissionList);
+                    _currentInitState = InitState.InitializationFailed;
+                    
+                    // Check Bluetooth status and provide user feedback
+                    bool isBluetoothEnabled = IsBluetoothEnabled();
+                    if (!isBluetoothEnabled) {
+                        UpdateStatusText("Error: Bluetooth is disabled and permissions denied.\nPlease enable Bluetooth and grant permissions.");
+                    }
                 }
             }
         }
