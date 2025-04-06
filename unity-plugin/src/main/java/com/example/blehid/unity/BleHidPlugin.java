@@ -7,6 +7,8 @@ import java.util.function.Supplier;
 
 import com.example.blehid.core.BleHidManager;
 import com.example.blehid.core.HidMediaConstants;
+import com.example.blehid.unity.events.AdvertisingStateChangedEvent;
+import com.example.blehid.unity.events.EventRegistry;
 
 /**
  * Static interface for Unity to access BLE HID functionality.
@@ -301,6 +303,18 @@ public class BleHidPlugin {
      */
     public static void setCallback(UnityCallback callback) {
         BleHidPlugin.callback = callback;
+        
+        // Register with the event system as well
+        if (callback instanceof UnityEventBridge) {
+            // The UnityEventBridge is already integrated with the event system
+            // Just make sure it's registered for all events
+            EventRegistry.getInstance().registerListener(
+                event -> {
+                    Log.d(TAG, "Event received in BleHidPlugin: " + event);
+                    // We don't need to do anything here since UnityEventBridge already handles events
+                }
+            );
+        }
         
         if (bleHidManager != null) {
             // Set up connection callback

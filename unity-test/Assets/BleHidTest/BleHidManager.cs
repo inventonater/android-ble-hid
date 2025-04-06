@@ -1,7 +1,9 @@
 using UnityEngine;
 using System;
 using System.Collections;
+using System.Collections.Generic;
 using UnityEngine.UI;
+using BleHid.Events;
 
 namespace BleHid
 {
@@ -1153,7 +1155,7 @@ namespace BleHid
             return _isAdvertising;
         }
 
-        // Unity callback methods - these are called from Java
+        // Unity callback methods - these are called from Java via EventBridge
 
         /// <summary>
         /// Called when a pairing request is received.
@@ -1165,6 +1167,10 @@ namespace BleHid
             {
                 WhenPairingRequested(address, variant);
             }
+            
+            // Create and fire an event
+            PairingRequestedEvent evt = new PairingRequestedEvent(address, variant);
+            BleHidEventRegistry.Instance.FireEvent(evt);
         }
 
         /// <summary>
@@ -1187,15 +1193,76 @@ namespace BleHid
             {
                 OnConnectionStateChanged(true);
             }
+            
+            // Create and fire an event
+            DeviceConnectedEvent evt = new DeviceConnectedEvent(address);
+            BleHidEventRegistry.Instance.FireEvent(evt);
+        }
+        
+        /// <summary>
+        /// Called when a device disconnects.
+        /// </summary>
+        public void OnDeviceDisconnected(string address, string reasonStr = null)
+        {
+            Debug.Log("[BleHidManager] Device disconnected: " + address);
+            _isConnected = false;
+            UpdateStatusText("Disconnected");
+            UpdateConnectionUI();
+            
+            if (OnDisconnected != null)
+            {
+                OnDisconnected();
+            }
+            
+            if (OnConnectionStateChanged != null)
+            {
+                OnConnectionStateChanged(false);
+            }
+            
+            // Parse the disconnect reason
+            DisconnectReason reason = DisconnectReason.Unknown;
+            if (!string.IsNullOrEmpty(reasonStr) && Enum.TryParse(reasonStr, out DisconnectReason parsedReason))
+            {
+                reason = parsedReason;
+            }
+            
+            // Create and fire an event
+            DeviceDisconnectedEvent evt = new DeviceDisconnectedEvent(address, reason);
+            BleHidEventRegistry.Instance.FireEvent(evt);
         }
 
         /// <summary>
         /// Called when pairing fails.
         /// </summary>
-        public void OnPairingFailed(string address)
+        public void OnPairingFailed(string address, string reasonStr = null)
         {
             Debug.Log("[BleHidManager] Pairing failed with: " + address);
             UpdateStatusText("Pairing failed");
+            
+            // Parse the failure reason
+            PairingFailureReason reason = PairingFailureReason.Unknown;
+            if (!string.IsNullOrEmpty(reasonStr) && Enum.TryParse(reasonStr, out PairingFailureReason parsedReason))
+            {
+                reason = parsedReason;
+            }
+            
+            // Create and fire an event
+            PairingFailedEvent evt = new PairingFailedEvent(address, reason);
+            BleHidEventRegistry.Instance.FireEvent(evt);
+        }
+        
+        /// <summary>
+        /// Called when advertising state changes.
+        /// </summary>
+        public void OnAdvertisingStateChanged(bool isAdvertising)
+        {
+            Debug.Log("[BleHidManager] Advertising state changed: " + isAdvertising);
+            _isAdvertising = isAdvertising;
+            UpdateStatusText(isAdvertising ? "Advertising..." : "Ready - Not advertising");
+            
+            // Create and fire an event
+            AdvertisingStateChangedEvent evt = new AdvertisingStateChangedEvent(isAdvertising);
+            BleHidEventRegistry.Instance.FireEvent(evt);
         }
 
         // Private helper methods
