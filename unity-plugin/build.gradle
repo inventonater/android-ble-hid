@@ -24,10 +24,13 @@ android {
         targetCompatibility rootProject.ext.javaVersion
     }
     
-    // Exclude all Unity classes to avoid conflicts with Unity's own implementation
+    // Don't exclude Unity classes as it may interfere with the manifest
+    // Instead only exclude specific problematic files if needed
     packagingOptions {
-        exclude '**/com/unity3d/player/**'
-        exclude '**/com/unity3d/**'
+        // Allow Unity3D classes to be included, needed for proper manifest merging
+        exclude 'META-INF/MANIFEST.MF'
+        exclude 'META-INF/LICENSE.txt'
+        exclude 'META-INF/NOTICE.txt'
     }
 }
 

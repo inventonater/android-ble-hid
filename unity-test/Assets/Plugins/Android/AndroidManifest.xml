@@ -3,7 +3,8 @@
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
     package="com.example.blehid"
-    android:installLocation="preferExternal">
+    android:installLocation="preferExternal"
+    tools:overrideLibrary="com.example.blehid.plugin">
 
     <!-- Screen support: adjust as needed for your target devices -->
     <supports-screens
@@ -30,17 +31,13 @@
         android:maxSdkVersion="30" />
 
     <!-- For Android 12+ (API 31+). 
-         If you support scanning that reveals location-like info, remove the "neverForLocation" flag. 
-         Tools attributes are used to handle merges/versions. -->
+         If you support scanning that reveals location-like info, remove the "neverForLocation" flag. -->
     <uses-permission
-        android:name="android.permission.BLUETOOTH_SCAN"
-        tools:targetApi="s" />
+        android:name="android.permission.BLUETOOTH_SCAN" />
     <uses-permission
-        android:name="android.permission.BLUETOOTH_ADVERTISE"
-        tools:targetApi="s" />
+        android:name="android.permission.BLUETOOTH_ADVERTISE" />
     <uses-permission
-        android:name="android.permission.BLUETOOTH_CONNECT"
-        tools:targetApi="s" />
+        android:name="android.permission.BLUETOOTH_CONNECT" />
 
     <!-- =============== FEATURES ===================== -->
     <!-- If your app absolutely requires BLE, set required="true". Otherwise, "false" lets non-BLE devices install. -->
@@ -53,7 +50,7 @@
         android:label="@string/app_name"
         android:theme="@style/UnityThemeSelector"
         android:isGame="true"
-        tools:replace="android:label">
+        tools:replace="android:label,android:theme,android:icon">
 
         <!-- =============== MAIN ACTIVITY (Unity) ================ -->
         <activity
@@ -61,19 +58,16 @@
             android:label="@string/app_name"
             android:screenOrientation="fullSensor"
             android:launchMode="singleTask"
-            android:configChanges="mcc|mnc|locale|touchscreen|keyboard|keyboardHidden|
-                                   navigation|orientation|screenLayout|uiMode|
-                                   screenSize|smallestScreenSize|fontScale|
-                                   layoutDirection|density"
+            android:configChanges="mcc|mnc|locale|touchscreen|keyboard|keyboardHidden|navigation|orientation|screenLayout|uiMode|screenSize|smallestScreenSize|fontScale|layoutDirection|density"
             android:hardwareAccelerated="false"
-            android:exported="true">
+            android:exported="true"
+            tools:node="replace">
 
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
                 <!-- Optional: If you want TV / Leanback support -->
                 <category android:name="android.intent.category.LEANBACK_LAUNCHER" />
-                <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
 
             <!-- Unity-specific metadata -->
