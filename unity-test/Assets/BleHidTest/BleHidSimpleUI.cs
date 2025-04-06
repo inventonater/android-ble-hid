@@ -66,97 +66,162 @@ namespace BleHid
         
         private void Update()
         {
-            // Handle touchpad input in the mouse tab
-            if (currentTab == 1 && bleHidManager != null && (bleHidManager.IsConnected || isEditorMode))
+            // Only process touchpad input when:
+            // 1. We're on the mouse tab
+            // 2. BLE is initialized or in editor mode
+            // 3. Connected to a device or in editor mode
+            if (currentTab != 1 || bleHidManager == null || (!bleHidManager.IsConnected && !isEditorMode))
             {
-                // Process touch input for the touchpad (similar to mouse input behavior)
-                if (Input.touchCount > 0)
-                {
-                    Touch touch = Input.GetTouch(0);
-                    
-                    // Start drag when touching inside touchpad
-                    if (touch.phase == TouchPhase.Began && touchpadRect.Contains(touch.position))
+                return;
+            }
+            
+            // Process direct touch input (mobile)
+            if (Input.touchCount > 0)
+            {
+                HandleTouchInput(Input.GetTouch(0));
+            }
+            // Process mouse input (editor/desktop)
+            #if UNITY_EDITOR
+            else if (isEditorMode)
+            {
+                HandleMouseInput();
+            }
+            #endif
+        }
+        
+        /// <summary>
+        /// Handles touch input for the touchpad area
+        /// </summary>
+        private void HandleTouchInput(Touch touch)
+        {
+            // Always work in screen coordinates for input
+            Vector2 touchScreenPos = touch.position;
+            Rect screenTouchpadRect = GetScreenTouchpadRect();
+            
+            // Log touchpad boundaries and touch positions for debugging
+            if (touch.phase == TouchPhase.Began)
+            {
+                AddLogEntry($"Touchpad screen rect: ({screenTouchpadRect.x}, {screenTouchpadRect.y}, w:{screenTouchpadRect.width}, h:{screenTouchpadRect.height})");
+                AddLogEntry($"Touch began at: ({touchScreenPos.x}, {touchScreenPos.y})");
+            }
+            
+            switch (touch.phase)
+            {
+                case TouchPhase.Began:
+                    // Start dragging if touch begins inside touchpad
+                    if (screenTouchpadRect.Contains(touchScreenPos))
                     {
-                        lastTouchPosition = touch.position;
+                        lastTouchPosition = touchScreenPos;
                         isMouseDragging = true;
+                        AddLogEntry("Touch drag started inside touchpad");
                     }
-                    // Continue drag as long as finger is down, regardless of position
-                    else if (touch.phase == TouchPhase.Moved && isMouseDragging)
+                    break;
+                    
+                case TouchPhase.Moved:
+                    // Process movement if we're dragging
+                    if (isMouseDragging)
                     {
-                        // Calculate delta movement
-                        Vector2 delta = touch.position - lastTouchPosition;
-                        
-                        // Scale the movement (adjust sensitivity as needed)
-                        int scaledDeltaX = (int)(delta.x * 0.5f);
-                        int scaledDeltaY = (int)(delta.y * 0.5f);
-                        
-                        // Only send if there's significant movement
-                        if (Mathf.Abs(scaledDeltaX) > 0 || Mathf.Abs(scaledDeltaY) > 0)
-                        {
-                            if (!isEditorMode)
-                            {
-                                // Send the mouse movement
-                                bleHidManager.MoveMouse(scaledDeltaX, scaledDeltaY);
-                            }
-                            else
-                            {
-                                AddLogEntry($"Touch delta: ({scaledDeltaX}, {scaledDeltaY})");
-                            }
-                            
-                            // Update last position
-                            lastTouchPosition = touch.position;
-                        }
+                        ProcessPointerMovement(touchScreenPos);
                     }
-                    // End drag when finger is lifted
-                    else if ((touch.phase == TouchPhase.Ended || touch.phase == TouchPhase.Canceled) && isMouseDragging)
+                    break;
+                    
+                case TouchPhase.Ended:
+                case TouchPhase.Canceled:
+                    if (isMouseDragging)
                     {
                         isMouseDragging = false;
+                        AddLogEntry("Touch drag ended");
                     }
+                    break;
+            }
+        }
+        
+        #if UNITY_EDITOR
+        /// <summary>
+        /// Handles mouse input for the touchpad area (editor only)
+        /// </summary>
+        private void HandleMouseInput()
+        {
+            // Convert mouse position to screen coordinates (Unity mouse Y is inverted)
+            Vector2 mouseScreenPos = new Vector2(
+                Input.mousePosition.x,
+                Input.mousePosition.y
+            );
+            
+            Rect screenTouchpadRect = GetScreenTouchpadRect();
+            
+            // Start drag on mouse down inside touchpad
+            if (Input.GetMouseButtonDown(0))
+            {
+                if (screenTouchpadRect.Contains(mouseScreenPos))
+                {
+                    lastTouchPosition = mouseScreenPos;
+                    isMouseDragging = true;
+                    AddLogEntry($"Mouse drag started at ({mouseScreenPos.x}, {mouseScreenPos.y})");
+                }
+            }
+            // Continue drag during movement
+            else if (Input.GetMouseButton(0) && isMouseDragging)
+            {
+                ProcessPointerMovement(mouseScreenPos);
+            }
+            // End drag on mouse up
+            else if (Input.GetMouseButtonUp(0) && isMouseDragging)
+            {
+                isMouseDragging = false;
+                AddLogEntry("Mouse drag ended");
+            }
+        }
+        #endif
+
+        float mouseScale = 3;
+
+        /// <summary>
+        /// Processes pointer movement for both touch and mouse input
+        /// </summary>
+        private void ProcessPointerMovement(Vector2 currentPosition)
+        {
+            // Calculate delta since last position
+            Vector2 delta = currentPosition - lastTouchPosition;
+            
+            // Scale the movement (adjusted for sensitivity)
+            int scaledDeltaX = (int)(delta.x * mouseScale);
+            int scaledDeltaY = (int)(delta.y * mouseScale);
+            
+            // Only process if movement is significant
+            if (Mathf.Abs(scaledDeltaX) > 0 || Mathf.Abs(scaledDeltaY) > 0)
+            {
+                // Invert Y direction for mouse movement (screen Y goes down, mouse Y goes up)
+                scaledDeltaY = -scaledDeltaY;
+                
+                // Send movement or log in editor mode
+                if (!isEditorMode)
+                {
+                    bleHidManager.MoveMouse(scaledDeltaX, scaledDeltaY);
+                    AddLogEntry($"Sending mouse delta: ({scaledDeltaX}, {scaledDeltaY})");
+                }
+                else
+                {
+                    AddLogEntry($"Mouse delta: ({scaledDeltaX}, {scaledDeltaY})");
                 }
                 
-                // Handle mouse input in editor
-                #if UNITY_EDITOR
-                if (isEditorMode)
-                {
-                    // Convert screen mouse position to GUI coordinates (flip Y)
-                    Vector2 mousePos = new Vector2(
-                        Input.mousePosition.x,
-                        Screen.height - Input.mousePosition.y
-                    );
-                    
-                    // Start drag when clicking inside touchpad
-                    if (Input.GetMouseButtonDown(0) && touchpadRect.Contains(mousePos))
-                    {
-                        lastTouchPosition = mousePos;
-                        isMouseDragging = true;
-                        // Don't log start - reduces noise
-                    }
-                    // Continue drag as long as mouse button is held, regardless of position
-                    else if (Input.GetMouseButton(0) && isMouseDragging)
-                    {
-                        // Calculate delta movement
-                        Vector2 delta = mousePos - lastTouchPosition;
-                        
-                        // Scale the movement
-                        int scaledDeltaX = (int)(delta.x * 0.5f);
-                        int scaledDeltaY = (int)(delta.y * 0.5f);
-                        
-                        // Only send/log if there's significant movement
-                        if (Mathf.Abs(scaledDeltaX) > 0 || Mathf.Abs(scaledDeltaY) > 0)
-                        {
-                            AddLogEntry($"Mouse delta: ({scaledDeltaX}, {scaledDeltaY})");
-                            lastTouchPosition = mousePos;
-                        }
-                    }
-                    // End drag when mouse is released
-                    else if (Input.GetMouseButtonUp(0) && isMouseDragging)
-                    {
-                        isMouseDragging = false;
-                        // Don't log end - reduces noise
-                    }
-                }
-                #endif
+                // Update last position for next calculation
+                lastTouchPosition = currentPosition;
             }
+        }
+        
+        /// <summary>
+        /// Converts GUI touchpad rect to screen coordinates
+        /// </summary>
+        private Rect GetScreenTouchpadRect()
+        {
+            // Convert GUI coordinates to screen coordinates
+            return new Rect(
+                touchpadRect.x,               // X stays the same
+                Screen.height - touchpadRect.y - touchpadRect.height, // Convert GUI Y to screen Y
+                touchpadRect.width,           // Width stays the same
+                touchpadRect.height           // Height stays the same
+            );
         }
         
         private void OnDestroy()
