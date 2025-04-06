@@ -123,10 +123,6 @@ When running the enhanced debugging tool, look for these key indicators:
 - `HidMouseService`: Implements the HID mouse service
 - `HidKeyboardService`: Implements the HID keyboard service
 
-## License
-
-This project is licensed under the MIT License - see the LICENSE file for details.
-
 ## Development Guide
 
 ### Project Structure
