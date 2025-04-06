@@ -15,12 +15,15 @@ import static com.example.blehid.core.HidMediaConstants.*;
 public class HidMediaReportHandler {
     private static final String TAG = "HidMediaReportHandler";
     
-    // Combined report: 4 bytes
+    // Combined report: 12 bytes
     // Byte 0: Media buttons
     // Byte 1: Mouse buttons
     // Byte 2: X movement
     // Byte 3: Y movement
-    private final byte[] combinedReport = new byte[4];
+    // Byte 4: Keyboard modifiers (CTRL, SHIFT, ALT, etc.)
+    // Byte 5: Reserved (always 0)
+    // Bytes 6-11: Keyboard keys (up to 6 keys)
+    private final byte[] combinedReport = new byte[12];
     
     private final BleGattServerManager gattServerManager;
     private final BluetoothGattCharacteristic reportCharacteristic;
@@ -41,19 +44,23 @@ public class HidMediaReportHandler {
     }
     
     /**
-     * Sends a combined media and mouse report.
+     * Sends a full combined report with media, mouse, and keyboard data.
      * 
-     * @param device  The connected Bluetooth device
+     * @param device The connected Bluetooth device
      * @param mediaButtons Media button state bitmap (see HidMediaConstants)
      * @param mouseButtons Mouse button state bitmap (see HidMediaConstants)
      * @param x X movement (-127 to 127)
      * @param y Y movement (-127 to 127)
+     * @param modifiers Keyboard modifiers (CTRL, SHIFT, ALT, etc.)
+     * @param keys Array of keyboard key codes (up to 6 keys)
      * @return true if the report was sent successfully, false otherwise
      */
-    public boolean sendCombinedReport(BluetoothDevice device, int mediaButtons, 
-                                    int mouseButtons, int x, int y) {
-        Log.d(TAG, "sendCombinedReport - mediaButtons: " + mediaButtons 
-                + ", mouseButtons: " + mouseButtons + ", x: " + x + ", y: " + y);
+    public boolean sendFullReport(BluetoothDevice device, int mediaButtons, 
+                                 int mouseButtons, int x, int y,
+                                 int modifiers, byte[] keys) {
+        Log.d(TAG, "sendFullReport - mediaButtons: " + mediaButtons 
+                + ", mouseButtons: " + mouseButtons + ", x: " + x + ", y: " + y
+                + ", modifiers: " + modifiers);
         
         if (device == null) {
             Log.e(TAG, "No connected device");
@@ -76,12 +83,25 @@ public class HidMediaReportHandler {
         combinedReport[1] = (byte) (mouseButtons & 0x07);  // Mouse buttons (3 bits)
         combinedReport[2] = (byte) x;                      // X movement
         combinedReport[3] = (byte) y;                      // Y movement
+        combinedReport[4] = (byte) (modifiers & 0xFF);     // Keyboard modifiers
+        combinedReport[5] = 0;                             // Reserved byte
+        
+        // Set up to 6 keyboard keys
+        int keyCount = (keys != null) ? Math.min(keys.length, 6) : 0;
+        for (int i = 0; i < 6; i++) {
+            combinedReport[i + 6] = (i < keyCount) ? keys[i] : 0;
+        }
         
         // Log detailed report information
-        Log.d(TAG, String.format("COMBINED REPORT DATA - mediaButtons=%d, mouseButtons=%d, x=%d, y=%d",
-                mediaButtons, mouseButtons, x, y));
-        Log.d(TAG, String.format("COMBINED REPORT BYTES - [%02X, %02X, %02X, %02X]",
-                combinedReport[0], combinedReport[1], combinedReport[2], combinedReport[3]));
+        if (Log.isLoggable(TAG, Log.DEBUG)) {
+            StringBuilder keyStr = new StringBuilder();
+            for (int i = 0; i < keyCount; i++) {
+                keyStr.append(String.format("0x%02X ", keys[i]));
+            }
+            
+            Log.d(TAG, String.format("FULL REPORT DATA - mediaButtons=%d, mouseButtons=%d, x=%d, y=%d, modifiers=0x%02X, keys=[%s]",
+                    mediaButtons, mouseButtons, x, y, modifiers, keyStr.toString().trim()));
+        }
         
         // Send notification with retry for more reliability
         boolean success = sendNotificationWithRetry(reportCharacteristic.getUuid(), combinedReport);
@@ -96,19 +116,37 @@ public class HidMediaReportHandler {
     }
     
     /**
-     * Sends only a media control report without changing mouse state.
+     * Sends a combined media and mouse report (backward compatible).
+     * 
+     * @param device  The connected Bluetooth device
+     * @param mediaButtons Media button state bitmap (see HidMediaConstants)
+     * @param mouseButtons Mouse button state bitmap (see HidMediaConstants)
+     * @param x X movement (-127 to 127)
+     * @param y Y movement (-127 to 127)
+     * @return true if the report was sent successfully, false otherwise
+     */
+    public boolean sendCombinedReport(BluetoothDevice device, int mediaButtons, 
+                                     int mouseButtons, int x, int y) {
+        // Keep existing keyboard values
+        return sendFullReport(device, mediaButtons, mouseButtons, x, y, 
+                            combinedReport[4], extractKeyboardKeys());
+    }
+    
+    /**
+     * Sends only a media control report without changing mouse or keyboard state.
      * 
      * @param device  The connected Bluetooth device
      * @param buttons Media button state bitmap (see HidMediaConstants)
      * @return true if the report was sent successfully, false otherwise
      */
     public boolean sendMediaReport(BluetoothDevice device, int buttons) {
-        // Keep existing mouse values
-        return sendCombinedReport(device, buttons, combinedReport[1], 0, 0);
+        // Keep existing mouse and keyboard values
+        return sendFullReport(device, buttons, combinedReport[1], 0, 0, 
+                            combinedReport[4], extractKeyboardKeys());
     }
     
     /**
-     * Sends only a mouse movement report without changing media state.
+     * Sends only a mouse movement report without changing media or keyboard state.
      * 
      * @param device The connected Bluetooth device
      * @param x X movement (-127 to 127)
@@ -116,20 +154,61 @@ public class HidMediaReportHandler {
      * @return true if the report was sent successfully, false otherwise
      */
     public boolean movePointer(BluetoothDevice device, int x, int y) {
-        // Keep existing media and mouse button values
-        return sendCombinedReport(device, combinedReport[0], combinedReport[1], x, y);
+        // Keep existing media, mouse button, and keyboard values
+        return sendFullReport(device, combinedReport[0], combinedReport[1], x, y, 
+                            combinedReport[4], extractKeyboardKeys());
     }
     
     /**
-     * Sends only a mouse button report without changing media state.
+     * Sends only a mouse button report without changing media or keyboard state.
      * 
      * @param device The connected Bluetooth device
      * @param buttons Mouse button state bitmap (see HidMediaConstants)
      * @return true if the report was sent successfully, false otherwise
      */
     public boolean sendMouseButtons(BluetoothDevice device, int buttons) {
-        // Keep existing media values, set x and y to 0
-        return sendCombinedReport(device, combinedReport[0], buttons, 0, 0);
+        // Keep existing media and keyboard values, set x and y to 0
+        return sendFullReport(device, combinedReport[0], buttons, 0, 0, 
+                            combinedReport[4], extractKeyboardKeys());
+    }
+    
+    /**
+     * Sends only a keyboard report without changing media or mouse state.
+     * 
+     * @param device The connected Bluetooth device
+     * @param modifiers Modifier keys (shift, ctrl, alt, etc.)
+     * @param keyCodes Array of key codes to send (up to 6)
+     * @return true if the report was sent successfully, false otherwise
+     */
+    public boolean sendKeyboardReport(BluetoothDevice device, int modifiers, byte[] keyCodes) {
+        // Keep existing media and mouse values
+        return sendFullReport(device, combinedReport[0], combinedReport[1], 0, 0, 
+                            modifiers, keyCodes);
+    }
+    
+    /**
+     * Sends a single key press (with optional modifiers).
+     * 
+     * @param device The connected Bluetooth device
+     * @param keyCode The key code to send
+     * @param modifiers Optional modifier keys (shift, ctrl, alt, etc.)
+     * @return true if the report was sent successfully, false otherwise
+     */
+    public boolean sendKey(BluetoothDevice device, byte keyCode, int modifiers) {
+        byte[] keys = new byte[1];
+        keys[0] = keyCode;
+        return sendKeyboardReport(device, modifiers, keys);
+    }
+    
+    /**
+     * Releases all keyboard keys.
+     * 
+     * @param device The connected Bluetooth device
+     * @return true if the report was sent successfully, false otherwise
+     */
+    public boolean releaseKeys(BluetoothDevice device) {
+        // Send a report with no keys pressed, keeping media and mouse state
+        return sendKeyboardReport(device, 0, null);
     }
     
     /**
@@ -193,6 +272,43 @@ public class HidMediaReportHandler {
     }
     
     /**
+     * Sends a key press and release.
+     * 
+     * @param device The connected Bluetooth device
+     * @param keyCode The key code to press and release
+     * @param modifiers Optional modifier keys (shift, ctrl, alt, etc.)
+     * @return true if both the press and release were successful, false otherwise
+     */
+    public boolean typeKey(BluetoothDevice device, byte keyCode, int modifiers) {
+        // Press the key
+        boolean pressResult = sendKey(device, keyCode, modifiers);
+        
+        try {
+            Thread.sleep(50); // Small delay between press and release
+        } catch (InterruptedException e) {
+            // Ignore
+        }
+        
+        // Release the key
+        boolean releaseResult = releaseKeys(device);
+        
+        return pressResult && releaseResult;
+    }
+    
+    /**
+     * Helper method to extract the keyboard keys from the combined report.
+     * 
+     * @return Array of key codes from the combined report
+     */
+    private byte[] extractKeyboardKeys() {
+        byte[] keys = new byte[6];
+        for (int i = 0; i < 6; i++) {
+            keys[i] = combinedReport[i + 6];
+        }
+        return keys;
+    }
+    
+    /**
      * Enables notifications for the report characteristic.
      */
     private void enableNotifications() {
@@ -203,10 +319,9 @@ public class HidMediaReportHandler {
             Log.d(TAG, "Set report characteristic descriptor value to enable notifications");
             
             // Send a zero report to initialize the connection
-            combinedReport[0] = 0; // No media buttons
-            combinedReport[1] = 0; // No mouse buttons
-            combinedReport[2] = 0; // No X movement
-            combinedReport[3] = 0; // No Y movement
+            for (int i = 0; i < combinedReport.length; i++) {
+                combinedReport[i] = 0; // Initialize all bytes to 0
+            }
             reportCharacteristic.setValue(combinedReport);
             
             // Send two initial reports - one is sometimes not enough

@@ -30,6 +30,16 @@ public class HidMediaService {
     public static final int BUTTON_RIGHT = HidMediaConstants.BUTTON_RIGHT;
     public static final int BUTTON_MIDDLE = HidMediaConstants.BUTTON_MIDDLE;
     
+    // Keyboard modifiers (duplicated for convenience)
+    public static final int KEY_MOD_LCTRL = HidMediaConstants.KEY_MOD_LCTRL;
+    public static final int KEY_MOD_LSHIFT = HidMediaConstants.KEY_MOD_LSHIFT;
+    public static final int KEY_MOD_LALT = HidMediaConstants.KEY_MOD_LALT;
+    public static final int KEY_MOD_LMETA = HidMediaConstants.KEY_MOD_LMETA;
+    public static final int KEY_MOD_RCTRL = HidMediaConstants.KEY_MOD_RCTRL;
+    public static final int KEY_MOD_RSHIFT = HidMediaConstants.KEY_MOD_RSHIFT;
+    public static final int KEY_MOD_RALT = HidMediaConstants.KEY_MOD_RALT;
+    public static final int KEY_MOD_RMETA = HidMediaConstants.KEY_MOD_RMETA;
+    
     private final BleHidManager bleHidManager;
     private final BleGattServerManager gattServerManager;
     private BluetoothGattService hidService;
@@ -149,8 +159,8 @@ public class HidMediaService {
                 BluetoothGattCharacteristic.PERMISSION_READ_ENCRYPTED | 
                 BluetoothGattCharacteristic.PERMISSION_WRITE_ENCRYPTED);
         
-        // Set initial report value for 4-byte combined format
-        byte[] initialReport = new byte[4];
+        // Set initial report value for 12-byte combined format (media, mouse, keyboard)
+        byte[] initialReport = new byte[12];
         characteristic.setValue(initialReport);
         
         // Add Report Reference descriptor to help hosts identify the report type
@@ -263,6 +273,175 @@ public class HidMediaService {
         }
         
         return reportHandler.click(connectedDevice, button);
+    }
+    
+    /**
+     * Keyboard control methods
+     */
+    
+    /**
+     * Sends a key press.
+     * 
+     * @param keyCode The key code to press
+     * @param modifiers Optional modifier keys (shift, ctrl, alt, etc.)
+     * @return true if the command was sent successfully, false otherwise
+     */
+    public boolean sendKey(byte keyCode, int modifiers) {
+        if (!isInitialized) {
+            Log.e(TAG, "HID service not initialized");
+            return false;
+        }
+        
+        connectedDevice = bleHidManager.getConnectedDevice();
+        if (connectedDevice == null) {
+            Log.e(TAG, "No connected device");
+            return false;
+        }
+        
+        return reportHandler.sendKey(connectedDevice, keyCode, modifiers);
+    }
+    
+    /**
+     * Releases all currently pressed keys.
+     * 
+     * @return true if the command was sent successfully, false otherwise
+     */
+    public boolean releaseAllKeys() {
+        if (!isInitialized) {
+            Log.e(TAG, "HID service not initialized");
+            return false;
+        }
+        
+        connectedDevice = bleHidManager.getConnectedDevice();
+        if (connectedDevice == null) {
+            Log.e(TAG, "No connected device");
+            return false;
+        }
+        
+        return reportHandler.releaseKeys(connectedDevice);
+    }
+    
+    /**
+     * Sends multiple keys at once.
+     * 
+     * @param keyCodes Array of up to 6 key codes to send simultaneously
+     * @param modifiers Optional modifier keys (shift, ctrl, alt, etc.)
+     * @return true if the command was sent successfully, false otherwise
+     */
+    public boolean sendKeys(byte[] keyCodes, int modifiers) {
+        if (!isInitialized) {
+            Log.e(TAG, "HID service not initialized");
+            return false;
+        }
+        
+        connectedDevice = bleHidManager.getConnectedDevice();
+        if (connectedDevice == null) {
+            Log.e(TAG, "No connected device");
+            return false;
+        }
+        
+        return reportHandler.sendKeyboardReport(connectedDevice, modifiers, keyCodes);
+    }
+    
+    /**
+     * Performs a key press and release (types a key).
+     * 
+     * @param keyCode The key code to type
+     * @param modifiers Optional modifier keys (shift, ctrl, alt, etc.)
+     * @return true if the command was sent successfully, false otherwise
+     */
+    public boolean typeKey(byte keyCode, int modifiers) {
+        if (!isInitialized) {
+            Log.e(TAG, "HID service not initialized");
+            return false;
+        }
+        
+        connectedDevice = bleHidManager.getConnectedDevice();
+        if (connectedDevice == null) {
+            Log.e(TAG, "No connected device");
+            return false;
+        }
+        
+        return reportHandler.typeKey(connectedDevice, keyCode, modifiers);
+    }
+    
+    /**
+     * Types a string of text character by character.
+     * 
+     * @param text The text to type
+     * @return true if all characters were sent successfully, false otherwise
+     */
+    public boolean typeText(String text) {
+        if (text == null || text.isEmpty()) {
+            return true;
+        }
+        
+        boolean success = true;
+        for (int i = 0; i < text.length(); i++) {
+            char c = text.charAt(i);
+            byte keyCode = 0;
+            int modifiers = 0;
+            
+            // Convert ASCII character to HID key code and modifiers
+            if (c >= 'a' && c <= 'z') {
+                // Lowercase letters
+                keyCode = (byte) (HidMediaConstants.KEY_A + (c - 'a'));
+            } else if (c >= 'A' && c <= 'Z') {
+                // Uppercase letters (use shift modifier)
+                keyCode = (byte) (HidMediaConstants.KEY_A + (c - 'A'));
+                modifiers = KEY_MOD_LSHIFT;
+            } else if (c >= '1' && c <= '9') {
+                // Numbers 1-9
+                keyCode = (byte) (HidMediaConstants.KEY_1 + (c - '1'));
+            } else if (c == '0') {
+                keyCode = HidMediaConstants.KEY_0;
+            } else if (c == ' ') {
+                keyCode = HidMediaConstants.KEY_SPACE;
+            } else if (c == '\n' || c == '\r') {
+                keyCode = HidMediaConstants.KEY_ENTER;
+            } else if (c == '\t') {
+                keyCode = HidMediaConstants.KEY_TAB;
+            } else if (c == '.') {
+                keyCode = HidMediaConstants.KEY_PERIOD;
+            } else if (c == ',') {
+                keyCode = HidMediaConstants.KEY_COMMA;
+            } else if (c == '-') {
+                keyCode = HidMediaConstants.KEY_MINUS;
+            } else if (c == '=') {
+                keyCode = HidMediaConstants.KEY_EQUALS;
+            } else if (c == ';') {
+                keyCode = HidMediaConstants.KEY_SEMICOLON;
+            } else if (c == '/') {
+                keyCode = HidMediaConstants.KEY_SLASH;
+            } else if (c == '\\') {
+                keyCode = HidMediaConstants.KEY_BACKSLASH;
+            } else if (c == '[') {
+                keyCode = HidMediaConstants.KEY_BRACKET_LEFT;
+            } else if (c == ']') {
+                keyCode = HidMediaConstants.KEY_BRACKET_RIGHT;
+            } else if (c == '\'') {
+                keyCode = HidMediaConstants.KEY_APOSTROPHE;
+            } else if (c == '`') {
+                keyCode = HidMediaConstants.KEY_GRAVE;
+            } else {
+                // Skip unsupported characters
+                continue;
+            }
+            
+            boolean result = typeKey(keyCode, modifiers);
+            if (!result) {
+                success = false;
+            }
+            
+            // Add a small delay between characters
+            try {
+                Thread.sleep(20);
+            } catch (InterruptedException e) {
+                // Ignore
+            }
+        }
+        
+        return success;
     }
     
     /**

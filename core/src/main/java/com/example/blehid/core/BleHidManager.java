@@ -365,6 +365,87 @@ public class BleHidManager {
         return hidMediaService.sendCombinedReport(mediaButtons, mouseButtons, x, y);
     }
     
+    /**
+     * Keyboard control methods
+     */
+    
+    /**
+     * Sends a single key press.
+     * 
+     * @param keyCode The key code to send
+     * @param modifiers Optional modifier keys (shift, ctrl, alt, etc.)
+     * @return true if successful, false otherwise
+     */
+    public boolean sendKey(byte keyCode, int modifiers) {
+        if (!isInitialized || connectedDevice == null) {
+            Log.e(TAG, "Not connected or initialized");
+            return false;
+        }
+        
+        return hidMediaService.sendKey(keyCode, modifiers);
+    }
+    
+    /**
+     * Releases all currently pressed keys.
+     * 
+     * @return true if successful, false otherwise
+     */
+    public boolean releaseAllKeys() {
+        if (!isInitialized || connectedDevice == null) {
+            Log.e(TAG, "Not connected or initialized");
+            return false;
+        }
+        
+        return hidMediaService.releaseAllKeys();
+    }
+    
+    /**
+     * Sends multiple keys at once.
+     * 
+     * @param keyCodes Array of up to 6 key codes to send simultaneously
+     * @param modifiers Optional modifier keys (shift, ctrl, alt, etc.)
+     * @return true if successful, false otherwise
+     */
+    public boolean sendKeys(byte[] keyCodes, int modifiers) {
+        if (!isInitialized || connectedDevice == null) {
+            Log.e(TAG, "Not connected or initialized");
+            return false;
+        }
+        
+        return hidMediaService.sendKeys(keyCodes, modifiers);
+    }
+    
+    /**
+     * Types a single key (press and release).
+     * 
+     * @param keyCode The key code to type
+     * @param modifiers Optional modifier keys (shift, ctrl, alt, etc.)
+     * @return true if successful, false otherwise
+     */
+    public boolean typeKey(byte keyCode, int modifiers) {
+        if (!isInitialized || connectedDevice == null) {
+            Log.e(TAG, "Not connected or initialized");
+            return false;
+        }
+        
+        return hidMediaService.typeKey(keyCode, modifiers);
+    }
+    
+    /**
+     * Types a string of text character by character.
+     * 
+     * @param text The text to type
+     * @return true if successful, false otherwise
+     */
+    public boolean typeText(String text) {
+        if (!isInitialized || connectedDevice == null) {
+            Log.e(TAG, "Not connected or initialized");
+            return false;
+        }
+        
+        return hidMediaService.typeText(text);
+    }
+    
     // Connection management
 
     /**

@@ -14,6 +14,7 @@ import android.text.format.DateFormat;
 import android.util.Log;
 import android.view.MotionEvent;
 import android.view.View;
+import android.widget.EditText;
 import android.widget.FrameLayout;
 import android.widget.Button;
 import android.widget.TextView;
@@ -24,6 +25,7 @@ import androidx.appcompat.app.AppCompatActivity;
 import com.example.blehid.app.R;
 import com.example.blehid.core.BleHidManager;
 import com.example.blehid.core.BlePairingManager;
+import com.example.blehid.core.HidMediaConstants;
 import com.example.blehid.core.HidMediaService;
 
 import java.util.Date;
@@ -49,8 +51,14 @@ public class SimpleMediaActivity extends AppCompatActivity {
     // Tab controls
     private Button mediaTabButton;
     private Button mouseTabButton;
+    private Button keyboardTabButton;
     private View mediaPanel;
     private View mousePanel;
+    private View keyboardPanel;
+    
+    // Keyboard controls
+    private EditText textInputField;
+    private Button sendTextButton;
     
     // Media controls
     private Button playPauseButton;
@@ -183,8 +191,14 @@ public class SimpleMediaActivity extends AppCompatActivity {
         // Initialize tab controls
         mediaTabButton = findViewById(R.id.mediaTabButton);
         mouseTabButton = findViewById(R.id.mouseTabButton);
+        keyboardTabButton = findViewById(R.id.keyboardTabButton);
         mediaPanel = findViewById(R.id.mediaPanel);
         mousePanel = findViewById(R.id.mousePanel);
+        keyboardPanel = findViewById(R.id.keyboardPanel);
+        
+        // Initialize keyboard controls
+        textInputField = findViewById(R.id.textInputField);
+        sendTextButton = findViewById(R.id.sendTextButton);
         
         // Initialize mouse controls
         touchpadArea = findViewById(R.id.touchpadArea);
@@ -261,6 +275,9 @@ public class SimpleMediaActivity extends AppCompatActivity {
         
         // Set up mouse controls
         setupMouseControls();
+        
+        // Set up keyboard controls
+        setupKeyboardControls();
         
         // Initialize BLE HID functionality
         initializeBleHid();
@@ -356,13 +373,15 @@ public class SimpleMediaActivity extends AppCompatActivity {
         mediaTabButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                // Show media panel, hide mouse panel
+                // Show media panel, hide others
                 mediaPanel.setVisibility(View.VISIBLE);
                 mousePanel.setVisibility(View.GONE);
+                keyboardPanel.setVisibility(View.GONE);
                 
                 // Update tab button styling
                 mediaTabButton.setBackgroundTintList(getColorStateList(android.R.color.holo_blue_dark));
                 mouseTabButton.setBackgroundTintList(getColorStateList(android.R.color.darker_gray));
+                keyboardTabButton.setBackgroundTintList(getColorStateList(android.R.color.darker_gray));
             }
         });
         
@@ -370,13 +389,31 @@ public class SimpleMediaActivity extends AppCompatActivity {
         mouseTabButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                // Show mouse panel, hide media panel
+                // Show mouse panel, hide others
                 mousePanel.setVisibility(View.VISIBLE);
                 mediaPanel.setVisibility(View.GONE);
+                keyboardPanel.setVisibility(View.GONE);
                 
                 // Update tab button styling
                 mouseTabButton.setBackgroundTintList(getColorStateList(android.R.color.holo_blue_dark));
                 mediaTabButton.setBackgroundTintList(getColorStateList(android.R.color.darker_gray));
+                keyboardTabButton.setBackgroundTintList(getColorStateList(android.R.color.darker_gray));
+            }
+        });
+        
+        // Keyboard tab click listener
+        keyboardTabButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                // Show keyboard panel, hide others
+                keyboardPanel.setVisibility(View.VISIBLE);
+                mediaPanel.setVisibility(View.GONE);
+                mousePanel.setVisibility(View.GONE);
+                
+                // Update tab button styling
+                keyboardTabButton.setBackgroundTintList(getColorStateList(android.R.color.holo_blue_dark));
+                mediaTabButton.setBackgroundTintList(getColorStateList(android.R.color.darker_gray));
+                mouseTabButton.setBackgroundTintList(getColorStateList(android.R.color.darker_gray));
             }
         });
     }
@@ -744,6 +781,176 @@ public class SimpleMediaActivity extends AppCompatActivity {
         } else {
             connectionText.setText(R.string.not_connected);
         }
+    }
+    
+    /**
+     * Sets up the keyboard control buttons and text input field.
+     */
+    private void setupKeyboardControls() {
+        // Set up the send text button to send the content of the text input field
+        sendTextButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                if (!bleHidManager.isConnected()) {
+                    Toast.makeText(SimpleMediaActivity.this, R.string.not_connected, Toast.LENGTH_SHORT).show();
+                    addLogEntry("KEYBOARD: Not connected");
+                    return;
+                }
+                
+                String text = textInputField.getText().toString();
+                if (text.isEmpty()) {
+                    Toast.makeText(SimpleMediaActivity.this, "Please enter text to send", Toast.LENGTH_SHORT).show();
+                    return;
+                }
+                
+                addLogEntry("KEYBOARD: Sending text: " + text);
+                boolean result = bleHidManager.typeText(text);
+                
+                if (result) {
+                    addLogEntry("KEYBOARD: Text sent successfully");
+                    textInputField.setText(""); // Clear the input field
+                } else {
+                    addLogEntry("KEYBOARD: Failed to send text");
+                    Toast.makeText(SimpleMediaActivity.this, "Failed to send text", Toast.LENGTH_SHORT).show();
+                }
+            }
+        });
+        
+        // Set up individual key buttons
+        // Temporarily commented out key setup to test basic functionality
+        /*
+        setupKeyButton(R.id.key_1, HidMediaConstants.KEY_1, "1");
+        setupKeyButton(R.id.key_2, HidMediaConstants.KEY_2, "2");
+        setupKeyButton(R.id.key_3, HidMediaConstants.KEY_3, "3");
+        setupKeyButton(R.id.key_4, HidMediaConstants.KEY_4, "4");
+        setupKeyButton(R.id.key_5, HidMediaConstants.KEY_5, "5");
+        setupKeyButton(R.id.key_6, HidMediaConstants.KEY_6, "6");
+        setupKeyButton(R.id.key_7, HidMediaConstants.KEY_7, "7");
+        setupKeyButton(R.id.key_8, HidMediaConstants.KEY_8, "8");
+        setupKeyButton(R.id.key_9, HidMediaConstants.KEY_9, "9");
+        setupKeyButton(R.id.key_0, HidMediaConstants.KEY_0, "0");
+        
+        setupKeyButton(R.id.key_space, HidMediaConstants.KEY_SPACE, "Space");
+        setupKeyButton(R.id.key_enter, HidMediaConstants.KEY_ENTER, "Enter");
+        setupKeyButton(R.id.key_backspace, HidMediaConstants.KEY_BACKSPACE, "Backspace");
+        setupKeyButton(R.id.key_tab, HidMediaConstants.KEY_TAB, "Tab");
+        setupKeyButton(R.id.key_esc, HidMediaConstants.KEY_ESCAPE, "Escape");
+        
+        // Navigation keys
+        setupKeyButton(R.id.key_up, HidMediaConstants.KEY_UP, "Up");
+        setupKeyButton(R.id.key_down, HidMediaConstants.KEY_DOWN, "Down");
+        setupKeyButton(R.id.key_left, HidMediaConstants.KEY_LEFT, "Left");
+        setupKeyButton(R.id.key_right, HidMediaConstants.KEY_RIGHT, "Right");
+        setupKeyButton(R.id.key_home, HidMediaConstants.KEY_HOME, "Home");
+        setupKeyButton(R.id.key_end, HidMediaConstants.KEY_END, "End");
+        setupKeyButton(R.id.key_del, HidMediaConstants.KEY_DELETE, "Delete");
+        */
+        
+        // Modifier keys
+        Button ctrlButton = findViewById(R.id.key_ctrl);
+        Button shiftButton = findViewById(R.id.key_shift);
+        Button altButton = findViewById(R.id.key_alt);
+        Button metaButton = findViewById(R.id.key_meta);
+        
+        // Set up Ctrl key
+        ctrlButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                addLogEntry("KEYBOARD: Pressed Ctrl+C (Copy)");
+                if (bleHidManager.isConnected()) {
+                    // Send Ctrl+C (commonly used for copy)
+                    boolean result = bleHidManager.sendKey(HidMediaConstants.KEY_C, HidMediaConstants.KEY_MOD_LCTRL);
+                    if (!result) {
+                        Toast.makeText(SimpleMediaActivity.this, "Failed to send Ctrl+C", Toast.LENGTH_SHORT).show();
+                    }
+                } else {
+                    Toast.makeText(SimpleMediaActivity.this, R.string.not_connected, Toast.LENGTH_SHORT).show();
+                }
+            }
+        });
+        
+        // Set up Shift key
+        shiftButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                addLogEntry("KEYBOARD: Pressed Shift+Tab (Backward Tab)");
+                if (bleHidManager.isConnected()) {
+                    // Send Shift+Tab (commonly used for backward tabbing)
+                    boolean result = bleHidManager.sendKey(HidMediaConstants.KEY_TAB, HidMediaConstants.KEY_MOD_LSHIFT);
+                    if (!result) {
+                        Toast.makeText(SimpleMediaActivity.this, "Failed to send Shift+Tab", Toast.LENGTH_SHORT).show();
+                    }
+                } else {
+                    Toast.makeText(SimpleMediaActivity.this, R.string.not_connected, Toast.LENGTH_SHORT).show();
+                }
+            }
+        });
+        
+        // Set up Alt key
+        altButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                addLogEntry("KEYBOARD: Pressed Alt+Tab (Window Switcher)");
+                if (bleHidManager.isConnected()) {
+                    // Send Alt+Tab (commonly used for window switching)
+                    boolean result = bleHidManager.sendKey(HidMediaConstants.KEY_TAB, HidMediaConstants.KEY_MOD_LALT);
+                    if (!result) {
+                        Toast.makeText(SimpleMediaActivity.this, "Failed to send Alt+Tab", Toast.LENGTH_SHORT).show();
+                    }
+                } else {
+                    Toast.makeText(SimpleMediaActivity.this, R.string.not_connected, Toast.LENGTH_SHORT).show();
+                }
+            }
+        });
+        
+        // Set up Meta/Win key
+        metaButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                addLogEntry("KEYBOARD: Pressed Meta/Win key");
+                if (bleHidManager.isConnected()) {
+                    // Send just the Win/Meta key
+                    byte[] keys = new byte[1];
+                    keys[0] = 0;
+                    boolean result = bleHidManager.sendKeys(keys, HidMediaConstants.KEY_MOD_LMETA);
+                    if (!result) {
+                        Toast.makeText(SimpleMediaActivity.this, "Failed to send Meta key", Toast.LENGTH_SHORT).show();
+                    }
+                } else {
+                    Toast.makeText(SimpleMediaActivity.this, R.string.not_connected, Toast.LENGTH_SHORT).show();
+                }
+            }
+        });
+    }
+    
+    /**
+     * Helper method to set up a keyboard key button.
+     * 
+     * @param buttonId The button resource ID
+     * @param keyCode The HID key code to send
+     * @param keyName The name of the key for logging
+     */
+    private void setupKeyButton(int buttonId, final byte keyCode, final String keyName) {
+        Button button = findViewById(buttonId);
+        if (button == null) {
+            Log.w(TAG, "Key button not found for " + keyName);
+            return;
+        }
+        
+        button.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                addLogEntry("KEYBOARD: Pressed " + keyName);
+                if (bleHidManager.isConnected()) {
+                    boolean result = bleHidManager.typeKey(keyCode, 0);
+                    if (!result) {
+                        Toast.makeText(SimpleMediaActivity.this, "Failed to send " + keyName, Toast.LENGTH_SHORT).show();
+                    }
+                } else {
+                    Toast.makeText(SimpleMediaActivity.this, R.string.not_connected, Toast.LENGTH_SHORT).show();
+                }
+            }
+        });
     }
     
     /**
