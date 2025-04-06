@@ -10,6 +10,7 @@
 rootProject.name = 'inventonater-hid'
 include ':app'
 include ':core'
-// Commenting out these modules as they haven't been updated for media player functionality
-// include ':unity-plugin'
+// Media player functionality has now been added to unity-plugin
+include ':unity-plugin'
+// Diagnostic module is still not updated
 // include ':ble-diagnostic'

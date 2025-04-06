@@ -4,10 +4,11 @@ import android.content.Context;
 import android.util.Log;
 
 import com.example.blehid.core.BleHidManager;
+import com.example.blehid.core.HidMediaConstants;
 
 /**
  * Static interface for Unity to access BLE HID functionality.
- * Provides methods for initializing, controlling advertising, and sending key events.
+ * Provides methods for initializing, controlling advertising, and sending media and mouse events.
  */
 public class BleHidPlugin {
     private static final String TAG = "BleHidPlugin";
@@ -111,74 +112,320 @@ public class BleHidPlugin {
     }
     
     /**
-     * Sends a keyboard HID report with the specified key.
-     * 
-     * @param keyCode The HID key code to send
-     * @return true if the report was sent successfully, false otherwise
+     * Media Control Methods
      */
-    public static boolean sendKey(int keyCode) {
+    
+    /**
+     * Sends a play/pause control command.
+     * 
+     * @return true if the command was sent successfully, false otherwise
+     */
+    public static boolean playPause() {
         if (!checkInitialized()) return false;
         
         if (!bleHidManager.isConnected()) {
-            Log.w(TAG, "Not connected to a host, cannot send key");
+            Log.w(TAG, "Not connected to a host, cannot send media command");
             return false;
         }
         
-        boolean result = bleHidManager.sendKey(keyCode);
+        boolean result = bleHidManager.playPause();
         
         if (result) {
-            Log.d(TAG, "Key sent: " + keyCode);
+            Log.d(TAG, "Play/Pause sent");
         } else {
-            Log.e(TAG, "Failed to send key: " + keyCode);
+            Log.e(TAG, "Failed to send Play/Pause");
         }
         
         return result;
     }
     
     /**
-     * Sends multiple keyboard HID keys simultaneously.
+     * Sends a next track control command.
      * 
-     * @param keyCodes Array of HID key codes to send
-     * @return true if the report was sent successfully, false otherwise
+     * @return true if the command was sent successfully, false otherwise
      */
-    public static boolean sendKeys(int[] keyCodes) {
+    public static boolean nextTrack() {
         if (!checkInitialized()) return false;
         
         if (!bleHidManager.isConnected()) {
-            Log.w(TAG, "Not connected to a host, cannot send keys");
+            Log.w(TAG, "Not connected to a host, cannot send media command");
             return false;
         }
         
-        boolean result = bleHidManager.sendKeys(keyCodes);
+        boolean result = bleHidManager.nextTrack();
         
         if (result) {
-            Log.d(TAG, "Keys sent: " + keyCodes.length + " keys");
+            Log.d(TAG, "Next Track sent");
         } else {
-            Log.e(TAG, "Failed to send keys");
+            Log.e(TAG, "Failed to send Next Track");
         }
         
         return result;
     }
     
     /**
-     * Releases all pressed keys.
+     * Sends a previous track control command.
      * 
-     * @return true if the report was sent successfully, false otherwise
+     * @return true if the command was sent successfully, false otherwise
      */
-    public static boolean releaseKeys() {
+    public static boolean previousTrack() {
         if (!checkInitialized()) return false;
         
         if (!bleHidManager.isConnected()) {
-            Log.w(TAG, "Not connected to a host, cannot release keys");
+            Log.w(TAG, "Not connected to a host, cannot send media command");
             return false;
         }
         
-        boolean result = bleHidManager.releaseKeys();
+        boolean result = bleHidManager.previousTrack();
         
         if (result) {
-            Log.d(TAG, "Keys released");
+            Log.d(TAG, "Previous Track sent");
         } else {
-            Log.e(TAG, "Failed to release keys");
+            Log.e(TAG, "Failed to send Previous Track");
+        }
+        
+        return result;
+    }
+    
+    /**
+     * Sends a volume up control command.
+     * 
+     * @return true if the command was sent successfully, false otherwise
+     */
+    public static boolean volumeUp() {
+        if (!checkInitialized()) return false;
+        
+        if (!bleHidManager.isConnected()) {
+            Log.w(TAG, "Not connected to a host, cannot send media command");
+            return false;
+        }
+        
+        boolean result = bleHidManager.volumeUp();
+        
+        if (result) {
+            Log.d(TAG, "Volume Up sent");
+        } else {
+            Log.e(TAG, "Failed to send Volume Up");
+        }
+        
+        return result;
+    }
+    
+    /**
+     * Sends a volume down control command.
+     * 
+     * @return true if the command was sent successfully, false otherwise
+     */
+    public static boolean volumeDown() {
+        if (!checkInitialized()) return false;
+        
+        if (!bleHidManager.isConnected()) {
+            Log.w(TAG, "Not connected to a host, cannot send media command");
+            return false;
+        }
+        
+        boolean result = bleHidManager.volumeDown();
+        
+        if (result) {
+            Log.d(TAG, "Volume Down sent");
+        } else {
+            Log.e(TAG, "Failed to send Volume Down");
+        }
+        
+        return result;
+    }
+    
+    /**
+     * Sends a mute control command.
+     * 
+     * @return true if the command was sent successfully, false otherwise
+     */
+    public static boolean mute() {
+        if (!checkInitialized()) return false;
+        
+        if (!bleHidManager.isConnected()) {
+            Log.w(TAG, "Not connected to a host, cannot send media command");
+            return false;
+        }
+        
+        boolean result = bleHidManager.mute();
+        
+        if (result) {
+            Log.d(TAG, "Mute sent");
+        } else {
+            Log.e(TAG, "Failed to send Mute");
+        }
+        
+        return result;
+    }
+    
+    /**
+     * Mouse Control Methods
+     */
+    
+    /**
+     * Moves the mouse pointer by the specified amount.
+     *
+     * @param x The X movement amount (-127 to 127)
+     * @param y The Y movement amount (-127 to 127)
+     * @return true if the command was sent successfully, false otherwise
+     */
+    public static boolean moveMouse(int x, int y) {
+        if (!checkInitialized()) return false;
+        
+        if (!bleHidManager.isConnected()) {
+            Log.w(TAG, "Not connected to a host, cannot move mouse");
+            return false;
+        }
+        
+        // Clamp values to valid range
+        x = Math.max(-127, Math.min(127, x));
+        y = Math.max(-127, Math.min(127, y));
+        
+        boolean result = bleHidManager.moveMouse(x, y);
+        
+        if (result) {
+            Log.d(TAG, "Mouse moved: x=" + x + ", y=" + y);
+        } else {
+            Log.e(TAG, "Failed to move mouse");
+        }
+        
+        return result;
+    }
+    
+    /**
+     * Presses a mouse button.
+     *
+     * @param button The button to press (HidMediaConstants.BUTTON_LEFT, BUTTON_RIGHT, BUTTON_MIDDLE)
+     * @return true if the command was sent successfully, false otherwise
+     */
+    public static boolean pressMouseButton(int button) {
+        if (!checkInitialized()) return false;
+        
+        if (!bleHidManager.isConnected()) {
+            Log.w(TAG, "Not connected to a host, cannot press mouse button");
+            return false;
+        }
+        
+        boolean result = bleHidManager.pressMouseButton(button);
+        
+        if (result) {
+            Log.d(TAG, "Mouse button pressed: " + button);
+        } else {
+            Log.e(TAG, "Failed to press mouse button");
+        }
+        
+        return result;
+    }
+    
+    /**
+     * Releases all mouse buttons.
+     *
+     * @return true if the command was sent successfully, false otherwise
+     */
+    public static boolean releaseMouseButtons() {
+        if (!checkInitialized()) return false;
+        
+        if (!bleHidManager.isConnected()) {
+            Log.w(TAG, "Not connected to a host, cannot release mouse buttons");
+            return false;
+        }
+        
+        boolean result = bleHidManager.releaseMouseButtons();
+        
+        if (result) {
+            Log.d(TAG, "Mouse buttons released");
+        } else {
+            Log.e(TAG, "Failed to release mouse buttons");
+        }
+        
+        return result;
+    }
+    
+    /**
+     * Performs a click with the specified button.
+     *
+     * @param button The button to click (HidMediaConstants.BUTTON_LEFT, BUTTON_RIGHT, BUTTON_MIDDLE)
+     * @return true if the command was sent successfully, false otherwise
+     */
+    public static boolean clickMouseButton(int button) {
+        if (!checkInitialized()) return false;
+        
+        if (!bleHidManager.isConnected()) {
+            Log.w(TAG, "Not connected to a host, cannot click mouse button");
+            return false;
+        }
+        
+        boolean result = bleHidManager.clickMouseButton(button);
+        
+        if (result) {
+            Log.d(TAG, "Mouse button clicked: " + button);
+        } else {
+            Log.e(TAG, "Failed to click mouse button");
+        }
+        
+        return result;
+    }
+    
+    /**
+     * Scrolls the mouse wheel.
+     *
+     * @param amount The scroll amount (-127 to 127)
+     * @return true if the command was sent successfully, false otherwise
+     */
+    public static boolean scrollMouseWheel(int amount) {
+        if (!checkInitialized()) return false;
+        
+        if (!bleHidManager.isConnected()) {
+            Log.w(TAG, "Not connected to a host, cannot scroll mouse wheel");
+            return false;
+        }
+        
+        // Clamp value to valid range
+        amount = Math.max(-127, Math.min(127, amount));
+        
+        boolean result = bleHidManager.scrollMouseWheel(amount);
+        
+        if (result) {
+            Log.d(TAG, "Mouse wheel scrolled: " + amount);
+        } else {
+            Log.e(TAG, "Failed to scroll mouse wheel");
+        }
+        
+        return result;
+    }
+    
+    /**
+     * Combined Media and Mouse Control
+     */
+    
+    /**
+     * Sends a combined media and mouse report.
+     * 
+     * @param mediaButtons Media button flags (HidMediaConstants.BUTTON_PLAY_PAUSE, etc.)
+     * @param mouseButtons Mouse button flags (HidMediaConstants.BUTTON_LEFT, etc.)
+     * @param x X-axis movement (-127 to 127)
+     * @param y Y-axis movement (-127 to 127)
+     * @return true if successful, false otherwise
+     */
+    public static boolean sendCombinedReport(int mediaButtons, int mouseButtons, int x, int y) {
+        if (!checkInitialized()) return false;
+        
+        if (!bleHidManager.isConnected()) {
+            Log.w(TAG, "Not connected to a host, cannot send combined report");
+            return false;
+        }
+        
+        // Clamp values to valid range
+        x = Math.max(-127, Math.min(127, x));
+        y = Math.max(-127, Math.min(127, y));
+        
+        boolean result = bleHidManager.sendCombinedReport(mediaButtons, mouseButtons, x, y);
+        
+        if (result) {
+            Log.d(TAG, "Combined report sent: media=" + mediaButtons + ", mouse=" + mouseButtons + ", x=" + x + ", y=" + y);
+        } else {
+            Log.e(TAG, "Failed to send combined report");
         }
         
         return result;
