@@ -202,8 +202,12 @@ namespace BleHid
                 AndroidJavaClass unityPlayer = new AndroidJavaClass("com.unity3d.player.UnityPlayer");
                 _activity = unityPlayer.GetStatic<AndroidJavaObject>("currentActivity");
                 
+                // Check Android version
+                AndroidJavaClass buildVersionClass = new AndroidJavaClass("android.os.Build$VERSION");
+                int sdkInt = buildVersionClass.GetStatic<int>("SDK_INT");
+                
                 // Check and request permissions for Android 12+
-                if (Build.VERSION.SDK_INT >= 31) // Android 12 (SDK 31+)
+                if (sdkInt >= 31) // Android 12 (SDK 31+)
                 {
                     if (!CheckAndRequestPermissions())
                     {
@@ -282,15 +286,17 @@ namespace BleHid
                 // For Android 12+ we need the new Bluetooth permissions
                 if (sdkInt >= 31)
                 {
-                    // Check if all required permissions are already granted
+                    // Check if all permissions are already granted
                     bool allPermissionsGranted = true;
+                    string missingPermissions = "";
+                    
                     foreach (string permission in _requiredPermissions)
                     {
                         int permissionStatus = _activity.Call<int>("checkSelfPermission", permission);
                         if (permissionStatus != 0) // 0 is PERMISSION_GRANTED
                         {
                             allPermissionsGranted = false;
-                            break;
+                            missingPermissions += permission.Replace("android.permission.", "") + " ";
                         }
                     }
                     
@@ -304,7 +310,8 @@ namespace BleHid
                     // If permissions aren't granted and we haven't requested them yet
                     if (!_permissionsRequested)
                     {
-                        Debug.Log("[BleHidManager] Requesting permissions...");
+                        Debug.Log("[BleHidManager] Requesting permissions: " + missingPermissions);
+                        UpdateStatusText("Requesting Bluetooth permissions...");
                         _activity.Call("requestPermissions", _requiredPermissions, 1);
                         _permissionsRequested = true;
                         StartCoroutine(CheckPermissionsAfterDelay());
@@ -320,6 +327,7 @@ namespace BleHid
             catch (Exception e)
             {
                 Debug.LogError("[BleHidManager] Error checking permissions: " + e.Message);
+                UpdateStatusText("Error: Can't check permissions. " + e.Message);
                 return false;
             }
         }
@@ -330,17 +338,19 @@ namespace BleHid
         private IEnumerator CheckPermissionsAfterDelay()
         {
             // Wait a bit for user to respond to permission dialogs
-            yield return new WaitForSeconds(1.0f);
+            yield return new WaitForSeconds(1.5f);
             
             // Check if permissions have been granted
             bool allGranted = true;
+            List<string> missingPermissions = new List<string>();
+            
             foreach (string permission in _requiredPermissions)
             {
                 int permissionStatus = _activity.Call<int>("checkSelfPermission", permission);
                 if (permissionStatus != 0) // 0 is PERMISSION_GRANTED
                 {
                     allGranted = false;
-                    break;
+                    missingPermissions.Add(permission.Replace("android.permission.", ""));
                 }
             }
             
@@ -356,8 +366,45 @@ namespace BleHid
             }
             else
             {
-                Debug.LogWarning("[BleHidManager] Not all permissions were granted");
-                UpdateStatusText("Bluetooth permissions denied");
+                string permissionList = string.Join(", ", missingPermissions.ToArray());
+                Debug.LogWarning("[BleHidManager] Missing permissions: " + permissionList);
+                UpdateStatusText("Error: Bluetooth permissions denied. Cannot function without " + permissionList);
+                
+                // Check if Bluetooth is enabled as well
+                bool isBluetoothEnabled = IsBluetoothEnabled();
+                if (!isBluetoothEnabled)
+                {
+                    UpdateStatusText("Error: Bluetooth is disabled and permissions denied");
+                }
+            }
+        }
+        
+        /// <summary>
+        /// Method to check if Bluetooth is enabled
+        /// </summary>
+        /// <returns>True if enabled, false otherwise</returns>
+        public bool IsBluetoothEnabled()
+        {
+            if (!_isInitialized || _activity == null)
+                return false;
+                
+            try
+            {
+                // Get the BluetoothAdapter through context
+                AndroidJavaObject bluetoothManager = _activity.Call<AndroidJavaObject>("getSystemService", "bluetooth");
+                if (bluetoothManager == null)
+                    return false;
+                    
+                AndroidJavaObject adapter = bluetoothManager.Call<AndroidJavaObject>("getAdapter");
+                if (adapter == null)
+                    return false;
+                    
+                return adapter.Call<bool>("isEnabled");
+            }
+            catch (Exception e)
+            {
+                Debug.LogError("[BleHidManager] Error checking Bluetooth state: " + e.Message);
+                return false;
             }
         }
 
