@@ -1,1373 +1,677 @@
-using UnityEngine;
 using System;
 using System.Collections;
-using System.Collections.Generic;
-using UnityEngine.UI;
-using BleHid.Events;
+using System.Runtime.InteropServices;
+using UnityEngine;
 
 namespace BleHid
 {
     /// <summary>
-    /// Unity wrapper for the Android BLE HID functionality.
-    /// Provides a simple interface for controlling media playback and mouse movement via BLE.
+    /// Main Unity interface for BLE HID functionality.
+    /// This class provides methods to control Bluetooth HID emulation for keyboard, mouse, and media control.
     /// </summary>
     public class BleHidManager : MonoBehaviour
     {
-        // Constants from HidMediaConstants.java
-        public static class HidConstants
-        {
-            // Media button constants
-            public const int BUTTON_PLAY_PAUSE = 0x01;
-            public const int BUTTON_NEXT_TRACK = 0x02;
-            public const int BUTTON_PREVIOUS_TRACK = 0x04;
-            public const int BUTTON_VOLUME_UP = 0x08;
-            public const int BUTTON_VOLUME_DOWN = 0x10;
-            public const int BUTTON_MUTE = 0x20;
-
-            // Mouse button constants
-            public const int BUTTON_LEFT = 0x01;
-            public const int BUTTON_RIGHT = 0x02;
-            public const int BUTTON_MIDDLE = 0x04;
-        }
-
-    // Inspector-configurable fields
-    [Header("Status UI")]
-    [SerializeField] private Text statusText;
-    [SerializeField] private Image connectionIndicator;
-    [SerializeField] private Color connectedColor = Color.green;
-    [SerializeField] private Color disconnectedColor = Color.red;
-    [SerializeField] private Color notSupportedColor = Color.gray;
-    
-    [Header("Version Information")]
-    [SerializeField] private Text versionText;  // New dedicated field for version info
-    [SerializeField] private bool showDetailedVersionInfo = true;  // Option to show detailed build info
-    
-    // Public methods to set UI references
-    public void SetStatusText(Text text)
-    {
-        statusText = text;
-        if (statusText != null && _isInitialized)
-        {
-            UpdateStatusText(_isConnected ? "Connected" : (_isAdvertising ? "Advertising..." : "Ready - Not advertising"));
-        }
-    }
-    
-    // Method to set version text UI reference
-    public void SetVersionText(Text text)
-    {
-        versionText = text;
-        UpdateVersionUI();  // Update immediately if we have version info
-    }
+        #region Events
+        // Define delegate types for events
+        public delegate void InitializeCompleteHandler(bool success, string message);
+        public delegate void AdvertisingStateChangedHandler(bool advertising, string message);
+        public delegate void ConnectionStateChangedHandler(bool connected, string deviceName, string deviceAddress);
+        public delegate void PairingStateChangedHandler(string status, string deviceAddress);
+        public delegate void ErrorHandler(int errorCode, string errorMessage);
+        public delegate void DebugLogHandler(string message);
         
-        public void SetConnectionIndicator(Image indicator)
-        {
-            connectionIndicator = indicator;
-            if (connectionIndicator != null)
-            {
-                UpdateConnectionUI();
-            }
-        }
-
-        // Events
-        public event Action OnConnected;
-        public event Action OnDisconnected;
-        public event Action<bool> OnConnectionStateChanged;
-        public event Action<string, int> WhenPairingRequested;
-
-        // Private fields
-        private AndroidJavaObject _activity;
-        private AndroidJavaClass _pluginClass;
-        private bool _isInitialized = false;
-        private bool _isConnected = false;
-        private bool _isBleSupported = false;
-        private bool _isAdvertising = false;
+        // Event declarations
+        public event InitializeCompleteHandler OnInitializeComplete;
+        public event AdvertisingStateChangedHandler OnAdvertisingStateChanged;
+        public event ConnectionStateChangedHandler OnConnectionStateChanged;
+        public event PairingStateChangedHandler OnPairingStateChanged;
+        public event ErrorHandler OnError;
+        public event DebugLogHandler OnDebugLog;
+        #endregion
         
-        // Version information
-        public string PluginVersion { get; private set; } = "Unknown";
-        public long PluginBuildNumber { get; private set; } = 0;
-        public string BuildTimestamp { get; private set; } = "Unknown";
-
-        // Singleton pattern
-        private static BleHidManager _instance;
-        public static BleHidManager Instance
-        {
-            get
-            {
-                if (_instance == null)
-                {
-                    _instance = FindObjectOfType<BleHidManager>();
-                    if (_instance == null)
-                    {
-                        GameObject go = new GameObject("BleHidManager");
-                        _instance = go.AddComponent<BleHidManager>();
-                        DontDestroyOnLoad(go);
-                    }
-                }
-                return _instance;
-            }
-        }
-
+        #region Properties
+        /// <summary>
+        /// Whether the BLE HID manager is initialized.
+        /// </summary>
+        public bool IsInitialized { get; private set; }
+        
+        /// <summary>
+        /// Whether BLE advertising is currently active.
+        /// </summary>
+        public bool IsAdvertising { get; private set; }
+        
+        /// <summary>
+        /// Whether a device is connected.
+        /// </summary>
+        public bool IsConnected { get; private set; }
+        
+        /// <summary>
+        /// Name of the connected device, if any.
+        /// </summary>
+        public string ConnectedDeviceName { get; private set; }
+        
+        /// <summary>
+        /// Address of the connected device, if any.
+        /// </summary>
+        public string ConnectedDeviceAddress { get; private set; }
+        
+        /// <summary>
+        /// Last error message.
+        /// </summary>
+        public string LastErrorMessage { get; private set; }
+        
+        /// <summary>
+        /// Last error code.
+        /// </summary>
+        public int LastErrorCode { get; private set; }
+        #endregion
+        
+        #region Singleton
+        /// <summary>
+        /// Singleton instance of the BleHidManager.
+        /// </summary>
+        public static BleHidManager Instance { get; private set; }
+        
         private void Awake()
         {
-            if (_instance != null && _instance != this)
+            if (Instance != null && Instance != this)
             {
                 Destroy(gameObject);
                 return;
             }
-
-            _instance = this;
+            
+            Instance = this;
             DontDestroyOnLoad(gameObject);
+            
+            Debug.Log("BleHidManager initialized");
         }
-
-        private void Start()
-        {
-            InitializePlugin();
-        }
-
-        private void Update()
-        {
-            // If we're initialized, check the connection status periodically
-            if (_isInitialized)
-            {
-                bool newConnectionState = IsConnected();
-                if (newConnectionState != _isConnected)
-                {
-                    _isConnected = newConnectionState;
-                    UpdateConnectionUI();
-
-                    if (_isConnected)
-                    {
-                        if (OnConnected != null) OnConnected();
-                    }
-                    else
-                    {
-                        if (OnDisconnected != null) OnDisconnected();
-                    }
-
-                    if (OnConnectionStateChanged != null)
-                    {
-                        OnConnectionStateChanged(_isConnected);
-                    }
-                }
-            }
-        }
-
+        #endregion
+        
+        #region Private Fields
+        // Boolean fields to track state
+        private bool isInitializing = false;
+        private AndroidJavaObject bridgeInstance = null;
+        #endregion
+        
+        #region Unity Lifecycle
         private void OnDestroy()
         {
-            ClosePlugin();
+            Close();
         }
-
-        private void OnApplicationPause(bool pause)
+        #endregion
+        
+        #region Public Methods
+        /// <summary>
+        /// Initialize the BLE HID functionality.
+        /// </summary>
+        /// <returns>A coroutine that can be used with StartCoroutine.</returns>
+        public IEnumerator Initialize()
         {
-            if (pause)
+            if (isInitializing)
             {
-                // If application is paused, stop advertising
-                if (_isAdvertising)
-                {
-                    StopAdvertising();
-                }
-            }
-            else
-            {
-                // When returning from pause, restart advertising if we were advertising before
-                if (_isInitialized && !_isConnected && _isAdvertising)
-                {
-                    StartAdvertising();
-                }
-            }
-        }
-
-        // Android 12+ permission strings
-        private readonly string[] _requiredPermissions = new string[]
-        {
-            "android.permission.BLUETOOTH_SCAN",
-            "android.permission.BLUETOOTH_ADVERTISE",
-            "android.permission.BLUETOOTH_CONNECT"
-        };
-        
-        // Permission handling 
-        private bool _permissionsRequested = false;
-        private bool _permissionsGranted = false;
-        private int _permissionRetryCount = 0;
-        private const int MAX_PERMISSION_RETRIES = 3;
-        
-        // Service availability flags
-        private bool _isMediaServiceAvailable = true;  // Media service always available in our implementation
-        private bool _isMouseServiceAvailable = true;  // Mouse functionality is included in the Media service
-        private bool _isKeyboardServiceAvailable = false; // Keyboard service might not be available
-        
-        // Initialization state enum
-        public enum InitState 
-        {
-            NotInitialized,
-            CheckingPermissions,
-            RequestingPermissions,
-            WaitingForPermissions,
-            Initializing,
-            InitializedSuccessfully,
-            InitializationFailed,
-            Unsupported
-        }
-        
-        private InitState _currentInitState = InitState.NotInitialized;
-        
-    // Public property to check initialization state
-    public InitState CurrentInitState => _currentInitState;
-    
-    /// <summary>
-    /// Gets the current system state as a set of flags.
-    /// </summary>
-    /// <returns>Byte with state flags matching the BleHidProtocol.State constants</returns>
-    public byte GetSystemState()
-    {
-        if (_pluginClass != null)
-        {
-            return _pluginClass.CallStatic<byte>("getSystemState");
-        }
-        return 0;
-    }
-    
-    /// <summary>
-    /// Verifies that a particular aspect of the system state is active.
-    /// </summary>
-    /// <param name="stateFlag">The state flag to verify from BleHidProtocol.State</param>
-    /// <returns>True if the state is active, false otherwise</returns>
-    public bool VerifyState(byte stateFlag)
-    {
-        if (_pluginClass != null)
-        {
-            return _pluginClass.CallStatic<bool>("verifyState", stateFlag);
-        }
-        return false;
-    }
-    
-    /// <summary>
-    /// Checks if the protocol version is compatible with the current version.
-    /// </summary>
-    /// <returns>True if compatible, false otherwise</returns>
-    public bool CheckProtocolVersion()
-    {
-        // For now, we only check if the Java side is initialized
-        // In the future, this could retrieve and verify the actual protocol version
-        return VerifyState(BleHidProtocol.State.Initialized);
-    }
-    
-    /// <summary>
-    /// Command batching functionality for efficient operations
-    /// </summary>
-    
-    /// <summary>
-    /// Starts a new command batch.
-    /// Call this before adding commands to the batch.
-    /// </summary>
-    public void StartBatch()
-    {
-        if (!CheckConnection()) return;
-        
-        try
-        {
-            _pluginClass.CallStatic("startBatch");
-            Debug.Log("[BleHidManager] Command batch started");
-        }
-        catch (Exception e)
-        {
-            Debug.LogError("[BleHidManager] Error starting batch: " + e.Message);
-        }
-    }
-    
-    /// <summary>
-    /// Adds a media command to the current batch.
-    /// </summary>
-    /// <param name="mediaButtonFlag">Media button flag (BleHidProtocol.MediaButton constants)</param>
-    public void AddMediaCommand(int mediaButtonFlag)
-    {
-        if (!CheckConnection()) return;
-        
-        try
-        {
-            _pluginClass.CallStatic("addMediaCommand", mediaButtonFlag);
-            Debug.Log("[BleHidManager] Media command added to batch: 0x" + mediaButtonFlag.ToString("X"));
-        }
-        catch (Exception e)
-        {
-            Debug.LogError("[BleHidManager] Error adding media command to batch: " + e.Message);
-        }
-    }
-    
-    /// <summary>
-    /// Adds a mouse movement command to the current batch.
-    /// </summary>
-    /// <param name="x">X-axis movement (-127 to 127)</param>
-    /// <param name="y">Y-axis movement (-127 to 127)</param>
-    public void AddMouseMove(int x, int y)
-    {
-        if (!CheckConnection()) return;
-        
-        // Clamp values to valid range (although Java side will do this too)
-        x = Mathf.Clamp(x, -127, 127);
-        y = Mathf.Clamp(y, -127, 127);
-        
-        try
-        {
-            _pluginClass.CallStatic("addMouseMove", x, y);
-            Debug.Log("[BleHidManager] Mouse move added to batch: x=" + x + ", y=" + y);
-        }
-        catch (Exception e)
-        {
-            Debug.LogError("[BleHidManager] Error adding mouse move to batch: " + e.Message);
-        }
-    }
-    
-    /// <summary>
-    /// Adds a mouse movement command to the current batch using Vector2.
-    /// </summary>
-    /// <param name="movement">Vector2 representing mouse movement</param>
-    /// <param name="sensitivity">Sensitivity multiplier</param>
-    public void AddMouseMove(Vector2 movement, float sensitivity = 1.0f)
-    {
-        int x = Mathf.Clamp(Mathf.RoundToInt(movement.x * sensitivity), -127, 127);
-        int y = Mathf.Clamp(Mathf.RoundToInt(movement.y * sensitivity), -127, 127);
-        AddMouseMove(x, y);
-    }
-    
-    /// <summary>
-    /// Adds a mouse button command to the current batch.
-    /// </summary>
-    /// <param name="mouseButtonFlag">Mouse button flag (BleHidProtocol.MouseButton constants)</param>
-    /// <param name="pressed">True for press, false for release</param>
-    public void AddMouseButton(int mouseButtonFlag, bool pressed)
-    {
-        if (!CheckConnection()) return;
-        
-        try
-        {
-            _pluginClass.CallStatic("addMouseButton", mouseButtonFlag, pressed);
-            Debug.Log("[BleHidManager] Mouse button added to batch: button=0x" + 
-                mouseButtonFlag.ToString("X") + ", pressed=" + pressed);
-        }
-        catch (Exception e)
-        {
-            Debug.LogError("[BleHidManager] Error adding mouse button to batch: " + e.Message);
-        }
-    }
-    
-    /// <summary>
-    /// Executes all commands in the current batch.
-    /// </summary>
-    /// <returns>True if all commands were executed successfully, false otherwise</returns>
-    public bool ExecuteBatch()
-    {
-        if (!CheckConnection()) return false;
-        
-        try
-        {
-            bool result = _pluginClass.CallStatic<bool>("executeBatch");
-            
-            if (result)
-            {
-                Debug.Log("[BleHidManager] Batch executed successfully");
-            }
-            else
-            {
-                Debug.LogError("[BleHidManager] Failed to execute batch");
+                Debug.LogWarning("BleHidManager: Already initializing");
+                yield break;
             }
             
-            return result;
-        }
-        catch (Exception e)
-        {
-            Debug.LogError("[BleHidManager] Error executing batch: " + e.Message);
-            return false;
-        }
-    }
-        
-        /// <summary>
-        /// Updates the version UI with current version info
-        /// </summary>
-        private void UpdateVersionUI()
-        {
-            if (versionText != null)
+            if (IsInitialized)
             {
-                if (showDetailedVersionInfo)
-                {
-                    versionText.text = $"v{PluginVersion} (Build {PluginBuildNumber})\nBuilt: {BuildTimestamp}";
-                }
-                else
-                {
-                    versionText.text = $"v{PluginVersion}";
-                }
+                Debug.LogWarning("BleHidManager: Already initialized");
+                yield break;
             }
-        }
-        
-        /// <summary>
-        /// Initializes the BLE HID plugin with improved error handling and state management.
-        /// </summary>
-        /// <returns>True if initialization was successful or in progress, false if it failed permanently.</returns>
-        public bool InitializePlugin()
-        {
-            if (_isInitialized)
+            
+            isInitializing = true;
+            Debug.Log("BleHidManager: Initializing...");
+            
+            // Only run on Android
+            if (Application.platform != RuntimePlatformSupportAndroid())
             {
-                Debug.Log("[BleHidManager] Already initialized");
-                return true;
+                string message = "BLE HID is only supported on Android";
+                Debug.LogWarning(message);
+                OnError?.Invoke(BleHidConstants.ERROR_PERIPHERAL_NOT_SUPPORTED, message);
+                OnInitializeComplete?.Invoke(false, message);
+                isInitializing = false;
+                yield break;
             }
-
+            
+            // Create bridge and initialize
+            bool initResult = false;
+            
             try
             {
-                if (Application.platform != RuntimePlatform.Android)
-                {
-                    Debug.LogWarning("[BleHidManager] Not running on Android, BLE HID functionality disabled");
-                    UpdateStatusText("Not running on Android");
-                    UpdateConnectionUI();
-                    return false;
-                }
-
-                // Get the Unity Activity
+                // Get the Unity activity
                 AndroidJavaClass unityPlayer = new AndroidJavaClass("com.unity3d.player.UnityPlayer");
-                _activity = unityPlayer.GetStatic<AndroidJavaObject>("currentActivity");
+                AndroidJavaObject activity = unityPlayer.GetStatic<AndroidJavaObject>("currentActivity");
                 
-                // Get the plugin class - we need this for version info even before initialization
-                _pluginClass = new AndroidJavaClass("com.example.blehid.unity.BleHidPlugin");
+                // Get the BleHidUnityBridge instance
+                AndroidJavaClass bridgeClass = new AndroidJavaClass("com.example.blehid.unity.BleHidUnityBridge");
+                bridgeInstance = bridgeClass.CallStatic<AndroidJavaObject>("getInstance");
                 
-                // Retrieve version information - these methods are available without requiring full initialization
-                try
+                // Initialize the bridge with this GameObject's name for callbacks
+                initResult = bridgeInstance.Call<bool>("initialize", gameObject.name);
+                
+                if (!initResult)
                 {
-                    PluginVersion = _pluginClass.CallStatic<string>("getPluginVersion");
-                    PluginBuildNumber = _pluginClass.CallStatic<long>("getPluginBuildNumber");
-                    BuildTimestamp = _pluginClass.CallStatic<string>("getBuildTimestamp");
-                    
-                    Debug.Log($"[BleHidManager] Plugin Version: {PluginVersion}, Build: {PluginBuildNumber}, Built: {BuildTimestamp}");
-                    UpdateVersionUI();
-                }
-                catch (Exception e)
-                {
-                    Debug.LogError($"[BleHidManager] Failed to get version info: {e.Message}");
-                }
-                
-                // Check Android version
-                AndroidJavaClass buildVersionClass = new AndroidJavaClass("android.os.Build$VERSION");
-                int sdkInt = buildVersionClass.GetStatic<int>("SDK_INT");
-                
-                // Check and request permissions for Android 12+
-                if (sdkInt >= 31) // Android 12 (SDK 31+)
-                {
-                    if (!CheckAndRequestPermissions())
-                    {
-                        UpdateStatusText("Waiting for permissions...");
-                        return false;
-                    }
-                }
-
-                // Get the plugin class
-                _pluginClass = new AndroidJavaClass("com.example.blehid.unity.BleHidPlugin");
-
-                // Register the callback handler
-                AndroidJavaClass callbackClass = new AndroidJavaClass("com.example.blehid.unity.UnityEventBridge");
-                callbackClass.CallStatic("setUnityGameObjectStatic", gameObject.name);
-
-                // Initialize the plugin
-                bool result = _pluginClass.CallStatic<bool>("initialize", _activity);
-                if (result)
-                {
-                    Debug.Log("[BleHidManager] Initialized successfully");
-                    _isInitialized = true;
-
-                    // Check if BLE peripheral mode is supported
-                    _isBleSupported = _pluginClass.CallStatic<bool>("isBlePeripheralSupported");
-                    if (!_isBleSupported)
-                    {
-                        Debug.LogWarning("[BleHidManager] BLE peripheral mode not supported on this device");
-                        UpdateStatusText("BLE peripheral not supported");
-                    }
-                    else
-                    {
-                        // Log available services for debugging
-                        Debug.Log("[BleHidManager] Media service available: " + _isMediaServiceAvailable);
-                        Debug.Log("[BleHidManager] Mouse functionality available: " + _isMouseServiceAvailable);
-                        Debug.Log("[BleHidManager] Keyboard service available: " + _isKeyboardServiceAvailable);
-                        
-                        UpdateStatusText("Ready - Not advertising");
-                    }
-                }
-                else
-                {
-                    Debug.LogError("[BleHidManager] Failed to initialize");
-                    UpdateStatusText("Initialization failed");
-                }
-
-                // Set up the Java to Unity callback - get the singleton instance that's implementing UnityCallback
-                AndroidJavaObject callbackInstance = callbackClass.CallStatic<AndroidJavaObject>("getInstance");
-                _pluginClass.CallStatic("setCallback", callbackInstance);
-
-                UpdateConnectionUI();
-                return result;
-            }
-            catch (Exception e)
-            {
-                Debug.LogError("[BleHidManager] Error initializing plugin: " + e.Message);
-                UpdateStatusText("Error: " + e.Message);
-                return false;
-            }
-        }
-        
-        /// <summary>
-        /// Checks and requests required Android permissions with improved user feedback
-        /// </summary>
-        /// <returns>True if all permissions are granted, false otherwise</returns>
-        private bool CheckAndRequestPermissions()
-        {
-            // Skip if not on Android
-            if (Application.platform != RuntimePlatform.Android)
-                return true;
-                
-            try
-            {
-                // Get the current Android API level
-                AndroidJavaClass buildVersionClass = new AndroidJavaClass("android.os.Build$VERSION");
-                int sdkInt = buildVersionClass.GetStatic<int>("SDK_INT");
-                
-                // Update the initialization state
-                _currentInitState = InitState.CheckingPermissions;
-                
-                // For Android 12+ we need the new Bluetooth permissions
-                if (sdkInt >= 31)
-                {
-                    // Check if all permissions are already granted
-                    bool allPermissionsGranted = true;
-                    List<string> missingPermissionsList = new List<string>();
-                    
-                    foreach (string permission in _requiredPermissions)
-                    {
-                        int permissionStatus = _activity.Call<int>("checkSelfPermission", permission);
-                        if (permissionStatus != 0) // 0 is PERMISSION_GRANTED
-                        {
-                            allPermissionsGranted = false;
-                            missingPermissionsList.Add(permission.Replace("android.permission.", ""));
-                        }
-                    }
-                    
-                    if (allPermissionsGranted)
-                    {
-                        Debug.Log("[BleHidManager] All permissions already granted");
-                        _permissionsGranted = true;
-                        _currentInitState = InitState.Initializing;
-                        return true;
-                    }
-                    
-                    string missingPermissions = string.Join(", ", missingPermissionsList.ToArray());
-                    
-                    // If permissions aren't granted and we haven't requested them yet or we're retrying
-                    if (!_permissionsRequested || _permissionRetryCount < MAX_PERMISSION_RETRIES)
-                    {
-                        _currentInitState = InitState.RequestingPermissions;
-                        
-                        if (_permissionRetryCount > 0) {
-                            Debug.Log("[BleHidManager] Retrying permission request (" + _permissionRetryCount + "/" + MAX_PERMISSION_RETRIES + ")");
-                            UpdateStatusText("Please grant Bluetooth permissions\nRetry " + _permissionRetryCount + "/" + MAX_PERMISSION_RETRIES);
-                        } else {
-                            Debug.Log("[BleHidManager] Requesting permissions: " + missingPermissions);
-                            UpdateStatusText("Requesting Bluetooth permissions:\n" + missingPermissions);
-                        }
-                        
-                        _activity.Call("requestPermissions", _requiredPermissions, 1);
-                        _permissionsRequested = true;
-                        _permissionRetryCount++;
-                        _currentInitState = InitState.WaitingForPermissions;
-                        StartCoroutine(CheckPermissionsAfterDelay());
-                        return false;
-                    }
-                    
-                    // If we've exceeded retry attempts
-                    if (_permissionRetryCount >= MAX_PERMISSION_RETRIES && !_permissionsGranted) {
-                        Debug.LogError("[BleHidManager] Failed to get permissions after " + MAX_PERMISSION_RETRIES + " attempts");
-                        UpdateStatusText("Error: Cannot function without Bluetooth permissions.\nPlease enable them in Settings.");
-                        _currentInitState = InitState.InitializationFailed;
-                        
-                        // Try to guide the user to settings
-                        TryOpenAppSettings();
-                        return false;
-                    }
-                    
-                    return _permissionsGranted;
-                }
-                
-                // For older Android versions, permissions are granted at install time
-                return true;
-            }
-            catch (Exception e)
-            {
-                Debug.LogError("[BleHidManager] Error checking permissions: " + e.Message);
-                UpdateStatusText("Error: Can't check permissions.\n" + e.Message);
-                _currentInitState = InitState.InitializationFailed;
-                return false;
-            }
-        }
-        
-        /// <summary>
-        /// Attempts to open the app settings page so the user can enable permissions manually
-        /// </summary>
-        private void TryOpenAppSettings()
-        {
-            try
-            {
-                if (Application.platform == RuntimePlatform.Android && _activity != null)
-                {
-                    AndroidJavaObject intent = new AndroidJavaObject("android.content.Intent", 
-                        "android.settings.APPLICATION_DETAILS_SETTINGS");
-                    AndroidJavaClass uriClass = new AndroidJavaClass("android.net.Uri");
-                    
-                    AndroidJavaObject packageNameUri = uriClass.CallStatic<AndroidJavaObject>(
-                        "fromParts", "package", Application.identifier, null);
-                    intent.Call<AndroidJavaObject>("setData", packageNameUri);
-                    
-                    _activity.Call("startActivity", intent);
-                    Debug.Log("[BleHidManager] Opened app settings for user to grant permissions");
+                    string message = "Failed to initialize BLE HID plugin";
+                    Debug.LogError(message);
+                    OnError?.Invoke(BleHidConstants.ERROR_INITIALIZATION_FAILED, message);
+                    OnInitializeComplete?.Invoke(false, message);
+                    isInitializing = false;
+                    yield break;
                 }
             }
             catch (Exception e)
             {
-                Debug.LogError("[BleHidManager] Failed to open app settings: " + e.Message);
+                string message = "Exception during initialization: " + e.Message;
+                Debug.LogException(e);
+                OnError?.Invoke(BleHidConstants.ERROR_INITIALIZATION_FAILED, message);
+                OnInitializeComplete?.Invoke(false, message);
+                isInitializing = false;
+                yield break;
             }
-        }
-        
-        /// <summary>
-        /// Coroutine to check permissions after a delay with improved retry logic
-        /// </summary>
-        private IEnumerator CheckPermissionsAfterDelay()
-        {
-            // Wait a bit for user to respond to permission dialogs
-            yield return new WaitForSeconds(2.0f);
             
-            // Check if permissions have been granted
-            bool allGranted = true;
-            List<string> missingPermissions = new List<string>();
-            
-            foreach (string permission in _requiredPermissions)
+            // If we get here, the bridge was initialized successfully, but we still need to wait
+            // for the callback to set IsInitialized
+            if (initResult)
             {
-                int permissionStatus = _activity.Call<int>("checkSelfPermission", permission);
-                if (permissionStatus != 0) // 0 is PERMISSION_GRANTED
+                // Wait for initialization to complete via callback
+                float timeout = 5.0f; // 5 seconds timeout
+                float startTime = Time.time;
+                
+                while (!IsInitialized && (Time.time - startTime) < timeout)
                 {
-                    allGranted = false;
-                    missingPermissions.Add(permission.Replace("android.permission.", ""));
+                    yield return null;
+                }
+                
+                if (!IsInitialized)
+                {
+                    string message = "BLE HID initialization timed out";
+                    Debug.LogError(message);
+                    OnError?.Invoke(BleHidConstants.ERROR_INITIALIZATION_FAILED, message);
+                    OnInitializeComplete?.Invoke(false, message);
                 }
             }
             
-            _permissionsGranted = allGranted;
-            
-            if (_permissionsGranted)
-            {
-                Debug.Log("[BleHidManager] All permissions granted");
-                UpdateStatusText("Permissions granted, initializing...");
-                _currentInitState = InitState.Initializing;
-                
-                // Try to initialize again now that we have permissions
-                InitializePlugin();
-            }
-            else
-            {
-                string permissionList = string.Join(", ", missingPermissions.ToArray());
-                Debug.LogWarning("[BleHidManager] Missing permissions: " + permissionList);
-                
-                // If we haven't reached max retries, we'll auto-retry in the next InitializePlugin call
-                if (_permissionRetryCount < MAX_PERMISSION_RETRIES) {
-                    UpdateStatusText("Waiting for permissions...\n" + 
-                                     "Missing: " + permissionList);
-                    
-                    // Wait a bit and try initializing again
-                    yield return new WaitForSeconds(2.0f);
-                    InitializePlugin();
-                } else {
-                    UpdateStatusText("Error: Bluetooth permissions denied.\nCannot function without: " + permissionList);
-                    _currentInitState = InitState.InitializationFailed;
-                    
-                    // Check Bluetooth status and provide user feedback
-                    bool isBluetoothEnabled = IsBluetoothEnabled();
-                    if (!isBluetoothEnabled) {
-                        UpdateStatusText("Error: Bluetooth is disabled and permissions denied.\nPlease enable Bluetooth and grant permissions.");
-                    }
-                }
-            }
+            isInitializing = false;
         }
         
         /// <summary>
-        /// Method to check if Bluetooth is enabled
+        /// Start BLE advertising to make this device discoverable.
         /// </summary>
-        /// <returns>True if enabled, false otherwise</returns>
-        public bool IsBluetoothEnabled()
-        {
-            if (!_isInitialized || _activity == null)
-                return false;
-                
-            try
-            {
-                // Get the BluetoothAdapter through context
-                AndroidJavaObject bluetoothManager = _activity.Call<AndroidJavaObject>("getSystemService", "bluetooth");
-                if (bluetoothManager == null)
-                    return false;
-                    
-                AndroidJavaObject adapter = bluetoothManager.Call<AndroidJavaObject>("getAdapter");
-                if (adapter == null)
-                    return false;
-                    
-                return adapter.Call<bool>("isEnabled");
-            }
-            catch (Exception e)
-            {
-                Debug.LogError("[BleHidManager] Error checking Bluetooth state: " + e.Message);
-                return false;
-            }
-        }
-
-        /// <summary>
-        /// Starts advertising the BLE HID device.
-        /// </summary>
-        /// <returns>True if advertising started successfully, false otherwise.</returns>
+        /// <returns>True if advertising was started successfully, false otherwise.</returns>
         public bool StartAdvertising()
         {
-            if (!_isInitialized)
-            {
-                Debug.LogError("[BleHidManager] Not initialized");
-                return false;
-            }
-
-            if (!_isBleSupported)
-            {
-                Debug.LogWarning("[BleHidManager] BLE peripheral mode not supported");
-                return false;
-            }
-
-            if (_isConnected)
-            {
-                Debug.Log("[BleHidManager] Already connected, no need to advertise");
-                return true;
-            }
-
+            if (!CheckInitialized()) return false;
+            
             try
             {
-                bool result = _pluginClass.CallStatic<bool>("startAdvertising");
-                if (result)
-                {
-                    Debug.Log("[BleHidManager] Advertising started");
-                    UpdateStatusText("Advertising...");
-                    _isAdvertising = true;
-                }
-                else
-                {
-                    Debug.LogError("[BleHidManager] Failed to start advertising");
-                    UpdateStatusText("Failed to start advertising");
-                }
+                bool result = bridgeInstance.Call<bool>("startAdvertising");
                 return result;
             }
             catch (Exception e)
             {
-                Debug.LogError("[BleHidManager] Error starting advertising: " + e.Message);
+                string message = "Exception starting advertising: " + e.Message;
+                Debug.LogException(e);
+                OnError?.Invoke(BleHidConstants.ERROR_ADVERTISING_FAILED, message);
                 return false;
             }
         }
-
+        
         /// <summary>
-        /// Stops advertising the BLE HID device.
+        /// Stop BLE advertising.
         /// </summary>
         public void StopAdvertising()
         {
-            if (!_isInitialized)
-            {
-                Debug.LogError("[BleHidManager] Not initialized");
-                return;
-            }
-
-            if (!_isAdvertising)
-            {
-                return;
-            }
-
+            if (!CheckInitialized()) return;
+            
             try
             {
-                _pluginClass.CallStatic("stopAdvertising");
-                Debug.Log("[BleHidManager] Advertising stopped");
-                UpdateStatusText("Advertising stopped");
-                _isAdvertising = false;
+                bridgeInstance.Call("stopAdvertising");
             }
             catch (Exception e)
             {
-                Debug.LogError("[BleHidManager] Error stopping advertising: " + e.Message);
+                string message = "Exception stopping advertising: " + e.Message;
+                Debug.LogException(e);
+                OnError?.Invoke(BleHidConstants.ERROR_ADVERTISING_FAILED, message);
             }
         }
-
+        
         /// <summary>
-        /// Checks if the device is connected to a host.
+        /// Get current advertising state.
         /// </summary>
-        /// <returns>True if connected, false otherwise.</returns>
-        public bool IsConnected()
+        /// <returns>True if advertising is active, false otherwise.</returns>
+        public bool GetAdvertisingState()
         {
-            if (!_isInitialized || !_isBleSupported)
-            {
-                return false;
-            }
-
+            if (!CheckInitialized()) return false;
+            
             try
             {
-                return _pluginClass.CallStatic<bool>("isConnected");
+                return bridgeInstance.Call<bool>("isAdvertising");
             }
             catch (Exception e)
             {
-                Debug.LogError("[BleHidManager] Error checking connection: " + e.Message);
+                Debug.LogException(e);
                 return false;
             }
         }
-
+        
         /// <summary>
-        /// Gets the address of the connected device.
+        /// Send a keyboard key press and release.
         /// </summary>
-        /// <returns>The MAC address of the connected device, or null if not connected.</returns>
-        public string GetConnectedDeviceAddress()
+        /// <param name="keyCode">HID key code (see BleHidConstants)</param>
+        /// <returns>True if successful, false otherwise.</returns>
+        public bool SendKey(byte keyCode)
         {
-            if (!_isInitialized || !_isBleSupported || !_isConnected)
-            {
-                return null;
-            }
-
+            if (!CheckConnected()) return false;
+            
             try
             {
-                return _pluginClass.CallStatic<string>("getConnectedDeviceAddress");
+                return bridgeInstance.Call<bool>("sendKey", (int)keyCode);
             }
             catch (Exception e)
             {
-                Debug.LogError("[BleHidManager] Error getting connected device address: " + e.Message);
-                return null;
+                Debug.LogException(e);
+                return false;
             }
         }
-
+        
         /// <summary>
-        /// Releases resources when the plugin is no longer needed.
+        /// Send a keyboard key with modifier keys.
         /// </summary>
-        public void ClosePlugin()
+        /// <param name="keyCode">HID key code (see BleHidConstants)</param>
+        /// <param name="modifiers">Modifier key bit flags (see BleHidConstants)</param>
+        /// <returns>True if successful, false otherwise.</returns>
+        public bool SendKeyWithModifiers(byte keyCode, byte modifiers)
         {
-            if (!_isInitialized)
-            {
-                return;
-            }
-
+            if (!CheckConnected()) return false;
+            
             try
             {
-                _pluginClass.CallStatic("close");
-                Debug.Log("[BleHidManager] Plugin closed");
-                _isInitialized = false;
-                _isConnected = false;
-                _isAdvertising = false;
-                UpdateStatusText("Plugin closed");
-                UpdateConnectionUI();
+                return bridgeInstance.Call<bool>("sendKeyWithModifiers", (int)keyCode, (int)modifiers);
             }
             catch (Exception e)
             {
-                Debug.LogError("[BleHidManager] Error closing plugin: " + e.Message);
+                Debug.LogException(e);
+                return false;
             }
         }
-
-        // Media Control Methods
-
+        
         /// <summary>
-        /// Sends play/pause media control command.
+        /// Type a string of text.
+        /// </summary>
+        /// <param name="text">The text to type</param>
+        /// <returns>True if successful, false otherwise.</returns>
+        public bool TypeText(string text)
+        {
+            if (!CheckConnected()) return false;
+            
+            try
+            {
+                return bridgeInstance.Call<bool>("typeText", text);
+            }
+            catch (Exception e)
+            {
+                Debug.LogException(e);
+                return false;
+            }
+        }
+        
+        /// <summary>
+        /// Send a mouse movement.
+        /// </summary>
+        /// <param name="deltaX">X-axis movement (-127 to 127)</param>
+        /// <param name="deltaY">Y-axis movement (-127 to 127)</param>
+        /// <returns>True if successful, false otherwise.</returns>
+        public bool MoveMouse(int deltaX, int deltaY)
+        {
+            if (!CheckConnected()) return false;
+            
+            try
+            {
+                return bridgeInstance.Call<bool>("moveMouse", deltaX, deltaY);
+            }
+            catch (Exception e)
+            {
+                Debug.LogException(e);
+                return false;
+            }
+        }
+        
+        /// <summary>
+        /// Click a mouse button.
+        /// </summary>
+        /// <param name="button">Button to click (0=left, 1=right, 2=middle)</param>
+        /// <returns>True if successful, false otherwise.</returns>
+        public bool ClickMouseButton(int button)
+        {
+            if (!CheckConnected()) return false;
+            
+            try
+            {
+                return bridgeInstance.Call<bool>("clickMouseButton", button);
+            }
+            catch (Exception e)
+            {
+                Debug.LogException(e);
+                return false;
+            }
+        }
+        
+        /// <summary>
+        /// Send media play/pause command.
         /// </summary>
         /// <returns>True if successful, false otherwise.</returns>
         public bool PlayPause()
         {
-            if (!CheckConnection()) return false;
+            if (!CheckConnected()) return false;
             
             try
             {
-                bool result = _pluginClass.CallStatic<bool>("playPause");
-                if (!result)
-                {
-                    Debug.LogError("[BleHidManager] Failed to send play/pause command");
-                }
-                return result;
+                return bridgeInstance.Call<bool>("playPause");
             }
             catch (Exception e)
             {
-                Debug.LogError("[BleHidManager] Error sending play/pause command: " + e.Message);
+                Debug.LogException(e);
                 return false;
             }
         }
-
+        
         /// <summary>
-        /// Sends next track media control command.
+        /// Send media next track command.
         /// </summary>
         /// <returns>True if successful, false otherwise.</returns>
         public bool NextTrack()
         {
-            if (!CheckConnection()) return false;
+            if (!CheckConnected()) return false;
             
             try
             {
-                bool result = _pluginClass.CallStatic<bool>("nextTrack");
-                if (!result)
-                {
-                    Debug.LogError("[BleHidManager] Failed to send next track command");
-                }
-                return result;
+                return bridgeInstance.Call<bool>("nextTrack");
             }
             catch (Exception e)
             {
-                Debug.LogError("[BleHidManager] Error sending next track command: " + e.Message);
+                Debug.LogException(e);
                 return false;
             }
         }
-
+        
         /// <summary>
-        /// Sends previous track media control command.
+        /// Send media previous track command.
         /// </summary>
         /// <returns>True if successful, false otherwise.</returns>
         public bool PreviousTrack()
         {
-            if (!CheckConnection()) return false;
+            if (!CheckConnected()) return false;
             
             try
             {
-                bool result = _pluginClass.CallStatic<bool>("previousTrack");
-                if (!result)
-                {
-                    Debug.LogError("[BleHidManager] Failed to send previous track command");
-                }
-                return result;
+                return bridgeInstance.Call<bool>("previousTrack");
             }
             catch (Exception e)
             {
-                Debug.LogError("[BleHidManager] Error sending previous track command: " + e.Message);
+                Debug.LogException(e);
                 return false;
             }
         }
-
+        
         /// <summary>
-        /// Sends volume up media control command.
+        /// Send media volume up command.
         /// </summary>
         /// <returns>True if successful, false otherwise.</returns>
         public bool VolumeUp()
         {
-            if (!CheckConnection()) return false;
+            if (!CheckConnected()) return false;
             
             try
             {
-                bool result = _pluginClass.CallStatic<bool>("volumeUp");
-                if (!result)
-                {
-                    Debug.LogError("[BleHidManager] Failed to send volume up command");
-                }
-                return result;
+                return bridgeInstance.Call<bool>("volumeUp");
             }
             catch (Exception e)
             {
-                Debug.LogError("[BleHidManager] Error sending volume up command: " + e.Message);
+                Debug.LogException(e);
                 return false;
             }
         }
-
+        
         /// <summary>
-        /// Sends volume down media control command.
+        /// Send media volume down command.
         /// </summary>
         /// <returns>True if successful, false otherwise.</returns>
         public bool VolumeDown()
         {
-            if (!CheckConnection()) return false;
+            if (!CheckConnected()) return false;
             
             try
             {
-                bool result = _pluginClass.CallStatic<bool>("volumeDown");
-                if (!result)
-                {
-                    Debug.LogError("[BleHidManager] Failed to send volume down command");
-                }
-                return result;
+                return bridgeInstance.Call<bool>("volumeDown");
             }
             catch (Exception e)
             {
-                Debug.LogError("[BleHidManager] Error sending volume down command: " + e.Message);
+                Debug.LogException(e);
                 return false;
             }
         }
-
+        
         /// <summary>
-        /// Sends mute media control command.
+        /// Send media mute command.
         /// </summary>
         /// <returns>True if successful, false otherwise.</returns>
         public bool Mute()
         {
-            if (!CheckConnection()) return false;
+            if (!CheckConnected()) return false;
             
             try
             {
-                bool result = _pluginClass.CallStatic<bool>("mute");
-                if (!result)
-                {
-                    Debug.LogError("[BleHidManager] Failed to send mute command");
-                }
-                return result;
+                return bridgeInstance.Call<bool>("mute");
             }
             catch (Exception e)
             {
-                Debug.LogError("[BleHidManager] Error sending mute command: " + e.Message);
+                Debug.LogException(e);
                 return false;
             }
-        }
-
-        // Mouse Control Methods
-
-        /// <summary>
-        /// Moves the mouse pointer by the specified amount.
-        /// </summary>
-        /// <param name="x">X-axis movement (-127 to 127)</param>
-        /// <param name="y">Y-axis movement (-127 to 127)</param>
-        /// <returns>True if successful, false otherwise.</returns>
-        public bool MoveMouse(int x, int y)
-        {
-            if (!CheckConnection()) return false;
-            
-            try
-            {
-                bool result = _pluginClass.CallStatic<bool>("moveMouse", x, y);
-                if (!result)
-                {
-                    Debug.LogError("[BleHidManager] Failed to move mouse");
-                }
-                return result;
-            }
-            catch (Exception e)
-            {
-                Debug.LogError("[BleHidManager] Error moving mouse: " + e.Message);
-                return false;
-            }
-        }
-
-        /// <summary>
-        /// Moves the mouse using Vector2 input. Useful for joystick input.
-        /// </summary>
-        /// <param name="movement">Vector2 representing mouse movement</param>
-        /// <param name="sensitivity">Sensitivity multiplier</param>
-        /// <returns>True if successful, false otherwise.</returns>
-        public bool MoveMouse(Vector2 movement, float sensitivity = 1.0f)
-        {
-            int x = Mathf.Clamp(Mathf.RoundToInt(movement.x * sensitivity), -127, 127);
-            int y = Mathf.Clamp(Mathf.RoundToInt(movement.y * sensitivity), -127, 127);
-            return MoveMouse(x, y);
-        }
-
-        /// <summary>
-        /// Presses a mouse button.
-        /// </summary>
-        /// <param name="button">The button to press (HidConstants.BUTTON_LEFT, BUTTON_RIGHT, BUTTON_MIDDLE)</param>
-        /// <returns>True if successful, false otherwise.</returns>
-        public bool PressMouseButton(int button)
-        {
-            if (!CheckConnection()) return false;
-            
-            try
-            {
-                bool result = _pluginClass.CallStatic<bool>("pressMouseButton", button);
-                if (!result)
-                {
-                    Debug.LogError("[BleHidManager] Failed to press mouse button");
-                }
-                return result;
-            }
-            catch (Exception e)
-            {
-                Debug.LogError("[BleHidManager] Error pressing mouse button: " + e.Message);
-                return false;
-            }
-        }
-
-        /// <summary>
-        /// Releases all mouse buttons.
-        /// </summary>
-        /// <returns>True if successful, false otherwise.</returns>
-        public bool ReleaseMouseButtons()
-        {
-            if (!CheckConnection()) return false;
-            
-            try
-            {
-                bool result = _pluginClass.CallStatic<bool>("releaseMouseButtons");
-                if (!result)
-                {
-                    Debug.LogError("[BleHidManager] Failed to release mouse buttons");
-                }
-                return result;
-            }
-            catch (Exception e)
-            {
-                Debug.LogError("[BleHidManager] Error releasing mouse buttons: " + e.Message);
-                return false;
-            }
-        }
-
-        /// <summary>
-        /// Performs a click with the specified button.
-        /// </summary>
-        /// <param name="button">The button to click (HidConstants.BUTTON_LEFT, BUTTON_RIGHT, BUTTON_MIDDLE)</param>
-        /// <returns>True if successful, false otherwise.</returns>
-        public bool ClickMouseButton(int button)
-        {
-            if (!CheckConnection()) return false;
-            
-            try
-            {
-                bool result = _pluginClass.CallStatic<bool>("clickMouseButton", button);
-                if (!result)
-                {
-                    Debug.LogError("[BleHidManager] Failed to click mouse button");
-                }
-                return result;
-            }
-            catch (Exception e)
-            {
-                Debug.LogError("[BleHidManager] Error clicking mouse button: " + e.Message);
-                return false;
-            }
-        }
-
-        /// <summary>
-        /// Scrolls the mouse wheel.
-        /// </summary>
-        /// <param name="amount">The scroll amount (-127 to 127)</param>
-        /// <returns>True if successful, false otherwise.</returns>
-        public bool ScrollMouseWheel(int amount)
-        {
-            if (!CheckConnection()) return false;
-            
-            try
-            {
-                bool result = _pluginClass.CallStatic<bool>("scrollMouseWheel", amount);
-                if (!result)
-                {
-                    Debug.LogError("[BleHidManager] Failed to scroll mouse wheel");
-                }
-                return result;
-            }
-            catch (Exception e)
-            {
-                Debug.LogError("[BleHidManager] Error scrolling mouse wheel: " + e.Message);
-                return false;
-            }
-        }
-
-        // Combined Media and Mouse Control
-
-        /// <summary>
-        /// Sends a combined media and mouse report.
-        /// </summary>
-        /// <param name="mediaButtons">Media button flags (HidConstants.BUTTON_PLAY_PAUSE, etc.)</param>
-        /// <param name="mouseButtons">Mouse button flags (HidConstants.BUTTON_LEFT, etc.)</param>
-        /// <param name="x">X-axis movement (-127 to 127)</param>
-        /// <param name="y">Y-axis movement (-127 to 127)</param>
-        /// <returns>True if successful, false otherwise.</returns>
-        public bool SendCombinedReport(int mediaButtons, int mouseButtons, int x, int y)
-        {
-            if (!CheckConnection()) return false;
-            
-            try
-            {
-                bool result = _pluginClass.CallStatic<bool>("sendCombinedReport", mediaButtons, mouseButtons, x, y);
-                if (!result)
-                {
-                    Debug.LogError("[BleHidManager] Failed to send combined report");
-                }
-                return result;
-            }
-            catch (Exception e)
-            {
-                Debug.LogError("[BleHidManager] Error sending combined report: " + e.Message);
-                return false;
-            }
-        }
-
-        // Helper methods
-
-        /// <summary>
-        /// Checks if BLE peripheral mode is supported on the device.
-        /// </summary>
-        /// <returns>True if supported, false otherwise.</returns>
-        public bool IsBlePeripheralSupported()
-        {
-            return _isBleSupported;
-        }
-
-        /// <summary>
-        /// Checks if the plugin is initialized.
-        /// </summary>
-        /// <returns>True if initialized, false otherwise.</returns>
-        public bool IsInitialized()
-        {
-            return _isInitialized;
-        }
-
-        /// <summary>
-        /// Checks if the device is currently advertising.
-        /// </summary>
-        /// <returns>True if advertising, false otherwise.</returns>
-        public bool IsAdvertising()
-        {
-            return _isAdvertising;
-        }
-
-        // Unity callback methods - these are called from Java via EventBridge
-
-        /// <summary>
-        /// Called when a pairing request is received.
-        /// </summary>
-        public void OnPairingRequested(string address, int variant)
-        {
-            Debug.Log("[BleHidManager] Pairing requested from: " + address + ", variant: " + variant);
-            if (WhenPairingRequested != null)
-            {
-                WhenPairingRequested(address, variant);
-            }
-            
-            // Create and fire an event
-            PairingRequestedEvent evt = new PairingRequestedEvent(address, variant);
-            BleHidEventRegistry.Instance.FireEvent(evt);
-        }
-
-        /// <summary>
-        /// Called when a device connects.
-        /// </summary>
-        public void OnDeviceConnected(string address)
-        {
-            Debug.Log("[BleHidManager] Device connected: " + address);
-            _isConnected = true;
-            _isAdvertising = false;
-            UpdateStatusText("Connected to: " + address);
-            UpdateConnectionUI();
-
-            if (OnConnected != null)
-            {
-                OnConnected();
-            }
-
-            if (OnConnectionStateChanged != null)
-            {
-                OnConnectionStateChanged(true);
-            }
-            
-            // Create and fire an event
-            DeviceConnectedEvent evt = new DeviceConnectedEvent(address);
-            BleHidEventRegistry.Instance.FireEvent(evt);
         }
         
         /// <summary>
-        /// Called when a device disconnects.
+        /// Get diagnostic information from the plugin.
         /// </summary>
-        public void OnDeviceDisconnected(string address, string reasonStr = null)
+        /// <returns>A string with diagnostic information.</returns>
+        public string GetDiagnosticInfo()
         {
-            Debug.Log("[BleHidManager] Device disconnected: " + address);
-            _isConnected = false;
-            UpdateStatusText("Disconnected");
-            UpdateConnectionUI();
+            if (!CheckInitialized()) return "Not initialized";
             
-            if (OnDisconnected != null)
+            try
             {
-                OnDisconnected();
+                return bridgeInstance.Call<string>("getDiagnosticInfo");
             }
-            
-            if (OnConnectionStateChanged != null)
+            catch (Exception e)
             {
-                OnConnectionStateChanged(false);
+                Debug.LogException(e);
+                return "Error getting diagnostic info: " + e.Message;
             }
-            
-            // Parse the disconnect reason
-            DisconnectReason reason = DisconnectReason.Unknown;
-            if (!string.IsNullOrEmpty(reasonStr) && Enum.TryParse(reasonStr, out DisconnectReason parsedReason))
-            {
-                reason = parsedReason;
-            }
-            
-            // Create and fire an event
-            DeviceDisconnectedEvent evt = new DeviceDisconnectedEvent(address, reason);
-            BleHidEventRegistry.Instance.FireEvent(evt);
-        }
-
-        /// <summary>
-        /// Called when pairing fails.
-        /// </summary>
-        public void OnPairingFailed(string address, string reasonStr = null)
-        {
-            Debug.Log("[BleHidManager] Pairing failed with: " + address);
-            UpdateStatusText("Pairing failed");
-            
-            // Parse the failure reason
-            PairingFailureReason reason = PairingFailureReason.Unknown;
-            if (!string.IsNullOrEmpty(reasonStr) && Enum.TryParse(reasonStr, out PairingFailureReason parsedReason))
-            {
-                reason = parsedReason;
-            }
-            
-            // Create and fire an event
-            PairingFailedEvent evt = new PairingFailedEvent(address, reason);
-            BleHidEventRegistry.Instance.FireEvent(evt);
         }
         
         /// <summary>
-        /// Called when advertising state changes.
+        /// Close the plugin and release all resources.
         /// </summary>
-        public void OnAdvertisingStateChanged(bool isAdvertising)
+        public void Close()
         {
-            Debug.Log("[BleHidManager] Advertising state changed: " + isAdvertising);
-            _isAdvertising = isAdvertising;
-            UpdateStatusText(isAdvertising ? "Advertising..." : "Ready - Not advertising");
+            if (bridgeInstance != null)
+            {
+                try
+                {
+                    bridgeInstance.Call("close");
+                }
+                catch (Exception e)
+                {
+                    Debug.LogException(e);
+                }
+                
+                bridgeInstance.Dispose();
+                bridgeInstance = null;
+            }
             
-            // Create and fire an event
-            AdvertisingStateChangedEvent evt = new AdvertisingStateChangedEvent(isAdvertising);
-            BleHidEventRegistry.Instance.FireEvent(evt);
+            IsInitialized = false;
+            IsAdvertising = false;
+            IsConnected = false;
+            ConnectedDeviceName = null;
+            ConnectedDeviceAddress = null;
+            
+            Debug.Log("BleHidManager closed");
         }
-
-        // Private helper methods
-
-        private bool CheckConnection()
+        #endregion
+        
+        #region Callback Methods (Called from Java)
+        
+        /// <summary>
+        /// Called when initialization is complete.
+        /// </summary>
+        public void HandleInitializeComplete(string message)
         {
-            if (!_isInitialized)
+            string[] parts = message.Split(new char[] { ':' }, 2);
+            bool success = bool.Parse(parts[0]);
+            string msg = parts.Length > 1 ? parts[1] : "";
+            
+            IsInitialized = success;
+            
+            if (success)
             {
-                Debug.LogError("[BleHidManager] Not initialized");
+                Debug.Log("BLE HID initialized successfully: " + msg);
+            }
+            else
+            {
+                Debug.LogError("BLE HID initialization failed: " + msg);
+            }
+            
+            OnInitializeComplete?.Invoke(success, msg);
+        }
+        
+        /// <summary>
+        /// Called when the advertising state changes.
+        /// </summary>
+        public void HandleAdvertisingStateChanged(string message)
+        {
+            string[] parts = message.Split(new char[] { ':' }, 2);
+            bool advertising = bool.Parse(parts[0]);
+            string msg = parts.Length > 1 ? parts[1] : "";
+            
+            IsAdvertising = advertising;
+            
+            if (advertising)
+            {
+                Debug.Log("BLE advertising started: " + msg);
+            }
+            else
+            {
+                Debug.Log("BLE advertising stopped: " + msg);
+            }
+            
+            OnAdvertisingStateChanged?.Invoke(advertising, msg);
+        }
+        
+        /// <summary>
+        /// Called when the connection state changes.
+        /// </summary>
+        public void HandleConnectionStateChanged(string message)
+        {
+            string[] parts = message.Split(':');
+            bool connected = bool.Parse(parts[0]);
+            string deviceName = null;
+            string deviceAddress = null;
+            
+            if (connected && parts.Length >= 3)
+            {
+                deviceName = parts[1];
+                deviceAddress = parts[2];
+            }
+            
+            IsConnected = connected;
+            ConnectedDeviceName = deviceName;
+            ConnectedDeviceAddress = deviceAddress;
+            
+            if (connected)
+            {
+                Debug.Log($"BLE device connected: {deviceName} ({deviceAddress})");
+            }
+            else
+            {
+                Debug.Log("BLE device disconnected");
+            }
+            
+            OnConnectionStateChanged?.Invoke(connected, deviceName, deviceAddress);
+        }
+        
+        /// <summary>
+        /// Called when the pairing state changes.
+        /// </summary>
+        public void HandlePairingStateChanged(string message)
+        {
+            string[] parts = message.Split(':');
+            string status = parts[0];
+            string deviceAddress = parts.Length > 1 ? parts[1] : null;
+            
+            Debug.Log($"BLE pairing state changed: {status}" + (deviceAddress != null ? $" ({deviceAddress})" : ""));
+            
+            OnPairingStateChanged?.Invoke(status, deviceAddress);
+        }
+        
+        /// <summary>
+        /// Called when an error occurs.
+        /// </summary>
+        public void HandleError(string message)
+        {
+            string[] parts = message.Split(new char[] { ':' }, 2);
+            int errorCode = int.Parse(parts[0]);
+            string errorMessage = parts.Length > 1 ? parts[1] : "";
+            
+            LastErrorCode = errorCode;
+            LastErrorMessage = errorMessage;
+            
+            Debug.LogError($"BLE HID error {errorCode}: {errorMessage}");
+            
+            OnError?.Invoke(errorCode, errorMessage);
+        }
+        
+        /// <summary>
+        /// Called for debug log messages.
+        /// </summary>
+        public void HandleDebugLog(string message)
+        {
+            Debug.Log("BLE HID [Debug]: " + message);
+            
+            OnDebugLog?.Invoke(message);
+        }
+        #endregion
+        
+        #region Helper Methods
+        private RuntimePlatform RuntimePlatformSupportAndroid()
+        {
+            return RuntimePlatform.Android;
+        }
+        
+        private bool CheckInitialized()
+        {
+            if (!IsInitialized || bridgeInstance == null)
+            {
+                string message = "BLE HID plugin not initialized";
+                Debug.LogError(message);
+                OnError?.Invoke(BleHidConstants.ERROR_NOT_INITIALIZED, message);
                 return false;
             }
-
-            if (!_isBleSupported)
-            {
-                Debug.LogWarning("[BleHidManager] BLE peripheral mode not supported");
-                return false;
-            }
-
-            if (!_isConnected)
-            {
-                Debug.LogWarning("[BleHidManager] Not connected to a host");
-                return false;
-            }
-
             return true;
         }
-
-        private void UpdateStatusText(string message)
+        
+        private bool CheckConnected()
         {
-            if (statusText != null)
+            if (!CheckInitialized()) return false;
+            
+            if (!IsConnected)
             {
-                statusText.text = message;
+                string message = "No BLE device connected";
+                Debug.LogError(message);
+                OnError?.Invoke(BleHidConstants.ERROR_NOT_CONNECTED, message);
+                return false;
             }
+            return true;
         }
-
-        private void UpdateConnectionUI()
-        {
-            if (connectionIndicator != null)
-            {
-                if (!_isInitialized || !_isBleSupported)
-                {
-                    connectionIndicator.color = notSupportedColor;
-                }
-                else if (_isConnected)
-                {
-                    connectionIndicator.color = connectedColor;
-                }
-                else
-                {
-                    connectionIndicator.color = disconnectedColor;
-                }
-            }
-        }
+        #endregion
     }
 }

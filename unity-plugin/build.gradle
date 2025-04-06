@@ -101,6 +101,6 @@ dependencies {
     // Kotlin dependencies
     implementation 'org.jetbrains.kotlin:kotlin-stdlib:1.8.10'
     
-    // Unity classes are provided at runtime
-    compileOnly fileTree(dir: '../unity-test/Assets/Plugins/Android', include: ['*.jar'], exclude: ['BleHidPlugin.aar'])
+    // Unity classes are provided by Unity's Android Player at runtime
+    compileOnly fileTree(dir: '/Applications/Unity/Hub/Editor/6000.0.41f1/PlaybackEngines/AndroidPlayer/Variations/il2cpp/Development/Classes', include: ['*.jar'])
 }

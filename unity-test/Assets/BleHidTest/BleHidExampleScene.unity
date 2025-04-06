@@ -269,18 +269,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 7f5f74c7321304a72b93ae5437b8b84b, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  createCanvas: 1
-  existingCanvas: {fileID: 0}
-  referenceResolution: {x: 1080, y: 1920}
-  createConnectionPanel: 1
-  createMediaPanel: 1
-  createMousePanel: 1
-  panelColor: {r: 0.1, g: 0.1, b: 0.1, a: 0.8}
-  buttonColor: {r: 0.2, g: 0.2, b: 0.2, a: 1}
-  textColor: {r: 1, g: 1, b: 1, a: 1}
-  topPadding: 50
-  panelSpacing: 20
-  buttonSpacing: 10
 --- !u!4 &846840969
 Transform:
   m_ObjectHideFlags: 0
