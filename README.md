@@ -53,7 +53,9 @@ This approach offers several advantages:
 ```
 ./gradlew :unity-plugin:assembleRelease :unity-plugin:copyToUnity
 ```
-This will build the AAR and copy it to the Unity project's Plugins/Android folder.
+This will build the AAR and copy it to the Unity project's Plugins/Android folder. 
+
+The build process automatically increments the build number each time the plugin is compiled, allowing you to always know which version is currently deployed to your Unity project. The build number is visible in the Unity app UI.
 
 ## Development
 

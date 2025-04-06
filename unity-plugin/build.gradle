@@ -1,5 +1,24 @@
 apply plugin: 'com.android.library'
 
+// Function to load, increment, and save the build number
+def getAndIncrementBuildNumber() {
+    def buildNumberPropsFile = file('buildnumber.properties')
+    def buildNumberProps = new Properties()
+    buildNumberProps.load(new FileInputStream(buildNumberPropsFile))
+    def buildNumber = buildNumberProps['buildNumber'].toInteger()
+    
+    // Increment and save the build number immediately
+    buildNumber++
+    buildNumberProps['buildNumber'] = buildNumber.toString()
+    buildNumberProps.store(buildNumberPropsFile.newWriter(), null)
+    println "Build number incremented to $buildNumber"
+    
+    return buildNumber
+}
+
+// Get the incremented build number right away
+def currentBuildNumber = getAndIncrementBuildNumber()
+
 android {
     namespace 'com.example.blehid.plugin'
     compileSdk rootProject.ext.compileSdkVersion
@@ -13,7 +32,7 @@ android {
         
         // Plugin-specific version info
         buildConfigField "String", "PLUGIN_VERSION", "\"1.0.0\""
-        buildConfigField "int", "PLUGIN_BUILD_NUMBER", "${(int)(System.currentTimeMillis() / 1000)}"
+        buildConfigField "int", "PLUGIN_BUILD_NUMBER", "$currentBuildNumber"
         buildConfigField "String", "BUILD_TIMESTAMP", "\"${new Date().format('yyyy-MM-dd HH:mm:ss')}\""
     }
     
