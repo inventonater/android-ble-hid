@@ -86,9 +86,60 @@ task copyCoreToUnity(type: Copy, dependsOn: ':core:assembleRelease') {
     }
 }
 
-// Task to copy both AARs to Unity
-task copyToUnity(dependsOn: [copyPluginToUnity, copyCoreToUnity]) {
-    description = 'Copies both the plugin and core AARs to the Unity project'
+// Custom task to stamp the AAR files with a timestamp for Git tracking
+task stampAarFiles {
+    description = 'Adds a timestamp to AAR files to ensure Git recognizes changes'
+    
+    // Make this task depend on the copy tasks
+    dependsOn copyPluginToUnity, copyCoreToUnity
+    
+    // Define the paths to the AAR files
+    def pluginAarFile = file("../unity-test/Assets/Plugins/Android/BleHidPlugin.aar")
+    def coreAarFile = file("../unity-test/Assets/Plugins/Android/BleHidCore.aar")
+    
+    doLast {
+        def stampedFiles = 0
+        
+        // Function to stamp an AAR file
+        def stampAarFile = { aarFile ->
+            if (aarFile.exists()) {
+                // Create a temporary file with timestamp
+                def tempFile = File.createTempFile("timestamp", ".txt")
+                tempFile.text = "Build timestamp: ${new Date()}"
+                
+                // Add the timestamp to the AAR (which is just a ZIP file)
+                ant.zip(destfile: aarFile, update: true) {
+                    zipfileset(file: tempFile, fullpath: "timestamp.txt")
+                }
+                
+                // Clean up
+                tempFile.delete()
+                
+                logger.lifecycle("AAR file stamped: ${aarFile.name}")
+                stampedFiles++
+                return true
+            } else {
+                logger.warn("AAR file not found: ${aarFile.name}")
+                return false
+            }
+        }
+        
+        // Stamp both files
+        stampAarFile(pluginAarFile)
+        stampAarFile(coreAarFile)
+        
+        if (stampedFiles == 0) {
+            logger.error("No AAR files were found to stamp")
+            throw new GradleException("No AAR files found for stamping")
+        } else {
+            logger.lifecycle("Stamped ${stampedFiles} AAR file(s) successfully")
+        }
+    }
+}
+
+// Task to copy both AARs to Unity and stamp them
+task copyToUnity(dependsOn: [stampAarFiles]) {
+    description = 'Copies both the plugin and core AARs to the Unity project and stamps them for Git tracking'
 }
 
 dependencies {
