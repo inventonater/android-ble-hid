@@ -68,7 +68,8 @@ android {
 
 // No longer copying core classes - using dependency approach instead
 
-// Custom task to copy the plugin AAR to Unity test project
+// We'll no longer copy to unity-test by default, but keep these tasks for backward compatibility
+// if someone needs to test with the old project structure
 task copyPluginToUnityTest(type: Copy, dependsOn: 'assembleRelease') {
     from "${buildDir}/outputs/aar/unity-plugin-release.aar"
     into "../unity-test/Assets/Plugins/Android"
@@ -77,7 +78,6 @@ task copyPluginToUnityTest(type: Copy, dependsOn: 'assembleRelease') {
     }
 }
 
-// Custom task to copy the core AAR to Unity test project
 task copyCoreToUnityTest(type: Copy, dependsOn: ':core:assembleRelease') {
     from "../core/build/outputs/aar/core-release.aar"
     into "../unity-test/Assets/Plugins/Android"
@@ -159,9 +159,9 @@ task stampAarFiles {
     }
 }
 
-// Task to copy both AARs to Unity projects and stamp them
+// Task to copy both AARs to Unity package and stamp them
 task copyToUnity(dependsOn: [stampAarFiles]) {
-    description = 'Copies both the plugin and core AARs to the Unity projects and stamps them for Git tracking'
+    description = 'Copies both the plugin and core AARs to the Unity package and stamps them for Git tracking'
 }
 
 dependencies {

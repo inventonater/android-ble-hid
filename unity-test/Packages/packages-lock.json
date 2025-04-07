@@ -1,5 +1,11 @@
 {
   "dependencies": {
+    "com.inventonater.blehid": {
+      "version": "file:../../com.inventonater.blehid",
+      "depth": 0,
+      "source": "local",
+      "dependencies": {}
+    },
     "com.unity.burst": {
       "version": "1.8.19",
       "depth": 2,

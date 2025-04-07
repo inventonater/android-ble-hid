@@ -1,5 +1,6 @@
 {
   "dependencies": {
+    "com.inventonater.blehid": "file:../../com.inventonater.blehid",
     "com.unity.ide.rider": "3.0.35",
     "com.unity.ide.visualstudio": "2.0.22",
     "com.unity.inputsystem": "1.13.1",

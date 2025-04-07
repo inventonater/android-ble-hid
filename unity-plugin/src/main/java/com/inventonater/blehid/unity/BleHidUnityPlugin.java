@@ -6,9 +6,9 @@ import android.bluetooth.BluetoothDevice;
 import android.content.Context;
 import android.util.Log;
 
-import com.example.blehid.core.BleHidManager;
-import com.example.blehid.core.BlePairingManager;
-import com.example.blehid.core.HidConstants;
+import com.inventonater.blehid.core.BleHidManager;
+import com.inventonater.blehid.core.BlePairingManager;
+import com.inventonater.blehid.core.HidConstants;
 
 /**
  * Main Unity plugin class for BLE HID functionality.
