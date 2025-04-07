@@ -172,9 +172,31 @@ namespace Inventonater.BleHid
                 AndroidJavaClass unityPlayer = new AndroidJavaClass("com.unity3d.player.UnityPlayer");
                 AndroidJavaObject activity = unityPlayer.GetStatic<AndroidJavaObject>("currentActivity");
                 
-                // Get the BleHidUnityBridge instance
-                AndroidJavaClass bridgeClass = new AndroidJavaClass("com.inventonater.blehid.unity.BleHidUnityBridge");
-                bridgeInstance = bridgeClass.CallStatic<AndroidJavaObject>("getInstance");
+                // Try to get the BleHidUnityBridge instance from the new namespace
+                try
+                {
+                    Debug.Log("Attempting to use com.inventonater.blehid.unity namespace...");
+                    AndroidJavaClass bridgeClass = new AndroidJavaClass("com.inventonater.blehid.unity.BleHidUnityBridge");
+                    bridgeInstance = bridgeClass.CallStatic<AndroidJavaObject>("getInstance");
+                    Debug.Log("Successfully connected to com.inventonater.blehid.unity.BleHidUnityBridge");
+                }
+                catch (Exception ex)
+                {
+                    // If that fails, try the old namespace as a fallback
+                    Debug.LogWarning("Failed to connect to com.inventonater.blehid.unity namespace: " + ex.Message);
+                    Debug.LogWarning("Attempting fallback to com.example.blehid.unity namespace...");
+                    
+                    try
+                    {
+                        AndroidJavaClass bridgeClass = new AndroidJavaClass("com.example.blehid.unity.BleHidUnityBridge");
+                        bridgeInstance = bridgeClass.CallStatic<AndroidJavaObject>("getInstance");
+                        Debug.Log("Successfully connected to com.example.blehid.unity.BleHidUnityBridge");
+                    }
+                    catch (Exception fallbackEx)
+                    {
+                        throw new Exception("Could not connect to either namespace (new or old): " + fallbackEx.Message);
+                    }
+                }
                 
                 // Initialize the bridge with this GameObject's name for callbacks
                 initResult = bridgeInstance.Call<bool>("initialize", gameObject.name);
@@ -228,19 +250,173 @@ namespace Inventonater.BleHid
         /// Start BLE advertising to make this device discoverable.
         /// </summary>
         /// <returns>True if advertising was started successfully, false otherwise.</returns>
+        /// <summary>
+        /// Run diagnostic checks and return a comprehensive report of the system state.
+        /// </summary>
+        /// <returns>A string containing the diagnostic information.</returns>
+        public string RunEnvironmentDiagnostics()
+        {
+            System.Text.StringBuilder report = new System.Text.StringBuilder();
+            
+            report.AppendLine("===== BLE HID Environment Diagnostics =====");
+            report.AppendLine("Date/Time: " + System.DateTime.Now.ToString());
+            report.AppendLine("Platform: " + Application.platform);
+            report.AppendLine("Unity Version: " + Application.unityVersion);
+            
+            if (Application.platform != RuntimePlatform.Android)
+            {
+                report.AppendLine("STATUS: UNSUPPORTED PLATFORM - Android required");
+                return report.ToString();
+            }
+            
+            // Android version check
+            try
+            {
+                AndroidJavaClass versionClass = new AndroidJavaClass("android.os.Build$VERSION");
+                int sdkInt = versionClass.GetStatic<int>("SDK_INT");
+                string release = versionClass.GetStatic<string>("RELEASE");
+                report.AppendLine($"Android Version: {release} (API {sdkInt})");
+            }
+            catch (Exception e)
+            {
+                report.AppendLine("Failed to get Android version: " + e.Message);
+            }
+            
+            // Plugin load check
+            string errorMsg;
+            bool pluginsLoaded = VerifyPluginsLoaded(out errorMsg);
+            report.AppendLine("Plugins Loaded: " + (pluginsLoaded ? "YES" : "NO"));
+            if (!pluginsLoaded)
+            {
+                report.AppendLine("Plugin Error: " + errorMsg);
+            }
+            
+            // Bluetooth enabled check
+            bool bluetoothEnabled = IsBluetoothEnabled(out errorMsg);
+            report.AppendLine("Bluetooth Enabled: " + (bluetoothEnabled ? "YES" : "NO"));
+            if (!bluetoothEnabled)
+            {
+                report.AppendLine("Bluetooth Error: " + errorMsg);
+            }
+            
+            // BLE advertising support check
+            bool advertisingSupported = SupportsBleAdvertising(out errorMsg);
+            report.AppendLine("BLE Advertising Support: " + (advertisingSupported ? "YES" : "NO"));
+            if (!advertisingSupported)
+            {
+                report.AppendLine("Advertising Error: " + errorMsg);
+            }
+            
+            // Permissions check
+            if (Application.platform == RuntimePlatform.Android)
+            {
+                AndroidJavaClass versionClass = new AndroidJavaClass("android.os.Build$VERSION");
+                int sdkInt = versionClass.GetStatic<int>("SDK_INT");
+                
+                if (sdkInt >= 31) // Android 12+
+                {
+                    bool hasConnectPermission = HasUserAuthorizedPermission("android.permission.BLUETOOTH_CONNECT");
+                    bool hasScanPermission = HasUserAuthorizedPermission("android.permission.BLUETOOTH_SCAN");
+                    bool hasAdvertisePermission = HasUserAuthorizedPermission("android.permission.BLUETOOTH_ADVERTISE");
+                    
+                    report.AppendLine("Permission BLUETOOTH_CONNECT: " + (hasConnectPermission ? "GRANTED" : "DENIED"));
+                    report.AppendLine("Permission BLUETOOTH_SCAN: " + (hasScanPermission ? "GRANTED" : "DENIED"));
+                    report.AppendLine("Permission BLUETOOTH_ADVERTISE: " + (hasAdvertisePermission ? "GRANTED" : "DENIED"));
+                }
+                else // Older Android
+                {
+                    report.AppendLine("Permissions: Not applicable for Android API " + sdkInt);
+                }
+            }
+            
+            // Bridge instance check
+            if (bridgeInstance != null)
+            {
+                report.AppendLine("Bridge Instance: PRESENT");
+                
+                bool bridgeValid = VerifyBridgeInterface(bridgeInstance, out errorMsg);
+                report.AppendLine("Bridge Interface Valid: " + (bridgeValid ? "YES" : "NO"));
+                if (!bridgeValid)
+                {
+                    report.AppendLine("Bridge Error: " + errorMsg);
+                }
+                
+                report.AppendLine("Initialized: " + IsInitialized);
+                report.AppendLine("Advertising: " + IsAdvertising);
+                report.AppendLine("Connected: " + IsConnected);
+                
+                if (IsConnected)
+                {
+                    report.AppendLine("Connected Device: " + ConnectedDeviceName + " (" + ConnectedDeviceAddress + ")");
+                }
+            }
+            else
+            {
+                report.AppendLine("Bridge Instance: NOT PRESENT");
+            }
+            
+            report.AppendLine("Last Error Code: " + LastErrorCode);
+            report.AppendLine("Last Error Message: " + LastErrorMessage);
+            
+            report.AppendLine("===== End of Diagnostics =====");
+            
+            return report.ToString();
+        }
+        
         public bool StartAdvertising()
         {
             if (!CheckInitialized()) return false;
             
             try
             {
+                Debug.Log("BleHidManager: Attempting to start advertising...");
+                
+                // Verify Bluetooth is enabled
+                string errorMsg;
+                if (!IsBluetoothEnabled(out errorMsg))
+                {
+                    Debug.LogError("BleHidManager: " + errorMsg);
+                    OnError?.Invoke(BleHidConstants.ERROR_BLUETOOTH_DISABLED, errorMsg);
+                    return false;
+                }
+                
+                // Verify device supports advertising
+                if (!SupportsBleAdvertising(out errorMsg))
+                {
+                    Debug.LogError("BleHidManager: " + errorMsg);
+                    OnError?.Invoke(BleHidConstants.ERROR_PERIPHERAL_NOT_SUPPORTED, errorMsg);
+                    return false;
+                }
+                
+                // Add extra debug info
+                try {
+                    // Use a simple toString() to get some information about the bridge instance
+                    string instanceInfo = bridgeInstance.Call<string>("toString");
+                    Debug.Log("BleHidManager: Using bridgeInstance: " + instanceInfo);
+                } catch (Exception debugEx) {
+                    Debug.LogWarning("BleHidManager: Could not get bridge instance info: " + debugEx.Message);
+                }
+                
                 bool result = bridgeInstance.Call<bool>("startAdvertising");
+                Debug.Log("BleHidManager: StartAdvertising call result: " + result);
+                
+                // Verify advertising state
+                try {
+                    bool isAdvertising = bridgeInstance.Call<bool>("isAdvertising");
+                    Debug.Log("BleHidManager: isAdvertising check after call: " + isAdvertising);
+                } catch (Exception verifyEx) {
+                    Debug.LogWarning("BleHidManager: Could not verify advertising state: " + verifyEx.Message);
+                }
+                
                 return result;
             }
             catch (Exception e)
             {
                 string message = "Exception starting advertising: " + e.Message;
+                Debug.LogError(message);
                 Debug.LogException(e);
+                LastErrorMessage = message;
+                LastErrorCode = BleHidConstants.ERROR_ADVERTISING_FAILED;
                 OnError?.Invoke(BleHidConstants.ERROR_ADVERTISING_FAILED, message);
                 return false;
             }
@@ -669,6 +845,181 @@ namespace Inventonater.BleHid
             
             OnDebugLog?.Invoke(message);
         }
+        #endregion
+        
+        #region Environment Checks
+        
+        /// <summary>
+        /// Verifies that plugins with the necessary functionality are loaded.
+        /// Checks both the new and old namespaces.
+        /// </summary>
+        private bool VerifyPluginsLoaded(out string errorMsg)
+        {
+            errorMsg = "";
+            
+            if (Application.platform != RuntimePlatform.Android)
+            {
+                errorMsg = "BLE HID is only supported on Android";
+                return false;
+            }
+            
+            try
+            {
+                // First try the newer namespace
+                AndroidJavaClass test = new AndroidJavaClass("com.inventonater.blehid.unity.BleHidUnityBridge");
+                Debug.Log("Found plugin with new namespace (com.inventonater.blehid.unity)");
+                return true;
+            }
+            catch (Exception ex1)
+            {
+                Debug.LogWarning("New namespace (com.inventonater.blehid.unity) not found: " + ex1.Message);
+                
+                try
+                {
+                    // Then try the older namespace
+                    AndroidJavaClass test = new AndroidJavaClass("com.example.blehid.unity.BleHidUnityBridge");
+                    Debug.Log("Found plugin with legacy namespace (com.example.blehid.unity)");
+                    return true;
+                }
+                catch (Exception ex2)
+                {
+                    errorMsg = "BLE HID plugins not found in either new or legacy namespace";
+                    Debug.LogError(errorMsg + ": " + ex2.Message);
+                    return false;
+                }
+            }
+        }
+        
+        /// <summary>
+        /// Verify that the bridge interface is valid and responsive.
+        /// </summary>
+        private bool VerifyBridgeInterface(AndroidJavaObject bridge, out string errorMsg)
+        {
+            errorMsg = "";
+            
+            if (bridge == null)
+            {
+                errorMsg = "Bridge instance is null";
+                return false;
+            }
+            
+            try
+            {
+                // Call a method that shouldn't have side effects
+                string result = bridge.Call<string>("toString");
+                Debug.Log("Bridge interface verified: " + result);
+                return true;
+            }
+            catch (Exception e)
+            {
+                errorMsg = "Bridge interface verification failed: " + e.Message;
+                Debug.LogError(errorMsg);
+                return false;
+            }
+        }
+        
+        /// <summary>
+        /// Check if Bluetooth is enabled on the device.
+        /// </summary>
+        private bool IsBluetoothEnabled(out string errorMsg)
+        {
+            errorMsg = "";
+            
+            if (Application.platform != RuntimePlatform.Android)
+            {
+                errorMsg = "Bluetooth check only works on Android";
+                return false;
+            }
+            
+            try
+            {
+                AndroidJavaClass bluetoothAdapter = new AndroidJavaClass("android.bluetooth.BluetoothAdapter");
+                AndroidJavaObject defaultAdapter = bluetoothAdapter.CallStatic<AndroidJavaObject>("getDefaultAdapter");
+                
+                if (defaultAdapter == null)
+                {
+                    errorMsg = "Bluetooth not supported on this device";
+                    return false;
+                }
+                
+                bool isEnabled = defaultAdapter.Call<bool>("isEnabled");
+                if (!isEnabled)
+                {
+                    errorMsg = "Bluetooth is turned off";
+                }
+                return isEnabled;
+            }
+            catch (Exception e)
+            {
+                errorMsg = "Failed to check Bluetooth state: " + e.Message;
+                Debug.LogError(errorMsg);
+                return false;
+            }
+        }
+        
+        /// <summary>
+        /// Check if the device supports BLE peripheral/advertising functionality.
+        /// Not all Android devices can act as a BLE peripheral.
+        /// </summary>
+        private bool SupportsBleAdvertising(out string errorMsg)
+        {
+            errorMsg = "";
+            
+            if (Application.platform != RuntimePlatform.Android)
+            {
+                errorMsg = "BLE advertising check only works on Android";
+                return false;
+            }
+            
+            try
+            {
+                AndroidJavaClass bluetoothAdapter = new AndroidJavaClass("android.bluetooth.BluetoothAdapter");
+                AndroidJavaObject defaultAdapter = bluetoothAdapter.CallStatic<AndroidJavaObject>("getDefaultAdapter");
+                
+                if (defaultAdapter == null)
+                {
+                    errorMsg = "Bluetooth not supported on this device";
+                    return false;
+                }
+                
+                // On some devices/Android versions this method might not exist, so we handle that case
+                try 
+                {
+                    bool isSupported = defaultAdapter.Call<bool>("isMultipleAdvertisementSupported");
+                    if (!isSupported)
+                    {
+                        errorMsg = "This device does not support BLE advertising";
+                    }
+                    return isSupported;
+                }
+                catch (Exception innerEx)
+                {
+                    // If the method doesn't exist, we can't be sure - use a different approach
+                    Debug.LogWarning("Could not check BLE advertising support directly: " + innerEx.Message);
+                    
+                    // Check Android version as a fallback - M (23) and above generally support it
+                    AndroidJavaClass buildVersion = new AndroidJavaClass("android.os.Build$VERSION");
+                    int sdkInt = buildVersion.GetStatic<int>("SDK_INT");
+                    
+                    if (sdkInt < 23)
+                    {
+                        errorMsg = "BLE advertising likely not supported on Android " + sdkInt;
+                        return false;
+                    }
+                    
+                    // Can't be certain, but newer devices typically support it
+                    Debug.Log("Could not definitively check BLE advertising support, but likely supported on Android " + sdkInt);
+                    return true;
+                }
+            }
+            catch (Exception e)
+            {
+                errorMsg = "Failed to check BLE advertising support: " + e.Message;
+                Debug.LogError(errorMsg);
+                return false;
+            }
+        }
+        
         #endregion
         
         #region Helper Methods

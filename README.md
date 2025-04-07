@@ -41,16 +41,27 @@ This will create a `com.inventonater.blehid-1.0.0.tgz` file that can be imported
 
 ### Building the Android Libraries
 
-To build the Android libraries and copy them to the Unity package:
+To build the Android libraries and copy them to the Unity package, use the dedicated build script:
 
 ```bash
-./gradlew :unity-plugin:copyToUnity
+./build-unity-package.sh
 ```
 
-This will:
-1. Build the core library
-2. Build the Unity plugin
-3. Copy both AAR files to the Unity package's Runtime/Plugins/Android directory
+This script:
+1. Builds only the necessary modules (core, unity-plugin)
+2. Avoids building app module (which can have resource issues)
+3. Copies both AAR files to the Unity package's Runtime/Plugins/Android directory
+4. Creates the final Unity package (.tgz file)
+
+Alternatively, you can build manually:
+
+```bash
+# Build only the required modules
+./gradlew :core:assembleRelease :unity-plugin:assembleRelease
+
+# Copy to Unity package
+./gradlew :unity-plugin:copyToUnity
+```
 
 Note: The AAR files now live exclusively in the package structure, not in the Unity project's Assets folder. This is by design - when a Unity project uses the package, it automatically gets access to the plugin files without needing to copy them into the project's Assets.
 
