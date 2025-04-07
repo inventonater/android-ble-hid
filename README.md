@@ -6,9 +6,9 @@ This project implements a Bluetooth Low Energy (BLE) Human Interface Device (HID
 
 The project is organized into multiple modules:
 
-- **core**: Core BLE HID functionality
-- **unity-plugin**: Unity-specific bridge for the core functionality
-- **app**: Android demo app that showcases the library's features
+- **core**: Core BLE HID functionality (`com.inventonater.blehid.core`)
+- **unity-plugin**: Unity-specific bridge for the core functionality (`com.inventonater.blehid.unity`)
+- **app**: Android demo app that showcases the library's features (`com.inventonater.blehid.app`)
 - **com.inventonater.blehid**: Unity package for easy integration into Unity projects
 
 ## Unity Package
@@ -87,6 +87,23 @@ cd com.inventonater.blehid
 ## Migration from Previous Version
 
 If you were using the previous version of this library that used the `unity-test` project structure, please see the [Migration Guide](com.inventonater.blehid/MIGRATION_GUIDE.md) for instructions on how to upgrade.
+
+## Namespace
+
+All code uses the `com.inventonater.blehid` namespace:
+
+- Core: `com.inventonater.blehid.core`
+- Unity Plugin: `com.inventonater.blehid.unity`
+- App: `com.inventonater.blehid.app`
+
+## Testing the Migration
+
+If you've just completed the namespace migration, you can verify everything works correctly:
+
+```bash
+# Test the entire build pipeline with the new namespace
+./test-migration.sh
+```
 
 ## License
 

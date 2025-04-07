@@ -12,7 +12,7 @@ namespace Inventonater.BleHid
     {
         /// <summary>
         /// Verifies that plugins with the necessary functionality are loaded.
-        /// Checks both the new and old namespaces.
+        /// Only checks the inventonater namespace.
         /// </summary>
         public static bool VerifyPluginsLoaded(out string errorMsg)
         {
@@ -26,28 +26,16 @@ namespace Inventonater.BleHid
             
             try
             {
-                // First try the newer namespace
+                // Only use the new namespace
                 AndroidJavaClass test = new AndroidJavaClass("com.inventonater.blehid.unity.BleHidUnityBridge");
-                Debug.Log("Found plugin with new namespace (com.inventonater.blehid.unity)");
+                Debug.Log("Found plugin with namespace com.inventonater.blehid.unity");
                 return true;
             }
-            catch (Exception ex1)
+            catch (Exception ex)
             {
-                Debug.LogWarning("New namespace (com.inventonater.blehid.unity) not found: " + ex1.Message);
-                
-                try
-                {
-                    // Then try the older namespace
-                    AndroidJavaClass test = new AndroidJavaClass("com.example.blehid.unity.BleHidUnityBridge");
-                    Debug.Log("Found plugin with legacy namespace (com.example.blehid.unity)");
-                    return true;
-                }
-                catch (Exception ex2)
-                {
-                    errorMsg = "BLE HID plugins not found in either new or legacy namespace";
-                    Debug.LogError(errorMsg + ": " + ex2.Message);
-                    return false;
-                }
+                errorMsg = "BLE HID plugin not found in com.inventonater.blehid.unity namespace";
+                Debug.LogError(errorMsg + ": " + ex.Message);
+                return false;
             }
         }
         

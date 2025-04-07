@@ -184,33 +184,13 @@ namespace Inventonater.BleHid
             // Create bridge and initialize
             bool initResult = false;
             
-            try
+            try 
             {
-                // Try to get the BleHidUnityBridge instance from the new namespace
-                try
-                {
-                    Debug.Log("Attempting to use com.inventonater.blehid.unity namespace...");
-                    AndroidJavaClass bridgeClass = new AndroidJavaClass("com.inventonater.blehid.unity.BleHidUnityBridge");
-                    bridgeInstance = bridgeClass.CallStatic<AndroidJavaObject>("getInstance");
-                    Debug.Log("Successfully connected to com.inventonater.blehid.unity.BleHidUnityBridge");
-                }
-                catch (Exception ex)
-                {
-                    // If that fails, try the old namespace as a fallback
-                    Debug.LogWarning("Failed to connect to com.inventonater.blehid.unity namespace: " + ex.Message);
-                    Debug.LogWarning("Attempting fallback to com.example.blehid.unity namespace...");
-                    
-                    try
-                    {
-                        AndroidJavaClass bridgeClass = new AndroidJavaClass("com.example.blehid.unity.BleHidUnityBridge");
-                        bridgeInstance = bridgeClass.CallStatic<AndroidJavaObject>("getInstance");
-                        Debug.Log("Successfully connected to com.example.blehid.unity.BleHidUnityBridge");
-                    }
-                    catch (Exception fallbackEx)
-                    {
-                        throw new Exception("Could not connect to either namespace (new or old): " + fallbackEx.Message);
-                    }
-                }
+                // Only try the new namespace - no fallback
+                Debug.Log("Connecting to com.inventonater.blehid.unity namespace...");
+                AndroidJavaClass bridgeClass = new AndroidJavaClass("com.inventonater.blehid.unity.BleHidUnityBridge");
+                bridgeInstance = bridgeClass.CallStatic<AndroidJavaObject>("getInstance");
+                Debug.Log("Successfully connected to com.inventonater.blehid.unity.BleHidUnityBridge");
                 
                 // Verify the bridge interface
                 if (!BleHidEnvironmentChecker.VerifyBridgeInterface(bridgeInstance, out errorMsg))
