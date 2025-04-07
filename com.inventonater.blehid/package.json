@@ -4,6 +4,11 @@
   "displayName": "Inventonater BLE HID",
   "description": "Bluetooth Low Energy Human Interface Device plugin for Unity",
   "unity": "2021.3",
+  "license": "MIT",
+  "author": {
+    "name": "Inventonater",
+    "url": "https://www.inventonater.com"
+  },
   "dependencies": {},
   "keywords": [
     "bluetooth",
