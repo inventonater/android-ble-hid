@@ -25,7 +25,7 @@ import androidx.appcompat.app.AppCompatActivity;
 import com.example.blehid.app.R;
 import com.example.blehid.core.BleHidManager;
 import com.example.blehid.core.BlePairingManager;
-import com.example.blehid.core.HidMediaConstants;
+import com.example.blehid.core.HidConstants;
 import com.example.blehid.core.HidMediaService;
 
 import java.util.Date;
@@ -819,31 +819,31 @@ public class SimpleMediaActivity extends AppCompatActivity {
         // Set up individual key buttons
         // Temporarily commented out key setup to test basic functionality
         /*
-        setupKeyButton(R.id.key_1, HidMediaConstants.KEY_1, "1");
-        setupKeyButton(R.id.key_2, HidMediaConstants.KEY_2, "2");
-        setupKeyButton(R.id.key_3, HidMediaConstants.KEY_3, "3");
-        setupKeyButton(R.id.key_4, HidMediaConstants.KEY_4, "4");
-        setupKeyButton(R.id.key_5, HidMediaConstants.KEY_5, "5");
-        setupKeyButton(R.id.key_6, HidMediaConstants.KEY_6, "6");
-        setupKeyButton(R.id.key_7, HidMediaConstants.KEY_7, "7");
-        setupKeyButton(R.id.key_8, HidMediaConstants.KEY_8, "8");
-        setupKeyButton(R.id.key_9, HidMediaConstants.KEY_9, "9");
-        setupKeyButton(R.id.key_0, HidMediaConstants.KEY_0, "0");
+        setupKeyButton(R.id.key_1, HidConstants.Keyboard.KEY_1, "1");
+        setupKeyButton(R.id.key_2, HidConstants.Keyboard.KEY_2, "2");
+        setupKeyButton(R.id.key_3, HidConstants.Keyboard.KEY_3, "3");
+        setupKeyButton(R.id.key_4, HidConstants.Keyboard.KEY_4, "4");
+        setupKeyButton(R.id.key_5, HidConstants.Keyboard.KEY_5, "5");
+        setupKeyButton(R.id.key_6, HidConstants.Keyboard.KEY_6, "6");
+        setupKeyButton(R.id.key_7, HidConstants.Keyboard.KEY_7, "7");
+        setupKeyButton(R.id.key_8, HidConstants.Keyboard.KEY_8, "8");
+        setupKeyButton(R.id.key_9, HidConstants.Keyboard.KEY_9, "9");
+        setupKeyButton(R.id.key_0, HidConstants.Keyboard.KEY_0, "0");
         
-        setupKeyButton(R.id.key_space, HidMediaConstants.KEY_SPACE, "Space");
-        setupKeyButton(R.id.key_enter, HidMediaConstants.KEY_ENTER, "Enter");
-        setupKeyButton(R.id.key_backspace, HidMediaConstants.KEY_BACKSPACE, "Backspace");
-        setupKeyButton(R.id.key_tab, HidMediaConstants.KEY_TAB, "Tab");
-        setupKeyButton(R.id.key_esc, HidMediaConstants.KEY_ESCAPE, "Escape");
+        setupKeyButton(R.id.key_space, HidConstants.Keyboard.KEY_SPACE, "Space");
+        setupKeyButton(R.id.key_enter, HidConstants.Keyboard.KEY_ENTER, "Enter");
+        setupKeyButton(R.id.key_backspace, HidConstants.Keyboard.KEY_BACKSPACE, "Backspace");
+        setupKeyButton(R.id.key_tab, HidConstants.Keyboard.KEY_TAB, "Tab");
+        setupKeyButton(R.id.key_esc, HidConstants.Keyboard.KEY_ESCAPE, "Escape");
         
         // Navigation keys
-        setupKeyButton(R.id.key_up, HidMediaConstants.KEY_UP, "Up");
-        setupKeyButton(R.id.key_down, HidMediaConstants.KEY_DOWN, "Down");
-        setupKeyButton(R.id.key_left, HidMediaConstants.KEY_LEFT, "Left");
-        setupKeyButton(R.id.key_right, HidMediaConstants.KEY_RIGHT, "Right");
-        setupKeyButton(R.id.key_home, HidMediaConstants.KEY_HOME, "Home");
-        setupKeyButton(R.id.key_end, HidMediaConstants.KEY_END, "End");
-        setupKeyButton(R.id.key_del, HidMediaConstants.KEY_DELETE, "Delete");
+        setupKeyButton(R.id.key_up, HidConstants.Keyboard.KEY_UP, "Up");
+        setupKeyButton(R.id.key_down, HidConstants.Keyboard.KEY_DOWN, "Down");
+        setupKeyButton(R.id.key_left, HidConstants.Keyboard.KEY_LEFT, "Left");
+        setupKeyButton(R.id.key_right, HidConstants.Keyboard.KEY_RIGHT, "Right");
+        setupKeyButton(R.id.key_home, HidConstants.Keyboard.KEY_HOME, "Home");
+        setupKeyButton(R.id.key_end, HidConstants.Keyboard.KEY_END, "End");
+        setupKeyButton(R.id.key_del, HidConstants.Keyboard.KEY_DELETE, "Delete");
         */
         
         // Modifier keys
@@ -859,7 +859,7 @@ public class SimpleMediaActivity extends AppCompatActivity {
                 addLogEntry("KEYBOARD: Pressed Ctrl+C (Copy)");
                 if (bleHidManager.isConnected()) {
                     // Send Ctrl+C (commonly used for copy)
-                    boolean result = bleHidManager.sendKey(HidMediaConstants.KEY_C, HidMediaConstants.KEY_MOD_LCTRL);
+                    boolean result = bleHidManager.sendKey(HidConstants.Keyboard.KEY_C, HidConstants.Keyboard.MOD_LCTRL);
                     if (!result) {
                         Toast.makeText(SimpleMediaActivity.this, "Failed to send Ctrl+C", Toast.LENGTH_SHORT).show();
                     }
@@ -876,7 +876,7 @@ public class SimpleMediaActivity extends AppCompatActivity {
                 addLogEntry("KEYBOARD: Pressed Shift+Tab (Backward Tab)");
                 if (bleHidManager.isConnected()) {
                     // Send Shift+Tab (commonly used for backward tabbing)
-                    boolean result = bleHidManager.sendKey(HidMediaConstants.KEY_TAB, HidMediaConstants.KEY_MOD_LSHIFT);
+                    boolean result = bleHidManager.sendKey(HidConstants.Keyboard.KEY_TAB, HidConstants.Keyboard.MOD_LSHIFT);
                     if (!result) {
                         Toast.makeText(SimpleMediaActivity.this, "Failed to send Shift+Tab", Toast.LENGTH_SHORT).show();
                     }
@@ -893,7 +893,7 @@ public class SimpleMediaActivity extends AppCompatActivity {
                 addLogEntry("KEYBOARD: Pressed Alt+Tab (Window Switcher)");
                 if (bleHidManager.isConnected()) {
                     // Send Alt+Tab (commonly used for window switching)
-                    boolean result = bleHidManager.sendKey(HidMediaConstants.KEY_TAB, HidMediaConstants.KEY_MOD_LALT);
+                    boolean result = bleHidManager.sendKey(HidConstants.Keyboard.KEY_TAB, HidConstants.Keyboard.MOD_LALT);
                     if (!result) {
                         Toast.makeText(SimpleMediaActivity.this, "Failed to send Alt+Tab", Toast.LENGTH_SHORT).show();
                     }
@@ -912,7 +912,7 @@ public class SimpleMediaActivity extends AppCompatActivity {
                     // Send just the Win/Meta key
                     byte[] keys = new byte[1];
                     keys[0] = 0;
-                    boolean result = bleHidManager.sendKeys(keys, HidMediaConstants.KEY_MOD_LMETA);
+                    boolean result = bleHidManager.sendKeys(keys, HidConstants.Keyboard.MOD_LMETA);
                     if (!result) {
                         Toast.makeText(SimpleMediaActivity.this, "Failed to send Meta key", Toast.LENGTH_SHORT).show();
                     }

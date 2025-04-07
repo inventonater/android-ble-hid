@@ -8,7 +8,7 @@ import android.util.Log;
 
 import com.example.blehid.core.BleHidManager;
 import com.example.blehid.core.BlePairingManager;
-import com.example.blehid.core.HidMediaConstants;
+import com.example.blehid.core.HidConstants;
 
 /**
  * Main Unity plugin class for BLE HID functionality.

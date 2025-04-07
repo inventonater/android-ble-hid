@@ -8,37 +8,35 @@ import android.util.Log;
 
 import java.util.UUID;
 
-import static com.example.blehid.core.HidMediaConstants.*;
-
 /**
- * Implements a BLE HID media player service.
- * Based on the HID consumer control specification for media players.
+ * Implements a BLE HID service supporting media player, mouse, and keyboard functionality.
+ * Based on the HID consumer control specification.
  */
 public class HidMediaService {
     private static final String TAG = "HidMediaService";
     
-    // Media control button constants (duplicated for convenience)
-    public static final int BUTTON_PLAY_PAUSE = HidMediaConstants.BUTTON_PLAY_PAUSE;
-    public static final int BUTTON_NEXT_TRACK = HidMediaConstants.BUTTON_NEXT_TRACK;
-    public static final int BUTTON_PREVIOUS_TRACK = HidMediaConstants.BUTTON_PREVIOUS_TRACK;
-    public static final int BUTTON_VOLUME_UP = HidMediaConstants.BUTTON_VOLUME_UP;
-    public static final int BUTTON_VOLUME_DOWN = HidMediaConstants.BUTTON_VOLUME_DOWN;
-    public static final int BUTTON_MUTE = HidMediaConstants.BUTTON_MUTE;
+    // Media control button constants
+    public static final int BUTTON_PLAY_PAUSE = HidConstants.Media.BUTTON_PLAY_PAUSE;
+    public static final int BUTTON_NEXT_TRACK = HidConstants.Media.BUTTON_NEXT_TRACK;
+    public static final int BUTTON_PREVIOUS_TRACK = HidConstants.Media.BUTTON_PREVIOUS_TRACK;
+    public static final int BUTTON_VOLUME_UP = HidConstants.Media.BUTTON_VOLUME_UP;
+    public static final int BUTTON_VOLUME_DOWN = HidConstants.Media.BUTTON_VOLUME_DOWN;
+    public static final int BUTTON_MUTE = HidConstants.Media.BUTTON_MUTE;
     
-    // Mouse button constants (duplicated for convenience)
-    public static final int BUTTON_LEFT = HidMediaConstants.BUTTON_LEFT;
-    public static final int BUTTON_RIGHT = HidMediaConstants.BUTTON_RIGHT;
-    public static final int BUTTON_MIDDLE = HidMediaConstants.BUTTON_MIDDLE;
+    // Mouse button constants
+    public static final int BUTTON_LEFT = HidConstants.Mouse.BUTTON_LEFT;
+    public static final int BUTTON_RIGHT = HidConstants.Mouse.BUTTON_RIGHT;
+    public static final int BUTTON_MIDDLE = HidConstants.Mouse.BUTTON_MIDDLE;
     
-    // Keyboard modifiers (duplicated for convenience)
-    public static final int KEY_MOD_LCTRL = HidMediaConstants.KEY_MOD_LCTRL;
-    public static final int KEY_MOD_LSHIFT = HidMediaConstants.KEY_MOD_LSHIFT;
-    public static final int KEY_MOD_LALT = HidMediaConstants.KEY_MOD_LALT;
-    public static final int KEY_MOD_LMETA = HidMediaConstants.KEY_MOD_LMETA;
-    public static final int KEY_MOD_RCTRL = HidMediaConstants.KEY_MOD_RCTRL;
-    public static final int KEY_MOD_RSHIFT = HidMediaConstants.KEY_MOD_RSHIFT;
-    public static final int KEY_MOD_RALT = HidMediaConstants.KEY_MOD_RALT;
-    public static final int KEY_MOD_RMETA = HidMediaConstants.KEY_MOD_RMETA;
+    // Keyboard modifiers
+    public static final int KEY_MOD_LCTRL = HidConstants.Keyboard.MOD_LCTRL;
+    public static final int KEY_MOD_LSHIFT = HidConstants.Keyboard.MOD_LSHIFT;
+    public static final int KEY_MOD_LALT = HidConstants.Keyboard.MOD_LALT;
+    public static final int KEY_MOD_LMETA = HidConstants.Keyboard.MOD_LMETA;
+    public static final int KEY_MOD_RCTRL = HidConstants.Keyboard.MOD_RCTRL;
+    public static final int KEY_MOD_RSHIFT = HidConstants.Keyboard.MOD_RSHIFT;
+    public static final int KEY_MOD_RALT = HidConstants.Keyboard.MOD_RALT;
+    public static final int KEY_MOD_RMETA = HidConstants.Keyboard.MOD_RMETA;
     
     private final BleHidManager bleHidManager;
     private final BleGattServerManager gattServerManager;
@@ -48,9 +46,9 @@ public class HidMediaService {
     
     private BluetoothDevice connectedDevice;
     private boolean isInitialized = false;
-    private byte currentProtocolMode = PROTOCOL_MODE_REPORT;
+    private byte currentProtocolMode = HidConstants.Protocol.MODE_REPORT;
     
-    private HidMediaReportHandler reportHandler;
+    private HidReportHandler reportHandler;
     
     /**
      * Creates a new HID Media Service.
@@ -80,7 +78,7 @@ public class HidMediaService {
         
         // Create HID service
         hidService = new BluetoothGattService(
-                HID_SERVICE_UUID,
+                HidConstants.Uuids.HID_SERVICE,
                 BluetoothGattService.SERVICE_TYPE_PRIMARY);
         
         setupCharacteristics();
@@ -90,7 +88,7 @@ public class HidMediaService {
         
         if (success) {
             // Create the report handler
-            reportHandler = new HidMediaReportHandler(
+            reportHandler = new HidReportHandler(
                     gattServerManager, 
                     reportCharacteristic);
             
@@ -109,32 +107,32 @@ public class HidMediaService {
     private void setupCharacteristics() {
         // HID Information characteristic
         BluetoothGattCharacteristic hidInfoCharacteristic = new BluetoothGattCharacteristic(
-                HID_INFORMATION_UUID,
+                HidConstants.Uuids.HID_INFORMATION,
                 BluetoothGattCharacteristic.PROPERTY_READ,
                 BluetoothGattCharacteristic.PERMISSION_READ_ENCRYPTED);
-        hidInfoCharacteristic.setValue(HID_INFORMATION);
+        hidInfoCharacteristic.setValue(HidConstants.Protocol.HID_INFORMATION);
         
         // Report Map characteristic
         BluetoothGattCharacteristic reportMapCharacteristic = new BluetoothGattCharacteristic(
-                HID_REPORT_MAP_UUID,
+                HidConstants.Uuids.HID_REPORT_MAP,
                 BluetoothGattCharacteristic.PROPERTY_READ,
                 BluetoothGattCharacteristic.PERMISSION_READ_ENCRYPTED);
-        reportMapCharacteristic.setValue(REPORT_MAP);
+        reportMapCharacteristic.setValue(HidConstants.Combined.REPORT_MAP);
         
         // HID Control Point characteristic
         BluetoothGattCharacteristic hidControlCharacteristic = new BluetoothGattCharacteristic(
-                HID_CONTROL_POINT_UUID,
+                HidConstants.Uuids.HID_CONTROL_POINT,
                 BluetoothGattCharacteristic.PROPERTY_WRITE_NO_RESPONSE,
                 BluetoothGattCharacteristic.PERMISSION_WRITE_ENCRYPTED);
         
         // Protocol Mode characteristic
         protocolModeCharacteristic = new BluetoothGattCharacteristic(
-                HID_PROTOCOL_MODE_UUID,
+                HidConstants.Uuids.HID_PROTOCOL_MODE,
                 BluetoothGattCharacteristic.PROPERTY_READ | 
                 BluetoothGattCharacteristic.PROPERTY_WRITE_NO_RESPONSE,
                 BluetoothGattCharacteristic.PERMISSION_READ_ENCRYPTED | 
                 BluetoothGattCharacteristic.PERMISSION_WRITE_ENCRYPTED);
-        protocolModeCharacteristic.setValue(new byte[] { PROTOCOL_MODE_REPORT });
+        protocolModeCharacteristic.setValue(new byte[] { HidConstants.Protocol.MODE_REPORT });
         
         // Report characteristic (for media control reports)
         reportCharacteristic = setupReportCharacteristic();
@@ -152,7 +150,7 @@ public class HidMediaService {
      */
     private BluetoothGattCharacteristic setupReportCharacteristic() {
         BluetoothGattCharacteristic characteristic = new BluetoothGattCharacteristic(
-                HID_REPORT_UUID,
+                HidConstants.Uuids.HID_REPORT,
                 BluetoothGattCharacteristic.PROPERTY_READ | 
                 BluetoothGattCharacteristic.PROPERTY_NOTIFY |
                 BluetoothGattCharacteristic.PROPERTY_WRITE,
@@ -166,14 +164,14 @@ public class HidMediaService {
         // Add Report Reference descriptor to help hosts identify the report type
         // We're not using report IDs so value is {0, Input report type}
         BluetoothGattDescriptor reportRefDescriptor = new BluetoothGattDescriptor(
-                REPORT_REFERENCE_UUID,
+                HidConstants.Uuids.REPORT_REFERENCE,
                 BluetoothGattDescriptor.PERMISSION_READ_ENCRYPTED);
         reportRefDescriptor.setValue(new byte[] { 0, 0x01 });  // No report ID, Input report
         characteristic.addDescriptor(reportRefDescriptor);
         
         // Add Client Characteristic Configuration Descriptor (CCCD) to enable notifications
         BluetoothGattDescriptor descriptor = new BluetoothGattDescriptor(
-                CLIENT_CONFIG_UUID,
+                HidConstants.Uuids.CLIENT_CONFIG,
                 BluetoothGattDescriptor.PERMISSION_READ_ENCRYPTED | 
                 BluetoothGattDescriptor.PERMISSION_WRITE_ENCRYPTED);
         characteristic.addDescriptor(descriptor);
@@ -181,7 +179,7 @@ public class HidMediaService {
         return characteristic;
     }
     
-    // --------------- Public API ---------------
+    // ==================== Public API ====================
     
     /**
      * Sends a combined media and mouse report.
@@ -237,7 +235,7 @@ public class HidMediaService {
     }
     
     /**
-     * Sends a mouse button report.
+     * Sends a mouse button press report.
      */
     public boolean pressButton(int button) {
         connectedDevice = bleHidManager.getConnectedDevice();
@@ -275,9 +273,7 @@ public class HidMediaService {
         return reportHandler.click(connectedDevice, button);
     }
     
-    /**
-     * Keyboard control methods
-     */
+    // ==================== Keyboard Methods ====================
     
     /**
      * Sends a key press.
@@ -385,44 +381,44 @@ public class HidMediaService {
             // Convert ASCII character to HID key code and modifiers
             if (c >= 'a' && c <= 'z') {
                 // Lowercase letters
-                keyCode = (byte) (HidMediaConstants.KEY_A + (c - 'a'));
+                keyCode = (byte) (HidConstants.Keyboard.KEY_A + (c - 'a'));
             } else if (c >= 'A' && c <= 'Z') {
                 // Uppercase letters (use shift modifier)
-                keyCode = (byte) (HidMediaConstants.KEY_A + (c - 'A'));
+                keyCode = (byte) (HidConstants.Keyboard.KEY_A + (c - 'A'));
                 modifiers = KEY_MOD_LSHIFT;
             } else if (c >= '1' && c <= '9') {
                 // Numbers 1-9
-                keyCode = (byte) (HidMediaConstants.KEY_1 + (c - '1'));
+                keyCode = (byte) (HidConstants.Keyboard.KEY_1 + (c - '1'));
             } else if (c == '0') {
-                keyCode = HidMediaConstants.KEY_0;
+                keyCode = HidConstants.Keyboard.KEY_0;
             } else if (c == ' ') {
-                keyCode = HidMediaConstants.KEY_SPACE;
+                keyCode = HidConstants.Keyboard.KEY_SPACE;
             } else if (c == '\n' || c == '\r') {
-                keyCode = HidMediaConstants.KEY_ENTER;
+                keyCode = HidConstants.Keyboard.KEY_ENTER;
             } else if (c == '\t') {
-                keyCode = HidMediaConstants.KEY_TAB;
+                keyCode = HidConstants.Keyboard.KEY_TAB;
             } else if (c == '.') {
-                keyCode = HidMediaConstants.KEY_PERIOD;
+                keyCode = HidConstants.Keyboard.KEY_PERIOD;
             } else if (c == ',') {
-                keyCode = HidMediaConstants.KEY_COMMA;
+                keyCode = HidConstants.Keyboard.KEY_COMMA;
             } else if (c == '-') {
-                keyCode = HidMediaConstants.KEY_MINUS;
+                keyCode = HidConstants.Keyboard.KEY_MINUS;
             } else if (c == '=') {
-                keyCode = HidMediaConstants.KEY_EQUALS;
+                keyCode = HidConstants.Keyboard.KEY_EQUALS;
             } else if (c == ';') {
-                keyCode = HidMediaConstants.KEY_SEMICOLON;
+                keyCode = HidConstants.Keyboard.KEY_SEMICOLON;
             } else if (c == '/') {
-                keyCode = HidMediaConstants.KEY_SLASH;
+                keyCode = HidConstants.Keyboard.KEY_SLASH;
             } else if (c == '\\') {
-                keyCode = HidMediaConstants.KEY_BACKSLASH;
+                keyCode = HidConstants.Keyboard.KEY_BACKSLASH;
             } else if (c == '[') {
-                keyCode = HidMediaConstants.KEY_BRACKET_LEFT;
+                keyCode = HidConstants.Keyboard.KEY_BRACKET_LEFT;
             } else if (c == ']') {
-                keyCode = HidMediaConstants.KEY_BRACKET_RIGHT;
+                keyCode = HidConstants.Keyboard.KEY_BRACKET_RIGHT;
             } else if (c == '\'') {
-                keyCode = HidMediaConstants.KEY_APOSTROPHE;
+                keyCode = HidConstants.Keyboard.KEY_APOSTROPHE;
             } else if (c == '`') {
-                keyCode = HidMediaConstants.KEY_GRAVE;
+                keyCode = HidConstants.Keyboard.KEY_GRAVE;
             } else {
                 // Skip unsupported characters
                 continue;
@@ -443,6 +439,8 @@ public class HidMediaService {
         
         return success;
     }
+    
+    // ==================== Media Control Methods ====================
     
     /**
      * Sends a play/pause control.
@@ -503,18 +501,18 @@ public class HidMediaService {
      * Gets the HID Report Map descriptor.
      */
     public byte[] getReportMap() {
-        return REPORT_MAP;
+        return HidConstants.Combined.REPORT_MAP;
     }
     
-    // --------------- GATT Server Callbacks ---------------
+    // ==================== GATT Server Callbacks ====================
     
     /**
      * Handles characteristic read requests.
      */
     public byte[] handleCharacteristicRead(UUID charUuid, int offset) {
-        if (charUuid.equals(HID_REPORT_UUID)) {
-            return handleReportRead(offset, reportHandler.getMediaReport());
-        } else if (charUuid.equals(HID_PROTOCOL_MODE_UUID)) {
+        if (charUuid.equals(HidConstants.Uuids.HID_REPORT)) {
+            return handleReportRead(offset, reportHandler.getReport());
+        } else if (charUuid.equals(HidConstants.Uuids.HID_PROTOCOL_MODE)) {
             // Return the current protocol mode
             return new byte[] { currentProtocolMode };
         }
@@ -544,25 +542,31 @@ public class HidMediaService {
      * Handles characteristic write requests.
      */
     public boolean handleCharacteristicWrite(UUID charUuid, byte[] value) {
-        if (charUuid.equals(HID_REPORT_UUID)) {
+        if (charUuid.equals(HidConstants.Uuids.HID_REPORT)) {
             // Handle write to report characteristic if needed
-            Log.d(TAG, "Received write to report characteristic: " + HidMediaConstants.bytesToHex(value));
+            Log.d(TAG, "Received write to report characteristic: " + HidConstants.bytesToHex(value));
             return true;
-        } else if (charUuid.equals(HID_PROTOCOL_MODE_UUID)) {
+        } else if (charUuid.equals(HidConstants.Uuids.HID_PROTOCOL_MODE)) {
             // Handle write to protocol mode characteristic
             if (value != null && value.length > 0) {
                 byte newMode = value[0];
-                if (newMode == PROTOCOL_MODE_REPORT) {
+                if (newMode == HidConstants.Protocol.MODE_REPORT) {
                     Log.d(TAG, "Protocol mode set to Report Protocol");
                     currentProtocolMode = newMode;
                     protocolModeCharacteristic.setValue(new byte[] { currentProtocolMode });
+                    
+                    // Let the report handler know about the protocol mode change
+                    if (reportHandler != null) {
+                        reportHandler.setProtocolMode(newMode);
+                    }
+                    
                     return true;
                 } else {
                     Log.w(TAG, "Invalid protocol mode value: " + newMode);
                 }
             }
             return true;
-        } else if (charUuid.equals(HID_CONTROL_POINT_UUID)) {
+        } else if (charUuid.equals(HidConstants.Uuids.HID_CONTROL_POINT)) {
             // Handle write to control point characteristic
             if (value != null && value.length > 0) {
                 byte controlPoint = value[0];
@@ -580,7 +584,8 @@ public class HidMediaService {
      * Handles descriptor read requests.
      */
     public byte[] handleDescriptorRead(UUID descriptorUuid, UUID characteristicUuid) {
-        if (descriptorUuid.equals(REPORT_REFERENCE_UUID) && characteristicUuid.equals(HID_REPORT_UUID)) {
+        if (descriptorUuid.equals(HidConstants.Uuids.REPORT_REFERENCE) && 
+                characteristicUuid.equals(HidConstants.Uuids.HID_REPORT)) {
             // Report Reference descriptor for report characteristic (no report ID)
             return new byte[] { 0x00, 0x01 };  // No report ID, Input report
         }
@@ -593,12 +598,12 @@ public class HidMediaService {
      * Handles descriptor write requests.
      */
     public boolean handleDescriptorWrite(UUID descriptorUuid, UUID characteristicUuid, byte[] value) {
-        if (descriptorUuid.equals(CLIENT_CONFIG_UUID)) {
+        if (descriptorUuid.equals(HidConstants.Uuids.CLIENT_CONFIG)) {
             if (value.length == 2) {
                 boolean enabled = (value[0] == 0x01 && value[1] == 0x00);
                 String state = enabled ? "enabled" : "disabled";
                 
-                if (characteristicUuid.equals(HID_REPORT_UUID)) {
+                if (characteristicUuid.equals(HidConstants.Uuids.HID_REPORT)) {
                     Log.d(TAG, "Notifications " + state + " for media report characteristic");
                     if (reportHandler != null) {
                         reportHandler.setNotificationsEnabled(characteristicUuid, enabled);

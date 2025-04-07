@@ -20,7 +20,7 @@ public class BleHidManager {
     private final BleAdvertiser advertiser;
     private final BleGattServerManager gattServerManager;
     private final BlePairingManager pairingManager;
-    // Using media service with combined mouse functionality
+    // Using media service for HID functionality
     private final HidMediaService hidMediaService;
 
     private boolean isInitialized = false;
@@ -47,7 +47,6 @@ public class BleHidManager {
         advertiser = new BleAdvertiser(this);
         gattServerManager = new BleGattServerManager(this);
         pairingManager = new BlePairingManager(this);
-        // Only initialize media service
         hidMediaService = new HidMediaService(this);
     }
 
@@ -84,16 +83,16 @@ public class BleHidManager {
             return false;
         }
         
-        // Initialize only the media service
+        // Initialize HID service
         boolean hidInitialized = hidMediaService.initialize();
         if (!hidInitialized) {
-            Log.e(TAG, "Failed to initialize HID media service");
+            Log.e(TAG, "Failed to initialize HID service");
             gattServerManager.close();
             return false;
         }
         
         isInitialized = true;
-        Log.i(TAG, "BLE HID Manager initialized successfully with media service");
+        Log.i(TAG, "BLE HID Manager initialized successfully");
         return true;
     }
 
@@ -119,8 +118,6 @@ public class BleHidManager {
             advertiser.stopAdvertising();
         }
     }
-
-    // Removed all keyboard-related methods to simplify the codebase
 
     /**
      * Checks if the device supports BLE peripheral mode.
@@ -177,9 +174,7 @@ public class BleHidManager {
         return hidMediaService;
     }
     
-    /**
-     * Media control methods
-     */
+    // ==================== Media Control Methods ====================
     
     /**
      * Sends a play/pause control.
@@ -265,9 +260,7 @@ public class BleHidManager {
         return hidMediaService.mute();
     }
 
-    /**
-     * Mouse control methods
-     */
+    // ==================== Mouse Control Methods ====================
     
     /**
      * Moves the mouse pointer by the specified amount.
@@ -342,8 +335,6 @@ public class BleHidManager {
         }
         
         // Vertical scrolling is often implemented as mouse movement along the Y axis
-        // while holding a special key or using a specific report format.
-        // We'll simulate it with vertical movement for simplicity
         return hidMediaService.movePointer(0, amount);
     }
     
@@ -365,9 +356,7 @@ public class BleHidManager {
         return hidMediaService.sendCombinedReport(mediaButtons, mouseButtons, x, y);
     }
     
-    /**
-     * Keyboard control methods
-     */
+    // ==================== Keyboard Control Methods ====================
     
     /**
      * Sends a single key press.
@@ -446,7 +435,7 @@ public class BleHidManager {
         return hidMediaService.typeText(text);
     }
     
-    // Connection management
+    // ==================== Connection Management ====================
 
     /**
      * Called when a device connects.
