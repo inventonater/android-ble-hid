@@ -1,6 +1,5 @@
 using System;
 using System.Collections;
-using System.Runtime.InteropServices;
 using UnityEngine;
 
 namespace Inventonater.BleHid
@@ -11,59 +10,46 @@ namespace Inventonater.BleHid
     /// </summary>
     public class BleHidManager : MonoBehaviour
     {
-        #region Events
-        // Define delegate types for events
-        public delegate void InitializeCompleteHandler(bool success, string message);
-        public delegate void AdvertisingStateChangedHandler(bool advertising, string message);
-        public delegate void ConnectionStateChangedHandler(bool connected, string deviceName, string deviceAddress);
-        public delegate void PairingStateChangedHandler(string status, string deviceAddress);
-        public delegate void ErrorHandler(int errorCode, string errorMessage);
-        public delegate void DebugLogHandler(string message);
-        
-        // Event declarations
-        public event InitializeCompleteHandler OnInitializeComplete;
-        public event AdvertisingStateChangedHandler OnAdvertisingStateChanged;
-        public event ConnectionStateChangedHandler OnConnectionStateChanged;
-        public event PairingStateChangedHandler OnPairingStateChanged;
-        public event ErrorHandler OnError;
-        public event DebugLogHandler OnDebugLog;
-        #endregion
-        
         #region Properties
         /// <summary>
         /// Whether the BLE HID manager is initialized.
         /// </summary>
-        public bool IsInitialized { get; private set; }
+        public bool IsInitialized { get; internal set; }
         
         /// <summary>
         /// Whether BLE advertising is currently active.
         /// </summary>
-        public bool IsAdvertising { get; private set; }
+        public bool IsAdvertising { get; internal set; }
         
         /// <summary>
         /// Whether a device is connected.
         /// </summary>
-        public bool IsConnected { get; private set; }
+        public bool IsConnected { get; internal set; }
         
         /// <summary>
         /// Name of the connected device, if any.
         /// </summary>
-        public string ConnectedDeviceName { get; private set; }
+        public string ConnectedDeviceName { get; internal set; }
         
         /// <summary>
         /// Address of the connected device, if any.
         /// </summary>
-        public string ConnectedDeviceAddress { get; private set; }
+        public string ConnectedDeviceAddress { get; internal set; }
         
         /// <summary>
         /// Last error message.
         /// </summary>
-        public string LastErrorMessage { get; private set; }
+        public string LastErrorMessage { get; internal set; }
         
         /// <summary>
         /// Last error code.
         /// </summary>
-        public int LastErrorCode { get; private set; }
+        public int LastErrorCode { get; internal set; }
+        
+        /// <summary>
+        /// The bridge instance used to communicate with Java.
+        /// </summary>
+        internal AndroidJavaObject BridgeInstance => bridgeInstance;
         #endregion
         
         #region Singleton
@@ -83,14 +69,36 @@ namespace Inventonater.BleHid
             Instance = this;
             DontDestroyOnLoad(gameObject);
             
+            // Create the callback handler
+            callbackHandler = new BleHidCallbackHandler(this);
+            
+            // Forward events
+            callbackHandler.OnInitializeComplete += (success, message) => OnInitializeComplete?.Invoke(success, message);
+            callbackHandler.OnAdvertisingStateChanged += (advertising, message) => OnAdvertisingStateChanged?.Invoke(advertising, message);
+            callbackHandler.OnConnectionStateChanged += (connected, deviceName, deviceAddress) => OnConnectionStateChanged?.Invoke(connected, deviceName, deviceAddress);
+            callbackHandler.OnPairingStateChanged += (status, deviceAddress) => OnPairingStateChanged?.Invoke(status, deviceAddress);
+            callbackHandler.OnError += (errorCode, errorMessage) => OnError?.Invoke(errorCode, errorMessage);
+            callbackHandler.OnDebugLog += (message) => OnDebugLog?.Invoke(message);
+            
             Debug.Log("BleHidManager initialized");
         }
         #endregion
         
+        #region Events
+        // Event declarations that will be forwarded from the callback handler
+        public event BleHidCallbackHandler.InitializeCompleteHandler OnInitializeComplete;
+        public event BleHidCallbackHandler.AdvertisingStateChangedHandler OnAdvertisingStateChanged;
+        public event BleHidCallbackHandler.ConnectionStateChangedHandler OnConnectionStateChanged;
+        public event BleHidCallbackHandler.PairingStateChangedHandler OnPairingStateChanged;
+        public event BleHidCallbackHandler.ErrorHandler OnError;
+        public event BleHidCallbackHandler.DebugLogHandler OnDebugLog;
+        #endregion
+        
         #region Private Fields
-        // Boolean fields to track state
+        // Fields to track state
         private bool isInitializing = false;
         private AndroidJavaObject bridgeInstance = null;
+        private BleHidCallbackHandler callbackHandler;
         #endregion
         
         #region Unity Lifecycle
@@ -123,7 +131,7 @@ namespace Inventonater.BleHid
             Debug.Log("BleHidManager: Initializing...");
             
             // Only run on Android
-            if (Application.platform != RuntimePlatformSupportAndroid())
+            if (Application.platform != RuntimePlatform.Android)
             {
                 string message = "BLE HID is only supported on Android";
                 Debug.LogWarning(message);
@@ -133,23 +141,33 @@ namespace Inventonater.BleHid
                 yield break;
             }
             
+            // Check if plugins are loaded
+            string errorMsg;
+            if (!BleHidEnvironmentChecker.VerifyPluginsLoaded(out errorMsg))
+            {
+                Debug.LogError(errorMsg);
+                OnError?.Invoke(BleHidConstants.ERROR_INITIALIZATION_FAILED, errorMsg);
+                OnInitializeComplete?.Invoke(false, errorMsg);
+                isInitializing = false;
+                yield break;
+            }
+            
             // Request runtime permissions for Android 12+ (API level 31+)
             if (Application.platform == RuntimePlatform.Android)
             {
-                Debug.Log("Requesting Bluetooth permissions...");
+                Debug.Log("Checking Android version for permissions...");
                 
                 // Get Android version
-                AndroidJavaClass versionClass = new AndroidJavaClass("android.os.Build$VERSION");
-                int sdkInt = versionClass.GetStatic<int>("SDK_INT");
+                int sdkInt = BleHidPermissionHandler.GetAndroidSDKVersion();
                 Debug.Log($"Android SDK version: {sdkInt}");
                 
                 // For Android 12+ (API 31+)
                 if (sdkInt >= 31)
                 {
-                    yield return StartCoroutine(RequestBluetoothPermissions());
+                    yield return StartCoroutine(BleHidPermissionHandler.RequestBluetoothPermissions());
                     
                     // Check if required permissions were granted
-                    if (!CheckBluetoothPermissions())
+                    if (!BleHidPermissionHandler.CheckBluetoothPermissions())
                     {
                         string message = "Bluetooth permissions not granted";
                         Debug.LogError(message);
@@ -168,10 +186,6 @@ namespace Inventonater.BleHid
             
             try
             {
-                // Get the Unity activity
-                AndroidJavaClass unityPlayer = new AndroidJavaClass("com.unity3d.player.UnityPlayer");
-                AndroidJavaObject activity = unityPlayer.GetStatic<AndroidJavaObject>("currentActivity");
-                
                 // Try to get the BleHidUnityBridge instance from the new namespace
                 try
                 {
@@ -196,6 +210,12 @@ namespace Inventonater.BleHid
                     {
                         throw new Exception("Could not connect to either namespace (new or old): " + fallbackEx.Message);
                     }
+                }
+                
+                // Verify the bridge interface
+                if (!BleHidEnvironmentChecker.VerifyBridgeInterface(bridgeInstance, out errorMsg))
+                {
+                    throw new Exception(errorMsg);
                 }
                 
                 // Initialize the bridge with this GameObject's name for callbacks
@@ -247,122 +267,18 @@ namespace Inventonater.BleHid
         }
         
         /// <summary>
-        /// Start BLE advertising to make this device discoverable.
-        /// </summary>
-        /// <returns>True if advertising was started successfully, false otherwise.</returns>
-        /// <summary>
         /// Run diagnostic checks and return a comprehensive report of the system state.
         /// </summary>
         /// <returns>A string containing the diagnostic information.</returns>
         public string RunEnvironmentDiagnostics()
         {
-            System.Text.StringBuilder report = new System.Text.StringBuilder();
-            
-            report.AppendLine("===== BLE HID Environment Diagnostics =====");
-            report.AppendLine("Date/Time: " + System.DateTime.Now.ToString());
-            report.AppendLine("Platform: " + Application.platform);
-            report.AppendLine("Unity Version: " + Application.unityVersion);
-            
-            if (Application.platform != RuntimePlatform.Android)
-            {
-                report.AppendLine("STATUS: UNSUPPORTED PLATFORM - Android required");
-                return report.ToString();
-            }
-            
-            // Android version check
-            try
-            {
-                AndroidJavaClass versionClass = new AndroidJavaClass("android.os.Build$VERSION");
-                int sdkInt = versionClass.GetStatic<int>("SDK_INT");
-                string release = versionClass.GetStatic<string>("RELEASE");
-                report.AppendLine($"Android Version: {release} (API {sdkInt})");
-            }
-            catch (Exception e)
-            {
-                report.AppendLine("Failed to get Android version: " + e.Message);
-            }
-            
-            // Plugin load check
-            string errorMsg;
-            bool pluginsLoaded = VerifyPluginsLoaded(out errorMsg);
-            report.AppendLine("Plugins Loaded: " + (pluginsLoaded ? "YES" : "NO"));
-            if (!pluginsLoaded)
-            {
-                report.AppendLine("Plugin Error: " + errorMsg);
-            }
-            
-            // Bluetooth enabled check
-            bool bluetoothEnabled = IsBluetoothEnabled(out errorMsg);
-            report.AppendLine("Bluetooth Enabled: " + (bluetoothEnabled ? "YES" : "NO"));
-            if (!bluetoothEnabled)
-            {
-                report.AppendLine("Bluetooth Error: " + errorMsg);
-            }
-            
-            // BLE advertising support check
-            bool advertisingSupported = SupportsBleAdvertising(out errorMsg);
-            report.AppendLine("BLE Advertising Support: " + (advertisingSupported ? "YES" : "NO"));
-            if (!advertisingSupported)
-            {
-                report.AppendLine("Advertising Error: " + errorMsg);
-            }
-            
-            // Permissions check
-            if (Application.platform == RuntimePlatform.Android)
-            {
-                AndroidJavaClass versionClass = new AndroidJavaClass("android.os.Build$VERSION");
-                int sdkInt = versionClass.GetStatic<int>("SDK_INT");
-                
-                if (sdkInt >= 31) // Android 12+
-                {
-                    bool hasConnectPermission = HasUserAuthorizedPermission("android.permission.BLUETOOTH_CONNECT");
-                    bool hasScanPermission = HasUserAuthorizedPermission("android.permission.BLUETOOTH_SCAN");
-                    bool hasAdvertisePermission = HasUserAuthorizedPermission("android.permission.BLUETOOTH_ADVERTISE");
-                    
-                    report.AppendLine("Permission BLUETOOTH_CONNECT: " + (hasConnectPermission ? "GRANTED" : "DENIED"));
-                    report.AppendLine("Permission BLUETOOTH_SCAN: " + (hasScanPermission ? "GRANTED" : "DENIED"));
-                    report.AppendLine("Permission BLUETOOTH_ADVERTISE: " + (hasAdvertisePermission ? "GRANTED" : "DENIED"));
-                }
-                else // Older Android
-                {
-                    report.AppendLine("Permissions: Not applicable for Android API " + sdkInt);
-                }
-            }
-            
-            // Bridge instance check
-            if (bridgeInstance != null)
-            {
-                report.AppendLine("Bridge Instance: PRESENT");
-                
-                bool bridgeValid = VerifyBridgeInterface(bridgeInstance, out errorMsg);
-                report.AppendLine("Bridge Interface Valid: " + (bridgeValid ? "YES" : "NO"));
-                if (!bridgeValid)
-                {
-                    report.AppendLine("Bridge Error: " + errorMsg);
-                }
-                
-                report.AppendLine("Initialized: " + IsInitialized);
-                report.AppendLine("Advertising: " + IsAdvertising);
-                report.AppendLine("Connected: " + IsConnected);
-                
-                if (IsConnected)
-                {
-                    report.AppendLine("Connected Device: " + ConnectedDeviceName + " (" + ConnectedDeviceAddress + ")");
-                }
-            }
-            else
-            {
-                report.AppendLine("Bridge Instance: NOT PRESENT");
-            }
-            
-            report.AppendLine("Last Error Code: " + LastErrorCode);
-            report.AppendLine("Last Error Message: " + LastErrorMessage);
-            
-            report.AppendLine("===== End of Diagnostics =====");
-            
-            return report.ToString();
+            return BleHidEnvironmentChecker.RunEnvironmentDiagnostics(this);
         }
         
+        /// <summary>
+        /// Start BLE advertising to make this device discoverable.
+        /// </summary>
+        /// <returns>True if advertising was started successfully, false otherwise.</returns>
         public bool StartAdvertising()
         {
             if (!CheckInitialized()) return false;
@@ -373,7 +289,7 @@ namespace Inventonater.BleHid
                 
                 // Verify Bluetooth is enabled
                 string errorMsg;
-                if (!IsBluetoothEnabled(out errorMsg))
+                if (!BleHidEnvironmentChecker.IsBluetoothEnabled(out errorMsg))
                 {
                     Debug.LogError("BleHidManager: " + errorMsg);
                     OnError?.Invoke(BleHidConstants.ERROR_BLUETOOTH_DISABLED, errorMsg);
@@ -381,7 +297,7 @@ namespace Inventonater.BleHid
                 }
                 
                 // Verify device supports advertising
-                if (!SupportsBleAdvertising(out errorMsg))
+                if (!BleHidEnvironmentChecker.SupportsBleAdvertising(out errorMsg))
                 {
                     Debug.LogError("BleHidManager: " + errorMsg);
                     OnError?.Invoke(BleHidConstants.ERROR_PERIPHERAL_NOT_SUPPORTED, errorMsg);
@@ -726,28 +642,12 @@ namespace Inventonater.BleHid
         #endregion
         
         #region Callback Methods (Called from Java)
-        
         /// <summary>
         /// Called when initialization is complete.
         /// </summary>
         public void HandleInitializeComplete(string message)
         {
-            string[] parts = message.Split(new char[] { ':' }, 2);
-            bool success = bool.Parse(parts[0]);
-            string msg = parts.Length > 1 ? parts[1] : "";
-            
-            IsInitialized = success;
-            
-            if (success)
-            {
-                Debug.Log("BLE HID initialized successfully: " + msg);
-            }
-            else
-            {
-                Debug.LogError("BLE HID initialization failed: " + msg);
-            }
-            
-            OnInitializeComplete?.Invoke(success, msg);
+            callbackHandler.HandleInitializeComplete(message);
         }
         
         /// <summary>
@@ -755,22 +655,7 @@ namespace Inventonater.BleHid
         /// </summary>
         public void HandleAdvertisingStateChanged(string message)
         {
-            string[] parts = message.Split(new char[] { ':' }, 2);
-            bool advertising = bool.Parse(parts[0]);
-            string msg = parts.Length > 1 ? parts[1] : "";
-            
-            IsAdvertising = advertising;
-            
-            if (advertising)
-            {
-                Debug.Log("BLE advertising started: " + msg);
-            }
-            else
-            {
-                Debug.Log("BLE advertising stopped: " + msg);
-            }
-            
-            OnAdvertisingStateChanged?.Invoke(advertising, msg);
+            callbackHandler.HandleAdvertisingStateChanged(message);
         }
         
         /// <summary>
@@ -778,31 +663,7 @@ namespace Inventonater.BleHid
         /// </summary>
         public void HandleConnectionStateChanged(string message)
         {
-            string[] parts = message.Split(':');
-            bool connected = bool.Parse(parts[0]);
-            string deviceName = null;
-            string deviceAddress = null;
-            
-            if (connected && parts.Length >= 3)
-            {
-                deviceName = parts[1];
-                deviceAddress = parts[2];
-            }
-            
-            IsConnected = connected;
-            ConnectedDeviceName = deviceName;
-            ConnectedDeviceAddress = deviceAddress;
-            
-            if (connected)
-            {
-                Debug.Log($"BLE device connected: {deviceName} ({deviceAddress})");
-            }
-            else
-            {
-                Debug.Log("BLE device disconnected");
-            }
-            
-            OnConnectionStateChanged?.Invoke(connected, deviceName, deviceAddress);
+            callbackHandler.HandleConnectionStateChanged(message);
         }
         
         /// <summary>
@@ -810,13 +671,7 @@ namespace Inventonater.BleHid
         /// </summary>
         public void HandlePairingStateChanged(string message)
         {
-            string[] parts = message.Split(':');
-            string status = parts[0];
-            string deviceAddress = parts.Length > 1 ? parts[1] : null;
-            
-            Debug.Log($"BLE pairing state changed: {status}" + (deviceAddress != null ? $" ({deviceAddress})" : ""));
-            
-            OnPairingStateChanged?.Invoke(status, deviceAddress);
+            callbackHandler.HandlePairingStateChanged(message);
         }
         
         /// <summary>
@@ -824,16 +679,7 @@ namespace Inventonater.BleHid
         /// </summary>
         public void HandleError(string message)
         {
-            string[] parts = message.Split(new char[] { ':' }, 2);
-            int errorCode = int.Parse(parts[0]);
-            string errorMessage = parts.Length > 1 ? parts[1] : "";
-            
-            LastErrorCode = errorCode;
-            LastErrorMessage = errorMessage;
-            
-            Debug.LogError($"BLE HID error {errorCode}: {errorMessage}");
-            
-            OnError?.Invoke(errorCode, errorMessage);
+            callbackHandler.HandleError(message);
         }
         
         /// <summary>
@@ -841,306 +687,11 @@ namespace Inventonater.BleHid
         /// </summary>
         public void HandleDebugLog(string message)
         {
-            Debug.Log("BLE HID [Debug]: " + message);
-            
-            OnDebugLog?.Invoke(message);
+            callbackHandler.HandleDebugLog(message);
         }
-        #endregion
-        
-        #region Environment Checks
-        
-        /// <summary>
-        /// Verifies that plugins with the necessary functionality are loaded.
-        /// Checks both the new and old namespaces.
-        /// </summary>
-        private bool VerifyPluginsLoaded(out string errorMsg)
-        {
-            errorMsg = "";
-            
-            if (Application.platform != RuntimePlatform.Android)
-            {
-                errorMsg = "BLE HID is only supported on Android";
-                return false;
-            }
-            
-            try
-            {
-                // First try the newer namespace
-                AndroidJavaClass test = new AndroidJavaClass("com.inventonater.blehid.unity.BleHidUnityBridge");
-                Debug.Log("Found plugin with new namespace (com.inventonater.blehid.unity)");
-                return true;
-            }
-            catch (Exception ex1)
-            {
-                Debug.LogWarning("New namespace (com.inventonater.blehid.unity) not found: " + ex1.Message);
-                
-                try
-                {
-                    // Then try the older namespace
-                    AndroidJavaClass test = new AndroidJavaClass("com.example.blehid.unity.BleHidUnityBridge");
-                    Debug.Log("Found plugin with legacy namespace (com.example.blehid.unity)");
-                    return true;
-                }
-                catch (Exception ex2)
-                {
-                    errorMsg = "BLE HID plugins not found in either new or legacy namespace";
-                    Debug.LogError(errorMsg + ": " + ex2.Message);
-                    return false;
-                }
-            }
-        }
-        
-        /// <summary>
-        /// Verify that the bridge interface is valid and responsive.
-        /// </summary>
-        private bool VerifyBridgeInterface(AndroidJavaObject bridge, out string errorMsg)
-        {
-            errorMsg = "";
-            
-            if (bridge == null)
-            {
-                errorMsg = "Bridge instance is null";
-                return false;
-            }
-            
-            try
-            {
-                // Call a method that shouldn't have side effects
-                string result = bridge.Call<string>("toString");
-                Debug.Log("Bridge interface verified: " + result);
-                return true;
-            }
-            catch (Exception e)
-            {
-                errorMsg = "Bridge interface verification failed: " + e.Message;
-                Debug.LogError(errorMsg);
-                return false;
-            }
-        }
-        
-        /// <summary>
-        /// Check if Bluetooth is enabled on the device.
-        /// </summary>
-        private bool IsBluetoothEnabled(out string errorMsg)
-        {
-            errorMsg = "";
-            
-            if (Application.platform != RuntimePlatform.Android)
-            {
-                errorMsg = "Bluetooth check only works on Android";
-                return false;
-            }
-            
-            try
-            {
-                AndroidJavaClass bluetoothAdapter = new AndroidJavaClass("android.bluetooth.BluetoothAdapter");
-                AndroidJavaObject defaultAdapter = bluetoothAdapter.CallStatic<AndroidJavaObject>("getDefaultAdapter");
-                
-                if (defaultAdapter == null)
-                {
-                    errorMsg = "Bluetooth not supported on this device";
-                    return false;
-                }
-                
-                bool isEnabled = defaultAdapter.Call<bool>("isEnabled");
-                if (!isEnabled)
-                {
-                    errorMsg = "Bluetooth is turned off";
-                }
-                return isEnabled;
-            }
-            catch (Exception e)
-            {
-                errorMsg = "Failed to check Bluetooth state: " + e.Message;
-                Debug.LogError(errorMsg);
-                return false;
-            }
-        }
-        
-        /// <summary>
-        /// Check if the device supports BLE peripheral/advertising functionality.
-        /// Not all Android devices can act as a BLE peripheral.
-        /// </summary>
-        private bool SupportsBleAdvertising(out string errorMsg)
-        {
-            errorMsg = "";
-            
-            if (Application.platform != RuntimePlatform.Android)
-            {
-                errorMsg = "BLE advertising check only works on Android";
-                return false;
-            }
-            
-            try
-            {
-                AndroidJavaClass bluetoothAdapter = new AndroidJavaClass("android.bluetooth.BluetoothAdapter");
-                AndroidJavaObject defaultAdapter = bluetoothAdapter.CallStatic<AndroidJavaObject>("getDefaultAdapter");
-                
-                if (defaultAdapter == null)
-                {
-                    errorMsg = "Bluetooth not supported on this device";
-                    return false;
-                }
-                
-                // On some devices/Android versions this method might not exist, so we handle that case
-                try 
-                {
-                    bool isSupported = defaultAdapter.Call<bool>("isMultipleAdvertisementSupported");
-                    if (!isSupported)
-                    {
-                        errorMsg = "This device does not support BLE advertising";
-                    }
-                    return isSupported;
-                }
-                catch (Exception innerEx)
-                {
-                    // If the method doesn't exist, we can't be sure - use a different approach
-                    Debug.LogWarning("Could not check BLE advertising support directly: " + innerEx.Message);
-                    
-                    // Check Android version as a fallback - M (23) and above generally support it
-                    AndroidJavaClass buildVersion = new AndroidJavaClass("android.os.Build$VERSION");
-                    int sdkInt = buildVersion.GetStatic<int>("SDK_INT");
-                    
-                    if (sdkInt < 23)
-                    {
-                        errorMsg = "BLE advertising likely not supported on Android " + sdkInt;
-                        return false;
-                    }
-                    
-                    // Can't be certain, but newer devices typically support it
-                    Debug.Log("Could not definitively check BLE advertising support, but likely supported on Android " + sdkInt);
-                    return true;
-                }
-            }
-            catch (Exception e)
-            {
-                errorMsg = "Failed to check BLE advertising support: " + e.Message;
-                Debug.LogError(errorMsg);
-                return false;
-            }
-        }
-        
         #endregion
         
         #region Helper Methods
-        private RuntimePlatform RuntimePlatformSupportAndroid()
-        {
-            return RuntimePlatform.Android;
-        }
-        
-        /// <summary>
-        /// Request Bluetooth permissions required for Android 12+ (API 31+)
-        /// </summary>
-        private IEnumerator RequestBluetoothPermissions()
-        {
-            Debug.Log("Requesting Android 12+ Bluetooth permissions");
-            
-            // Request BLUETOOTH_CONNECT permission
-            yield return RequestAndroidPermission("android.permission.BLUETOOTH_CONNECT");
-            
-            // Request BLUETOOTH_SCAN permission
-            yield return RequestAndroidPermission("android.permission.BLUETOOTH_SCAN");
-            
-            // Request BLUETOOTH_ADVERTISE permission
-            yield return RequestAndroidPermission("android.permission.BLUETOOTH_ADVERTISE");
-            
-            // Give a small delay to allow the permission requests to complete
-            yield return new WaitForSeconds(0.5f);
-        }
-        
-        /// <summary>
-        /// Request a specific Android permission using Unity's Permission API
-        /// </summary>
-        private IEnumerator RequestAndroidPermission(string permission)
-        {
-            if (Application.platform != RuntimePlatform.Android)
-                yield break;
-                
-            Debug.Log($"Requesting permission: {permission}");
-            
-            // Use Unity's permission system to check/request
-            if (!HasUserAuthorizedPermission(permission))
-            {
-                Debug.Log($"Requesting permission: {permission}");
-                RequestUserPermission(permission);
-                
-                // Wait briefly to allow the permission dialog to show and be handled
-                yield return new WaitForSeconds(0.5f);
-            }
-            else
-            {
-                Debug.Log($"Permission already granted: {permission}");
-            }
-        }
-        
-        /// <summary>
-        /// Check if the user has authorized the specified permission
-        /// </summary>
-        private bool HasUserAuthorizedPermission(string permission)
-        {
-            if (Application.platform != RuntimePlatform.Android)
-                return true;
-                
-            AndroidJavaClass unityPlayer = new AndroidJavaClass("com.unity3d.player.UnityPlayer");
-            AndroidJavaObject currentActivity = unityPlayer.GetStatic<AndroidJavaObject>("currentActivity");
-            AndroidJavaClass compatClass = new AndroidJavaClass("androidx.core.content.ContextCompat");
-            AndroidJavaClass permissionClass = new AndroidJavaClass("android.content.pm.PackageManager");
-            int granted = permissionClass.GetStatic<int>("PERMISSION_GRANTED");
-            
-            int result = compatClass.CallStatic<int>("checkSelfPermission", currentActivity, permission);
-            return result == granted;
-        }
-        
-        /// <summary>
-        /// Request the specified permission from the user
-        /// </summary>
-        private void RequestUserPermission(string permission)
-        {
-            if (Application.platform != RuntimePlatform.Android)
-                return;
-                
-            try
-            {
-                AndroidJavaClass unityPlayer = new AndroidJavaClass("com.unity3d.player.UnityPlayer");
-                AndroidJavaObject currentActivity = unityPlayer.GetStatic<AndroidJavaObject>("currentActivity");
-                AndroidJavaClass compatClass = new AndroidJavaClass("androidx.core.app.ActivityCompat");
-                
-                // Request permission - this will show the permission dialog
-                compatClass.CallStatic("requestPermissions", currentActivity, new string[] { permission }, 0);
-            }
-            catch (Exception e)
-            {
-                Debug.LogError($"Error requesting permission {permission}: {e.Message}");
-            }
-        }
-        
-        /// <summary>
-        /// Check if all required Bluetooth permissions are granted
-        /// </summary>
-        private bool CheckBluetoothPermissions()
-        {
-            if (Application.platform != RuntimePlatform.Android)
-                return true;
-                
-            AndroidJavaClass versionClass = new AndroidJavaClass("android.os.Build$VERSION");
-            int sdkInt = versionClass.GetStatic<int>("SDK_INT");
-                
-            // For Android 12+ (API 31+) we need these permissions
-            if (sdkInt >= 31)
-            {
-                bool hasConnectPermission = HasUserAuthorizedPermission("android.permission.BLUETOOTH_CONNECT");
-                bool hasScanPermission = HasUserAuthorizedPermission("android.permission.BLUETOOTH_SCAN");
-                bool hasAdvertisePermission = HasUserAuthorizedPermission("android.permission.BLUETOOTH_ADVERTISE");
-                
-                Debug.Log($"Permissions: BLUETOOTH_CONNECT={hasConnectPermission}, BLUETOOTH_SCAN={hasScanPermission}, BLUETOOTH_ADVERTISE={hasAdvertisePermission}");
-                
-                return hasConnectPermission && hasScanPermission && hasAdvertisePermission;
-            }
-            
-            // For older Android versions we check the legacy permissions
-            return true; // These should be granted at install time pre-Android 12
-        }
-        
         private bool CheckInitialized()
         {
             if (!IsInitialized || bridgeInstance == null)
