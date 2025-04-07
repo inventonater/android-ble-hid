@@ -13,10 +13,6 @@ import com.inventonater.blehid.core.HidConstants;
 /**
  * Main Unity plugin class for BLE HID functionality.
  * This class serves as the primary interface between Unity and the BLE HID core.
- * 
- * NOTE: This is a simplified stub file to demonstrate the package structure change.
- * A real implementation would need to properly adapt all functionality from the original
- * BleHidUnityPlugin class.
  */
 public class BleHidUnityPlugin {
     private static final String TAG = "BleHidUnityPlugin";
@@ -69,17 +65,68 @@ public class BleHidUnityPlugin {
         // Create BLE HID manager
         bleHidManager = new BleHidManager(activity);
         
-        // Initialize implementation would go here
-        // For now, just mark it as initialized
-        isInitialized = true;
-        
-        Log.d(TAG, "BLE HID plugin initialized");
-        
-        if (callback != null) {
-            callback.onInitializeComplete(true, "BLE HID initialized successfully");
+        // Check if BLE peripheral mode is supported
+        if (!bleHidManager.isBlePeripheralSupported()) {
+            String error = "BLE peripheral mode is not supported on this device";
+            Log.e(TAG, error);
+            if (callback != null) {
+                callback.onError(ERROR_PERIPHERAL_NOT_SUPPORTED, error);
+                callback.onInitializeComplete(false, error);
+            }
+            return false;
         }
         
-        return true;
+        // Set up pairing callback
+        bleHidManager.getBlePairingManager().setPairingCallback(new BlePairingManager.PairingCallback() {
+            @Override
+            public void onPairingRequested(BluetoothDevice device, int variant) {
+                final String deviceInfo = getDeviceInfo(device);
+                final String message = "Pairing requested by " + deviceInfo + ", variant: " + variant;
+                Log.d(TAG, message);
+                
+                if (callback != null) {
+                    callback.onDebugLog(message);
+                    callback.onPairingStateChanged("REQUESTED", device.getAddress());
+                }
+                
+                // Auto-accept pairing requests
+                bleHidManager.getBlePairingManager().setPairingConfirmation(device, true);
+            }
+            
+            @Override
+            public void onPairingComplete(BluetoothDevice device, boolean success) {
+                final String deviceInfo = getDeviceInfo(device);
+                final String result = success ? "SUCCESS" : "FAILED";
+                final String message = "Pairing " + result + " with " + deviceInfo;
+                Log.d(TAG, message);
+                
+                if (callback != null) {
+                    callback.onDebugLog(message);
+                    callback.onPairingStateChanged(result, device.getAddress());
+                    updateConnectionStatus();
+                }
+            }
+        });
+        
+        // Initialize the BLE HID functionality
+        boolean initialized = bleHidManager.initialize();
+        isInitialized = initialized;
+        
+        if (initialized) {
+            Log.d(TAG, "BLE HID initialized successfully");
+            if (callback != null) {
+                callback.onInitializeComplete(true, "BLE HID initialized successfully");
+            }
+        } else {
+            String error = "BLE HID initialization failed";
+            Log.e(TAG, error);
+            if (callback != null) {
+                callback.onError(ERROR_INITIALIZATION_FAILED, error);
+                callback.onInitializeComplete(false, error);
+            }
+        }
+        
+        return initialized;
     }
     
     /**
@@ -91,144 +138,354 @@ public class BleHidUnityPlugin {
     
     /**
      * Start BLE advertising.
+     * 
+     * @return true if advertising started successfully, false otherwise
      */
     public boolean startAdvertising() {
-        // Stub implementation
-        return true;
+        if (!checkInitialized()) return false;
+        
+        boolean result = bleHidManager.startAdvertising();
+        if (result) {
+            Log.d(TAG, "Advertising started");
+            if (callback != null) {
+                callback.onAdvertisingStateChanged(true, "Advertising started");
+                callback.onDebugLog("Advertising started");
+            }
+        } else {
+            String error = "Failed to start advertising";
+            Log.e(TAG, error);
+            if (callback != null) {
+                callback.onError(ERROR_ADVERTISING_FAILED, error);
+                callback.onAdvertisingStateChanged(false, error);
+                callback.onDebugLog(error);
+            }
+        }
+        
+        return result;
     }
     
     /**
      * Stop BLE advertising.
      */
     public void stopAdvertising() {
-        // Stub implementation
+        if (!checkInitialized()) return;
+        
+        bleHidManager.stopAdvertising();
+        Log.d(TAG, "Advertising stopped");
+        if (callback != null) {
+            callback.onAdvertisingStateChanged(false, "Advertising stopped");
+            callback.onDebugLog("Advertising stopped");
+        }
     }
     
     /**
      * Check if BLE advertising is active.
      */
     public boolean isAdvertising() {
-        // Stub implementation
-        return false;
+        if (!checkInitialized()) return false;
+        return bleHidManager.isAdvertising();
     }
     
     /**
      * Check if a device is connected.
      */
     public boolean isConnected() {
-        // Stub implementation
-        return false;
+        if (!checkInitialized()) return false;
+        return bleHidManager.isConnected();
     }
     
     /**
      * Get information about the connected device.
+     * 
+     * @return A string array with [deviceName, deviceAddress] or null if not connected
      */
     public String[] getConnectedDeviceInfo() {
-        // Stub implementation
-        return null;
+        if (!checkInitialized() || !bleHidManager.isConnected()) {
+            return null;
+        }
+        
+        BluetoothDevice device = bleHidManager.getConnectedDevice();
+        if (device == null) return null;
+        
+        String deviceName = device.getName();
+        if (deviceName == null || deviceName.isEmpty()) {
+            deviceName = "Unknown Device";
+        }
+        
+        return new String[] { deviceName, device.getAddress() };
     }
     
     /**
      * Send a keyboard key press and release.
+     * 
+     * @param keyCode The HID key code
+     * @return true if the key was sent successfully, false otherwise
      */
     public boolean sendKey(byte keyCode) {
-        // Stub implementation
-        return true;
+        if (!checkConnected()) return false;
+        
+        boolean result = bleHidManager.sendKey(keyCode, 0); // Add 0 for modifier parameter
+        if (result) {
+            // Release key after a short delay
+            new Thread(new Runnable() {
+                @Override
+                public void run() {
+                    try {
+                        Thread.sleep(100);
+                        bleHidManager.releaseAllKeys(); // Changed to the correct method name
+                    } catch (InterruptedException e) {
+                        // Ignore
+                    }
+                }
+            }).start();
+        }
+        
+        return result;
     }
     
     /**
      * Send a keyboard key with modifier keys.
+     * 
+     * @param keyCode The HID key code
+     * @param modifiers Modifier keys (bit flags)
+     * @return true if the key was sent successfully, false otherwise
      */
     public boolean sendKeyWithModifiers(byte keyCode, byte modifiers) {
-        // Stub implementation
-        return true;
+        if (!checkConnected()) return false;
+        
+        boolean result = bleHidManager.sendKey(keyCode, modifiers);
+        if (result) {
+            // Release key after a short delay
+            new Thread(new Runnable() {
+                @Override
+                public void run() {
+                    try {
+                        Thread.sleep(100);
+                        bleHidManager.releaseAllKeys(); // Changed to the correct method name
+                    } catch (InterruptedException e) {
+                        // Ignore
+                    }
+                }
+            }).start();
+        }
+        
+        return result;
     }
     
     /**
      * Type a string of text.
+     * 
+     * @param text The text to type
+     * @return true if the text was sent successfully, false otherwise
      */
     public boolean typeText(String text) {
-        // Stub implementation
-        return true;
+        if (!checkConnected()) return false;
+        
+        return bleHidManager.typeText(text);
     }
     
     /**
      * Send a mouse movement.
+     * 
+     * @param deltaX X-axis movement (-127 to 127)
+     * @param deltaY Y-axis movement (-127 to 127)
+     * @return true if the movement was sent successfully, false otherwise
      */
     public boolean moveMouse(int deltaX, int deltaY) {
-        // Stub implementation
-        return true;
+        if (!checkConnected()) return false;
+        
+        // Clamp values to valid range
+        deltaX = Math.max(-127, Math.min(127, deltaX));
+        deltaY = Math.max(-127, Math.min(127, deltaY));
+        
+        return bleHidManager.moveMouse(deltaX, deltaY);
     }
     
     /**
      * Send a mouse button click.
+     * 
+     * @param button The button to click (0=left, 1=right, 2=middle)
+     * @return true if the click was sent successfully, false otherwise
      */
     public boolean clickMouseButton(int button) {
-        // Stub implementation
-        return true;
+        if (!checkConnected()) return false;
+        
+        return bleHidManager.clickMouseButton(button);
     }
     
     /**
      * Send a media play/pause command.
+     * 
+     * @return true if the command was sent successfully, false otherwise
      */
     public boolean playPause() {
-        // Stub implementation
-        return true;
+        if (!checkConnected()) return false;
+        return bleHidManager.playPause();
     }
     
     /**
      * Send a media next track command.
+     * 
+     * @return true if the command was sent successfully, false otherwise
      */
     public boolean nextTrack() {
-        // Stub implementation
-        return true;
+        if (!checkConnected()) return false;
+        return bleHidManager.nextTrack();
     }
     
     /**
      * Send a media previous track command.
+     * 
+     * @return true if the command was sent successfully, false otherwise
      */
     public boolean previousTrack() {
-        // Stub implementation
-        return true;
+        if (!checkConnected()) return false;
+        return bleHidManager.previousTrack();
     }
     
     /**
      * Send a media volume up command.
+     * 
+     * @return true if the command was sent successfully, false otherwise
      */
     public boolean volumeUp() {
-        // Stub implementation
-        return true;
+        if (!checkConnected()) return false;
+        return bleHidManager.volumeUp();
     }
     
     /**
      * Send a media volume down command.
+     * 
+     * @return true if the command was sent successfully, false otherwise
      */
     public boolean volumeDown() {
-        // Stub implementation
-        return true;
+        if (!checkConnected()) return false;
+        return bleHidManager.volumeDown();
     }
     
     /**
      * Send a media mute command.
+     * 
+     * @return true if the command was sent successfully, false otherwise
      */
     public boolean mute() {
-        // Stub implementation
-        return true;
+        if (!checkConnected()) return false;
+        return bleHidManager.mute();
     }
     
     /**
      * Get diagnostic information about the BLE HID state.
+     * 
+     * @return A string with diagnostic information
      */
     public String getDiagnosticInfo() {
-        // Stub implementation
-        return "BLE HID Diagnostic Info";
+        if (!checkInitialized()) return "Not initialized";
+        
+        StringBuilder info = new StringBuilder();
+        info.append("Initialized: ").append(isInitialized()).append("\n");
+        info.append("Advertising: ").append(bleHidManager.isAdvertising()).append("\n");
+        info.append("Connected: ").append(bleHidManager.isConnected()).append("\n");
+        
+        if (bleHidManager.isConnected()) {
+            BluetoothDevice device = bleHidManager.getConnectedDevice();
+            if (device != null) {
+                info.append("Device: ").append(getDeviceInfo(device)).append("\n");
+                info.append("Bond State: ").append(bondStateToString(device.getBondState())).append("\n");
+            }
+        }
+        
+        return info.toString();
     }
     
     /**
      * Release all resources and close the plugin.
      */
     public void close() {
-        // Stub implementation
+        if (bleHidManager != null) {
+            bleHidManager.close();
+        }
+        
         isInitialized = false;
+        Log.d(TAG, "Plugin closed");
+    }
+    
+    /**
+     * Update the connection status and notify Unity.
+     */
+    private void updateConnectionStatus() {
+        if (callback == null || !isInitialized) return;
+        
+        if (bleHidManager.isConnected()) {
+            BluetoothDevice device = bleHidManager.getConnectedDevice();
+            if (device != null) {
+                String deviceName = device.getName();
+                if (deviceName == null || deviceName.isEmpty()) {
+                    deviceName = "Unknown Device";
+                }
+                callback.onConnectionStateChanged(true, deviceName, device.getAddress());
+            }
+        } else {
+            callback.onConnectionStateChanged(false, null, null);
+        }
+    }
+    
+    /**
+     * Get a formatted string with device information.
+     */
+    private String getDeviceInfo(BluetoothDevice device) {
+        if (device == null) return "null";
+        
+        String deviceName = device.getName();
+        if (deviceName == null || deviceName.isEmpty()) {
+            deviceName = "Unknown Device";
+        }
+        
+        return deviceName + " (" + device.getAddress() + ")";
+    }
+    
+    /**
+     * Convert a Bluetooth bond state to a readable string.
+     */
+    private String bondStateToString(int bondState) {
+        switch (bondState) {
+            case BluetoothDevice.BOND_NONE:
+                return "BOND_NONE";
+            case BluetoothDevice.BOND_BONDING:
+                return "BOND_BONDING";
+            case BluetoothDevice.BOND_BONDED:
+                return "BOND_BONDED";
+            default:
+                return "UNKNOWN(" + bondState + ")";
+        }
+    }
+    
+    /**
+     * Check if the plugin is initialized and log an error if not.
+     */
+    private boolean checkInitialized() {
+        if (!isInitialized || bleHidManager == null) {
+            Log.e(TAG, "Plugin not initialized");
+            if (callback != null) {
+                callback.onError(ERROR_NOT_INITIALIZED, "Plugin not initialized");
+            }
+            return false;
+        }
+        return true;
+    }
+    
+    /**
+     * Check if a device is connected and log an error if not.
+     */
+    private boolean checkConnected() {
+        if (!checkInitialized()) return false;
+        
+        if (!bleHidManager.isConnected()) {
+            Log.e(TAG, "No device connected");
+            if (callback != null) {
+                callback.onError(ERROR_NOT_CONNECTED, "No device connected");
+            }
+            return false;
+        }
+        return true;
     }
 }
