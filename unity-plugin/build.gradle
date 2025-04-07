@@ -20,7 +20,7 @@ def getAndIncrementBuildNumber() {
 def currentBuildNumber = getAndIncrementBuildNumber()
 
 android {
-    namespace 'com.example.blehid.plugin'
+    namespace 'com.inventonater.blehid'
     compileSdk rootProject.ext.compileSdkVersion
     
     defaultConfig {
@@ -68,8 +68,8 @@ android {
 
 // No longer copying core classes - using dependency approach instead
 
-// Custom task to copy the plugin AAR to Unity project
-task copyPluginToUnity(type: Copy, dependsOn: 'assembleRelease') {
+// Custom task to copy the plugin AAR to Unity test project
+task copyPluginToUnityTest(type: Copy, dependsOn: 'assembleRelease') {
     from "${buildDir}/outputs/aar/unity-plugin-release.aar"
     into "../unity-test/Assets/Plugins/Android"
     rename { String fileName ->
@@ -77,10 +77,28 @@ task copyPluginToUnity(type: Copy, dependsOn: 'assembleRelease') {
     }
 }
 
-// Custom task to copy the core AAR to Unity project
-task copyCoreToUnity(type: Copy, dependsOn: ':core:assembleRelease') {
+// Custom task to copy the core AAR to Unity test project
+task copyCoreToUnityTest(type: Copy, dependsOn: ':core:assembleRelease') {
     from "../core/build/outputs/aar/core-release.aar"
     into "../unity-test/Assets/Plugins/Android"
+    rename { String fileName ->
+        fileName.replace("core-release.aar", "BleHidCore.aar")
+    }
+}
+
+// Custom task to copy the plugin AAR to Unity package
+task copyPluginToPackage(type: Copy, dependsOn: 'assembleRelease') {
+    from "${buildDir}/outputs/aar/unity-plugin-release.aar"
+    into "../com.inventonater.blehid/Runtime/Plugins/Android"
+    rename { String fileName ->
+        fileName.replace("unity-plugin-release.aar", "BleHidPlugin.aar")
+    }
+}
+
+// Custom task to copy the core AAR to Unity package
+task copyCoreToPackage(type: Copy, dependsOn: ':core:assembleRelease') {
+    from "../core/build/outputs/aar/core-release.aar"
+    into "../com.inventonater.blehid/Runtime/Plugins/Android"
     rename { String fileName ->
         fileName.replace("core-release.aar", "BleHidCore.aar")
     }
@@ -91,11 +109,13 @@ task stampAarFiles {
     description = 'Adds a timestamp to AAR files to ensure Git recognizes changes'
     
     // Make this task depend on the copy tasks
-    dependsOn copyPluginToUnity, copyCoreToUnity
+    dependsOn copyPluginToUnityTest, copyCoreToUnityTest, copyPluginToPackage, copyCoreToPackage
     
     // Define the paths to the AAR files
-    def pluginAarFile = file("../unity-test/Assets/Plugins/Android/BleHidPlugin.aar")
-    def coreAarFile = file("../unity-test/Assets/Plugins/Android/BleHidCore.aar")
+    def unityTestPluginAarFile = file("../unity-test/Assets/Plugins/Android/BleHidPlugin.aar")
+    def unityTestCoreAarFile = file("../unity-test/Assets/Plugins/Android/BleHidCore.aar")
+    def packagePluginAarFile = file("../com.inventonater.blehid/Runtime/Plugins/Android/BleHidPlugin.aar")
+    def packageCoreAarFile = file("../com.inventonater.blehid/Runtime/Plugins/Android/BleHidCore.aar")
     
     doLast {
         def stampedFiles = 0
@@ -124,9 +144,11 @@ task stampAarFiles {
             }
         }
         
-        // Stamp both files
-        stampAarFile(pluginAarFile)
-        stampAarFile(coreAarFile)
+        // Stamp all files
+        stampAarFile(unityTestPluginAarFile)
+        stampAarFile(unityTestCoreAarFile)
+        stampAarFile(packagePluginAarFile)
+        stampAarFile(packageCoreAarFile)
         
         if (stampedFiles == 0) {
             logger.error("No AAR files were found to stamp")
@@ -137,9 +159,9 @@ task stampAarFiles {
     }
 }
 
-// Task to copy both AARs to Unity and stamp them
+// Task to copy both AARs to Unity projects and stamp them
 task copyToUnity(dependsOn: [stampAarFiles]) {
-    description = 'Copies both the plugin and core AARs to the Unity project and stamps them for Git tracking'
+    description = 'Copies both the plugin and core AARs to the Unity projects and stamps them for Git tracking'
 }
 
 dependencies {
