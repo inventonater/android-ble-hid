@@ -68,9 +68,10 @@ android {
 
 // No longer copying core classes - using dependency approach instead
 
-// We'll no longer copy to unity-test by default, but keep these tasks for backward compatibility
-// if someone needs to test with the old project structure
+// Keep these tasks for backward compatibility, but they're not part of the default build process
+// They can be run manually with: ./gradlew copyPluginToUnityTest copyCoreToUnityTest
 task copyPluginToUnityTest(type: Copy, dependsOn: 'assembleRelease') {
+    description = 'Copies the plugin AAR to unity-test/Assets (legacy approach, use only for compatibility)'
     from "${buildDir}/outputs/aar/unity-plugin-release.aar"
     into "../unity-test/Assets/Plugins/Android"
     rename { String fileName ->
@@ -79,6 +80,7 @@ task copyPluginToUnityTest(type: Copy, dependsOn: 'assembleRelease') {
 }
 
 task copyCoreToUnityTest(type: Copy, dependsOn: ':core:assembleRelease') {
+    description = 'Copies the core AAR to unity-test/Assets (legacy approach, use only for compatibility)'
     from "../core/build/outputs/aar/core-release.aar"
     into "../unity-test/Assets/Plugins/Android"
     rename { String fileName ->
@@ -108,12 +110,10 @@ task copyCoreToPackage(type: Copy, dependsOn: ':core:assembleRelease') {
 task stampAarFiles {
     description = 'Adds a timestamp to AAR files to ensure Git recognizes changes'
     
-    // Make this task depend on the copy tasks
-    dependsOn copyPluginToUnityTest, copyCoreToUnityTest, copyPluginToPackage, copyCoreToPackage
+    // Make this task depend only on the package copy tasks
+    dependsOn copyPluginToPackage, copyCoreToPackage
     
     // Define the paths to the AAR files
-    def unityTestPluginAarFile = file("../unity-test/Assets/Plugins/Android/BleHidPlugin.aar")
-    def unityTestCoreAarFile = file("../unity-test/Assets/Plugins/Android/BleHidCore.aar")
     def packagePluginAarFile = file("../com.inventonater.blehid/Runtime/Plugins/Android/BleHidPlugin.aar")
     def packageCoreAarFile = file("../com.inventonater.blehid/Runtime/Plugins/Android/BleHidCore.aar")
     
@@ -144,9 +144,7 @@ task stampAarFiles {
             }
         }
         
-        // Stamp all files
-        stampAarFile(unityTestPluginAarFile)
-        stampAarFile(unityTestCoreAarFile)
+        // Stamp package files only
         stampAarFile(packagePluginAarFile)
         stampAarFile(packageCoreAarFile)
         
@@ -162,6 +160,11 @@ task stampAarFiles {
 // Task to copy both AARs to Unity package and stamp them
 task copyToUnity(dependsOn: [stampAarFiles]) {
     description = 'Copies both the plugin and core AARs to the Unity package and stamps them for Git tracking'
+}
+
+// More descriptive alias for new projects
+task copyToPackage(dependsOn: [copyToUnity]) {
+    description = 'Alias for copyToUnity - copies AARs to the package structure'
 }
 
 dependencies {

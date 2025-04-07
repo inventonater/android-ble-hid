@@ -50,7 +50,19 @@ To build the Android libraries and copy them to the Unity package:
 This will:
 1. Build the core library
 2. Build the Unity plugin
-3. Copy both AAR files to the Unity package's Plugins/Android directory
+3. Copy both AAR files to the Unity package's Runtime/Plugins/Android directory
+
+Note: The AAR files now live exclusively in the package structure, not in the Unity project's Assets folder. This is by design - when a Unity project uses the package, it automatically gets access to the plugin files without needing to copy them into the project's Assets.
+
+#### Legacy Build Support
+
+If you still need to copy the AAR files to a Unity project's Assets folder (legacy approach), you can use:
+
+```bash
+./gradlew copyPluginToUnityTest copyCoreToUnityTest
+```
+
+However, this is not recommended for new projects, which should use the package system instead.
 
 ### Building the Unity Package
 

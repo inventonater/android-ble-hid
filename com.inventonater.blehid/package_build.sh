@@ -37,7 +37,11 @@ TMP_DIR=$(mktemp -d)
 echo "Using temporary directory: $TMP_DIR"
 
 # Copy the package contents to the temp directory
-cp -r package.json README.md MIGRATION_GUIDE.md Runtime Editor "$TMP_DIR"
+cp -r package.json README.md Runtime Editor "$TMP_DIR"
+# Copy migration guide if it exists
+if [ -f "MIGRATION_GUIDE.md" ]; then
+    cp MIGRATION_GUIDE.md "$TMP_DIR"
+fi
 
 # Create the tgz package
 echo "Creating package..."
