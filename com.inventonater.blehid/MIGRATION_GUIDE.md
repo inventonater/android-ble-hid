@@ -95,17 +95,45 @@ The key advantage is that you no longer need to manage these files directly in y
 
 ### 5. Android Manifest Settings
 
-If you had custom AndroidManifest.xml settings for Bluetooth permissions, you'll need to ensure those are still properly set in your project. The package includes the necessary permissions, but you may need to merge them with your project's manifest.
+**New in version 1.0.0**: The package now includes its own `AndroidManifest.xml` with all required Bluetooth permissions. You no longer need to manually add these permissions to your project's manifest.
 
-In your project's `Assets/Plugins/Android/AndroidManifest.xml` file, ensure you have:
+The package's manifest includes:
+- `BLUETOOTH`, `BLUETOOTH_ADMIN` (for Android 11 and below)
+- `ACCESS_FINE_LOCATION`, `ACCESS_COARSE_LOCATION` (for Android 11 and below)
+- `BLUETOOTH_SCAN`, `BLUETOOTH_ADVERTISE`, `BLUETOOTH_CONNECT` (for Android 12+)
+- Required Bluetooth feature declarations
 
-```xml
-<uses-permission android:name="android.permission.BLUETOOTH" />
-<uses-permission android:name="android.permission.BLUETOOTH_ADMIN" />
-<uses-permission android:name="android.permission.BLUETOOTH_ADVERTISE" />
-<uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
-<uses-permission android:name="android.permission.BLUETOOTH_SCAN" />
-```
+These permissions will be automatically merged into your final application manifest during the build process. If your project has its own `AndroidManifest.xml`, you can safely remove any Bluetooth-related permissions from it to avoid duplication.
+
+If you previously had a custom `gradle.properties` file in your `Assets/Plugins/Android` directory with Bluetooth-related settings, you can safely remove it as well. The package now handles all necessary Bluetooth configurations.
+
+#### Verifying The Manifest Merging
+
+To verify that the Bluetooth permissions are correctly being included in your final build:
+
+1. After building your Android APK, you can examine the final `AndroidManifest.xml` using Android's APK Analyzer:
+   - In Android Studio, select "Build > Analyze APK..." and select your built APK
+   - Navigate to "AndroidManifest.xml" in the APK Analyzer
+   - Verify that all Bluetooth permissions are present
+
+2. Alternatively, you can use the `aapt` tool from the Android SDK:
+   ```bash
+   aapt dump xmltree YOUR_APP.apk AndroidManifest.xml | grep -i bluetooth
+   ```
+
+3. If the permissions aren't appearing in your final build, see the troubleshooting section in the README.md for solutions.
+
+#### Manual Permission Setup (If Needed)
+
+In rare cases where manifest merging doesn't work correctly with your specific Unity version or configuration, you can manually copy the manifest to your project:
+
+1. Copy the `AndroidManifest.xml` file from:
+   `Packages/com.inventonater.blehid/Runtime/Plugins/Android/AndroidManifest.xml`
+   
+2. Paste it into your project's:
+   `Assets/Plugins/Android/AndroidManifest.xml`
+   
+3. If you already have an AndroidManifest.xml file, merge the permission entries from our file into yours.
 
 ### 6. Testing
 

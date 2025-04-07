@@ -31,7 +31,13 @@ A Unity plugin that provides Bluetooth Low Energy Human Interface Device (HID) f
 
 ## Getting Started
 
-### 1. Add BleHidManager to Your Scene
+### 1. Android Bluetooth Permissions
+
+This package now includes a pre-configured `AndroidManifest.xml` with all necessary Bluetooth permissions for both older Android versions (using BLUETOOTH and LOCATION permissions) and newer Android 12+ devices (using the BLUETOOTH_SCAN, BLUETOOTH_ADVERTISE, and BLUETOOTH_CONNECT permissions).
+
+No manual setup of permissions is required - they will be automatically merged into your project's final AndroidManifest.xml during the build process.
+
+### 2. Add BleHidManager to Your Scene
 
 ```csharp
 // Add a BleHidManager component to a GameObject in your scene
@@ -41,7 +47,7 @@ BleHidManager bleHid = bleHidObject.AddComponent<BleHidManager>();
 
 Or, drag the `BleHidManager` prefab from the package into your scene.
 
-### 2. Initialize the Plugin
+### 3. Initialize the Plugin
 
 ```csharp
 // Initialize the BLE HID functionality
@@ -60,7 +66,7 @@ bleHid.OnInitializeComplete += (success, message) => {
 };
 ```
 
-### 3. Use the API to Send HID Commands
+### 4. Use the API to Send HID Commands
 
 ```csharp
 // Type text
@@ -133,6 +139,80 @@ Contains constants for HID key codes, modifiers, and error codes.
 - Unity 2021.3 or higher
 - Android 8.0 (API level 26) or higher
 - Bluetooth support on the device
+
+## Android Manifest Configuration
+
+The plugin includes a pre-configured `AndroidManifest.xml` file with all necessary Bluetooth permissions. You don't need to manually add these permissions to your project's manifest. If your project already has an AndroidManifest.xml, the permissions will be automatically merged during build.
+
+The included permissions are:
+- BLUETOOTH, BLUETOOTH_ADMIN (for Android 11 and below)
+- ACCESS_FINE_LOCATION, ACCESS_COARSE_LOCATION (for Android 11 and below)
+- BLUETOOTH_SCAN, BLUETOOTH_ADVERTISE, BLUETOOTH_CONNECT (for Android 12+)
+
+### How Unity's Manifest Merging Works
+
+When building an Android application, Unity performs a manifest merge process that combines:
+
+1. Unity's base AndroidManifest.xml template
+2. Any manifests found in Assets/Plugins/Android/ directory
+3. Manifests from package plugins (like ours in com.inventonater.blehid/Runtime/Plugins/Android/)
+4. Gradle template manifests (if using custom Gradle templates)
+
+> **Important**: If you're having issues with the permissions not being included in your final build, try these troubleshooting steps:
+> 
+> 1. Make sure the package is properly imported (try removing and re-adding it in the Packages/manifest.json)
+> 2. Restart Unity to ensure all plugin files are properly detected
+> 3. Check the Unity console for any import errors related to the package
+> 4. If needed, manually copy the AndroidManifest.xml from com.inventonater.blehid/Runtime/Plugins/Android/ to your project's Assets/Plugins/Android/ directory
+
+#### Merging Order and Priority
+
+The merging process follows these rules:
+
+- If an element with the same identifier appears in multiple manifests, the higher priority manifest's version is used
+- Unique elements from all manifests are preserved
+- For permissions, each unique permission is included only once, regardless of how many manifests request it
+- Conflicting attributes on the same elements typically use the higher priority version
+
+#### Compatibility with Other Packages
+
+This approach is compatible with other packages that have their own AndroidManifest.xml files:
+
+- If multiple packages request the same permission, it will appear only once in the final manifest
+- If packages have unique permissions, all will be included
+- If packages have conflicting configurations for the same component, Unity's build system usually follows a documented priority order
+
+For most permission-related requirements, you won't encounter conflicts since Android permissions are simply merged rather than overwritten.
+
+##### Example Scenario
+
+If you have:
+- Our package requesting Bluetooth permissions
+- Another AR package requesting camera permissions
+- Your main app requesting internet permissions
+
+The final manifest will include all three sets of permissions without conflicts.
+
+### Manually Adding Permissions (If Needed)
+
+In rare cases where the automatic manifest merging doesn't work with your specific Unity version or build configuration, you can manually add the required permissions to your project's AndroidManifest.xml:
+
+```xml
+<!-- Bluetooth permissions for Android 12+ -->
+<uses-permission android:name="android.permission.BLUETOOTH_SCAN" />
+<uses-permission android:name="android.permission.BLUETOOTH_ADVERTISE" />
+<uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
+
+<!-- Bluetooth permissions for Android 11 and below -->
+<uses-permission android:name="android.permission.BLUETOOTH" android:maxSdkVersion="30" />
+<uses-permission android:name="android.permission.BLUETOOTH_ADMIN" android:maxSdkVersion="30" />
+<uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" android:maxSdkVersion="30" />
+<uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" android:maxSdkVersion="30" />
+
+<!-- Bluetooth feature requirements -->
+<uses-feature android:name="android.hardware.bluetooth" android:required="true" />
+<uses-feature android:name="android.hardware.bluetooth_le" android:required="true" />
+```
 
 ## Building from Source
 

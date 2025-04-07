@@ -13,6 +13,7 @@ namespace Inventonater.BleHid.Editor
         private const string AndroidPluginsFolderPath = "Runtime/Plugins/Android";
         private const string PluginFilename = "BleHidPlugin.aar";
         private const string CoreFilename = "BleHidCore.aar";
+        private const string ManifestFilename = "AndroidManifest.xml";
         
         [MenuItem("Inventonater/BLE HID/Setup Plugin")]
         public static void SetupPlugin()
@@ -43,6 +44,14 @@ namespace Inventonater.BleHid.Editor
                     File.Copy(unityTestPluginPath, Path.Combine(androidPluginsPath, PluginFilename), true);
                     File.Copy(unityTestCorePath, Path.Combine(androidPluginsPath, CoreFilename), true);
                     Debug.Log("Plugin files copied successfully!");
+                    
+                    // Check if the project's Plugins/Android folder has an AndroidManifest.xml
+                    string unityProjectManifestPath = Path.Combine(Application.dataPath, "Plugins/Android", ManifestFilename);
+                    if (File.Exists(unityProjectManifestPath))
+                    {
+                        Debug.Log("Warning: Found existing AndroidManifest.xml in your Unity project. " +
+                                  "The BleHid package now includes its own AndroidManifest.xml with all required permissions.");
+                    }
                 }
                 catch (Exception e)
                 {
@@ -65,6 +74,9 @@ namespace Inventonater.BleHid.Editor
         public static void BuildAndroidPlugin()
         {
             Debug.Log("Building Android plugin...");
+            
+            // Ensure users know about the included manifest
+            Debug.Log("Note: The BleHid package includes AndroidManifest.xml with all required Bluetooth permissions.");
             
             // Execute gradle build
             string projectRoot = Path.GetFullPath(Path.Combine(Application.dataPath, "../.."));
