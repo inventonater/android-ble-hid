@@ -6,19 +6,38 @@ using UnityEngine;
 namespace Inventonater.BleHid
 {
     /// <summary>
-    /// Simple immediate mode UI for controlling BLE HID functionality.
-    /// This script combines all features (media, mouse, keyboard) into a single script
-    /// using Unity's OnGUI system for reliable touch input handling.
+    /// Improved immediate mode UI for controlling BLE HID functionality.
+    /// This script reorganizes the controls into a more intuitive hierarchy,
+    /// separating device selection, control types, and settings.
     /// </summary>
     public class BleHidSimpleUI : MonoBehaviour
     {
         #region Private Fields
         private BleHidManager bleHidManager;
-        private int currentTab = 0;
-        private string[] tabNames = new string[] { "Media", "Mouse", "Keyboard" };
+        
+        // Main tab system
+        private int currentMainTab = 0;
+        private string[] mainTabNames = new string[] { "Remote Device", "Local Device", "Settings" };
+        
+        // Subtab systems
+        private int currentRemoteSubtab = 0;
+        private string[] remoteSubtabNames = new string[] { "Media", "Mouse", "Keyboard" };
+        
+        private int currentLocalSubtab = 0;
+        private string[] localSubtabNames = new string[] { "Media", "Direction Keys" };
+        
+        private int currentSettingsSubtab = 0;
+        private string[] settingsSubtabNames = new string[] { "Connection", "Permissions", "About" };
+        
+        // Text input for keyboard
         private string textToSend = "";
+        
+        // Logging
         private Vector2 scrollPosition;
         private List<string> logMessages = new List<string>();
+        private bool showLogs = false;
+        
+        // State tracking
         private bool isInitialized = false;
         private Rect touchpadRect;
         private Vector2 lastTouchPosition;
@@ -30,6 +49,16 @@ namespace Inventonater.BleHid
         // Permission handling
         private bool hasPermissionError = false;
         private string permissionErrorMessage = "";
+        
+        // UI styling
+        private GUIStyle remoteTabStyle;
+        private GUIStyle localTabStyle;
+        private GUIStyle settingsTabStyle;
+        private GUIStyle subtabStyle;
+        private GUIStyle headerStyle;
+        private GUIStyle buttonStyle;
+        private GUIStyle statusEnabledStyle;
+        private GUIStyle statusDisabledStyle;
         #endregion
 
         #region Unity Lifecycle
@@ -67,10 +96,11 @@ namespace Inventonater.BleHid
         private void Update()
         {
             // Only process touchpad input when:
-            // 1. We're on the mouse tab
+            // 1. We're on the Remote Device > Mouse tab
             // 2. BLE is initialized or in editor mode
             // 3. Connected to a device or in editor mode
-            if (currentTab != 1 || bleHidManager == null || (!bleHidManager.IsConnected && !isEditorMode))
+            if (currentMainTab != 0 || currentRemoteSubtab != 1 || 
+                bleHidManager == null || (!bleHidManager.IsConnected && !isEditorMode))
             {
                 return;
             }
@@ -238,8 +268,62 @@ namespace Inventonater.BleHid
             }
         }
 
+        private void InitializeStyles()
+        {
+            // Create styles if not already created
+            if (remoteTabStyle == null)
+            {
+                // Remote tab style - blue theme
+                remoteTabStyle = new GUIStyle(GUI.skin.button);
+                remoteTabStyle.normal.background = MakeColorTexture(new Color(0.2f, 0.4f, 0.8f, 0.8f));
+                remoteTabStyle.active.background = MakeColorTexture(new Color(0.2f, 0.4f, 0.8f, 1.0f));
+                remoteTabStyle.normal.textColor = Color.white;
+                remoteTabStyle.fontSize = 24;
+                
+                // Local tab style - green theme
+                localTabStyle = new GUIStyle(GUI.skin.button);
+                localTabStyle.normal.background = MakeColorTexture(new Color(0.2f, 0.7f, 0.3f, 0.8f));
+                localTabStyle.active.background = MakeColorTexture(new Color(0.2f, 0.7f, 0.3f, 1.0f));
+                localTabStyle.normal.textColor = Color.white;
+                localTabStyle.fontSize = 24;
+                
+                // Settings tab style - orange theme
+                settingsTabStyle = new GUIStyle(GUI.skin.button);
+                settingsTabStyle.normal.background = MakeColorTexture(new Color(0.8f, 0.5f, 0.2f, 0.8f));
+                settingsTabStyle.active.background = MakeColorTexture(new Color(0.8f, 0.5f, 0.2f, 1.0f));
+                settingsTabStyle.normal.textColor = Color.white;
+                settingsTabStyle.fontSize = 24;
+                
+                // Subtab style
+                subtabStyle = new GUIStyle(GUI.skin.button);
+                subtabStyle.fontSize = 20;
+                
+                // Header style
+                headerStyle = new GUIStyle(GUI.skin.label);
+                headerStyle.fontSize = 22;
+                headerStyle.fontStyle = FontStyle.Bold;
+                headerStyle.alignment = TextAnchor.MiddleCenter;
+                
+                // Button style
+                buttonStyle = new GUIStyle(GUI.skin.button);
+                buttonStyle.fontSize = 22;
+                
+                // Status styles
+                statusEnabledStyle = new GUIStyle(GUI.skin.label);
+                statusEnabledStyle.normal.textColor = Color.green;
+                statusEnabledStyle.fontSize = 20;
+                
+                statusDisabledStyle = new GUIStyle(GUI.skin.label);
+                statusDisabledStyle.normal.textColor = Color.red;
+                statusDisabledStyle.fontSize = 20;
+            }
+        }
+        
         private void OnGUI()
         {
+            // Initialize styles if needed
+            InitializeStyles();
+            
             // Set up GUI style for better touch targets
             GUI.skin.button.fontSize = 24;
             GUI.skin.label.fontSize = 20;
@@ -285,48 +369,23 @@ namespace Inventonater.BleHid
                 GUILayout.Space(20);
             }
 
-            // Status area
+            // Status area (minimized version)
             GUILayout.BeginVertical(GUI.skin.box);
-            GUILayout.Label("Status: " + (isInitialized ? "Ready" : "Initializing..."));
-
-            if (bleHidManager != null && bleHidManager.IsConnected)
-            {
-                GUILayout.Label("Connected to: " + bleHidManager.ConnectedDeviceName);
-                GUILayout.Label("Device: " + bleHidManager.ConnectedDeviceName + " (" + bleHidManager.ConnectedDeviceAddress + ")");
+            
+            // Condensed status line
+            string statusText = $"Status: {(isInitialized ? "Ready" : "Initializing...")}";
+            if (bleHidManager != null && bleHidManager.IsConnected) {
+                statusText += $" | Connected to: {bleHidManager.ConnectedDeviceName}";
+            } else {
+                statusText += " | Not connected";
             }
-            else
-            {
-                GUILayout.Label("Not connected");
-
-                if (isEditorMode)
-                {
-                    GUILayout.Label("EDITOR MODE: UI visible but BLE functions disabled");
-                }
+            
+            if (isEditorMode) {
+                statusText += " | EDITOR MODE";
             }
-
-            if (bleHidManager != null && (isInitialized || isEditorMode))
-            {
-                if (GUILayout.Button(bleHidManager.IsAdvertising ? "Stop Advertising" : "Start Advertising", GUILayout.Height(60)))
-                {
-                    if (isEditorMode)
-                    {
-                        AddLogEntry("Advertising toggle (not functional in editor)");
-                    }
-                    else
-                    {
-                        if (bleHidManager.IsAdvertising)
-                            bleHidManager.StopAdvertising();
-                        else
-                            bleHidManager.StartAdvertising();
-                    }
-                }
-            }
-            else
-            {
-                GUI.enabled = false;
-                GUILayout.Button("Start Advertising", GUILayout.Height(60));
-                GUI.enabled = true;
-            }
+            
+            GUILayout.Label(statusText);
+            
             GUILayout.EndVertical();
 
             // If we have a permission error, don't show the rest of the UI
@@ -336,32 +395,169 @@ namespace Inventonater.BleHid
                 return;
             }
 
-            // Tab selection
-            currentTab = GUILayout.Toolbar(currentTab, tabNames, GUILayout.Height(60));
+            // Main Tab Selection
+            GUILayout.BeginHorizontal();
+            
+            // Remote Tab Button
+            if (GUILayout.Toggle(currentMainTab == 0, "Remote Device", remoteTabStyle, GUILayout.Height(60), GUILayout.ExpandWidth(true)))
+            {
+                if (currentMainTab != 0)
+                {
+                    currentMainTab = 0;
+                    if (!isEditorMode)
+                    {
+                        bleHidManager.SetInputMode(BleHidConstants.InputMode.REMOTE);
+                    }
+                    AddLogEntry("Switched to Remote Device tab");
+                }
+            }
+            
+            // Local Tab Button
+            if (GUILayout.Toggle(currentMainTab == 1, "Local Device", localTabStyle, GUILayout.Height(60), GUILayout.ExpandWidth(true)))
+            {
+                if (currentMainTab != 1)
+                {
+                    currentMainTab = 1;
+                    if (!isEditorMode)
+                    {
+                        bleHidManager.SetInputMode(BleHidConstants.InputMode.LOCAL);
+                    }
+                    AddLogEntry("Switched to Local Device tab");
+                }
+            }
+            
+            // Settings Tab Button
+            if (GUILayout.Toggle(currentMainTab == 2, "Settings", settingsTabStyle, GUILayout.Height(60), GUILayout.ExpandWidth(true)))
+            {
+                if (currentMainTab != 2)
+                {
+                    currentMainTab = 2;
+                    AddLogEntry("Switched to Settings tab");
+                }
+            }
+            
+            GUILayout.EndHorizontal();
+            
+            // Subtab bar based on main tab selection
+            GUILayout.BeginHorizontal();
+            
+            switch (currentMainTab)
+            {
+                case 0: // Remote Device tab
+                    currentRemoteSubtab = GUILayout.Toolbar(currentRemoteSubtab, remoteSubtabNames, subtabStyle, GUILayout.Height(40));
+                    break;
+                case 1: // Local Device tab
+                    currentLocalSubtab = GUILayout.Toolbar(currentLocalSubtab, localSubtabNames, subtabStyle, GUILayout.Height(40));
+                    break;
+                case 2: // Settings tab
+                    currentSettingsSubtab = GUILayout.Toolbar(currentSettingsSubtab, settingsSubtabNames, subtabStyle, GUILayout.Height(40));
+                    break;
+            }
+            
+            GUILayout.EndHorizontal();
 
-            // Tab content
-            GUILayout.BeginVertical(GUI.skin.box, GUILayout.Height(Screen.height * 0.45f));
+            // Content area
+            GUILayout.BeginVertical(GUI.skin.box, GUILayout.Height(Screen.height * 0.55f));
 
-            // Check if BLE HID is initialized and a device is connected (or in editor mode)
+            // Check if BLE HID is initialized
             if (bleHidManager != null && (isInitialized || isEditorMode))
             {
-                // In editor mode, enable UI without requiring connection
-                GUI.enabled = bleHidManager.IsConnected || isEditorMode;
-
-                switch (currentTab)
+                switch (currentMainTab)
                 {
-                    case 0: // Media tab
-                        DrawMediaControls();
+                    case 0: // Remote Device tab
+                        // Remote tabs require device connection
+                        GUI.enabled = bleHidManager.IsConnected || isEditorMode;
+                        
+                        switch (currentRemoteSubtab)
+                        {
+                            case 0: // Media tab
+                                GUILayout.Label("Remote Media Controls", headerStyle);
+                                DrawMediaControls(false); // false = remote mode
+                                break;
+                            case 1: // Mouse tab
+                                GUILayout.Label("Remote Mouse Controls", headerStyle);
+                                DrawMouseControls();
+                                break;
+                            case 2: // Keyboard tab
+                                GUILayout.Label("Remote Keyboard Controls", headerStyle);
+                                DrawKeyboardControls();
+                                break;
+                        }
+                        
+                        GUI.enabled = true;
                         break;
-                    case 1: // Mouse tab
-                        DrawMouseControls();
+                        
+                    case 1: // Local Device tab
+                        // Check if permissions are enabled
+                        bool accessibilityEnabled = isEditorMode || bleHidManager.IsAccessibilityServiceEnabled();
+                        bool mediaListenerEnabled = isEditorMode || bleHidManager.IsMediaNotificationListenerEnabled();
+                        
+                        if (!accessibilityEnabled && !mediaListenerEnabled)
+                        {
+                            // No permissions - show warning
+                            DrawPermissionWarning();
+                        }
+                        else
+                        {
+                            switch (currentLocalSubtab)
+                            {
+                                case 0: // Media tab
+                                    GUILayout.Label("Local Media Controls", headerStyle);
+                                    if (mediaListenerEnabled)
+                                    {
+                                        DrawMediaControls(true); // true = local mode
+                                    }
+                                    else
+                                    {
+                                        GUILayout.Space(20);
+                                        GUILayout.Label("Media Notification Listener permission required", statusDisabledStyle);
+                                        if (GUILayout.Button("Enable Permission", GUILayout.Height(60)))
+                                        {
+                                            if (!isEditorMode)
+                                            {
+                                                bleHidManager.OpenNotificationListenerSettings();
+                                            }
+                                        }
+                                    }
+                                    break;
+                                case 1: // Direction Keys tab
+                                    GUILayout.Label("Local Direction Controls", headerStyle);
+                                    if (accessibilityEnabled)
+                                    {
+                                        DrawDirectionControls();
+                                    }
+                                    else
+                                    {
+                                        GUILayout.Space(20);
+                                        GUILayout.Label("Accessibility Service permission required", statusDisabledStyle);
+                                        if (GUILayout.Button("Enable Permission", GUILayout.Height(60)))
+                                        {
+                                            if (!isEditorMode)
+                                            {
+                                                bleHidManager.OpenAccessibilitySettings();
+                                            }
+                                        }
+                                    }
+                                    break;
+                            }
+                        }
                         break;
-                    case 2: // Keyboard tab
-                        DrawKeyboardControls();
+                        
+                    case 2: // Settings tab
+                        switch (currentSettingsSubtab)
+                        {
+                            case 0: // Connection tab
+                                DrawConnectionSettings();
+                                break;
+                            case 1: // Permissions tab
+                                DrawPermissionsSettings();
+                                break;
+                            case 2: // About tab
+                                DrawAboutInfo();
+                                break;
+                        }
                         break;
                 }
-
-                GUI.enabled = true;
             }
             else
             {
@@ -370,21 +566,30 @@ namespace Inventonater.BleHid
 
             GUILayout.EndVertical();
 
-            // Log area
-            GUILayout.Label("Log:");
-            scrollPosition = GUILayout.BeginScrollView(scrollPosition, GUI.skin.box, GUILayout.Height(Screen.height * 0.2f));
-            foreach (string log in logMessages)
+            // Log toggle
+            if (GUILayout.Button(showLogs ? "Hide Logs" : "Show Logs", GUILayout.Height(40)))
             {
-                GUILayout.Label(log);
+                showLogs = !showLogs;
             }
-            GUILayout.EndScrollView();
+            
+            // Log area (only shown if toggled on)
+            if (showLogs)
+            {
+                GUILayout.Label("Log:");
+                scrollPosition = GUILayout.BeginScrollView(scrollPosition, GUI.skin.box, GUILayout.Height(Screen.height * 0.2f));
+                foreach (string log in logMessages)
+                {
+                    GUILayout.Label(log);
+                }
+                GUILayout.EndScrollView();
+            }
 
             GUILayout.EndArea();
         }
         #endregion
 
         #region Tab UI Methods
-        private void DrawMediaControls()
+        private void DrawMediaControls(bool isLocal)
         {
             // Media control buttons row 1
             GUILayout.BeginHorizontal();
@@ -713,6 +918,513 @@ namespace Inventonater.BleHid
             Debug.Log(logEntry);
         }
 
+        /// <summary>
+        /// Draw the Local Controls tab - allows controlling the local device
+        /// </summary>
+        private void DrawLocalControls()
+        {
+            // Mode selection
+            GUILayout.BeginVertical(GUI.skin.box);
+            GUILayout.Label("Input Mode:", GUIStyle.none);
+            
+            int currentMode = BleHidConstants.InputMode.REMOTE;
+            if (!isEditorMode)
+            {
+                currentMode = bleHidManager.GetInputMode();
+            }
+            
+            GUILayout.BeginHorizontal();
+            if (GUILayout.Toggle(currentMode == BleHidConstants.InputMode.REMOTE, "Remote Device", GUI.skin.button, GUILayout.Height(60)))
+            {
+                if (currentMode != BleHidConstants.InputMode.REMOTE && !isEditorMode)
+                {
+                    bleHidManager.SetInputMode(BleHidConstants.InputMode.REMOTE);
+                    AddLogEntry("Switched to Remote mode");
+                }
+            }
+            
+            if (GUILayout.Toggle(currentMode == BleHidConstants.InputMode.LOCAL, "Local Device", GUI.skin.button, GUILayout.Height(60)))
+            {
+                if (currentMode != BleHidConstants.InputMode.LOCAL && !isEditorMode)
+                {
+                    bleHidManager.SetInputMode(BleHidConstants.InputMode.LOCAL);
+                    AddLogEntry("Switched to Local mode");
+                }
+            }
+            GUILayout.EndHorizontal();
+            GUILayout.EndVertical();
+            
+            // Permission checks and settings buttons
+            GUILayout.BeginVertical(GUI.skin.box);
+            GUILayout.Label("Permissions:", GUIStyle.none);
+            
+            bool accessibilityEnabled = false;
+            bool mediaListenerEnabled = false;
+            
+            if (!isEditorMode)
+            {
+                accessibilityEnabled = bleHidManager.IsAccessibilityServiceEnabled();
+                mediaListenerEnabled = bleHidManager.IsMediaNotificationListenerEnabled();
+            }
+            
+            // Accessibility Service permission
+            GUILayout.BeginHorizontal();
+            if (accessibilityEnabled)
+            {
+                GUIStyle enabledStyle = new GUIStyle(GUI.skin.label);
+                enabledStyle.normal.textColor = Color.green;
+                GUILayout.Label("✓ Accessibility Service Enabled", enabledStyle);
+            }
+            else
+            {
+                GUIStyle disabledStyle = new GUIStyle(GUI.skin.label);
+                disabledStyle.normal.textColor = Color.red;
+                GUILayout.Label("✗ Accessibility Service Disabled", disabledStyle);
+            }
+            
+            if (GUILayout.Button("Settings", GUILayout.Height(40), GUILayout.Width(150)))
+            {
+                if (isEditorMode)
+                {
+                    AddLogEntry("Cannot open Accessibility Settings in editor mode");
+                }
+                else
+                {
+                    AddLogEntry("Opening Accessibility Settings...");
+                    bleHidManager.OpenAccessibilitySettings();
+                }
+            }
+            GUILayout.EndHorizontal();
+            
+            // Media Notification Listener permission
+            GUILayout.BeginHorizontal();
+            if (mediaListenerEnabled)
+            {
+                GUIStyle enabledStyle = new GUIStyle(GUI.skin.label);
+                enabledStyle.normal.textColor = Color.green;
+                GUILayout.Label("✓ Media Notification Listener Enabled", enabledStyle);
+            }
+            else
+            {
+                GUIStyle disabledStyle = new GUIStyle(GUI.skin.label);
+                disabledStyle.normal.textColor = Color.red;
+                GUILayout.Label("✗ Media Notification Listener Disabled", disabledStyle);
+            }
+            
+            if (GUILayout.Button("Settings", GUILayout.Height(40), GUILayout.Width(150)))
+            {
+                if (isEditorMode)
+                {
+                    AddLogEntry("Cannot open Notification Settings in editor mode");
+                }
+                else
+                {
+                    AddLogEntry("Opening Notification Settings...");
+                    bleHidManager.OpenNotificationListenerSettings();
+                }
+            }
+            GUILayout.EndHorizontal();
+            GUILayout.EndVertical();
+            
+            // Controls
+            if (accessibilityEnabled || mediaListenerEnabled || isEditorMode)
+            {
+                GUILayout.Space(10);
+                
+                // Media controls
+                if (mediaListenerEnabled || isEditorMode)
+                {
+                    GUILayout.Label("Media Controls:", GUIStyle.none);
+                    
+                    // Media control buttons row 1
+                    GUILayout.BeginHorizontal();
+                    if (GUILayout.Button("Previous", GUILayout.Height(60)))
+                    {
+                        if (isEditorMode)
+                            AddLogEntry("Local: Previous track pressed");
+                        else
+                            bleHidManager.PreviousTrack();
+                    }
+                    
+                    if (GUILayout.Button("Play/Pause", GUILayout.Height(60)))
+                    {
+                        if (isEditorMode)
+                            AddLogEntry("Local: Play/Pause pressed");
+                        else
+                            bleHidManager.PlayPause();
+                    }
+                    
+                    if (GUILayout.Button("Next", GUILayout.Height(60)))
+                    {
+                        if (isEditorMode)
+                            AddLogEntry("Local: Next track pressed");
+                        else
+                            bleHidManager.NextTrack();
+                    }
+                    GUILayout.EndHorizontal();
+                    
+                    // Media control buttons row 2
+                    GUILayout.BeginHorizontal();
+                    if (GUILayout.Button("Volume Down", GUILayout.Height(60)))
+                    {
+                        if (isEditorMode)
+                            AddLogEntry("Local: Volume down pressed");
+                        else
+                            bleHidManager.VolumeDown();
+                    }
+                    
+                    if (GUILayout.Button("Mute", GUILayout.Height(60)))
+                    {
+                        if (isEditorMode)
+                            AddLogEntry("Local: Mute pressed");
+                        else
+                            bleHidManager.Mute();
+                    }
+                    
+                    if (GUILayout.Button("Volume Up", GUILayout.Height(60)))
+                    {
+                        if (isEditorMode)
+                            AddLogEntry("Local: Volume up pressed");
+                        else
+                            bleHidManager.VolumeUp();
+                    }
+                    GUILayout.EndHorizontal();
+                }
+                
+                // Directional controls (if accessibility enabled)
+                if (accessibilityEnabled || isEditorMode)
+                {
+                    GUILayout.Space(10);
+                    GUILayout.Label("Direction Controls:", GUIStyle.none);
+                    
+                    // Up button
+                    GUILayout.BeginHorizontal();
+                    GUILayout.FlexibleSpace();
+                    if (GUILayout.Button("Up", GUILayout.Height(60), GUILayout.Width(150)))
+                    {
+                        if (isEditorMode)
+                            AddLogEntry("Local: Up key pressed");
+                        else
+                            bleHidManager.SendDirectionalKey(BleHidConstants.KEY_UP);
+                    }
+                    GUILayout.FlexibleSpace();
+                    GUILayout.EndHorizontal();
+                    
+                    // Left, Down, Right buttons in one row
+                    GUILayout.BeginHorizontal();
+                    GUILayout.FlexibleSpace();
+                    if (GUILayout.Button("Left", GUILayout.Height(60), GUILayout.Width(150)))
+                    {
+                        if (isEditorMode)
+                            AddLogEntry("Local: Left key pressed");
+                        else
+                            bleHidManager.SendDirectionalKey(BleHidConstants.KEY_LEFT);
+                    }
+                    
+                    if (GUILayout.Button("Down", GUILayout.Height(60), GUILayout.Width(150)))
+                    {
+                        if (isEditorMode)
+                            AddLogEntry("Local: Down key pressed");
+                        else
+                            bleHidManager.SendDirectionalKey(BleHidConstants.KEY_DOWN);
+                    }
+                    
+                    if (GUILayout.Button("Right", GUILayout.Height(60), GUILayout.Width(150)))
+                    {
+                        if (isEditorMode)
+                            AddLogEntry("Local: Right key pressed");
+                        else
+                            bleHidManager.SendDirectionalKey(BleHidConstants.KEY_RIGHT);
+                    }
+                    GUILayout.FlexibleSpace();
+                    GUILayout.EndHorizontal();
+                }
+            }
+            else
+            {
+                // Display message if neither permission is enabled
+                GUIStyle warningStyle = new GUIStyle(GUI.skin.label);
+                warningStyle.normal.textColor = new Color(1f, 0.7f, 0f); // Orange
+                warningStyle.fontSize = 24;
+                warningStyle.alignment = TextAnchor.MiddleCenter;
+                
+                GUILayout.Space(40);
+                GUILayout.Label("Please enable at least one permission above to use local device control", warningStyle);
+            }
+        }
+        
+        // Shows warning for permissions
+        private void DrawPermissionWarning()
+        {
+            GUIStyle warningStyle = new GUIStyle(GUI.skin.box);
+            warningStyle.normal.background = MakeColorTexture(new Color(1f, 0.7f, 0f, 0.3f)); // Orange background
+            warningStyle.padding = new RectOffset(20, 20, 20, 20);
+            
+            GUILayout.BeginVertical(warningStyle);
+            
+            GUILayout.Label("Permissions Required", headerStyle);
+            GUILayout.Space(10);
+            
+            GUILayout.Label("Local device control requires at least one of these permissions:", GUI.skin.label);
+            GUILayout.Space(10);
+            
+            GUILayout.Label("• Accessibility Service - For directional keys and keyboard control", GUI.skin.label);
+            GUILayout.Label("• Media Notification Listener - For media playback control", GUI.skin.label);
+            
+            GUILayout.Space(20);
+            
+            if (GUILayout.Button("Enable Accessibility Service", GUILayout.Height(60)))
+            {
+                if (!isEditorMode)
+                {
+                    bleHidManager.OpenAccessibilitySettings();
+                    AddLogEntry("Opening Accessibility Settings...");
+                }
+            }
+            
+            GUILayout.Space(10);
+            
+            if (GUILayout.Button("Enable Media Notification Listener", GUILayout.Height(60)))
+            {
+                if (!isEditorMode)
+                {
+                    bleHidManager.OpenNotificationListenerSettings();
+                    AddLogEntry("Opening Notification Settings...");
+                }
+            }
+            
+            GUILayout.EndVertical();
+        }
+        
+        // Shows directional key controls
+        private void DrawDirectionControls()
+        {
+            // Up button
+            GUILayout.BeginHorizontal();
+            GUILayout.FlexibleSpace();
+            if (GUILayout.Button("Up", buttonStyle, GUILayout.Height(80), GUILayout.Width(150)))
+            {
+                if (isEditorMode)
+                    AddLogEntry("Local: Up key pressed");
+                else
+                    bleHidManager.SendDirectionalKey(BleHidConstants.KEY_UP);
+            }
+            GUILayout.FlexibleSpace();
+            GUILayout.EndHorizontal();
+            
+            // Left, Down, Right buttons in one row
+            GUILayout.BeginHorizontal();
+            GUILayout.FlexibleSpace();
+            if (GUILayout.Button("Left", buttonStyle, GUILayout.Height(80), GUILayout.Width(150)))
+            {
+                if (isEditorMode)
+                    AddLogEntry("Local: Left key pressed");
+                else
+                    bleHidManager.SendDirectionalKey(BleHidConstants.KEY_LEFT);
+            }
+            
+            if (GUILayout.Button("Down", buttonStyle, GUILayout.Height(80), GUILayout.Width(150)))
+            {
+                if (isEditorMode)
+                    AddLogEntry("Local: Down key pressed");
+                else
+                    bleHidManager.SendDirectionalKey(BleHidConstants.KEY_DOWN);
+            }
+            
+            if (GUILayout.Button("Right", buttonStyle, GUILayout.Height(80), GUILayout.Width(150)))
+            {
+                if (isEditorMode)
+                    AddLogEntry("Local: Right key pressed");
+                else
+                    bleHidManager.SendDirectionalKey(BleHidConstants.KEY_RIGHT);
+            }
+            GUILayout.FlexibleSpace();
+            GUILayout.EndHorizontal();
+        }
+        
+        // Draw connection settings tab
+        private void DrawConnectionSettings()
+        {
+            GUILayout.Label("Bluetooth Connection", headerStyle);
+            GUILayout.Space(10);
+            
+            // Display connection status
+            GUIStyle statusStyle = bleHidManager.IsConnected ? statusEnabledStyle : statusDisabledStyle;
+            GUILayout.BeginHorizontal();
+            GUILayout.Label("Connection Status:", GUI.skin.label);
+            GUILayout.Label(bleHidManager.IsConnected ? "Connected" : "Not Connected", statusStyle);
+            GUILayout.EndHorizontal();
+            
+            if (bleHidManager.IsConnected)
+            {
+                GUILayout.BeginHorizontal();
+                GUILayout.Label("Connected Device:", GUI.skin.label);
+                GUILayout.Label(bleHidManager.ConnectedDeviceName, GUI.skin.label);
+                GUILayout.EndHorizontal();
+                
+                GUILayout.BeginHorizontal();
+                GUILayout.Label("Device Address:", GUI.skin.label);
+                GUILayout.Label(bleHidManager.ConnectedDeviceAddress, GUI.skin.label);
+                GUILayout.EndHorizontal();
+            }
+            
+            GUILayout.Space(20);
+            
+            // Advertising controls
+            GUILayout.BeginHorizontal();
+            GUILayout.Label("Advertising Status:", GUI.skin.label);
+            GUILayout.Label(bleHidManager.IsAdvertising ? "Advertising" : "Not Advertising", 
+                            bleHidManager.IsAdvertising ? statusEnabledStyle : statusDisabledStyle);
+            GUILayout.EndHorizontal();
+            
+            if (GUILayout.Button(bleHidManager.IsAdvertising ? "Stop Advertising" : "Start Advertising", 
+                                GUILayout.Height(60)))
+            {
+                if (isEditorMode)
+                {
+                    AddLogEntry("Advertising toggle (not functional in editor)");
+                }
+                else
+                {
+                    if (bleHidManager.IsAdvertising)
+                        bleHidManager.StopAdvertising();
+                    else
+                        bleHidManager.StartAdvertising();
+                }
+            }
+            
+            if (bleHidManager.IsConnected)
+            {
+                GUILayout.Space(20);
+                if (GUILayout.Button("Disconnect", GUILayout.Height(60)))
+                {
+                    if (!isEditorMode)
+                    {
+                        // There's no explicit disconnect method in BleHidManager,
+                        // but stopping advertising will usually disconnect the device
+                        bleHidManager.StopAdvertising();
+                        AddLogEntry("Stopping advertising to disconnect device");
+                    }
+                }
+            }
+        }
+        
+        // Draw permissions settings tab
+        private void DrawPermissionsSettings()
+        {
+            GUILayout.Label("Android Permissions", headerStyle);
+            GUILayout.Space(10);
+            
+            // BLE permissions
+            GUILayout.Label("Bluetooth Permissions:", GUI.skin.label, GUILayout.Height(30));
+            
+            GUILayout.BeginHorizontal();
+            GUILayout.Label("• BLUETOOTH_CONNECT", GUI.skin.label);
+            GUILayout.Label(BleHidPermissionHandler.HasUserAuthorizedPermission("android.permission.BLUETOOTH_CONNECT") ? 
+                           "Granted" : "Not Granted", 
+                           BleHidPermissionHandler.HasUserAuthorizedPermission("android.permission.BLUETOOTH_CONNECT") ? 
+                           statusEnabledStyle : statusDisabledStyle);
+            GUILayout.EndHorizontal();
+            
+            GUILayout.BeginHorizontal();
+            GUILayout.Label("• BLUETOOTH_SCAN", GUI.skin.label);
+            GUILayout.Label(BleHidPermissionHandler.HasUserAuthorizedPermission("android.permission.BLUETOOTH_SCAN") ? 
+                           "Granted" : "Not Granted", 
+                           BleHidPermissionHandler.HasUserAuthorizedPermission("android.permission.BLUETOOTH_SCAN") ? 
+                           statusEnabledStyle : statusDisabledStyle);
+            GUILayout.EndHorizontal();
+            
+            GUILayout.BeginHorizontal();
+            GUILayout.Label("• BLUETOOTH_ADVERTISE", GUI.skin.label);
+            GUILayout.Label(BleHidPermissionHandler.HasUserAuthorizedPermission("android.permission.BLUETOOTH_ADVERTISE") ? 
+                           "Granted" : "Not Granted", 
+                           BleHidPermissionHandler.HasUserAuthorizedPermission("android.permission.BLUETOOTH_ADVERTISE") ? 
+                           statusEnabledStyle : statusDisabledStyle);
+            GUILayout.EndHorizontal();
+            
+            GUILayout.Space(20);
+            
+            // Special permissions
+            GUILayout.Label("Special Permissions:", GUI.skin.label, GUILayout.Height(30));
+            
+            // Accessibility Service
+            GUILayout.BeginHorizontal();
+            GUILayout.Label("• Accessibility Service", GUI.skin.label);
+            bool accessibilityEnabled = isEditorMode || bleHidManager.IsAccessibilityServiceEnabled();
+            GUILayout.Label(accessibilityEnabled ? "Enabled" : "Disabled", 
+                           accessibilityEnabled ? statusEnabledStyle : statusDisabledStyle);
+            GUILayout.EndHorizontal();
+            
+            if (GUILayout.Button("Open Accessibility Settings", GUILayout.Height(50)))
+            {
+                if (!isEditorMode)
+                {
+                    bleHidManager.OpenAccessibilitySettings();
+                    AddLogEntry("Opening Accessibility Settings...");
+                }
+            }
+            
+            GUILayout.Space(10);
+            
+            // Media Notification Listener
+            GUILayout.BeginHorizontal();
+            GUILayout.Label("• Media Notification Listener", GUI.skin.label);
+            bool mediaListenerEnabled = isEditorMode || bleHidManager.IsMediaNotificationListenerEnabled();
+            GUILayout.Label(mediaListenerEnabled ? "Enabled" : "Disabled", 
+                           mediaListenerEnabled ? statusEnabledStyle : statusDisabledStyle);
+            GUILayout.EndHorizontal();
+            
+            if (GUILayout.Button("Open Notification Settings", GUILayout.Height(50)))
+            {
+                if (!isEditorMode)
+                {
+                    bleHidManager.OpenNotificationListenerSettings();
+                    AddLogEntry("Opening Notification Settings...");
+                }
+            }
+        }
+        
+        // Draw about info tab
+        private void DrawAboutInfo()
+        {
+            GUILayout.Label("About BLE HID", headerStyle);
+            GUILayout.Space(20);
+            
+            GUIStyle titleStyle = new GUIStyle(GUI.skin.label);
+            titleStyle.fontSize = 24;
+            titleStyle.fontStyle = FontStyle.Bold;
+            titleStyle.alignment = TextAnchor.MiddleCenter;
+            
+            GUIStyle subtitleStyle = new GUIStyle(GUI.skin.label);
+            subtitleStyle.fontSize = 18;
+            subtitleStyle.alignment = TextAnchor.MiddleCenter;
+            
+            GUIStyle normalStyle = new GUIStyle(GUI.skin.label);
+            normalStyle.fontSize = 16;
+            normalStyle.alignment = TextAnchor.MiddleCenter;
+            normalStyle.wordWrap = true;
+            
+            GUILayout.Label("Android BLE HID", titleStyle);
+            GUILayout.Label("Version 1.0.0", subtitleStyle);
+            GUILayout.Space(20);
+            
+            GUILayout.Label("A Unity plugin for Android HID peripherals over BLE", normalStyle);
+            GUILayout.Label("Supports both remote device control and local device control", normalStyle);
+            GUILayout.Space(20);
+            
+            GUILayout.Label("© 2025 Inventonater", normalStyle);
+            GUILayout.Label("Licensed under the MIT License", normalStyle);
+            
+            GUILayout.Space(30);
+            
+            if (GUILayout.Button("Get Diagnostic Info", GUILayout.Height(50)))
+            {
+                string info = bleHidManager.GetDiagnosticInfo();
+                GUIUtility.systemCopyBuffer = info;
+                AddLogEntry("Diagnostic info copied to clipboard");
+            }
+        }
+        
         // Helper to create colored textures for UI elements
         private Texture2D MakeColorTexture(Color color)
         {

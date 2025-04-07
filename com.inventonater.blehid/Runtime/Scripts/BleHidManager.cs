@@ -573,6 +573,137 @@ namespace Inventonater.BleHid
         }
         
         /// <summary>
+        /// Send a directional key press (up, down, left, right).
+        /// </summary>
+        /// <param name="direction">Direction key code (see BleHidConstants.KEY_UP, etc.)</param>
+        /// <returns>True if successful, false otherwise.</returns>
+        public bool SendDirectionalKey(byte direction)
+        {
+            if (!CheckInitialized()) return false;
+            
+            try
+            {
+                return bridgeInstance.Call<bool>("sendDirectionalKey", (int)direction);
+            }
+            catch (Exception e)
+            {
+                Debug.LogException(e);
+                return false;
+            }
+        }
+        
+        /// <summary>
+        /// Set the input mode (remote or local).
+        /// </summary>
+        /// <param name="mode">Mode to set (BleHidConstants.InputMode.REMOTE or BleHidConstants.InputMode.LOCAL)</param>
+        /// <returns>True if successful, false otherwise.</returns>
+        public bool SetInputMode(int mode)
+        {
+            if (!CheckInitialized()) return false;
+            
+            try
+            {
+                return bridgeInstance.Call<bool>("setInputMode", mode);
+            }
+            catch (Exception e)
+            {
+                Debug.LogException(e);
+                return false;
+            }
+        }
+        
+        /// <summary>
+        /// Get the current input mode.
+        /// </summary>
+        /// <returns>BleHidConstants.InputMode.REMOTE or BleHidConstants.InputMode.LOCAL</returns>
+        public int GetInputMode()
+        {
+            if (!CheckInitialized()) return BleHidConstants.InputMode.REMOTE;
+            
+            try
+            {
+                return bridgeInstance.Call<int>("getInputMode");
+            }
+            catch (Exception e)
+            {
+                Debug.LogException(e);
+                return BleHidConstants.InputMode.REMOTE;
+            }
+        }
+        
+        /// <summary>
+        /// Check if the accessibility service is enabled.
+        /// </summary>
+        /// <returns>True if enabled, false otherwise.</returns>
+        public bool IsAccessibilityServiceEnabled()
+        {
+            if (!CheckInitialized()) return false;
+            
+            try
+            {
+                return bridgeInstance.Call<bool>("isAccessibilityServiceEnabled");
+            }
+            catch (Exception e)
+            {
+                Debug.LogException(e);
+                return false;
+            }
+        }
+        
+        /// <summary>
+        /// Open accessibility settings to enable the service.
+        /// </summary>
+        public void OpenAccessibilitySettings()
+        {
+            if (!CheckInitialized()) return;
+            
+            try
+            {
+                bridgeInstance.Call("openAccessibilitySettings");
+            }
+            catch (Exception e)
+            {
+                Debug.LogException(e);
+            }
+        }
+        
+        /// <summary>
+        /// Check if the media notification listener service is enabled.
+        /// </summary>
+        /// <returns>True if enabled, false otherwise.</returns>
+        public bool IsMediaNotificationListenerEnabled()
+        {
+            if (!CheckInitialized()) return false;
+            
+            try
+            {
+                return bridgeInstance.Call<bool>("isMediaNotificationListenerEnabled");
+            }
+            catch (Exception e)
+            {
+                Debug.LogException(e);
+                return false;
+            }
+        }
+        
+        /// <summary>
+        /// Open notification settings to enable the media notification listener service.
+        /// </summary>
+        public void OpenNotificationListenerSettings()
+        {
+            if (!CheckInitialized()) return;
+            
+            try
+            {
+                bridgeInstance.Call("openNotificationListenerSettings");
+            }
+            catch (Exception e)
+            {
+                Debug.LogException(e);
+            }
+        }
+        
+        /// <summary>
         /// Get diagnostic information from the plugin.
         /// </summary>
         /// <returns>A string with diagnostic information.</returns>

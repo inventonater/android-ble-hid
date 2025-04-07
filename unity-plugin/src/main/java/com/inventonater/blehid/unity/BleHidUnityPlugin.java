@@ -5,10 +5,13 @@ import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
 import android.content.Context;
 import android.util.Log;
+import android.view.KeyEvent;
 
+import com.inventonater.blehid.core.AccessibilityControlService;
 import com.inventonater.blehid.core.BleHidManager;
 import com.inventonater.blehid.core.BlePairingManager;
 import com.inventonater.blehid.core.HidConstants;
+import com.inventonater.blehid.core.MediaControlService;
 
 /**
  * Main Unity plugin class for BLE HID functionality.
@@ -487,5 +490,169 @@ public class BleHidUnityPlugin {
             return false;
         }
         return true;
+    }
+    
+    // ==================== Local Mode Methods ====================
+    
+    /**
+     * Set the input mode (remote or local).
+     * 
+     * @param mode 0 for remote (BLE HID), 1 for local (Accessibility)
+     * @return true if mode was set, false otherwise
+     */
+    public boolean setInputMode(int mode) {
+        if (!checkInitialized()) return false;
+        
+        if (mode != BleHidManager.MODE_REMOTE && mode != BleHidManager.MODE_LOCAL) {
+            Log.e(TAG, "Invalid mode: " + mode);
+            if (callback != null) {
+                callback.onError(ERROR_INVALID_PARAMETER, "Invalid mode: " + mode);
+            }
+            return false;
+        }
+        
+        bleHidManager.setMode(mode);
+        String modeName = (mode == BleHidManager.MODE_REMOTE) ? "Remote" : "Local";
+        
+        if (callback != null) {
+            callback.onDebugLog("Input mode set to: " + modeName);
+        }
+        
+        return true;
+    }
+    
+    /**
+     * Get the current input mode.
+     * 
+     * @return 0 for remote (BLE HID), 1 for local (Accessibility)
+     */
+    public int getInputMode() {
+        if (!checkInitialized()) return BleHidManager.MODE_REMOTE;
+        return bleHidManager.getMode();
+    }
+    
+    /**
+     * Check if the accessibility service is enabled.
+     * 
+     * @return true if enabled, false otherwise
+     */
+    public boolean isAccessibilityServiceEnabled() {
+        if (!checkInitialized()) return false;
+        return bleHidManager.isAccessibilityServiceEnabled();
+    }
+    
+    /**
+     * Open accessibility settings to enable the service.
+     */
+    public void openAccessibilitySettings() {
+        if (!checkInitialized()) return;
+        bleHidManager.openAccessibilitySettings();
+        
+        if (callback != null) {
+            callback.onDebugLog("Opening Accessibility Settings");
+        }
+    }
+    
+    /**
+     * Check if the media notification listener service is enabled.
+     * 
+     * @return true if enabled, false otherwise
+     */
+    public boolean isMediaNotificationListenerEnabled() {
+        if (!checkInitialized()) return false;
+        return bleHidManager.isMediaNotificationListenerEnabled();
+    }
+    
+    /**
+     * Open notification settings to enable the media notification listener service.
+     */
+    public void openNotificationListenerSettings() {
+        if (!checkInitialized()) return;
+        bleHidManager.openNotificationListenerSettings();
+        
+        if (callback != null) {
+            callback.onDebugLog("Opening Notification Listener Settings");
+        }
+    }
+    
+    /**
+     * Send a directional key (up, down, left, right).
+     * 
+     * @param direction One of HidConstants.Keyboard.KEY_UP, KEY_DOWN, KEY_LEFT, KEY_RIGHT
+     * @return true if the key was sent successfully, false otherwise
+     */
+    public boolean sendDirectionalKey(byte direction) {
+        if (!checkInitialized()) return false;
+        
+        // Check for valid direction key
+        if (direction != HidConstants.Keyboard.KEY_UP && 
+            direction != HidConstants.Keyboard.KEY_DOWN && 
+            direction != HidConstants.Keyboard.KEY_LEFT && 
+            direction != HidConstants.Keyboard.KEY_RIGHT) {
+            
+            Log.e(TAG, "Invalid direction key: " + direction);
+            if (callback != null) {
+                callback.onError(ERROR_INVALID_PARAMETER, "Invalid direction key");
+            }
+            return false;
+        }
+        
+        return bleHidManager.sendDirectionalKey(direction);
+    }
+    
+    /**
+     * Called when the accessibility service is connected.
+     * 
+     * @param service The accessibility service instance
+     */
+    public void onAccessibilityServiceConnected(BleHidAccessibilityService service) {
+        if (!checkInitialized()) return;
+        
+        Log.d(TAG, "Accessibility service connected");
+        bleHidManager.getAccessibilityControlService().setAccessibilityService(service);
+        
+        if (callback != null) {
+            callback.onDebugLog("Accessibility service connected");
+        }
+    }
+    
+    /**
+     * Called when the accessibility service is disconnected.
+     */
+    public void onAccessibilityServiceDisconnected() {
+        if (!checkInitialized()) return;
+        
+        Log.d(TAG, "Accessibility service disconnected");
+        bleHidManager.getAccessibilityControlService().setAccessibilityService(null);
+        
+        if (callback != null) {
+            callback.onDebugLog("Accessibility service disconnected");
+        }
+    }
+    
+    /**
+     * Called when the media notification listener service is connected.
+     */
+    public void onMediaListenerServiceConnected() {
+        if (!checkInitialized()) return;
+        
+        Log.d(TAG, "Media notification listener service connected");
+        
+        if (callback != null) {
+            callback.onDebugLog("Media notification listener service connected");
+        }
+    }
+    
+    /**
+     * Called when the media notification listener service is disconnected.
+     */
+    public void onMediaListenerServiceDisconnected() {
+        if (!checkInitialized()) return;
+        
+        Log.d(TAG, "Media notification listener service disconnected");
+        
+        if (callback != null) {
+            callback.onDebugLog("Media notification listener service disconnected");
+        }
     }
 }

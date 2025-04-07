@@ -3,10 +3,26 @@ using UnityEngine;
 namespace Inventonater.BleHid
 {
     /// <summary>
-    /// Contains constants for the HID keyboard, mouse, and media key codes.
+    /// Constants used by the BleHid plugin.
     /// </summary>
     public static class BleHidConstants
     {
+        /// <summary>
+        /// Input modes for the BleHid plugin.
+        /// </summary>
+        public static class InputMode
+        {
+            /// <summary>
+            /// Remote mode - Send inputs to the connected Bluetooth device.
+            /// </summary>
+            public const int REMOTE = 0;
+            
+            /// <summary>
+            /// Local mode - Control the local Android device.
+            /// </summary>
+            public const int LOCAL = 1;
+        }
+        
         // Mouse buttons - using bit flags to match Android implementation
         // These values represent individual bits rather than indices:
         // 0x01 = 00000001, 0x02 = 00000010, 0x04 = 00000100

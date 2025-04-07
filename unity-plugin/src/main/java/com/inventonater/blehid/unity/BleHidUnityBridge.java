@@ -93,7 +93,7 @@ public class BleHidUnityBridge {
         }
     }
 
-    // Forward the rest of the methods to the plugin
+    // ==================== Forward Methods to the Plugin ====================
 
     public boolean startAdvertising() {
         return plugin.startAdvertising();
@@ -165,5 +165,68 @@ public class BleHidUnityBridge {
 
     public void close() {
         plugin.close();
+    }
+    
+    // ==================== Local Device Control Methods ====================
+    
+    /**
+     * Set the input mode (remote or local).
+     * 
+     * @param mode 0 for remote (BLE HID), 1 for local (Accessibility)
+     * @return true if mode was set, false otherwise
+     */
+    public boolean setInputMode(int mode) {
+        return plugin.setInputMode(mode);
+    }
+    
+    /**
+     * Get the current input mode.
+     * 
+     * @return 0 for remote (BLE HID), 1 for local (Accessibility)
+     */
+    public int getInputMode() {
+        return plugin.getInputMode();
+    }
+    
+    /**
+     * Check if the accessibility service is enabled.
+     * 
+     * @return true if enabled, false otherwise
+     */
+    public boolean isAccessibilityServiceEnabled() {
+        return plugin.isAccessibilityServiceEnabled();
+    }
+    
+    /**
+     * Open accessibility settings to enable the service.
+     */
+    public void openAccessibilitySettings() {
+        plugin.openAccessibilitySettings();
+    }
+    
+    /**
+     * Check if the media notification listener service is enabled.
+     * 
+     * @return true if enabled, false otherwise
+     */
+    public boolean isMediaNotificationListenerEnabled() {
+        return plugin.isMediaNotificationListenerEnabled();
+    }
+    
+    /**
+     * Open notification settings to enable the media notification listener service.
+     */
+    public void openNotificationListenerSettings() {
+        plugin.openNotificationListenerSettings();
+    }
+    
+    /**
+     * Send a directional key (up, down, left, right).
+     * 
+     * @param direction One of HidConstants.KEY_UP, KEY_DOWN, KEY_LEFT, KEY_RIGHT
+     * @return true if the key was sent successfully, false otherwise
+     */
+    public boolean sendDirectionalKey(int direction) {
+        return plugin.sendDirectionalKey((byte)direction);
     }
 }
