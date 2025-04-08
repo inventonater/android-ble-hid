@@ -120,10 +120,5 @@ namespace Inventonater.BleHid
         public const int ERROR_INVALID_PARAMETER = 1007;
         public const int ERROR_PERMISSIONS_NOT_GRANTED = 1008;
 public const int ERROR_ACCESSIBILITY_NOT_ENABLED = 1009;
-        
-        // UI compatibility constants
-        public const byte KEY_LEFT_SHIFT = KEY_MOD_LSHIFT;
-        public const byte KEY_LEFT_CTRL = KEY_MOD_LCTRL;
-        public const byte KEY_LEFT_ALT = KEY_MOD_LALT;
     }
 }
