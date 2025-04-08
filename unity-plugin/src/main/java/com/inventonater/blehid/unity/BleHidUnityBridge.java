@@ -166,4 +166,74 @@ public class BleHidUnityBridge {
     public void close() {
         plugin.close();
     }
+    
+    // Local Control methods
+    
+    public boolean initializeLocalControl() {
+        // Always refresh the activity reference first
+        Activity activity = UnityPlayer.currentActivity;
+        if (activity == null) {
+            Log.e(TAG, "Unity activity is null - not ready for initialization");
+            return false;
+        }
+        
+        // Update the plugin's activity reference and initialize
+        plugin.updateUnityActivity(activity);
+        return plugin.initializeLocalControl();
+    }
+
+    public boolean isAccessibilityServiceEnabled() {
+        return plugin.isAccessibilityServiceEnabled();
+    }
+
+    public void openAccessibilitySettings() {
+        plugin.openAccessibilitySettings();
+    }
+
+    // Media control methods
+    public boolean localPlayPause() {
+        return plugin.localPlayPause();
+    }
+
+    public boolean localNextTrack() {
+        return plugin.localNextTrack();
+    }
+
+    public boolean localPreviousTrack() {
+        return plugin.localPreviousTrack();
+    }
+
+    public boolean localVolumeUp() {
+        return plugin.localVolumeUp();
+    }
+
+    public boolean localVolumeDown() {
+        return plugin.localVolumeDown();
+    }
+
+    public boolean localMute() {
+        return plugin.localMute();
+    }
+
+    // Input control methods
+    public boolean localTap(int x, int y) {
+        return plugin.localTap(x, y);
+    }
+
+    public boolean localSwipe(int x1, int y1, int x2, int y2) {
+        return plugin.localSwipe(x1, y1, x2, y2);
+    }
+
+    public boolean localNavigate(int direction) {
+        return plugin.localNavigate(direction);
+    }
+
+    // Navigation constants for Unity
+    public int getNavUp() { return BleHidUnityPlugin.NAV_UP; }
+    public int getNavDown() { return BleHidUnityPlugin.NAV_DOWN; }
+    public int getNavLeft() { return BleHidUnityPlugin.NAV_LEFT; }
+    public int getNavRight() { return BleHidUnityPlugin.NAV_RIGHT; }
+    public int getNavBack() { return BleHidUnityPlugin.NAV_BACK; }
+    public int getNavHome() { return BleHidUnityPlugin.NAV_HOME; }
+    public int getNavRecents() { return BleHidUnityPlugin.NAV_RECENTS; }
 }

@@ -15,7 +15,7 @@ namespace Inventonater.BleHid
         #region Private Fields
         private BleHidManager bleHidManager;
         private int currentTab = 0;
-        private string[] tabNames = new string[] { "Media", "Mouse", "Keyboard" };
+        private string[] tabNames = new string[] { "Media", "Mouse", "Keyboard", "Local" };
         private string textToSend = "";
         private Vector2 scrollPosition;
         private List<string> logMessages = new List<string>();
@@ -30,6 +30,9 @@ namespace Inventonater.BleHid
         // Permission handling
         private bool hasPermissionError = false;
         private string permissionErrorMessage = "";
+        
+        // Track if we've attempted to initialize local control
+        private bool localControlInitialized = false;
         #endregion
 
         #region Unity Lifecycle
@@ -59,9 +62,58 @@ namespace Inventonater.BleHid
 
             // Initialize BLE HID
             StartCoroutine(bleHidManager.Initialize());
+            
+            // Initialize BleHidLocalControl for Android
+            #if UNITY_ANDROID && !UNITY_EDITOR
+            StartCoroutine(InitializeLocalControl());
+            #endif
 
             // Add log message
             AddLogEntry("Starting BLE HID initialization...");
+        }
+        
+        /// <summary>
+        /// Initialize the local control component for Android
+        /// </summary>
+        private IEnumerator InitializeLocalControl()
+        {
+            if (localControlInitialized)
+                yield break;
+                
+            localControlInitialized = true;
+            
+            AddLogEntry("Initializing local control...");
+            
+            // First, ensure we can get an instance
+            BleHidLocalControl localControlInstance = null;
+            
+            try
+            {
+                localControlInstance = BleHidLocalControl.Instance;
+                if (localControlInstance == null)
+                {
+                    AddLogEntry("Failed to create local control instance");
+                    yield break;
+                }
+            }
+            catch (System.Exception e)
+            {
+                AddLogEntry("Error creating local control instance: " + e.Message);
+                yield break;
+            }
+            
+            // Now initialize with retries
+            yield return StartCoroutine(localControlInstance.Initialize(5));
+            
+            // Check if initialization was successful
+            if (localControlInstance == null || !localControlInstance.IsAccessibilityServiceEnabled())
+            {
+                AddLogEntry("Local control initialized, but accessibility service not enabled");
+            }
+            else
+            {
+                AddLogEntry("Local control fully initialized");
+            }
         }
 
         private void Update()
@@ -345,23 +397,32 @@ namespace Inventonater.BleHid
             // Check if BLE HID is initialized and a device is connected (or in editor mode)
             if (bleHidManager != null && (isInitialized || isEditorMode))
             {
-                // In editor mode, enable UI without requiring connection
-                GUI.enabled = bleHidManager.IsConnected || isEditorMode;
-
                 switch (currentTab)
                 {
                     case 0: // Media tab
+                        // Remote BLE controls need a connected device
+                        GUI.enabled = bleHidManager.IsConnected || isEditorMode;
                         DrawMediaControls();
+                        GUI.enabled = true;
                         break;
                     case 1: // Mouse tab
+                        // Remote BLE controls need a connected device
+                        GUI.enabled = bleHidManager.IsConnected || isEditorMode;
                         DrawMouseControls();
+                        GUI.enabled = true;
                         break;
                     case 2: // Keyboard tab
+                        // Remote BLE controls need a connected device
+                        GUI.enabled = bleHidManager.IsConnected || isEditorMode;
                         DrawKeyboardControls();
+                        GUI.enabled = true;
+                        break;
+                    case 3: // Local Control tab
+                        // Local controls always enabled since they don't rely on a BLE connection
+                        GUI.enabled = true;
+                        DrawLocalControlTab();
                         break;
                 }
-
-                GUI.enabled = true;
             }
             else
             {
@@ -560,6 +621,39 @@ namespace Inventonater.BleHid
                     bleHidManager.SendKey(BleHidConstants.KEY_BACKSPACE);
             }
             GUILayout.EndHorizontal();
+            
+            // Navigation keys
+            GUILayout.Label("Navigation Keys:");
+            GUILayout.BeginHorizontal();
+            if (GUILayout.Button("Up", GUILayout.Height(60)))
+            {
+                if (isEditorMode)
+                    AddLogEntry("Up key pressed");
+                else
+                    bleHidManager.SendKey(BleHidConstants.KEY_UP);
+            }
+            if (GUILayout.Button("Down", GUILayout.Height(60)))
+            {
+                if (isEditorMode)
+                    AddLogEntry("Down key pressed");
+                else
+                    bleHidManager.SendKey(BleHidConstants.KEY_DOWN);
+            }
+            if (GUILayout.Button("Left", GUILayout.Height(60)))
+            {
+                if (isEditorMode)
+                    AddLogEntry("Left key pressed");
+                else
+                    bleHidManager.SendKey(BleHidConstants.KEY_LEFT);
+            }
+            if (GUILayout.Button("Right", GUILayout.Height(60)))
+            {
+                if (isEditorMode)
+                    AddLogEntry("Right key pressed");
+                else
+                    bleHidManager.SendKey(BleHidConstants.KEY_RIGHT);
+            }
+            GUILayout.EndHorizontal();
         }
 
         private void DrawKeyboardRow(string[] keys)
@@ -585,6 +679,297 @@ namespace Inventonater.BleHid
                 else
                     bleHidManager.SendKey(keyCode);
             }
+        }
+        
+        private void DrawLocalControlTab()
+        {
+            // Initialize if not already done
+            if (!localControlInitialized && !isEditorMode)
+            {
+                #if UNITY_ANDROID
+                StartCoroutine(InitializeLocalControl());
+                #endif
+            }
+            
+            // Check if we have an initialized instance
+            bool canUseLocalControls = false;
+            bool accessibilityEnabled = false;
+            
+            #if UNITY_ANDROID
+            if (!isEditorMode)
+            {
+                try
+                {
+                    var instance = BleHidLocalControl.Instance;
+                    if (instance != null)
+                    {
+                        canUseLocalControls = true;
+                        try
+                        {
+                            accessibilityEnabled = instance.IsAccessibilityServiceEnabled();
+                        }
+                        catch (Exception)
+                        {
+                            // IsAccessibilityServiceEnabled might throw if not fully initialized
+                            accessibilityEnabled = false;
+                        }
+                    }
+                }
+                catch (Exception)
+                {
+                    canUseLocalControls = false;
+                }
+            }
+            #endif
+            
+            if (!canUseLocalControls && !isEditorMode)
+            {
+                // Show initializing status
+                GUILayout.Label("Initializing local control...");
+                return;
+            }
+            
+            if (!accessibilityEnabled && !isEditorMode)
+            {
+                // Show initialization status and button to open settings
+                GUILayout.Label("Local control requires Accessibility Service permissions");
+                
+                if (GUILayout.Button("Initialize Local Control", GUILayout.Height(60)))
+                {
+                    #if UNITY_ANDROID
+                    StartCoroutine(InitializeLocalControl());
+                    #endif
+                }
+                
+                if (canUseLocalControls && GUILayout.Button("Open Accessibility Settings", GUILayout.Height(60)))
+                {
+                    #if UNITY_ANDROID
+                    BleHidLocalControl.Instance.OpenAccessibilitySettings();
+                    #endif
+                }
+                
+                // Add a help message
+                GUILayout.Space(10);
+                GUILayout.Label("To enable the Accessibility Service:");
+                GUILayout.Label("1. Tap 'Open Accessibility Settings'");
+                GUILayout.Label("2. Find 'Inventonater BLE HID' in the list");
+                GUILayout.Label("3. Toggle it ON");
+                GUILayout.Label("4. Accept the permissions");
+                
+                return;
+            }
+            
+            // Add local controls once initialized (or in editor mode)
+            GUILayout.Label("Local Device Control");
+            
+            // Two main sections - media and navigation
+            GUILayout.BeginVertical(GUI.skin.box);
+            GUILayout.Label("Media Controls", GUI.skin.box);
+            
+            // Media controls row 1
+            GUILayout.BeginHorizontal();
+            if (GUILayout.Button("Previous", GUILayout.Height(60)))
+            {
+                if (isEditorMode)
+                {
+                    AddLogEntry("Local Previous track pressed");
+                }
+                else
+                {
+                    #if UNITY_ANDROID
+                    BleHidLocalControl.Instance.PreviousTrack();
+                    #endif
+                }
+            }
+            
+            if (GUILayout.Button("Play/Pause", GUILayout.Height(60)))
+            {
+                if (isEditorMode)
+                {
+                    AddLogEntry("Local Play/Pause pressed");
+                }
+                else
+                {
+                    #if UNITY_ANDROID
+                    BleHidLocalControl.Instance.PlayPause();
+                    #endif
+                }
+            }
+            
+            if (GUILayout.Button("Next", GUILayout.Height(60)))
+            {
+                if (isEditorMode)
+                {
+                    AddLogEntry("Local Next track pressed");
+                }
+                else
+                {
+                    #if UNITY_ANDROID
+                    BleHidLocalControl.Instance.NextTrack();
+                    #endif
+                }
+            }
+            GUILayout.EndHorizontal();
+            
+            // Media controls row 2
+            GUILayout.BeginHorizontal();
+            if (GUILayout.Button("Vol -", GUILayout.Height(60)))
+            {
+                if (isEditorMode)
+                {
+                    AddLogEntry("Local Volume down pressed");
+                }
+                else
+                {
+                    #if UNITY_ANDROID
+                    BleHidLocalControl.Instance.VolumeDown();
+                    #endif
+                }
+            }
+            
+            if (GUILayout.Button("Mute", GUILayout.Height(60)))
+            {
+                if (isEditorMode)
+                {
+                    AddLogEntry("Local Mute pressed");
+                }
+                else
+                {
+                    #if UNITY_ANDROID
+                    BleHidLocalControl.Instance.Mute();
+                    #endif
+                }
+            }
+            
+            if (GUILayout.Button("Vol +", GUILayout.Height(60)))
+            {
+                if (isEditorMode)
+                {
+                    AddLogEntry("Local Volume up pressed");
+                }
+                else
+                {
+                    #if UNITY_ANDROID
+                    BleHidLocalControl.Instance.VolumeUp();
+                    #endif
+                }
+            }
+            GUILayout.EndHorizontal();
+            GUILayout.EndVertical();
+            
+            // Navigation section
+            GUILayout.BeginVertical(GUI.skin.box);
+            GUILayout.Label("Navigation", GUI.skin.box);
+            
+            // Navigation row 1 (Back, Home, Recents)
+            GUILayout.BeginHorizontal();
+            if (GUILayout.Button("Back", GUILayout.Height(60)))
+            {
+                if (isEditorMode)
+                {
+                    AddLogEntry("Local Back pressed");
+                }
+                else
+                {
+                    #if UNITY_ANDROID
+                    BleHidLocalControl.Instance.Navigate(BleHidLocalControl.NavigationDirection.Back);
+                    #endif
+                }
+            }
+            
+            if (GUILayout.Button("Home", GUILayout.Height(60)))
+            {
+                if (isEditorMode)
+                {
+                    AddLogEntry("Local Home pressed");
+                }
+                else
+                {
+                    #if UNITY_ANDROID
+                    BleHidLocalControl.Instance.Navigate(BleHidLocalControl.NavigationDirection.Home);
+                    #endif
+                }
+            }
+            
+            if (GUILayout.Button("Recents", GUILayout.Height(60)))
+            {
+                if (isEditorMode)
+                {
+                    AddLogEntry("Local Recents pressed");
+                }
+                else
+                {
+                    #if UNITY_ANDROID
+                    BleHidLocalControl.Instance.Navigate(BleHidLocalControl.NavigationDirection.Recents);
+                    #endif
+                }
+            }
+            GUILayout.EndHorizontal();
+            
+            // Navigation row 2 (Up button)
+            GUILayout.BeginHorizontal();
+            GUILayout.FlexibleSpace();
+            if (GUILayout.Button("Up", GUILayout.Height(60), GUILayout.Width(Screen.width / 3)))
+            {
+                if (isEditorMode)
+                {
+                    AddLogEntry("Local Up pressed");
+                }
+                else
+                {
+                    #if UNITY_ANDROID
+                    BleHidLocalControl.Instance.Navigate(BleHidLocalControl.NavigationDirection.Up);
+                    #endif
+                }
+            }
+            GUILayout.FlexibleSpace();
+            GUILayout.EndHorizontal();
+            
+            // Navigation row 3 (Left, Down, Right)
+            GUILayout.BeginHorizontal();
+            if (GUILayout.Button("Left", GUILayout.Height(60)))
+            {
+                if (isEditorMode)
+                {
+                    AddLogEntry("Local Left pressed");
+                }
+                else
+                {
+                    #if UNITY_ANDROID
+                    BleHidLocalControl.Instance.Navigate(BleHidLocalControl.NavigationDirection.Left);
+                    #endif
+                }
+            }
+            
+            if (GUILayout.Button("Down", GUILayout.Height(60)))
+            {
+                if (isEditorMode)
+                {
+                    AddLogEntry("Local Down pressed");
+                }
+                else
+                {
+                    #if UNITY_ANDROID
+                    BleHidLocalControl.Instance.Navigate(BleHidLocalControl.NavigationDirection.Down);
+                    #endif
+                }
+            }
+            
+            if (GUILayout.Button("Right", GUILayout.Height(60)))
+            {
+                if (isEditorMode)
+                {
+                    AddLogEntry("Local Right pressed");
+                }
+                else
+                {
+                    #if UNITY_ANDROID
+                    BleHidLocalControl.Instance.Navigate(BleHidLocalControl.NavigationDirection.Right);
+                    #endif
+                }
+            }
+            GUILayout.EndHorizontal();
+            GUILayout.EndVertical();
         }
 
         private byte GetKeyCode(string key)

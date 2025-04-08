@@ -9,6 +9,7 @@ import android.util.Log;
 import com.inventonater.blehid.core.BleHidManager;
 import com.inventonater.blehid.core.BlePairingManager;
 import com.inventonater.blehid.core.HidConstants;
+import com.inventonater.blehid.core.LocalInputManager;
 
 /**
  * Main Unity plugin class for BLE HID functionality.
@@ -25,12 +26,14 @@ public class BleHidUnityPlugin {
     public static final int ERROR_PERIPHERAL_NOT_SUPPORTED = 1005;
     public static final int ERROR_ADVERTISING_FAILED = 1006;
     public static final int ERROR_INVALID_PARAMETER = 1007;
+    public static final int ERROR_ACCESSIBILITY_NOT_ENABLED = 1008;
     
     private static BleHidUnityPlugin instance;
     private Activity unityActivity;
     private BleHidManager bleHidManager;
     private BleHidUnityCallback callback;
     private boolean isInitialized = false;
+    private LocalInputManager localInputManager;
     
     /**
      * Get the singleton instance of the plugin.
@@ -372,6 +375,133 @@ public class BleHidUnityPlugin {
         if (!checkConnected()) return false;
         return bleHidManager.mute();
     }
+    
+    /**
+     * Update the Unity Activity reference.
+     * This allows refreshing the activity reference when needed.
+     * 
+     * @param activity The updated Unity activity
+     */
+    public void updateUnityActivity(Activity activity) {
+        if (activity != null) {
+            this.unityActivity = activity;
+            Log.d(TAG, "Unity activity reference updated");
+        } else {
+            Log.e(TAG, "Attempted to update with null activity");
+        }
+    }
+    
+    /**
+     * Initialize local input control.
+     */
+    public boolean initializeLocalControl() {
+        // Check if we have a valid activity reference
+        if (unityActivity == null) {
+            Log.e(TAG, "Activity not available");
+            return false;
+        }
+        
+        try {
+            // Initialize the LocalInputManager with the current activity
+            localInputManager = LocalInputManager.initialize(unityActivity);
+            Log.d(TAG, "Local input manager initialized");
+            
+            // Check accessibility service
+            boolean serviceEnabled = localInputManager.isAccessibilityServiceEnabled();
+            if (!serviceEnabled) {
+                Log.w(TAG, "Accessibility service not enabled");
+                if (callback != null) {
+                    callback.onDebugLog("Accessibility service not enabled. Please enable it in Settings.");
+                }
+            }
+            
+            return true;
+        } catch (Exception e) {
+            Log.e(TAG, "Failed to initialize local control", e);
+            if (callback != null) {
+                callback.onError(ERROR_INITIALIZATION_FAILED, "Failed to initialize local control: " + e.getMessage());
+            }
+            return false;
+        }
+    }
+
+    /**
+     * Check if accessibility service is enabled.
+     */
+    public boolean isAccessibilityServiceEnabled() {
+        if (localInputManager == null) {
+            Log.e(TAG, "Local input manager not initialized");
+            return false;
+        }
+        return localInputManager.isAccessibilityServiceEnabled();
+    }
+
+    /**
+     * Open accessibility settings.
+     */
+    public void openAccessibilitySettings() {
+        if (localInputManager != null) {
+            localInputManager.openAccessibilitySettings();
+        }
+    }
+
+    // Media control methods
+
+    public boolean localPlayPause() {
+        if (localInputManager == null) return false;
+        return localInputManager.playPause();
+    }
+
+    public boolean localNextTrack() {
+        if (localInputManager == null) return false;
+        return localInputManager.nextTrack();
+    }
+
+    public boolean localPreviousTrack() {
+        if (localInputManager == null) return false;
+        return localInputManager.previousTrack();
+    }
+
+    public boolean localVolumeUp() {
+        if (localInputManager == null) return false;
+        return localInputManager.volumeUp();
+    }
+
+    public boolean localVolumeDown() {
+        if (localInputManager == null) return false;
+        return localInputManager.volumeDown();
+    }
+
+    public boolean localMute() {
+        if (localInputManager == null) return false;
+        return localInputManager.mute();
+    }
+
+    // Input control methods
+
+    public boolean localTap(int x, int y) {
+        if (localInputManager == null) return false;
+        return localInputManager.tap(x, y);
+    }
+
+    public boolean localSwipe(int x1, int y1, int x2, int y2) {
+        if (localInputManager == null) return false;
+        return localInputManager.swipe(x1, y1, x2, y2);
+    }
+
+    public boolean localNavigate(int direction) {
+        if (localInputManager == null) return false;
+        return localInputManager.navigate(direction);
+    }
+
+    // Navigation constants
+    public static final int NAV_UP = LocalInputManager.NAV_UP;
+    public static final int NAV_DOWN = LocalInputManager.NAV_DOWN;
+    public static final int NAV_LEFT = LocalInputManager.NAV_LEFT;
+    public static final int NAV_RIGHT = LocalInputManager.NAV_RIGHT;
+    public static final int NAV_BACK = LocalInputManager.NAV_BACK;
+    public static final int NAV_HOME = LocalInputManager.NAV_HOME;
+    public static final int NAV_RECENTS = LocalInputManager.NAV_RECENTS;
     
     /**
      * Get diagnostic information about the BLE HID state.

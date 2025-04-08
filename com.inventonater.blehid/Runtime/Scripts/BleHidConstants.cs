@@ -117,5 +117,6 @@ namespace Inventonater.BleHid
         public const int ERROR_ADVERTISING_FAILED = 1006;
         public const int ERROR_INVALID_PARAMETER = 1007;
         public const int ERROR_PERMISSIONS_NOT_GRANTED = 1008;
+public const int ERROR_ACCESSIBILITY_NOT_ENABLED = 1009;
     }
 }
