@@ -17,7 +17,7 @@ public class CameraTaskService extends Service {
     private static final String TAG = "CameraTaskService";
     private static final int CAMERA_TAP_DELAY_MS = 3500; // Increased delay before tapping camera button
     private static final int RETURN_TO_APP_DELAY_MS = 1500; // Delay before returning to app
-    private static final float CAMERA_BUTTON_Y_POSITION = 0.83f; // Position camera button at 83% down the screen
+    private static final float CAMERA_BUTTON_Y_POSITION = 0.92f; // Position camera button at 92% down the screen - corrected after testing
     
     public static final String ACTION_TAKE_PHOTO = "com.inventonater.blehid.TAKE_PHOTO";
     public static final String ACTION_RECORD_VIDEO = "com.inventonater.blehid.RECORD_VIDEO";
@@ -74,19 +74,42 @@ public class CameraTaskService extends Service {
     private void performCameraButtonTap() {
         // Get display metrics to find center-bottom of screen
         DisplayMetrics metrics = getResources().getDisplayMetrics();
-        int x = metrics.widthPixels / 2;
+        
+        // Calculate coordinates based on screen size
+        int x = metrics.widthPixels / 2; // Center horizontally
         int y = (int)(metrics.heightPixels * CAMERA_BUTTON_Y_POSITION);
         
-        // Try multiple taps around the likely shutter button position
+        Log.d(TAG, "Screen size: " + metrics.widthPixels + "x" + metrics.heightPixels);
+        Log.d(TAG, "Attempting camera button tap at " + x + "," + y);
+        
+        // First try the confirmed position that works (verified with ADB)
         boolean success = LocalInputController.performGlobalTap(x, y);
         Log.d(TAG, "First tap attempt at " + x + "," + y + " (success: " + success + ")");
         
         // If the first tap fails or to improve reliability, try a second tap after a short delay
         handler.postDelayed(() -> {
-            // Try a slightly different position for the second tap
-            int y2 = (int)(metrics.heightPixels * (CAMERA_BUTTON_Y_POSITION + 0.03f));
+            // Try a slightly different position for the second tap (94% down screen)
+            int y2 = (int)(metrics.heightPixels * 0.94f);
             boolean secondTapSuccess = LocalInputController.performGlobalTap(x, y2);
             Log.d(TAG, "Second tap attempt at " + x + "," + y2 + " (success: " + secondTapSuccess + ")");
+            
+            // For extra reliability on some devices, try a third position (90% down screen)
+            if (!secondTapSuccess) {
+                handler.postDelayed(() -> {
+                    int y3 = (int)(metrics.heightPixels * 0.90f);
+                    boolean thirdTapSuccess = LocalInputController.performGlobalTap(x, y3);
+                    Log.d(TAG, "Third tap attempt at " + x + "," + y3 + " (success: " + thirdTapSuccess + ")");
+                    
+                    // For some devices with unusual layouts, try one more position
+                    if (!thirdTapSuccess) {
+                        handler.postDelayed(() -> {
+                            int y4 = (int)(metrics.heightPixels * 0.97f); // Very bottom of screen
+                            boolean fourthTapSuccess = LocalInputController.performGlobalTap(x, y4);
+                            Log.d(TAG, "Fourth tap attempt at " + x + "," + y4 + " (success: " + fourthTapSuccess + ")");
+                        }, 300);
+                    }
+                }, 300);
+            }
         }, 500);
     }
     
