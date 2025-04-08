@@ -81,7 +81,7 @@ namespace Inventonater.BleHid.UI.Panels.Remote
                 }
                 else if (bleHidManager != null && !string.IsNullOrEmpty(textInput))
                 {
-                    bleHidManager.SendText(textInput);
+                    bleHidManager.TypeText(textInput);
                     logger.Log($"Sent text: {textInput}");
                 }
             }

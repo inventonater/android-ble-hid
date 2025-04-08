@@ -194,61 +194,46 @@ namespace Inventonater.BleHid.UI.Panels.Local
         {
             logger.Log("Initializing local control...");
             
-            try
-            {
-                // Get instance of BleHidLocalControl
+            // Get instance of BleHidLocalControl
+            try {
                 localControl = BleHidLocalControl.Instance;
-                
-                if (localControl != null)
-                {
-                    // Initialize with retries
-                    yield return bleHidManager.StartCoroutine(localControl.Initialize(5));
-                    
-                    // Check if accessibility service is enabled
-                    bool accessibilityEnabled = false;
-                    
-                    try
-                    {
-                        accessibilityEnabled = localControl.IsAccessibilityServiceEnabled();
-                    }
-                    catch (System.Exception e)
-                    {
-                        logger.LogError($"Error checking accessibility service: {e.Message}");
-                    }
-                    
-                    if (!accessibilityEnabled)
-                    {
-                        logger.LogWarning("Accessibility service not enabled");
-                        
-                        // Prompt the user to open accessibility settings
-                        GUILayout.BeginVertical(GUI.skin.box);
-                        GUILayout.Label("Accessibility Service Required", titleStyle);
-                        GUILayout.Label("Please enable the Accessibility Service to use local controls");
-                        
-                        if (GUILayout.Button("Open Accessibility Settings", GUILayout.Height(40)))
-                        {
-                            localControl.OpenAccessibilitySettings();
-                        }
-                        GUILayout.EndVertical();
-                    }
-                    else
-                    {
-                        logger.Log("Local control fully initialized");
-                        isInitialized = true;
-                    }
-                }
-                else
-                {
-                    logger.LogError("Failed to create local control instance");
-                }
             }
-            catch (System.Exception e)
+            catch (System.Exception e) {
+                logger.LogError($"Error creating local control instance: {e.Message}");
+                isInitializing = false;
+                yield break;
+            }
+            
+            if (localControl == null)
             {
-                logger.LogError($"Error initializing local control: {e.Message}");
+                logger.LogError("Failed to create local control instance");
+                isInitializing = false;
+                yield break;
+            }
+            
+            // Initialize with retries
+            yield return bleHidManager.StartCoroutine(localControl.Initialize(5));
+            
+            // Check if accessibility service is enabled
+            bool accessibilityEnabled = false;
+            try {
+                accessibilityEnabled = localControl.IsAccessibilityServiceEnabled();
+            }
+            catch (System.Exception e) {
+                logger.LogError($"Error checking accessibility service: {e.Message}");
+            }
+            
+            if (!accessibilityEnabled)
+            {
+                logger.LogWarning("Accessibility service not enabled");
+            }
+            else
+            {
+                logger.Log("Local control fully initialized");
+                isInitialized = true;
             }
             
             isInitializing = false;
-            yield break;
         }
     }
 }
