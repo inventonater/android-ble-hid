@@ -6,7 +6,7 @@ namespace Inventonater.BleHid
 {
     /// <summary>
     /// Handles Android permission requests and checks for BLE HID functionality.
-    /// Specifically manages Bluetooth permissions needed for Android 12+ devices.
+    /// Manages Bluetooth permissions needed for Android 12+ devices and Accessibility permissions.
     /// </summary>
     public class BleHidPermissionHandler
     {
@@ -121,6 +121,48 @@ namespace Inventonater.BleHid
             
             // For older Android versions we check the legacy permissions
             return true; // These should be granted at install time pre-Android 12
+        }
+        
+        /// <summary>
+        /// Check if the Accessibility Service is enabled for this app
+        /// </summary>
+        public static bool IsAccessibilityServiceEnabled()
+        {
+            if (Application.platform != RuntimePlatform.Android)
+                return true;
+                
+            try
+            {
+                // Use BleHidLocalControl to check accessibility status
+                BleHidLocalControl localControl = BleHidLocalControl.Instance;
+                return localControl.IsAccessibilityServiceEnabled();
+            }
+            catch (Exception e)
+            {
+                Debug.LogError("Failed to check accessibility service: " + e.Message);
+                return false;
+            }
+        }
+        
+        /// <summary>
+        /// Open the Android Accessibility Settings screen
+        /// </summary>
+        public static void OpenAccessibilitySettings()
+        {
+            if (Application.platform != RuntimePlatform.Android)
+                return;
+                
+            try
+            {
+                // Use BleHidLocalControl to open accessibility settings
+                BleHidLocalControl localControl = BleHidLocalControl.Instance;
+                localControl.OpenAccessibilitySettings();
+                Debug.Log("Opening Accessibility Settings...");
+            }
+            catch (Exception e)
+            {
+                Debug.LogError("Failed to open accessibility settings: " + e.Message);
+            }
         }
         
         /// <summary>

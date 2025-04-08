@@ -5,18 +5,12 @@ namespace Inventonater.BleHid.UI.Panels.Local
 {
     /// <summary>
     /// Panel for local system control functionality.
-    /// Provides system-level controls like quick settings toggles and notifications.
+    /// Primarily handles accessibility service setup and status.
     /// </summary>
     public class LocalSystemPanel : BaseBleHidPanel
     {
         private BleHidLocalControl localControl;
-        
-        // Toggle states for system settings (doesn't actually reflect real state yet)
-        private bool wifiEnabled = true;
-        private bool bluetoothEnabled = true;
-        private bool flashlightEnabled = false;
-        private bool airplaneModeEnabled = false;
-        private bool darkModeEnabled = false;
+        private bool accessibilityServiceEnabled = false;
         
         public override bool RequiresConnectedDevice => false;
         
@@ -35,9 +29,47 @@ namespace Inventonater.BleHid.UI.Panels.Local
             }
         }
         
+        public override void OnActivate()
+        {
+            base.OnActivate();
+            
+            // Check accessibility status when panel is activated
+            CheckAccessibilityStatus();
+        }
+        
+        /// <summary>
+        /// Check if the accessibility service is enabled
+        /// </summary>
+        private void CheckAccessibilityStatus()
+        {
+            #if UNITY_EDITOR
+            // In editor mode, pretend it's enabled
+            accessibilityServiceEnabled = true;
+            #else
+            // Check actual status
+            if (localControl != null)
+            {
+                try
+                {
+                    accessibilityServiceEnabled = localControl.IsAccessibilityServiceEnabled();
+                }
+                catch (Exception e)
+                {
+                    logger.LogError($"Error checking accessibility status: {e.Message}");
+                    accessibilityServiceEnabled = false;
+                }
+            }
+            else
+            {
+                accessibilityServiceEnabled = false;
+            }
+            #endif
+        }
+        
         protected override void DrawPanelContent()
         {
-            GUILayout.Label("System Controls", titleStyle);
+            GUILayout.Label("System Settings", titleStyle);
+            GUILayout.Space(10);
             
             #if UNITY_EDITOR
             bool isEditorMode = true;
@@ -45,123 +77,80 @@ namespace Inventonater.BleHid.UI.Panels.Local
             bool isEditorMode = false;
             #endif
             
-            // Quick Settings Toggles
+            // Main area - focused on Accessibility Service status
+            if (!isEditorMode)
+            {
+                DrawAccessibilityStatus();
+                
+                // Only show this message if accessibility is enabled
+                if (accessibilityServiceEnabled)
+                {
+                    GUILayout.Space(20);
+                    
+                    GUILayout.BeginVertical(GUI.skin.box, GUILayout.ExpandHeight(true));
+                    GUILayout.Label("System Control Ready", subtitleStyle);
+                    GUILayout.Label("The app now has permission to control system functions.");
+                    GUILayout.Label("You can use the Media, Navigation, and Touch panels to control your device.");
+                    GUILayout.EndVertical();
+                }
+            }
+            else
+            {
+                // Editor mode message
+                GUILayout.BeginVertical(GUI.skin.box);
+                GUILayout.Label("System Control (Editor Mode)", subtitleStyle);
+                GUILayout.Label("System controls require running on an Android device");
+                GUILayout.Label("with the Accessibility Service enabled.");
+                GUILayout.EndVertical();
+            }
+        }
+        
+        /// <summary>
+        /// Displays the accessibility service status and provides a button to enable it if needed.
+        /// </summary>
+        private void DrawAccessibilityStatus()
+        {
             GUILayout.BeginVertical(GUI.skin.box);
-            GUILayout.Label("Quick Settings", subtitleStyle);
             
-            // Quick Settings Row 1
-            GUILayout.BeginHorizontal();
-            DrawToggleButton("WiFi", ref wifiEnabled, GUILayout.Height(60));
-            DrawToggleButton("Bluetooth", ref bluetoothEnabled, GUILayout.Height(60));
-            DrawToggleButton("Flashlight", ref flashlightEnabled, GUILayout.Height(60));
-            GUILayout.EndHorizontal();
+            // Setup styles
+            GUIStyle statusStyle = new GUIStyle(GUI.skin.label);
+            statusStyle.fontSize = 14;
+            statusStyle.fontStyle = FontStyle.Bold;
             
-            // Quick Settings Row 2
-            GUILayout.BeginHorizontal();
-            DrawToggleButton("Airplane Mode", ref airplaneModeEnabled, GUILayout.Height(60));
-            DrawToggleButton("Dark Mode", ref darkModeEnabled, GUILayout.Height(60));
-            
-            if (GUILayout.Button("Auto-Rotate", GUILayout.Height(60)))
+            if (accessibilityServiceEnabled)
             {
-                logger.Log("Auto-rotate toggle (not implemented)");
+                // Accessibility service is enabled - show status
+                statusStyle.normal.textColor = Color.green;
+                GUILayout.Label("✓ Accessibility Service: ENABLED", statusStyle);
+                GUILayout.Label("System controls can now be used");
             }
-            GUILayout.EndHorizontal();
-            
-            GUILayout.EndVertical();
-            
-            // Notification Actions
-            GUILayout.BeginVertical(GUI.skin.box);
-            GUILayout.Label("Notifications", subtitleStyle);
-            
-            GUILayout.BeginHorizontal();
-            if (GUILayout.Button("Pull Down Notifications", GUILayout.Height(60)))
+            else
             {
-                logger.Log("Pull down notifications (not implemented)");
+                // Accessibility service is disabled - show status and enable button
+                statusStyle.normal.textColor = Color.red;
+                GUILayout.Label("✗ Accessibility Service: DISABLED", statusStyle);
+                GUILayout.Label("System controls require Accessibility Service permissions");
+                
+                // Add enable button with distinctive style
+                GUIStyle enableStyle = new GUIStyle(GUI.skin.button);
+                enableStyle.fontStyle = FontStyle.Bold;
+                
+                if (GUILayout.Button("ENABLE ACCESSIBILITY SERVICE", enableStyle, GUILayout.Height(50)))
+                {
+                    if (localControl != null)
+                    {
+                        localControl.OpenAccessibilitySettings();
+                        logger.Log("Opening Accessibility Settings...");
+                    }
+                    else
+                    {
+                        logger.LogError("LocalControl not available");
+                    }
+                }
             }
-            
-            if (GUILayout.Button("Clear All Notifications", GUILayout.Height(60)))
-            {
-                logger.Log("Clear all notifications (not implemented)");
-            }
-            GUILayout.EndHorizontal();
-            
-            GUILayout.EndVertical();
-            
-            // System Controls
-            GUILayout.BeginVertical(GUI.skin.box);
-            GUILayout.Label("System Actions", subtitleStyle);
-            
-            // System Controls Row 1
-            GUILayout.BeginHorizontal();
-            if (GUILayout.Button("Screenshot", GUILayout.Height(60)))
-            {
-                logger.Log("Screenshot capture (not implemented)");
-            }
-            
-            if (GUILayout.Button("Power Dialog", GUILayout.Height(60)))
-            {
-                logger.Log("Power dialog (not implemented)");
-            }
-            GUILayout.EndHorizontal();
-            
-            // System Controls Row 2
-            GUILayout.BeginHorizontal();
-            if (GUILayout.Button("Split Screen", GUILayout.Height(60)))
-            {
-                logger.Log("Split screen toggle (not implemented)");
-            }
-            
-            if (GUILayout.Button("One-handed Mode", GUILayout.Height(60)))
-            {
-                logger.Log("One-handed mode toggle (not implemented)");
-            }
-            GUILayout.EndHorizontal();
-            
-            GUILayout.EndVertical();
-            
-            // App Shortcuts
-            GUILayout.BeginVertical(GUI.skin.box);
-            GUILayout.Label("App Shortcuts", subtitleStyle);
-            
-            GUILayout.BeginHorizontal();
-            if (GUILayout.Button("Settings", GUILayout.Height(60)))
-            {
-                logger.Log("Open Settings app (not implemented)");
-            }
-            
-            if (GUILayout.Button("Camera", GUILayout.Height(60)))
-            {
-                logger.Log("Open Camera app (not implemented)");
-            }
-            
-            if (GUILayout.Button("Quick Launch", GUILayout.Height(60)))
-            {
-                logger.Log("Quick launch app selector (not implemented)");
-            }
-            GUILayout.EndHorizontal();
             
             GUILayout.EndVertical();
         }
         
-        /// <summary>
-        /// Draw a toggle button that changes state when clicked.
-        /// </summary>
-        private void DrawToggleButton(string text, ref bool state, params GUILayoutOption[] options)
-        {
-            // Change button style based on state
-            GUIStyle toggleStyle = new GUIStyle(GUI.skin.button);
-            if (state)
-            {
-                toggleStyle.normal.background = MakeColorTexture(new Color(0.2f, 0.7f, 0.2f, 1.0f));
-                toggleStyle.normal.textColor = Color.white;
-            }
-            
-            if (GUILayout.Button(text + (state ? ": ON" : ": OFF"), toggleStyle, options))
-            {
-                // Toggle state
-                state = !state;
-                logger.Log($"{text} toggled to {(state ? "ON" : "OFF")} (not implemented)");
-            }
-        }
     }
 }

@@ -12,6 +12,7 @@ namespace Inventonater.BleHid.UI.Panels.Local
         private BleHidLocalControl localControl;
         private bool isInitialized = false;
         private bool isInitializing = false;
+        private bool permissionCheckActive = false;
         
         // Subtab panels
         private LocalMediaPanel mediaPanel;
@@ -148,29 +149,146 @@ namespace Inventonater.BleHid.UI.Panels.Local
         
         private void DrawInitializationUI()
         {
-            GUILayout.BeginVertical(GUI.skin.box);
+            GUILayout.BeginVertical(GUI.skin.box, GUILayout.ExpandHeight(true));
             
             GUILayout.Label("Local Control Setup", titleStyle);
             GUILayout.Space(10);
             
-            GUILayout.Label("Local control requires Accessibility Service permissions to function.");
-            GUILayout.Label("These permissions allow the app to control media playback and system navigation.");
-            
-            GUILayout.Space(20);
-            
-            if (GUILayout.Button("Initialize Local Control", GUILayout.Height(60)))
+            if (localControl != null)
             {
-                StartInitialization();
+                bool accessibilityEnabled = false;
+                try {
+                    accessibilityEnabled = localControl.IsAccessibilityServiceEnabled();
+                } catch (System.Exception) { /* Handle silently */ }
+                
+                // Show current permission status
+                GUIStyle statusStyle = new GUIStyle(GUI.skin.label);
+                statusStyle.fontSize = 16;
+                statusStyle.fontStyle = FontStyle.Bold;
+                
+                if (accessibilityEnabled) {
+                    statusStyle.normal.textColor = Color.green;
+                    GUILayout.Label("✓ Accessibility Service: ENABLED", statusStyle);
+                } else {
+                    statusStyle.normal.textColor = Color.red;
+                    GUILayout.Label("✗ Accessibility Service: DISABLED", statusStyle);
+                }
+                
+                GUILayout.Space(15);
+                
+                // Informative text explaining the permissions
+                GUILayout.Label("The Accessibility Service allows this app to:", GUI.skin.label);
+                
+                GUIStyle bulletStyle = new GUIStyle(GUI.skin.label);
+                bulletStyle.padding.left = 20;
+                GUILayout.Label("• Control media playback on your device", bulletStyle);
+                GUILayout.Label("• Perform navigation gestures (swipes, taps)", bulletStyle);
+                GUILayout.Label("• Access system controls (volume, brightness)", bulletStyle);
+                
+                GUILayout.Space(20);
+                
+                // Different buttons based on status
+                if (!accessibilityEnabled) {
+                    // Make the enable button prominent
+                    GUIStyle enableStyle = new GUIStyle(GUI.skin.button);
+                    enableStyle.fontSize = 16;
+                    enableStyle.fontStyle = FontStyle.Bold;
+                    
+                    if (GUILayout.Button("ENABLE ACCESSIBILITY SERVICE", enableStyle, GUILayout.Height(70)))
+                    {
+                        if (localControl != null) {
+                            localControl.OpenAccessibilitySettings();
+                            logger.Log("Opening Accessibility Settings...");
+                            // Start permission check coroutine
+                            bleHidManager.StartCoroutine(PollForAccessibilityPermission());
+                        }
+                    }
+                    
+                    GUILayout.Space(10);
+                    GUILayout.Label("After enabling the service in Settings, return to this app.", GUI.skin.label);
+                }
+                
+                // Always show initialization button (as fallback)
+                if (GUILayout.Button(isInitializing ? "Initializing..." : "Reinitialize Local Control", 
+                                     GUILayout.Height(50)))
+                {
+                    if (!isInitializing) {
+                        StartInitialization();
+                    }
+                }
             }
-            
-            GUILayout.Space(10);
+            else
+            {
+                // If localControl isn't available yet, show simpler UI
+                GUILayout.Label("Local control requires Accessibility Service permissions to function.");
+                GUILayout.Label("These permissions allow the app to control media playback and system navigation.");
+                
+                GUILayout.Space(20);
+                
+                if (GUILayout.Button("Initialize Local Control", GUILayout.Height(60)))
+                {
+                    StartInitialization();
+                }
+            }
             
             if (isInitializing)
             {
+                GUILayout.Space(10);
                 GUILayout.Label("Initializing local control...");
             }
             
             GUILayout.EndVertical();
+        }
+        
+        /// <summary>
+        /// Periodically checks if the user has enabled accessibility permissions after
+        /// being directed to the system settings.
+        /// </summary>
+        private IEnumerator PollForAccessibilityPermission()
+        {
+            if (permissionCheckActive) yield break;
+            permissionCheckActive = true;
+            
+            logger.Log("Waiting for accessibility permission...");
+            int checkCount = 0;
+            const int MAX_CHECKS = 20; // Limit the number of checks
+            
+            while (checkCount < MAX_CHECKS)
+            {
+                // Give time for the user to enable permissions and return
+                yield return new WaitForSeconds(1.0f);
+                checkCount++;
+                
+                if (localControl == null) break;
+                
+                bool accessibilityEnabled = false;
+                try {
+                    accessibilityEnabled = localControl.IsAccessibilityServiceEnabled();
+                } catch (System.Exception) { /* Continue silently */ }
+                
+                if (accessibilityEnabled)
+                {
+                    logger.Log("Accessibility service enabled successfully!");
+                    isInitialized = true;
+                    break;
+                }
+            }
+            
+            permissionCheckActive = false;
+            
+            // Force UI refresh
+            Repaint();
+        }
+        
+        /// <summary>
+        /// Forces a UI repaint to reflect updated permission status.
+        /// </summary>
+        private void Repaint()
+        {
+            // Force layout recalculation and redraw
+            #if UNITY_EDITOR
+            UnityEditor.EditorUtility.SetDirty(bleHidManager.gameObject);
+            #endif
         }
         
         private void StartInitialization()
@@ -225,7 +343,8 @@ namespace Inventonater.BleHid.UI.Panels.Local
             
             if (!accessibilityEnabled)
             {
-                logger.LogWarning("Accessibility service not enabled");
+                logger.LogWarning("Accessibility service not enabled - user action required");
+                // Don't set isInitialized since we still need the user to enable accessibility
             }
             else
             {
@@ -234,6 +353,9 @@ namespace Inventonater.BleHid.UI.Panels.Local
             }
             
             isInitializing = false;
+            
+            // Force UI refresh
+            Repaint();
         }
     }
 }

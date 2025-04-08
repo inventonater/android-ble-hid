@@ -619,6 +619,132 @@ namespace Inventonater.BleHid
             
             Debug.Log("BleHidManager closed");
         }
+        
+        /// <summary>
+        /// Check if Bluetooth permissions are granted.
+        /// </summary>
+        /// <returns>True if permissions are granted, false otherwise.</returns>
+        public bool CheckBluetoothPermissions()
+        {
+            return BleHidPermissionHandler.CheckBluetoothPermissions();
+        }
+        
+        /// <summary>
+        /// Send a key down event for a modifier key.
+        /// </summary>
+        /// <param name="keyCode">HID modifier key code (see BleHidConstants)</param>
+        /// <returns>True if successful, false otherwise.</returns>
+        public bool KeyDown(byte keyCode)
+        {
+            if (!CheckConnected()) return false;
+            
+            try
+            {
+                // For modifier keys, we use them as modifiers with no regular key
+                return SendKeyWithModifiers(0, keyCode);
+            }
+            catch (Exception e)
+            {
+                Debug.LogException(e);
+                return false;
+            }
+        }
+        
+        /// <summary>
+        /// Send a key up event for a modifier key.
+        /// </summary>
+        /// <param name="keyCode">HID modifier key code (see BleHidConstants)</param>
+        /// <returns>True if successful, false otherwise.</returns>
+        public bool KeyUp(byte keyCode)
+        {
+            if (!CheckConnected()) return false;
+            
+            // Since modifiers are one-shot in SendKeyWithModifiers, we don't need to do anything
+            // This is a no-op for API compatibility
+            return true;
+        }
+        
+        /// <summary>
+        /// Type a single character.
+        /// </summary>
+        /// <param name="key">The character to type</param>
+        /// <returns>True if successful, false otherwise.</returns>
+        public bool SendKey(char key)
+        {
+            if (!CheckConnected()) return false;
+            
+            try
+            {
+                byte keyCode = 0;
+                byte modifiers = 0;
+                
+                // Convert character to HID key code and modifiers
+                if (key >= 'a' && key <= 'z')
+                {
+                    // Lowercase letters
+                    keyCode = (byte)(BleHidConstants.KEY_A + (key - 'a'));
+                }
+                else if (key >= 'A' && key <= 'Z')
+                {
+                    // Uppercase letters - use shift modifier
+                    keyCode = (byte)(BleHidConstants.KEY_A + (key - 'A'));
+                    modifiers = BleHidConstants.KEY_MOD_LSHIFT;
+                }
+                else
+                {
+                    // Handle common special characters
+                    switch (key)
+                    {
+                        case ' ': keyCode = BleHidConstants.KEY_SPACE; break;
+                        case '\t': keyCode = BleHidConstants.KEY_TAB; break;
+                        case '\n':
+                        case '\r': keyCode = BleHidConstants.KEY_RETURN; break;
+                        case '0': keyCode = BleHidConstants.KEY_0; break;
+                        case '1': keyCode = BleHidConstants.KEY_1; break;
+                        case '2': keyCode = BleHidConstants.KEY_2; break;
+                        case '3': keyCode = BleHidConstants.KEY_3; break;
+                        case '4': keyCode = BleHidConstants.KEY_4; break;
+                        case '5': keyCode = BleHidConstants.KEY_5; break;
+                        case '6': keyCode = BleHidConstants.KEY_6; break;
+                        case '7': keyCode = BleHidConstants.KEY_7; break;
+                        case '8': keyCode = BleHidConstants.KEY_8; break;
+                        case '9': keyCode = BleHidConstants.KEY_9; break;
+                        case '.': keyCode = BleHidConstants.KEY_DOT; break;
+                        case ',': keyCode = BleHidConstants.KEY_COMMA; break;
+                        case ';': keyCode = BleHidConstants.KEY_SEMICOLON; break;
+                        case '=': keyCode = BleHidConstants.KEY_EQUAL; break;
+                        case '-': keyCode = BleHidConstants.KEY_MINUS; break;
+                        case '/': keyCode = BleHidConstants.KEY_SLASH; break;
+                        case '\\': keyCode = BleHidConstants.KEY_BACKSLASH; break;
+                        // Add more special characters as needed
+                        
+                        // For characters that require shift
+                        case '!': keyCode = BleHidConstants.KEY_1; modifiers = BleHidConstants.KEY_MOD_LSHIFT; break;
+                        case '@': keyCode = BleHidConstants.KEY_2; modifiers = BleHidConstants.KEY_MOD_LSHIFT; break;
+                        case '#': keyCode = BleHidConstants.KEY_3; modifiers = BleHidConstants.KEY_MOD_LSHIFT; break;
+                        case '$': keyCode = BleHidConstants.KEY_4; modifiers = BleHidConstants.KEY_MOD_LSHIFT; break;
+                        case '%': keyCode = BleHidConstants.KEY_5; modifiers = BleHidConstants.KEY_MOD_LSHIFT; break;
+                        case '^': keyCode = BleHidConstants.KEY_6; modifiers = BleHidConstants.KEY_MOD_LSHIFT; break;
+                        case '&': keyCode = BleHidConstants.KEY_7; modifiers = BleHidConstants.KEY_MOD_LSHIFT; break;
+                        case '*': keyCode = BleHidConstants.KEY_8; modifiers = BleHidConstants.KEY_MOD_LSHIFT; break;
+                        case '(': keyCode = BleHidConstants.KEY_9; modifiers = BleHidConstants.KEY_MOD_LSHIFT; break;
+                        case ')': keyCode = BleHidConstants.KEY_0; modifiers = BleHidConstants.KEY_MOD_LSHIFT; break;
+                        
+                        default:
+                            Debug.LogWarning($"SendKey: Unsupported character: {key}");
+                            return false;
+                    }
+                }
+                
+                // Send the key with appropriate modifiers
+                return SendKeyWithModifiers(keyCode, modifiers);
+            }
+            catch (Exception e)
+            {
+                Debug.LogException(e);
+                return false;
+            }
+        }
         #endregion
         
         #region Callback Methods (Called from Java)
