@@ -299,6 +299,66 @@ namespace Inventonater.BleHid
 
         #endregion
 
+        #region Camera Control Methods
+
+        /// <summary>
+        /// Launches the default camera app.
+        /// </summary>
+        public bool LaunchCameraApp()
+        {
+            if (!CheckInitialized()) return false;
+            return bridgeInstance.Call<bool>("launchCameraApp");
+        }
+
+        /// <summary>
+        /// Launches the camera in photo capture mode.
+        /// </summary>
+        public bool LaunchPhotoCapture()
+        {
+            if (!CheckInitialized()) return false;
+            return bridgeInstance.Call<bool>("launchPhotoCapture");
+        }
+
+        /// <summary>
+        /// Launches the camera in video capture mode.
+        /// </summary>
+        public bool LaunchVideoCapture()
+        {
+            if (!CheckInitialized()) return false;
+            return bridgeInstance.Call<bool>("launchVideoCapture");
+        }
+
+        /// <summary>
+        /// Takes a picture using the camera using the direct photo capture intent.
+        /// More reliable than tap-based approach as it uses the system intent.
+        /// </summary>
+        public IEnumerator TakePictureWithCamera()
+        {
+            // Launch photo capture intent directly - more reliable across different devices
+            if (!LaunchPhotoCapture()) yield break;
+            
+            // Nothing more to do - the system handles the camera UI
+            Debug.Log("Photo capture intent launched");
+        }
+
+        /// <summary>
+        /// Records a video using the direct video capture intent.
+        /// This is more reliable than the tap-based approach as it uses the system intent.
+        /// </summary>
+        public IEnumerator RecordVideo(float duration = 5.0f)
+        {
+            // Launch video capture intent directly - more reliable across different devices
+            if (!LaunchVideoCapture()) yield break;
+            
+            // The user will need to stop recording manually
+            Debug.Log("Video capture intent launched");
+            
+            // Note: We can't automatically stop recording when using the intent approach
+            // The user will need to stop recording manually
+        }
+
+        #endregion
+
         #region Helper Methods
 
         private bool CheckInitialized()

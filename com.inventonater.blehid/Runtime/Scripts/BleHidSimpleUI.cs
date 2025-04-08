@@ -31,8 +31,9 @@ namespace Inventonater.BleHid
         // Permission handling
         private bool hasPermissionError = false;
         private string permissionErrorMessage = "";
-        private List<BleHidPermissionHandler.BluetoothPermission> missingPermissions = new List<BleHidPermissionHandler.BluetoothPermission>();
+        private List<BleHidPermissionHandler.AndroidPermission> missingPermissions = new List<BleHidPermissionHandler.AndroidPermission>();
         private bool checkingPermissions = false;
+        private bool hasCameraPermission = false;
         
         // Accessibility service handling
         private bool hasAccessibilityError = false;
@@ -834,6 +835,94 @@ namespace Inventonater.BleHid
             GUILayout.EndHorizontal();
             GUILayout.EndVertical();
             
+            // Camera controls section
+            GUILayout.BeginVertical(GUI.skin.box);
+            GUILayout.Label("Camera Controls", GUI.skin.box);
+            
+            // Check camera permission
+            #if UNITY_ANDROID && !UNITY_EDITOR
+            hasCameraPermission = BleHidPermissionHandler.CheckCameraPermission();
+            
+            if (!hasCameraPermission)
+            {
+                GUILayout.Label("Camera permission required for camera features");
+                if (GUILayout.Button("Request Camera Permission", GUILayout.Height(60)))
+                {
+                    StartCoroutine(BleHidPermissionHandler.RequestCameraPermission());
+                    AddLogEntry("Requesting camera permission");
+                }
+            }
+            else
+            #endif
+            {
+                // Photo button - uses system photo intent
+                if (GUILayout.Button("Take Photo", GUILayout.Height(60)))
+                {
+                    if (isEditorMode)
+                    {
+                        AddLogEntry("Take Photo pressed (not available in editor)");
+                    }
+                    else
+                    {
+                        #if UNITY_ANDROID
+                        StartCoroutine(BleHidLocalControl.Instance.TakePictureWithCamera());
+                        AddLogEntry("Opening camera for photo capture...");
+                        #endif
+                    }
+                }
+                
+                // Video button - uses system video intent
+                if (GUILayout.Button("Record Video", GUILayout.Height(60)))
+                {
+                    if (isEditorMode)
+                    {
+                        AddLogEntry("Record Video pressed (not available in editor)");
+                    }
+                    else
+                    {
+                        #if UNITY_ANDROID
+                        StartCoroutine(BleHidLocalControl.Instance.RecordVideo());
+                        AddLogEntry("Opening camera for video recording... (stop manually when done)");
+                        #endif
+                    }
+                }
+                
+                // Direct launch buttons
+                GUILayout.BeginHorizontal();
+                if (GUILayout.Button("Launch Camera", GUILayout.Height(60)))
+                {
+                    if (isEditorMode)
+                    {
+                        AddLogEntry("Launch Camera pressed (not available in editor)");
+                    }
+                    else
+                    {
+                        #if UNITY_ANDROID
+                        BleHidLocalControl.Instance.LaunchCameraApp();
+                        AddLogEntry("Launching camera app");
+                        #endif
+                    }
+                }
+                
+                if (GUILayout.Button("Launch Video", GUILayout.Height(60)))
+                {
+                    if (isEditorMode)
+                    {
+                        AddLogEntry("Launch Video pressed (not available in editor)");
+                    }
+                    else
+                    {
+                        #if UNITY_ANDROID
+                        BleHidLocalControl.Instance.LaunchVideoCapture();
+                        AddLogEntry("Launching video capture");
+                        #endif
+                    }
+                }
+                GUILayout.EndHorizontal();
+            }
+            
+            GUILayout.EndVertical();
+            
             // Navigation section
             GUILayout.BeginVertical(GUI.skin.box);
             GUILayout.Label("Navigation", GUI.skin.box);
@@ -1061,7 +1150,7 @@ namespace Inventonater.BleHid
         /// <summary>
         /// Request a single permission and update the UI accordingly
         /// </summary>
-        private IEnumerator RequestSinglePermission(BleHidPermissionHandler.BluetoothPermission permission)
+        private IEnumerator RequestSinglePermission(BleHidPermissionHandler.AndroidPermission permission)
         {
             yield return StartCoroutine(BleHidPermissionHandler.RequestAndroidPermission(permission.PermissionString));
             

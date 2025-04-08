@@ -1,6 +1,9 @@
 package com.inventonater.blehid.core;
 
 import android.content.Context;
+import android.content.Intent;
+import android.content.ActivityNotFoundException;
+import android.provider.MediaStore;
 import android.util.Log;
 
 /**
@@ -127,6 +130,73 @@ public class LocalInputManager {
      */
     public boolean navigate(int direction) {
         return inputController.sendKey(direction);
+    }
+    
+    /**
+     * Launch camera app directly.
+     * This opens the default camera app without taking a picture.
+     */
+    public boolean launchCameraApp() {
+        Intent intent = new Intent(Intent.ACTION_MAIN);
+        intent.addCategory(Intent.CATEGORY_DEFAULT);
+        intent.setPackage("com.android.camera");  // This might not work on all devices
+        
+        // If specific package approach doesn't work, try alternate approach
+        if (!isIntentResolvable(intent)) {
+            // Alternative approach: use the camera capture intent but don't handle the result
+            intent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
+        }
+        
+        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        try {
+            context.startActivity(intent);
+            Log.d(TAG, "Launched camera app");
+            return true;
+        } catch (ActivityNotFoundException e) {
+            Log.e(TAG, "No camera app found", e);
+            return false;
+        }
+    }
+    
+    /**
+     * Check if an intent can be resolved by the system
+     */
+    private boolean isIntentResolvable(Intent intent) {
+        return intent.resolveActivity(context.getPackageManager()) != null;
+    }
+    
+    /**
+     * Launch photo capture intent.
+     * This opens the camera in photo mode and returns the result to the calling app.
+     */
+    public boolean launchPhotoCapture() {
+        Intent intent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
+        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        try {
+            context.startActivity(intent);
+            Log.d(TAG, "Launched photo capture intent");
+            return true;
+        } catch (ActivityNotFoundException e) {
+            Log.e(TAG, "No camera app found for photo capture", e);
+            return false;
+        }
+    }
+    
+    /**
+     * Launch video capture intent.
+     * This opens the camera in video mode and returns the result to the calling app.
+     */
+    public boolean launchVideoCapture() {
+        Intent intent = new Intent(MediaStore.ACTION_VIDEO_CAPTURE);
+        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        try {
+            context.startActivity(intent);
+            Log.d(TAG, "Launched video capture intent");
+            return true;
+        } catch (ActivityNotFoundException e) {
+            Log.e(TAG, "No camera app found for video capture", e);
+            return false;
+        }
     }
     
     /**

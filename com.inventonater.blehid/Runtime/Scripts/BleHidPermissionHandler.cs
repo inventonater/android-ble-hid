@@ -7,45 +7,64 @@ namespace Inventonater.BleHid
 {
     /// <summary>
     /// Handles Android permission requests and checks for BLE HID functionality.
-    /// Specifically manages Bluetooth permissions needed for Android 12+ devices.
+    /// Specifically manages Bluetooth permissions needed for Android 12+ devices 
+    /// and other runtime permissions required by the plugin.
     /// </summary>
     public class BleHidPermissionHandler
     {
-        /// <summary>
-        /// Represents a Bluetooth permission
-        /// </summary>
-        public class BluetoothPermission
+    /// <summary>
+    /// Represents an Android permission
+    /// </summary>
+    public class AndroidPermission
+    {
+        public string Name { get; set; }
+        public string PermissionString { get; set; }
+        public bool IsGranted { get; set; }
+        public string Description { get; set; }
+    }
+    
+    /// <summary>
+    /// Constant for Camera permission
+    /// </summary>
+    public const string CAMERA_PERMISSION = "android.permission.CAMERA";
+    
+    /// <summary>
+    /// List of Bluetooth permissions required for Android 12+
+    /// </summary>
+    public static readonly AndroidPermission[] BluetoothPermissions = new AndroidPermission[]
+    {
+        new AndroidPermission
         {
-            public string Name { get; set; }
-            public string PermissionString { get; set; }
-            public bool IsGranted { get; set; }
-            public string Description { get; set; }
+            Name = "Bluetooth Connect",
+            PermissionString = "android.permission.BLUETOOTH_CONNECT",
+            Description = "Required to connect to and control Bluetooth devices"
+        },
+        new AndroidPermission
+        {
+            Name = "Bluetooth Scan",
+            PermissionString = "android.permission.BLUETOOTH_SCAN",
+            Description = "Required to scan for nearby Bluetooth devices"
+        },
+        new AndroidPermission
+        {
+            Name = "Bluetooth Advertise",
+            PermissionString = "android.permission.BLUETOOTH_ADVERTISE",
+            Description = "Required to advertise this device to other Bluetooth devices"
         }
-        
-        /// <summary>
-        /// List of Bluetooth permissions required for Android 12+
-        /// </summary>
-        public static readonly BluetoothPermission[] RequiredPermissions = new BluetoothPermission[]
+    };
+    
+    /// <summary>
+    /// List of other permissions required by the app
+    /// </summary>
+    public static readonly AndroidPermission[] OtherPermissions = new AndroidPermission[]
+    {
+        new AndroidPermission
         {
-            new BluetoothPermission
-            {
-                Name = "Bluetooth Connect",
-                PermissionString = "android.permission.BLUETOOTH_CONNECT",
-                Description = "Required to connect to and control Bluetooth devices"
-            },
-            new BluetoothPermission
-            {
-                Name = "Bluetooth Scan",
-                PermissionString = "android.permission.BLUETOOTH_SCAN",
-                Description = "Required to scan for nearby Bluetooth devices"
-            },
-            new BluetoothPermission
-            {
-                Name = "Bluetooth Advertise",
-                PermissionString = "android.permission.BLUETOOTH_ADVERTISE",
-                Description = "Required to advertise this device to other Bluetooth devices"
-            }
-        };
+            Name = "Camera",
+            PermissionString = CAMERA_PERMISSION,
+            Description = "Required for using the camera features"
+        }
+    };
         /// <summary>
         /// Request Bluetooth permissions required for Android 12+ (API level 31+)
         /// </summary>
@@ -70,9 +89,9 @@ namespace Inventonater.BleHid
         /// Get a list of all missing Bluetooth permissions
         /// </summary>
         /// <returns>List of permissions that are not currently granted</returns>
-        public static List<BluetoothPermission> GetMissingPermissions()
+        public static List<AndroidPermission> GetMissingBluetoothPermissions()
         {
-            List<BluetoothPermission> missingPermissions = new List<BluetoothPermission>();
+            List<AndroidPermission> missingPermissions = new List<AndroidPermission>();
             
             // Skip permission check if not on Android
             if (Application.platform != RuntimePlatform.Android)
@@ -84,7 +103,7 @@ namespace Inventonater.BleHid
                 return missingPermissions;
             
             // Check each required permission
-            foreach (var permission in RequiredPermissions)
+            foreach (var permission in BluetoothPermissions)
             {
                 permission.IsGranted = HasUserAuthorizedPermission(permission.PermissionString);
                 
@@ -95,6 +114,30 @@ namespace Inventonater.BleHid
             }
             
             return missingPermissions;
+        }
+        
+        /// <summary>
+        /// Request camera permission
+        /// </summary>
+        public static IEnumerator RequestCameraPermission()
+        {
+            Debug.Log("Requesting Camera permission");
+            
+            yield return RequestAndroidPermission(CAMERA_PERMISSION);
+            
+            // Give a small delay to allow the permission request to complete
+            yield return new WaitForSeconds(0.5f);
+        }
+        
+        /// <summary>
+        /// Check if camera permission is granted
+        /// </summary>
+        public static bool CheckCameraPermission()
+        {
+            if (Application.platform != RuntimePlatform.Android)
+                return true;
+                
+            return HasUserAuthorizedPermission(CAMERA_PERMISSION);
         }
         
         /// <summary>
@@ -213,7 +256,7 @@ namespace Inventonater.BleHid
             // For Android 12+ (API 31+) we need these permissions
             if (sdkInt >= 31)
             {
-                return GetMissingPermissions().Count == 0;
+                return GetMissingBluetoothPermissions().Count == 0;
             }
             
             // For older Android versions we check the legacy permissions

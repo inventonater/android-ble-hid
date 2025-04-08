@@ -493,6 +493,23 @@ public class BleHidUnityPlugin {
         if (localInputManager == null) return false;
         return localInputManager.navigate(direction);
     }
+    
+    // Camera control methods
+    
+    public boolean launchCameraApp() {
+        if (localInputManager == null) return false;
+        return localInputManager.launchCameraApp();
+    }
+    
+    public boolean launchPhotoCapture() {
+        if (localInputManager == null) return false;
+        return localInputManager.launchPhotoCapture();
+    }
+    
+    public boolean launchVideoCapture() {
+        if (localInputManager == null) return false;
+        return localInputManager.launchVideoCapture();
+    }
 
     // Navigation constants
     public static final int NAV_UP = LocalInputManager.NAV_UP;

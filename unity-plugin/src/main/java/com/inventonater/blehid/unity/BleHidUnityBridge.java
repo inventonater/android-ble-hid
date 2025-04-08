@@ -227,6 +227,20 @@ public class BleHidUnityBridge {
     public boolean localNavigate(int direction) {
         return plugin.localNavigate(direction);
     }
+    
+    // Camera control methods
+    
+    public boolean launchCameraApp() {
+        return plugin.launchCameraApp();
+    }
+    
+    public boolean launchPhotoCapture() {
+        return plugin.launchPhotoCapture();
+    }
+    
+    public boolean launchVideoCapture() {
+        return plugin.launchVideoCapture();
+    }
 
     // Navigation constants for Unity
     public int getNavUp() { return BleHidUnityPlugin.NAV_UP; }
