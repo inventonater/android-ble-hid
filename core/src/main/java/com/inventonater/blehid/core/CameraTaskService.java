@@ -15,8 +15,9 @@ import android.util.Log;
  */
 public class CameraTaskService extends Service {
     private static final String TAG = "CameraTaskService";
-    private static final int CAMERA_TAP_DELAY_MS = 2000; // Delay before tapping camera button
-    private static final int RETURN_TO_APP_DELAY_MS = 1000; // Delay before returning to app
+    private static final int CAMERA_TAP_DELAY_MS = 3500; // Increased delay before tapping camera button
+    private static final int RETURN_TO_APP_DELAY_MS = 1500; // Delay before returning to app
+    private static final float CAMERA_BUTTON_Y_POSITION = 0.83f; // Position camera button at 83% down the screen
     
     public static final String ACTION_TAKE_PHOTO = "com.inventonater.blehid.TAKE_PHOTO";
     public static final String ACTION_RECORD_VIDEO = "com.inventonater.blehid.RECORD_VIDEO";
@@ -74,11 +75,19 @@ public class CameraTaskService extends Service {
         // Get display metrics to find center-bottom of screen
         DisplayMetrics metrics = getResources().getDisplayMetrics();
         int x = metrics.widthPixels / 2;
-        int y = (int)(metrics.heightPixels * 0.85); // Camera button usually near bottom
+        int y = (int)(metrics.heightPixels * CAMERA_BUTTON_Y_POSITION);
         
-        // Use accessibility service to perform the tap
+        // Try multiple taps around the likely shutter button position
         boolean success = LocalInputController.performGlobalTap(x, y);
-        Log.d(TAG, "Performing tap at " + x + "," + y + " (success: " + success + ")");
+        Log.d(TAG, "First tap attempt at " + x + "," + y + " (success: " + success + ")");
+        
+        // If the first tap fails or to improve reliability, try a second tap after a short delay
+        handler.postDelayed(() -> {
+            // Try a slightly different position for the second tap
+            int y2 = (int)(metrics.heightPixels * (CAMERA_BUTTON_Y_POSITION + 0.03f));
+            boolean secondTapSuccess = LocalInputController.performGlobalTap(x, y2);
+            Log.d(TAG, "Second tap attempt at " + x + "," + y2 + " (success: " + secondTapSuccess + ")");
+        }, 500);
     }
     
     private void returnToApp() {

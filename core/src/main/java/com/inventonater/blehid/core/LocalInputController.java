@@ -117,34 +117,48 @@ public class LocalInputController {
             return false;
         }
         
+        // Verify service is fully connected and ready
+        if (!service.isReady()) {
+            Log.e(TAG, "Accessibility service is not ready/connected");
+            return false;
+        }
+        
+        Log.i(TAG, "Attempting global tap at (" + x + ", " + y + ")");
+        
         Path path = new Path();
         path.moveTo(x, y);
         
         GestureDescription.Builder builder = new GestureDescription.Builder();
-        builder.addStroke(new GestureDescription.StrokeDescription(path, 0, 100));
+        builder.addStroke(new GestureDescription.StrokeDescription(path, 0, 150)); // longer duration for more reliable tap
         
         final CountDownLatch latch = new CountDownLatch(1);
         final boolean[] result = {false};
         
-        service.dispatchGesture(builder.build(), 
-            new AccessibilityService.GestureResultCallback() {
-                @Override
-                public void onCompleted(GestureDescription gestureDescription) {
-                    result[0] = true;
-                    latch.countDown();
-                }
-                
-                @Override
-                public void onCancelled(GestureDescription gestureDescription) {
-                    result[0] = false;
-                    latch.countDown();
-                }
-            }, null);
-        
         try {
-            latch.await(1, TimeUnit.SECONDS);
-        } catch (InterruptedException e) {
-            Log.e(TAG, "Global tap gesture interrupted", e);
+            service.dispatchGesture(builder.build(), 
+                new AccessibilityService.GestureResultCallback() {
+                    @Override
+                    public void onCompleted(GestureDescription gestureDescription) {
+                        result[0] = true;
+                        Log.d(TAG, "Global tap completed successfully");
+                        latch.countDown();
+                    }
+                    
+                    @Override
+                    public void onCancelled(GestureDescription gestureDescription) {
+                        result[0] = false;
+                        Log.w(TAG, "Global tap was cancelled");
+                        latch.countDown();
+                    }
+                }, null);
+            
+            // Wait for the tap to complete with a longer timeout
+            if (!latch.await(1500, TimeUnit.MILLISECONDS)) {
+                Log.e(TAG, "Global tap timed out waiting for completion");
+                return false;
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "Error during global tap: " + e.getMessage(), e);
             return false;
         }
         
