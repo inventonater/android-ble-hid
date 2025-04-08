@@ -521,6 +521,20 @@ public class BleHidUnityPlugin {
     }
     
     /**
+     * Take a picture with configurable parameters.
+     * 
+     * @param tapDelayMs Delay before tapping shutter button
+     * @param returnDelayMs Delay before returning to app
+     * @param buttonX X position of shutter button (0.0-1.0)
+     * @param buttonY Y position of shutter button (0.0-1.0)
+     * @return true if camera was launched successfully
+     */
+    public boolean takePictureWithCamera(int tapDelayMs, int returnDelayMs, float buttonX, float buttonY) {
+        if (localInputManager == null) return false;
+        return localInputManager.takePictureWithCamera(tapDelayMs, returnDelayMs, buttonX, buttonY);
+    }
+    
+    /**
      * Record a video by launching the camera in video mode,
      * tapping to start recording, waiting for the specified duration,
      * and tapping again to stop recording.
@@ -530,6 +544,21 @@ public class BleHidUnityPlugin {
     public boolean recordVideo(long durationMs) {
         if (localInputManager == null) return false;
         return localInputManager.recordVideo(durationMs);
+    }
+    
+    /**
+     * Record video with configurable parameters.
+     * 
+     * @param durationMs Duration of recording in milliseconds
+     * @param tapDelayMs Delay before tapping record button
+     * @param returnDelayMs Delay before returning to app
+     * @param buttonX X position of record button (0.0-1.0)
+     * @param buttonY Y position of record button (0.0-1.0)
+     * @return true if video recording was launched successfully
+     */
+    public boolean recordVideo(long durationMs, int tapDelayMs, int returnDelayMs, float buttonX, float buttonY) {
+        if (localInputManager == null) return false;
+        return localInputManager.recordVideo(durationMs, tapDelayMs, returnDelayMs, buttonX, buttonY);
     }
 
     // Navigation constants

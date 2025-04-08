@@ -145,13 +145,63 @@ namespace Inventonater.BleHid
     /// </summary>
     public IEnumerator TakePictureWithCamera()
     {
+        return TakePictureWithCamera(0, 0, 0, 0);
+    }
+    
+    /// <summary>
+    /// Take a picture with the camera using configurable parameters.
+    /// </summary>
+    /// <param name="tapDelay">Delay in milliseconds before tapping the shutter button (0 = use default)</param>
+    /// <param name="returnDelay">Delay in milliseconds before returning to the app (0 = use default)</param>
+    /// <param name="buttonX">X position of shutter button as a ratio (0.0-1.0, 0 = use default)</param>
+    /// <param name="buttonY">Y position of shutter button as a ratio (0.0-1.0, 0 = use default)</param>
+    public IEnumerator TakePictureWithCamera(int tapDelay, int returnDelay, float buttonX, float buttonY)
+    {
         if (!CheckInitialized()) yield break;
         
-        bool result = bridgeInstance.Call<bool>("takePictureWithCamera");
-        Debug.Log("Launched camera for auto photo capture: " + (result ? "Success" : "Failed"));
+        // Call the extended method in the Android bridge
+        bool result = false;
+        float waitTime = 3.0f; // Default wait time
+        
+        if (tapDelay == 0 && returnDelay == 0 && buttonX == 0 && buttonY == 0)
+        {
+            // Use the simpler method if no parameters are provided
+            result = bridgeInstance.Call<bool>("takePictureWithCamera");
+        }
+        else
+        {
+            using (AndroidJavaObject cameraParams = new AndroidJavaObject("android.os.Bundle"))
+            {
+                // Add parameters to bundle
+                if (tapDelay > 0)
+                {
+                    cameraParams.Call("putInt", "tap_delay_ms", tapDelay);
+                    waitTime = tapDelay / 1000f + 2f; // Adjust wait time based on tap delay
+                }
+                
+                if (returnDelay > 0)
+                {
+                    cameraParams.Call("putInt", "return_delay_ms", returnDelay);
+                    waitTime += returnDelay / 1000f;
+                }
+                
+                if (buttonX > 0)
+                    cameraParams.Call("putFloat", "button_x_position", buttonX);
+                
+                if (buttonY > 0)
+                    cameraParams.Call("putFloat", "button_y_position", buttonY);
+                
+                // Call the Java method with parameters
+                result = bridgeInstance.Call<bool>("takePictureWithCameraParams", cameraParams);
+            }
+        }
+        
+        Debug.Log("Launched camera for auto photo capture: " + (result ? "Success" : "Failed") +
+                  (tapDelay > 0 || returnDelay > 0 || buttonX > 0 || buttonY > 0 ? 
+                  $" with custom parameters (tapDelay={tapDelay}, returnDelay={returnDelay}, buttonPos=({buttonX},{buttonY}))" : ""));
         
         // Wait for background service to finish its work
-        yield return new WaitForSeconds(3.0f);
+        yield return new WaitForSeconds(waitTime);
     }
     
     /// <summary>
@@ -161,16 +211,68 @@ namespace Inventonater.BleHid
     /// <param name="duration">Duration in seconds to record video</param>
     public IEnumerator RecordVideo(float duration = 5.0f)
     {
+        return RecordVideo(duration, 0, 0, 0, 0);
+    }
+    
+    /// <summary>
+    /// Record a video with configurable parameters.
+    /// </summary>
+    /// <param name="duration">Duration in seconds to record video</param>
+    /// <param name="tapDelay">Delay in milliseconds before tapping the record button (0 = use default)</param>
+    /// <param name="returnDelay">Delay in milliseconds before returning to the app (0 = use default)</param>
+    /// <param name="buttonX">X position of record button as a ratio (0.0-1.0, 0 = use default)</param>
+    /// <param name="buttonY">Y position of record button as a ratio (0.0-1.0, 0 = use default)</param>
+    public IEnumerator RecordVideo(float duration, int tapDelay, int returnDelay, float buttonX, float buttonY)
+    {
         if (!CheckInitialized()) yield break;
         
         // Convert seconds to milliseconds
         long durationMs = (long)(duration * 1000);
+        bool result = false;
+        float waitTime = duration + 2.0f; // Default wait time
         
-        bool result = bridgeInstance.Call<bool>("recordVideo", durationMs);
-        Debug.Log($"Recording video for {duration} seconds: " + (result ? "Success" : "Failed"));
+        if (tapDelay == 0 && returnDelay == 0 && buttonX == 0 && buttonY == 0)
+        {
+            // Use the simpler method if no parameters are provided
+            result = bridgeInstance.Call<bool>("recordVideo", durationMs);
+        }
+        else
+        {
+            using (AndroidJavaObject videoParams = new AndroidJavaObject("android.os.Bundle"))
+            {
+                // Always add duration
+                videoParams.Call("putLong", "video_duration_ms", durationMs);
+                
+                // Add optional parameters
+                if (tapDelay > 0)
+                {
+                    videoParams.Call("putInt", "tap_delay_ms", tapDelay);
+                    waitTime = tapDelay / 1000f + duration + 2f; // Adjust wait time
+                }
+                
+                if (returnDelay > 0)
+                {
+                    videoParams.Call("putInt", "return_delay_ms", returnDelay);
+                    waitTime += returnDelay / 1000f;
+                }
+                
+                if (buttonX > 0)
+                    videoParams.Call("putFloat", "button_x_position", buttonX);
+                
+                if (buttonY > 0)
+                    videoParams.Call("putFloat", "button_y_position", buttonY);
+                
+                // Call the Java method with parameters
+                result = bridgeInstance.Call<bool>("recordVideoParams", videoParams);
+            }
+        }
+        
+        Debug.Log($"Recording video for {duration} seconds: " + (result ? "Success" : "Failed") +
+                  (tapDelay > 0 || returnDelay > 0 || buttonX > 0 || buttonY > 0 ? 
+                  $" with custom parameters (tapDelay={tapDelay}, returnDelay={returnDelay}, buttonPos=({buttonX},{buttonY}))" : ""));
         
         // Wait for the recording to complete (duration + buffer)
-        yield return new WaitForSeconds(duration + 2.0f);
+        yield return new WaitForSeconds(waitTime);
     }
 
         /// <summary>

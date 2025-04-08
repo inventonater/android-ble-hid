@@ -15,13 +15,18 @@ import android.util.Log;
  */
 public class CameraTaskService extends Service {
     private static final String TAG = "CameraTaskService";
-    private static final int CAMERA_TAP_DELAY_MS = 3500; // Increased delay before tapping camera button
-    private static final int RETURN_TO_APP_DELAY_MS = 1500; // Delay before returning to app
-    private static final float CAMERA_BUTTON_Y_POSITION = 0.92f; // Position camera button at 92% down the screen - corrected after testing
+    private static int CAMERA_TAP_DELAY_MS = 3500; // Delay before tapping camera button, configurable
+    private static int RETURN_TO_APP_DELAY_MS = 1500; // Delay before returning to app
+    private static float CAMERA_BUTTON_X_POSITION = 0.5f; // Horizontal position (0.5 = center)
+    private static float CAMERA_BUTTON_Y_POSITION = 0.92f; // Vertical position (0.92 = 92% down the screen)
     
     public static final String ACTION_TAKE_PHOTO = "com.inventonater.blehid.TAKE_PHOTO";
     public static final String ACTION_RECORD_VIDEO = "com.inventonater.blehid.RECORD_VIDEO";
     public static final String EXTRA_VIDEO_DURATION = "video_duration_ms";
+    public static final String EXTRA_TAP_DELAY = "tap_delay_ms";
+    public static final String EXTRA_RETURN_DELAY = "return_delay_ms";
+    public static final String EXTRA_BUTTON_X = "button_x_position";
+    public static final String EXTRA_BUTTON_Y = "button_y_position";
     
     private Handler handler = new Handler(Looper.getMainLooper());
     private boolean isRecordingVideo = false;
@@ -30,6 +35,28 @@ public class CameraTaskService extends Service {
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
         if (intent == null) return START_NOT_STICKY;
+        
+        // Get configurable parameters if provided
+        if (intent.hasExtra(EXTRA_TAP_DELAY)) {
+            CAMERA_TAP_DELAY_MS = intent.getIntExtra(EXTRA_TAP_DELAY, 3500);
+        }
+        
+        if (intent.hasExtra(EXTRA_RETURN_DELAY)) {
+            RETURN_TO_APP_DELAY_MS = intent.getIntExtra(EXTRA_RETURN_DELAY, 1500);
+        }
+        
+        if (intent.hasExtra(EXTRA_BUTTON_X)) {
+            CAMERA_BUTTON_X_POSITION = intent.getFloatExtra(EXTRA_BUTTON_X, 0.5f);
+        }
+        
+        if (intent.hasExtra(EXTRA_BUTTON_Y)) {
+            CAMERA_BUTTON_Y_POSITION = intent.getFloatExtra(EXTRA_BUTTON_Y, 0.92f);
+        }
+        
+        Log.d(TAG, "Using parameters: tap_delay=" + CAMERA_TAP_DELAY_MS + 
+                  ", return_delay=" + RETURN_TO_APP_DELAY_MS + 
+                  ", button_x=" + CAMERA_BUTTON_X_POSITION + 
+                  ", button_y=" + CAMERA_BUTTON_Y_POSITION);
         
         String action = intent.getAction();
         if (ACTION_TAKE_PHOTO.equals(action)) {
@@ -72,45 +99,25 @@ public class CameraTaskService extends Service {
     }
     
     private void performCameraButtonTap() {
-        // Get display metrics to find center-bottom of screen
+        // Get display metrics for screen dimensions
         DisplayMetrics metrics = getResources().getDisplayMetrics();
         
-        // Calculate coordinates based on screen size
-        int x = metrics.widthPixels / 2; // Center horizontally
+        // Calculate actual x,y coordinates based on screen size and configured position
+        int x = (int)(metrics.widthPixels * CAMERA_BUTTON_X_POSITION);
         int y = (int)(metrics.heightPixels * CAMERA_BUTTON_Y_POSITION);
         
         Log.d(TAG, "Screen size: " + metrics.widthPixels + "x" + metrics.heightPixels);
-        Log.d(TAG, "Attempting camera button tap at " + x + "," + y);
+        Log.d(TAG, "Performing camera button tap at " + x + "," + y + 
+              " (position " + CAMERA_BUTTON_X_POSITION + "," + CAMERA_BUTTON_Y_POSITION + ")");
         
-        // First try the confirmed position that works (verified with ADB)
+        // Perform the tap at the configured position
         boolean success = LocalInputController.performGlobalTap(x, y);
-        Log.d(TAG, "First tap attempt at " + x + "," + y + " (success: " + success + ")");
         
-        // If the first tap fails or to improve reliability, try a second tap after a short delay
-        handler.postDelayed(() -> {
-            // Try a slightly different position for the second tap (94% down screen)
-            int y2 = (int)(metrics.heightPixels * 0.94f);
-            boolean secondTapSuccess = LocalInputController.performGlobalTap(x, y2);
-            Log.d(TAG, "Second tap attempt at " + x + "," + y2 + " (success: " + secondTapSuccess + ")");
-            
-            // For extra reliability on some devices, try a third position (90% down screen)
-            if (!secondTapSuccess) {
-                handler.postDelayed(() -> {
-                    int y3 = (int)(metrics.heightPixels * 0.90f);
-                    boolean thirdTapSuccess = LocalInputController.performGlobalTap(x, y3);
-                    Log.d(TAG, "Third tap attempt at " + x + "," + y3 + " (success: " + thirdTapSuccess + ")");
-                    
-                    // For some devices with unusual layouts, try one more position
-                    if (!thirdTapSuccess) {
-                        handler.postDelayed(() -> {
-                            int y4 = (int)(metrics.heightPixels * 0.97f); // Very bottom of screen
-                            boolean fourthTapSuccess = LocalInputController.performGlobalTap(x, y4);
-                            Log.d(TAG, "Fourth tap attempt at " + x + "," + y4 + " (success: " + fourthTapSuccess + ")");
-                        }, 300);
-                    }
-                }, 300);
-            }
-        }, 500);
+        if (success) {
+            Log.d(TAG, "Camera button tap succeeded");
+        } else {
+            Log.e(TAG, "Camera button tap failed or timed out");
+        }
     }
     
     private void returnToApp() {

@@ -251,6 +251,29 @@ public class BleHidUnityBridge {
     }
     
     /**
+     * Take a picture with camera with custom parameters
+     * 
+     * @param params Bundle containing parameters for the camera capture:
+     *        - tap_delay_ms: Delay before tapping the shutter button
+     *        - return_delay_ms: Delay before returning to app
+     *        - button_x_position: X position of shutter button (0.0-1.0)
+     *        - button_y_position: Y position of shutter button (0.0-1.0)
+     * @return true if camera was launched successfully
+     */
+    public boolean takePictureWithCameraParams(android.os.Bundle params) {
+        if (params == null) {
+            return plugin.takePictureWithCamera();
+        }
+        
+        int tapDelay = params.getInt("tap_delay_ms", 0);
+        int returnDelay = params.getInt("return_delay_ms", 0);
+        float buttonX = params.getFloat("button_x_position", 0.0f);
+        float buttonY = params.getFloat("button_y_position", 0.0f);
+        
+        return plugin.takePictureWithCamera(tapDelay, returnDelay, buttonX, buttonY);
+    }
+    
+    /**
      * Record a video with camera by launching the camera app,
      * automatically tapping to start recording, waiting for the specified
      * duration, and then tapping again to stop recording
@@ -259,6 +282,31 @@ public class BleHidUnityBridge {
      */
     public boolean recordVideo(long durationMs) {
         return plugin.recordVideo(durationMs);
+    }
+    
+    /**
+     * Record a video with custom parameters
+     * 
+     * @param params Bundle containing parameters for the video recording:
+     *        - video_duration_ms: Duration of recording in milliseconds
+     *        - tap_delay_ms: Delay before tapping the record button
+     *        - return_delay_ms: Delay before returning to app
+     *        - button_x_position: X position of record button (0.0-1.0)
+     *        - button_y_position: Y position of record button (0.0-1.0)
+     * @return true if video recording was launched successfully
+     */
+    public boolean recordVideoParams(android.os.Bundle params) {
+        if (params == null) {
+            return false;
+        }
+        
+        long durationMs = params.getLong("video_duration_ms", 5000);
+        int tapDelay = params.getInt("tap_delay_ms", 0);
+        int returnDelay = params.getInt("return_delay_ms", 0);
+        float buttonX = params.getFloat("button_x_position", 0.0f);
+        float buttonY = params.getFloat("button_y_position", 0.0f);
+        
+        return plugin.recordVideo(durationMs, tapDelay, returnDelay, buttonX, buttonY);
     }
 
     // Navigation constants for Unity

@@ -204,6 +204,19 @@ public class LocalInputManager {
      * and using a background service to tap the shutter button.
      */
     public boolean takePictureWithCamera() {
+        return takePictureWithCamera(0, 0, 0, 0);
+    }
+    
+    /**
+     * Takes a picture with the camera using configurable parameters.
+     * 
+     * @param tapDelayMs Delay in ms before tapping the shutter button (0 = use default)
+     * @param returnDelayMs Delay in ms before returning to app (0 = use default)
+     * @param buttonX X position of shutter button as a ratio (0.0-1.0, 0 = use default)
+     * @param buttonY Y position of shutter button as a ratio (0.0-1.0, 0 = use default)
+     * @return true if camera was launched successfully
+     */
+    public boolean takePictureWithCamera(int tapDelayMs, int returnDelayMs, float buttonX, float buttonY) {
         // First, launch the camera app
         Intent cameraIntent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
         cameraIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
@@ -214,7 +227,27 @@ public class LocalInputManager {
             // Then start our service to handle the capture
             Intent serviceIntent = new Intent(context, CameraTaskService.class);
             serviceIntent.setAction(CameraTaskService.ACTION_TAKE_PHOTO);
+            
+            // Add optional parameters if provided
+            if (tapDelayMs > 0) {
+                serviceIntent.putExtra(CameraTaskService.EXTRA_TAP_DELAY, tapDelayMs);
+            }
+            
+            if (returnDelayMs > 0) {
+                serviceIntent.putExtra(CameraTaskService.EXTRA_RETURN_DELAY, returnDelayMs);
+            }
+            
+            if (buttonX > 0) {
+                serviceIntent.putExtra(CameraTaskService.EXTRA_BUTTON_X, buttonX);
+            }
+            
+            if (buttonY > 0) {
+                serviceIntent.putExtra(CameraTaskService.EXTRA_BUTTON_Y, buttonY);
+            }
+            
             context.startService(serviceIntent);
+            Log.d(TAG, "Taking picture with parameters: tapDelay=" + tapDelayMs + 
+                  ", returnDelay=" + returnDelayMs + ", buttonPos=(" + buttonX + "," + buttonY + ")");
             
             return true;
         } catch (ActivityNotFoundException e) {
@@ -228,6 +261,20 @@ public class LocalInputManager {
      * and using a background service to tap the record button.
      */
     public boolean recordVideo(long durationMs) {
+        return recordVideo(durationMs, 0, 0, 0, 0);
+    }
+    
+    /**
+     * Records a video with configurable parameters.
+     * 
+     * @param durationMs Duration of the recording in milliseconds
+     * @param tapDelayMs Delay in ms before tapping the record button (0 = use default)
+     * @param returnDelayMs Delay in ms before returning to app (0 = use default)
+     * @param buttonX X position of record button as a ratio (0.0-1.0, 0 = use default)
+     * @param buttonY Y position of record button as a ratio (0.0-1.0, 0 = use default)
+     * @return true if video recording was launched successfully
+     */
+    public boolean recordVideo(long durationMs, int tapDelayMs, int returnDelayMs, float buttonX, float buttonY) {
         // First, launch the video camera
         Intent videoIntent = new Intent(MediaStore.ACTION_VIDEO_CAPTURE);
         videoIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
@@ -239,7 +286,27 @@ public class LocalInputManager {
             Intent serviceIntent = new Intent(context, CameraTaskService.class);
             serviceIntent.setAction(CameraTaskService.ACTION_RECORD_VIDEO);
             serviceIntent.putExtra(CameraTaskService.EXTRA_VIDEO_DURATION, durationMs);
+            
+            // Add optional parameters if provided
+            if (tapDelayMs > 0) {
+                serviceIntent.putExtra(CameraTaskService.EXTRA_TAP_DELAY, tapDelayMs);
+            }
+            
+            if (returnDelayMs > 0) {
+                serviceIntent.putExtra(CameraTaskService.EXTRA_RETURN_DELAY, returnDelayMs);
+            }
+            
+            if (buttonX > 0) {
+                serviceIntent.putExtra(CameraTaskService.EXTRA_BUTTON_X, buttonX);
+            }
+            
+            if (buttonY > 0) {
+                serviceIntent.putExtra(CameraTaskService.EXTRA_BUTTON_Y, buttonY);
+            }
+            
             context.startService(serviceIntent);
+            Log.d(TAG, "Recording video for " + durationMs + "ms with parameters: tapDelay=" + 
+                  tapDelayMs + ", returnDelay=" + returnDelayMs + ", buttonPos=(" + buttonX + "," + buttonY + ")");
             
             return true;
         } catch (ActivityNotFoundException e) {
