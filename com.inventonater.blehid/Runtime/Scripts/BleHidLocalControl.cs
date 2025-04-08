@@ -12,6 +12,7 @@ namespace Inventonater.BleHid
         private static BleHidLocalControl instance;
         private AndroidJavaObject bridgeInstance;
         private bool initialized = false;
+        private float initRetryDelay = 0.5f; // Seconds between initialization retries
 
         // Events
         public delegate void AccessibilityStatusChangedHandler(bool enabled);
@@ -47,11 +48,11 @@ namespace Inventonater.BleHid
         }
 
         /// <summary>
-        /// Initialize local control functionality.
+        /// Initialize local control functionality with retries.
         /// </summary>
-        /// <param name="maxRetries">Maximum number of retries for initialization</param>
+        /// <param name="maxRetries">Maximum number of retry attempts if initialization fails.</param>
         /// <returns>A coroutine that can be used with StartCoroutine.</returns>
-        public IEnumerator Initialize(int maxRetries = 5)
+        public IEnumerator Initialize(int maxRetries = 3)
         {
             if (initialized)
             {
@@ -65,23 +66,17 @@ namespace Inventonater.BleHid
                 yield break;
             }
 
-            // Wait a bit to ensure Unity is fully initialized
-            yield return new WaitForSeconds(1.0f);
-            
             int retryCount = 0;
             bool success = false;
-            
-            while (!success && retryCount < maxRetries)
+
+            while (!success && retryCount <= maxRetries)
             {
                 try
                 {
                     // Get bridge instance
-                    if (bridgeInstance == null)
-                    {
-                        AndroidJavaClass bridgeClass = new AndroidJavaClass("com.inventonater.blehid.unity.BleHidUnityBridge");
-                        bridgeInstance = bridgeClass.CallStatic<AndroidJavaObject>("getInstance");
-                    }
-                    
+                    AndroidJavaClass bridgeClass = new AndroidJavaClass("com.inventonater.blehid.unity.BleHidUnityBridge");
+                    bridgeInstance = bridgeClass.CallStatic<AndroidJavaObject>("getInstance");
+
                     // Initialize local control
                     success = bridgeInstance.Call<bool>("initializeLocalControl");
                     
@@ -89,44 +84,38 @@ namespace Inventonater.BleHid
                     {
                         initialized = true;
                         Debug.Log("BleHidLocalControl: Initialized successfully");
-                        
-                        try
+
+                        // Check if accessibility service is enabled
+                        bool serviceEnabled = IsAccessibilityServiceEnabled();
+                        if (!serviceEnabled)
                         {
-                            // Check if accessibility service is enabled
-                            bool serviceEnabled = IsAccessibilityServiceEnabled();
-                            if (!serviceEnabled)
-                            {
-                                Debug.LogWarning("BleHidLocalControl: Accessibility service not enabled. Please enable it in settings.");
-                            }
+                            Debug.LogWarning("BleHidLocalControl: Accessibility service not enabled. Please enable it in settings.");
                         }
-                        catch (Exception ex)
-                        {
-                            // Don't fail initialization if checking accessibility fails
-                            Debug.LogWarning("BleHidLocalControl: Unable to check accessibility status: " + ex.Message);
-                        }
-                        
-                        break;
                     }
                     else
                     {
-                        Debug.LogWarning($"BleHidLocalControl: Initialization attempt {retryCount+1} failed");
+                        Debug.LogError($"BleHidLocalControl: Failed to initialize (attempt {retryCount + 1}/{maxRetries + 1})");
+                        retryCount++;
+                        
+                        if (retryCount <= maxRetries)
+                        {
+                            yield return new WaitForSeconds(initRetryDelay);
+                        }
                     }
                 }
                 catch (Exception e)
                 {
-                    Debug.LogWarning($"BleHidLocalControl: Initialization attempt {retryCount+1} failed: {e.Message}");
+                    Debug.LogException(e);
+                    retryCount++;
+                    
+                    if (retryCount <= maxRetries)
+                    {
+                        yield return new WaitForSeconds(initRetryDelay);
+                    }
                 }
-                
-                retryCount++;
-                
-                // Wait before trying again
-                yield return new WaitForSeconds(0.5f);
             }
             
-            if (!success)
-            {
-                Debug.LogError("BleHidLocalControl: Failed to initialize after multiple attempts");
-            }
+            yield break;
         }
 
         /// <summary>
@@ -140,15 +129,7 @@ namespace Inventonater.BleHid
                 return false;
             }
 
-            try
-            {
-                return bridgeInstance.Call<bool>("isAccessibilityServiceEnabled");
-            }
-            catch (Exception e)
-            {
-                Debug.LogError("BleHidLocalControl: Error checking accessibility service: " + e.Message);
-                return false;
-            }
+            return bridgeInstance.Call<bool>("isAccessibilityServiceEnabled");
         }
 
         /// <summary>
