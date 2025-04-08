@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 
 namespace Inventonater.BleHid
@@ -30,6 +31,14 @@ namespace Inventonater.BleHid
         // Permission handling
         private bool hasPermissionError = false;
         private string permissionErrorMessage = "";
+        private List<BleHidPermissionHandler.BluetoothPermission> missingPermissions = new List<BleHidPermissionHandler.BluetoothPermission>();
+        private bool checkingPermissions = false;
+        
+        // Accessibility service handling
+        private bool hasAccessibilityError = false;
+        private string accessibilityErrorMessage = "Accessibility Service is required for local device control";
+        private bool accessibilityServiceEnabled = false;
+        private bool checkingAccessibilityService = false;
         
         // Track if we've attempted to initialize local control
         private bool localControlInitialized = false;
@@ -70,6 +79,11 @@ namespace Inventonater.BleHid
 
             // Add log message
             AddLogEntry("Starting BLE HID initialization...");
+            
+            // Check permissions on startup (Android only)
+            #if UNITY_ANDROID && !UNITY_EDITOR
+            CheckMissingPermissions();
+            #endif
         }
         
         /// <summary>
@@ -306,34 +320,14 @@ namespace Inventonater.BleHid
             // Permission error warning - show at the top with a red background
             if (hasPermissionError)
             {
-                GUIStyle errorStyle = new GUIStyle(GUI.skin.box);
-                errorStyle.normal.background = MakeColorTexture(new Color(0.8f, 0.2f, 0.2f, 1.0f));
-                errorStyle.normal.textColor = Color.white;
-                errorStyle.fontSize = 22;
-                errorStyle.fontStyle = FontStyle.Bold;
-                errorStyle.padding = new RectOffset(20, 20, 20, 20);
-
-                GUILayout.BeginVertical(errorStyle);
-                GUILayout.Label("Permission Error", GUIStyle.none);
-                GUILayout.Space(5);
-                GUILayout.Label(permissionErrorMessage, GUIStyle.none);
-
-                // Workaround notification for API level 31+
-                GUILayout.Space(10);
-                GUILayout.Label("Android 12+ requires Bluetooth permissions to be granted manually.", GUIStyle.none);
-                GUILayout.Label("Please go to Settings > Apps > BLE HID and grant all Bluetooth permissions.", GUIStyle.none);
-
-                GUILayout.Space(10);
-                if (GUILayout.Button("Try Again", GUILayout.Height(60)))
-                {
-                    // Clear error and try to initialize again
-                    hasPermissionError = false;
-                    permissionErrorMessage = "";
-                    AddLogEntry("Retrying initialization...");
-                    StartCoroutine(bleHidManager.Initialize());
-                }
-                GUILayout.EndVertical();
-
+                DrawPermissionErrorUI();
+                GUILayout.Space(20);
+            }
+            
+            // Accessibility error - show if we're not in the Local tab
+            if (hasAccessibilityError && currentTab != 3)
+            {
+                DrawAccessibilityErrorUI(false); // Simple notification when not on Local tab
                 GUILayout.Space(20);
             }
 
@@ -731,32 +725,15 @@ namespace Inventonater.BleHid
             
             if (!accessibilityEnabled && !isEditorMode)
             {
-                // Show initialization status and button to open settings
-                GUILayout.Label("Local control requires Accessibility Service permissions");
-                
-                if (GUILayout.Button("Initialize Local Control", GUILayout.Height(60)))
-                {
-                    #if UNITY_ANDROID
-                    StartCoroutine(InitializeLocalControl());
-                    #endif
-                }
-                
-                if (canUseLocalControls && GUILayout.Button("Open Accessibility Settings", GUILayout.Height(60)))
-                {
-                    #if UNITY_ANDROID
-                    BleHidLocalControl.Instance.OpenAccessibilitySettings();
-                    #endif
-                }
-                
-                // Add a help message
-                GUILayout.Space(10);
-                GUILayout.Label("To enable the Accessibility Service:");
-                GUILayout.Label("1. Tap 'Open Accessibility Settings'");
-                GUILayout.Label("2. Find 'Inventonater BLE HID' in the list");
-                GUILayout.Label("3. Toggle it ON");
-                GUILayout.Label("4. Accept the permissions");
-                
+                // Show detailed accessibility error UI
+                hasAccessibilityError = true;
+                DrawAccessibilityErrorUI(true); // Full UI with instructions
                 return;
+            }
+            else
+            {
+                // Accessibility is enabled, clear the error
+                hasAccessibilityError = false;
             }
             
             // Add local controls once initialized (or in editor mode)
@@ -1008,6 +985,133 @@ namespace Inventonater.BleHid
         #endregion
 
         #region Event Handlers
+        /// <summary>
+        /// Draw the permission error UI with specific missing permissions and resolution buttons
+        /// </summary>
+        private void DrawPermissionErrorUI()
+        {
+            GUIStyle errorStyle = new GUIStyle(GUI.skin.box);
+            errorStyle.normal.background = MakeColorTexture(new Color(0.8f, 0.2f, 0.2f, 1.0f));
+            errorStyle.normal.textColor = Color.white;
+            errorStyle.fontSize = 22;
+            errorStyle.fontStyle = FontStyle.Bold;
+            errorStyle.padding = new RectOffset(20, 20, 20, 20);
+            
+            GUILayout.BeginVertical(errorStyle);
+            
+            // Header
+            GUILayout.Label("Missing Permissions", GUIStyle.none);
+            GUILayout.Space(5);
+            
+            if (checkingPermissions)
+            {
+                GUILayout.Label("Checking permissions...", GUIStyle.none);
+            }
+            else if (missingPermissions.Count > 0)
+            {
+                // Show general error message
+                GUILayout.Label(permissionErrorMessage, GUIStyle.none);
+                GUILayout.Space(10);
+                
+                // List each missing permission with a request button
+                GUILayout.Label("The following permissions are required:", GUIStyle.none);
+                GUILayout.Space(5);
+                
+                foreach (var permission in missingPermissions)
+                {
+                    GUILayout.BeginHorizontal();
+                    GUILayout.Label($"• {permission.Name}: {permission.Description}", GUIStyle.none, GUILayout.Width(Screen.width * 0.6f));
+                    
+                    if (GUILayout.Button("Request", GUILayout.Height(40)))
+                    {
+                        AddLogEntry($"Requesting permission: {permission.Name}");
+                        StartCoroutine(RequestSinglePermission(permission));
+                    }
+                    GUILayout.EndHorizontal();
+                }
+                
+                // Open settings button
+                GUILayout.Space(10);
+                GUILayout.Label("If permission requests don't work, try granting them manually:", GUIStyle.none);
+                
+                if (GUILayout.Button("Open App Settings", GUILayout.Height(50)))
+                {
+                    AddLogEntry("Opening app settings");
+                    BleHidPermissionHandler.OpenAppSettings();
+                }
+            }
+            else
+            {
+                GUILayout.Label("Permission error occurred but no missing permissions were found.", GUIStyle.none);
+                GUILayout.Label("This could be a temporary issue. Please try again.", GUIStyle.none);
+            }
+            
+            // Retry button
+            GUILayout.Space(10);
+            if (GUILayout.Button("Check Permissions Again", GUILayout.Height(60)))
+            {
+                // Re-check permissions and try to initialize again
+                CheckMissingPermissions();
+                AddLogEntry("Rechecking permissions...");
+            }
+            
+            GUILayout.EndVertical();
+        }
+        
+        /// <summary>
+        /// Request a single permission and update the UI accordingly
+        /// </summary>
+        private IEnumerator RequestSinglePermission(BleHidPermissionHandler.BluetoothPermission permission)
+        {
+            yield return StartCoroutine(BleHidPermissionHandler.RequestAndroidPermission(permission.PermissionString));
+            
+            // Re-check permissions after the request
+            yield return new WaitForSeconds(0.5f);
+            CheckMissingPermissions();
+            
+            // If all permissions have been granted, try initializing again
+            if (missingPermissions.Count == 0)
+            {
+                hasPermissionError = false;
+                permissionErrorMessage = "";
+                AddLogEntry("All permissions granted. Initializing...");
+                yield return StartCoroutine(bleHidManager.Initialize());
+            }
+        }
+        
+        /// <summary>
+        /// Check for missing permissions and update the UI
+        /// </summary>
+        private void CheckMissingPermissions()
+        {
+            checkingPermissions = true;
+            
+            // Run this in coroutine to avoid freezing the UI
+            StartCoroutine(CheckMissingPermissionsCoroutine());
+        }
+        
+        private IEnumerator CheckMissingPermissionsCoroutine()
+        {
+            // Allow UI to update
+            yield return null;
+            
+            // Get missing permissions
+            missingPermissions = BleHidPermissionHandler.GetMissingPermissions();
+            
+            // Log the results
+            if (missingPermissions.Count > 0)
+            {
+                string missingList = string.Join(", ", missingPermissions.Select(p => p.Name).ToArray());
+                AddLogEntry($"Missing permissions: {missingList}");
+            }
+            else
+            {
+                AddLogEntry("All required permissions are granted");
+            }
+            
+            checkingPermissions = false;
+        }
+
         private void OnInitializeComplete(bool success, string message)
         {
             isInitialized = success;
@@ -1017,12 +1121,19 @@ namespace Inventonater.BleHid
                 // Clear any permission errors
                 hasPermissionError = false;
                 permissionErrorMessage = "";
+                missingPermissions.Clear();
 
                 AddLogEntry("BLE HID initialized successfully: " + message);
             }
             else
             {
                 AddLogEntry("BLE HID initialization failed: " + message);
+                
+                // Check if this is a permission error
+                if (message.Contains("permission"))
+                {
+                    CheckMissingPermissions();
+                }
             }
         }
 
@@ -1055,6 +1166,120 @@ namespace Inventonater.BleHid
             AddLogEntry("Pairing state changed: " + status + (deviceAddress != null ? " (" + deviceAddress + ")" : ""));
         }
 
+        /// <summary>
+        /// Draw the accessibility service error UI with instructions
+        /// </summary>
+        private void DrawAccessibilityErrorUI(bool fullUI)
+        {
+            // Create a style for the error box
+            GUIStyle errorStyle = new GUIStyle(GUI.skin.box);
+            errorStyle.normal.background = MakeColorTexture(new Color(0.8f, 0.4f, 0.0f, 1.0f)); // Orange for accessibility
+            errorStyle.normal.textColor = Color.white;
+            errorStyle.fontSize = 22;
+            errorStyle.fontStyle = FontStyle.Bold;
+            errorStyle.padding = new RectOffset(20, 20, 20, 20);
+            
+            GUILayout.BeginVertical(errorStyle);
+            
+            // Header
+            GUILayout.Label("Accessibility Service Required", GUIStyle.none);
+            GUILayout.Space(5);
+            
+            if (checkingAccessibilityService)
+            {
+                GUILayout.Label("Checking accessibility service status...", GUIStyle.none);
+            }
+            else
+            {
+                // Show error message
+                GUILayout.Label(accessibilityErrorMessage, GUIStyle.none);
+                
+                if (fullUI)
+                {
+                    // Full UI with detailed instructions - showing only the Open Settings button as requested
+                    GUILayout.Space(10);
+                    
+                    if (GUILayout.Button("Open Accessibility Settings", GUILayout.Height(60)))
+                    {
+                        #if UNITY_ANDROID
+                        if (BleHidLocalControl.Instance != null)
+                        {
+                            BleHidLocalControl.Instance.OpenAccessibilitySettings();
+                            AddLogEntry("Opening accessibility settings");
+                        }
+                        #endif
+                    }
+                    
+                    // Detailed instructions
+                    GUILayout.Space(10);
+                    GUILayout.Label("To enable the Accessibility Service:", GUIStyle.none);
+                    GUILayout.Label("1. Tap 'Open Accessibility Settings'", GUIStyle.none);
+                    GUILayout.Label("2. Find 'Inventonater BLE HID' in the list", GUIStyle.none);
+                    GUILayout.Label("3. Toggle it ON", GUIStyle.none);
+                    GUILayout.Label("4. Accept the permissions", GUIStyle.none);
+                }
+                else
+                {
+                    // Simple notification with link to Local tab
+                    GUILayout.Space(5);
+                    GUILayout.Label("Go to the Local tab to enable this feature", GUIStyle.none);
+                    
+                    if (GUILayout.Button("Go to Local Controls Tab", GUILayout.Height(40)))
+                    {
+                        currentTab = 3; // Switch to Local tab
+                    }
+                }
+            }
+            
+            GUILayout.EndVertical();
+        }
+        
+        /// <summary>
+        /// Check if the accessibility service is enabled
+        /// </summary>
+        private void CheckAccessibilityServiceStatus()
+        {
+            checkingAccessibilityService = true;
+            StartCoroutine(CheckAccessibilityServiceCoroutine());
+        }
+        
+        private IEnumerator CheckAccessibilityServiceCoroutine()
+        {
+            yield return null; // Wait a frame to let UI update
+            
+            #if UNITY_ANDROID && !UNITY_EDITOR
+            if (BleHidLocalControl.Instance != null)
+            {
+                try
+                {
+                    accessibilityServiceEnabled = BleHidLocalControl.Instance.IsAccessibilityServiceEnabled();
+                    hasAccessibilityError = !accessibilityServiceEnabled;
+                    
+                    if (accessibilityServiceEnabled)
+                    {
+                        AddLogEntry("Accessibility service is enabled");
+                    }
+                    else
+                    {
+                        AddLogEntry("Accessibility service is not enabled");
+                    }
+                }
+                catch (Exception e)
+                {
+                    AddLogEntry("Error checking accessibility service: " + e.Message);
+                    hasAccessibilityError = true;
+                }
+            }
+            else
+            {
+                hasAccessibilityError = true;
+                AddLogEntry("BleHidLocalControl instance not available");
+            }
+            #endif
+            
+            checkingAccessibilityService = false;
+        }
+
         private void OnError(int errorCode, string errorMessage)
         {
             // Check for permission error
@@ -1063,6 +1288,18 @@ namespace Inventonater.BleHid
                 hasPermissionError = true;
                 permissionErrorMessage = errorMessage;
                 AddLogEntry("Permission error: " + errorMessage);
+                
+                // Check which specific permissions are missing
+                CheckMissingPermissions();
+            }
+            else if (errorCode == BleHidConstants.ERROR_ACCESSIBILITY_NOT_ENABLED)
+            {
+                hasAccessibilityError = true;
+                accessibilityErrorMessage = errorMessage;
+                AddLogEntry("Accessibility error: " + errorMessage);
+                
+                // Check accessibility service status
+                CheckAccessibilityServiceStatus();
             }
             else
             {

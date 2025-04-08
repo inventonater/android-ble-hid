@@ -1,5 +1,6 @@
 using System;
 using System.Collections;
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace Inventonater.BleHid
@@ -10,6 +11,41 @@ namespace Inventonater.BleHid
     /// </summary>
     public class BleHidPermissionHandler
     {
+        /// <summary>
+        /// Represents a Bluetooth permission
+        /// </summary>
+        public class BluetoothPermission
+        {
+            public string Name { get; set; }
+            public string PermissionString { get; set; }
+            public bool IsGranted { get; set; }
+            public string Description { get; set; }
+        }
+        
+        /// <summary>
+        /// List of Bluetooth permissions required for Android 12+
+        /// </summary>
+        public static readonly BluetoothPermission[] RequiredPermissions = new BluetoothPermission[]
+        {
+            new BluetoothPermission
+            {
+                Name = "Bluetooth Connect",
+                PermissionString = "android.permission.BLUETOOTH_CONNECT",
+                Description = "Required to connect to and control Bluetooth devices"
+            },
+            new BluetoothPermission
+            {
+                Name = "Bluetooth Scan",
+                PermissionString = "android.permission.BLUETOOTH_SCAN",
+                Description = "Required to scan for nearby Bluetooth devices"
+            },
+            new BluetoothPermission
+            {
+                Name = "Bluetooth Advertise",
+                PermissionString = "android.permission.BLUETOOTH_ADVERTISE",
+                Description = "Required to advertise this device to other Bluetooth devices"
+            }
+        };
         /// <summary>
         /// Request Bluetooth permissions required for Android 12+ (API level 31+)
         /// </summary>
@@ -28,6 +64,73 @@ namespace Inventonater.BleHid
             
             // Give a small delay to allow the permission requests to complete
             yield return new WaitForSeconds(0.5f);
+        }
+        
+        /// <summary>
+        /// Get a list of all missing Bluetooth permissions
+        /// </summary>
+        /// <returns>List of permissions that are not currently granted</returns>
+        public static List<BluetoothPermission> GetMissingPermissions()
+        {
+            List<BluetoothPermission> missingPermissions = new List<BluetoothPermission>();
+            
+            // Skip permission check if not on Android
+            if (Application.platform != RuntimePlatform.Android)
+                return missingPermissions;
+                
+            // Skip if Android version is below 12 (API 31)
+            int sdkInt = GetAndroidSDKVersion();
+            if (sdkInt < 31)
+                return missingPermissions;
+            
+            // Check each required permission
+            foreach (var permission in RequiredPermissions)
+            {
+                permission.IsGranted = HasUserAuthorizedPermission(permission.PermissionString);
+                
+                if (!permission.IsGranted)
+                {
+                    missingPermissions.Add(permission);
+                }
+            }
+            
+            return missingPermissions;
+        }
+        
+        /// <summary>
+        /// Open the Android app settings page for this application
+        /// </summary>
+        public static void OpenAppSettings()
+        {
+            if (Application.platform != RuntimePlatform.Android)
+                return;
+                
+            try
+            {
+                AndroidJavaClass unityPlayer = new AndroidJavaClass("com.unity3d.player.UnityPlayer");
+                AndroidJavaObject currentActivity = unityPlayer.GetStatic<AndroidJavaObject>("currentActivity");
+                AndroidJavaObject context = currentActivity.Call<AndroidJavaObject>("getApplicationContext");
+                
+                AndroidJavaClass intentClass = new AndroidJavaClass("android.content.Intent");
+                AndroidJavaObject intent = new AndroidJavaObject(
+                    "android.content.Intent", 
+                    "android.settings.APPLICATION_DETAILS_SETTINGS");
+                
+                AndroidJavaClass uriClass = new AndroidJavaClass("android.net.Uri");
+                AndroidJavaObject uriBuilder = new AndroidJavaObject("java.lang.StringBuilder");
+                uriBuilder.Call<AndroidJavaObject>("append", "package:");
+                uriBuilder.Call<AndroidJavaObject>("append", context.Call<string>("getPackageName"));
+                AndroidJavaObject uri = uriClass.CallStatic<AndroidJavaObject>("parse", uriBuilder.Call<string>("toString"));
+                
+                intent.Call<AndroidJavaObject>("setData", uri);
+                intent.Call<AndroidJavaObject>("addFlags", intentClass.GetStatic<int>("FLAG_ACTIVITY_NEW_TASK"));
+                
+                currentActivity.Call("startActivity", intent);
+            }
+            catch (Exception e)
+            {
+                Debug.LogError("Failed to open app settings: " + e.Message);
+            }
         }
         
         /// <summary>
@@ -110,13 +213,7 @@ namespace Inventonater.BleHid
             // For Android 12+ (API 31+) we need these permissions
             if (sdkInt >= 31)
             {
-                bool hasConnectPermission = HasUserAuthorizedPermission("android.permission.BLUETOOTH_CONNECT");
-                bool hasScanPermission = HasUserAuthorizedPermission("android.permission.BLUETOOTH_SCAN");
-                bool hasAdvertisePermission = HasUserAuthorizedPermission("android.permission.BLUETOOTH_ADVERTISE");
-                
-                Debug.Log($"Permissions: BLUETOOTH_CONNECT={hasConnectPermission}, BLUETOOTH_SCAN={hasScanPermission}, BLUETOOTH_ADVERTISE={hasAdvertisePermission}");
-                
-                return hasConnectPermission && hasScanPermission && hasAdvertisePermission;
+                return GetMissingPermissions().Count == 0;
             }
             
             // For older Android versions we check the legacy permissions
