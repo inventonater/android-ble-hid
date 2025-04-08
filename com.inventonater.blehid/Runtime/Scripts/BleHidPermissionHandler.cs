@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 
 namespace Inventonater.BleHid
@@ -83,6 +84,53 @@ namespace Inventonater.BleHid
             
             // Give a small delay to allow the permission requests to complete
             yield return new WaitForSeconds(0.5f);
+        }
+        
+        /// <summary>
+        /// Get a list of all missing permissions (both Bluetooth and other)
+        /// </summary>
+        /// <returns>List of permissions that are not currently granted</returns>
+        public static List<AndroidPermission> GetMissingPermissions()
+        {
+            List<AndroidPermission> missingPermissions = new List<AndroidPermission>();
+            
+            // Skip permission check if not on Android
+            if (Application.platform != RuntimePlatform.Android)
+                return missingPermissions;
+            
+            // Check Bluetooth permissions (only for Android 12+)
+            int sdkInt = GetAndroidSDKVersion();
+            if (sdkInt >= 31)
+            {
+                // Check each required Bluetooth permission
+                foreach (var permission in BluetoothPermissions)
+                {
+                    permission.IsGranted = HasUserAuthorizedPermission(permission.PermissionString);
+                    
+                    if (!permission.IsGranted)
+                    {
+                        missingPermissions.Add(permission);
+                    }
+                }
+            }
+            
+            // Check other permissions (like Camera)
+            foreach (var permission in OtherPermissions)
+            {
+                permission.IsGranted = HasUserAuthorizedPermission(permission.PermissionString);
+                
+                if (!permission.IsGranted)
+                {
+                    // Don't add camera if it's already in the list
+                    bool alreadyInList = missingPermissions.Any(p => p.PermissionString == permission.PermissionString);
+                    if (!alreadyInList)
+                    {
+                        missingPermissions.Add(permission);
+                    }
+                }
+            }
+            
+            return missingPermissions;
         }
         
         /// <summary>
