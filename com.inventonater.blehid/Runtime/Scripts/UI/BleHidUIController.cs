@@ -379,42 +379,37 @@ namespace Inventonater.BleHid.UI
         {
             logger.Log("Initializing local control...");
             
-            // Get instance of BleHidLocalControl
-            try {
+            try
+            {
+                // Get instance of BleHidLocalControl
                 localControl = BleHidLocalControl.Instance;
+                
+                if (localControl != null)
+                {
+                    // Initialize with retries
+                    yield return StartCoroutine(localControl.Initialize(5));
+                    
+                    // Check if initialization was successful
+                    bool accessibilityEnabled = localControl.IsAccessibilityServiceEnabled();
+                    hasAccessibilityPermission = accessibilityEnabled;
+                    
+                    if (!accessibilityEnabled)
+                    {
+                        logger.LogWarning("Accessibility service not enabled. Some features will be limited.");
+                    }
+                    else
+                    {
+                        logger.Log("Local control fully initialized");
+                    }
+                }
+                else
+                {
+                    logger.LogError("Failed to create local control instance");
+                }
             }
-            catch (Exception e) {
-                logger.LogError($"Error creating local control instance: {e.Message}");
-                yield break;
-            }
-            
-            if (localControl == null)
+            catch (Exception e)
             {
-                logger.LogError("Failed to create local control instance");
-                yield break;
-            }
-            
-            // Initialize with retries
-            yield return StartCoroutine(localControl.Initialize(5));
-            
-            // Check if initialization was successful
-            bool accessibilityEnabled = false;
-            try {
-                accessibilityEnabled = localControl.IsAccessibilityServiceEnabled();
-            }
-            catch (Exception e) {
-                logger.LogError($"Error checking accessibility service: {e.Message}");
-            }
-            
-            hasAccessibilityPermission = accessibilityEnabled;
-            
-            if (!accessibilityEnabled)
-            {
-                logger.LogWarning("Accessibility service not enabled. Some features will be limited.");
-            }
-            else
-            {
-                logger.Log("Local control fully initialized");
+                logger.LogError($"Error initializing local control: {e.Message}");
             }
         }
         

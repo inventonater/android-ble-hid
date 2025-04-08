@@ -11,7 +11,7 @@ namespace Inventonater.BleHid.UI
     {
         private static BleHidLogger instance;
         private readonly List<string> logMessages = new List<string>();
-        private int maxMessages = 100;
+        private readonly int maxMessages = 100;
         
         /// <summary>
         /// Singleton instance.

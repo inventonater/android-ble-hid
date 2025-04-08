@@ -95,8 +95,6 @@ namespace Inventonater.BleHid
         
         // Navigation keys
         public const byte KEY_PRINT_SCREEN = 0x46;
-        public const byte KEY_PRINT = 0x46; // Alias for KEY_PRINT_SCREEN
-        public const byte KEY_ESC = 0x29;   // Alias for KEY_ESCAPE
         public const byte KEY_SCROLL_LOCK = 0x47;
         public const byte KEY_PAUSE = 0x48;
         public const byte KEY_INSERT = 0x49;

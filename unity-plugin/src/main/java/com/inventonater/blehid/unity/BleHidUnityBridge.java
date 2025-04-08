@@ -167,28 +167,6 @@ public class BleHidUnityBridge {
         plugin.close();
     }
     
-    // Permission methods
-    
-    /**
-     * Check if a specific permission is granted.
-     * 
-     * @param type The permission type to check (0=Bluetooth, 1=Accessibility)
-     * @return true if the permission is granted, false otherwise
-     */
-    public boolean hasPermission(int type) {
-        return plugin.hasPermission(type);
-    }
-    
-    /**
-     * Request a specific permission by opening appropriate system settings.
-     * 
-     * @param type The permission type to request (0=Bluetooth, 1=Accessibility)
-     * @return true if the settings page was opened, false otherwise
-     */
-    public boolean requestPermission(int type) {
-        return plugin.requestPermission(type);
-    }
-    
     // Local Control methods
     
     public boolean initializeLocalControl() {

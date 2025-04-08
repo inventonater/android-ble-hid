@@ -10,8 +10,6 @@ import com.inventonater.blehid.core.BleHidManager;
 import com.inventonater.blehid.core.BlePairingManager;
 import com.inventonater.blehid.core.HidConstants;
 import com.inventonater.blehid.core.LocalInputManager;
-import com.inventonater.blehid.core.PermissionManager;
-import com.inventonater.blehid.core.PermissionManager.PermissionType;
 
 /**
  * Main Unity plugin class for BLE HID functionality.
@@ -35,8 +33,7 @@ public class BleHidUnityPlugin {
     private BleHidManager bleHidManager;
     private BleHidUnityCallback callback;
     private boolean isInitialized = false;
-    private LocalInputManager inputManager;
-    private PermissionManager permissionManager;
+    private LocalInputManager localInputManager;
     
     /**
      * Get the singleton instance of the plugin.
@@ -67,9 +64,6 @@ public class BleHidUnityPlugin {
         
         this.unityActivity = activity;
         this.callback = callback;
-        
-        // Initialize permission manager
-        permissionManager = new PermissionManager(activity);
         
         // Create BLE HID manager
         bleHidManager = new BleHidManager(activity);
@@ -432,59 +426,21 @@ public class BleHidUnityPlugin {
     }
 
     /**
-     * Check if a specific permission is granted.
-     * 
-     * @param type The permission type to check
-     * @return true if the permission is granted, false otherwise
-     */
-    public boolean hasPermission(int type) {
-        if (permissionManager == null) {
-            return false;
-        }
-        
-        PermissionType permType = (type == 0) ? 
-            PermissionType.BLUETOOTH : PermissionType.ACCESSIBILITY;
-        
-        return permissionManager.hasPermission(permType);
-    }
-    
-    /**
-     * Request a specific permission by opening appropriate system settings.
-     * 
-     * @param type The permission type to request
-     * @return true if the settings page was opened, false otherwise
-     */
-    public boolean requestPermission(int type) {
-        if (permissionManager == null) {
-            return false;
-        }
-        
-        PermissionType permType = (type == 0) ? 
-            PermissionType.BLUETOOTH : PermissionType.ACCESSIBILITY;
-            
-        return permissionManager.requestPermission(permType);
-    }
-    
-    /**
      * Check if accessibility service is enabled.
      */
     public boolean isAccessibilityServiceEnabled() {
-        if (permissionManager != null) {
-            return permissionManager.hasPermission(PermissionType.ACCESSIBILITY);
-        } else if (localInputManager != null) {
-            return localInputManager.isAccessibilityServiceEnabled();
+        if (localInputManager == null) {
+            Log.e(TAG, "Local input manager not initialized");
+            return false;
         }
-        Log.e(TAG, "Permission manager and local input manager not initialized");
-        return false;
+        return localInputManager.isAccessibilityServiceEnabled();
     }
 
     /**
      * Open accessibility settings.
      */
     public void openAccessibilitySettings() {
-        if (permissionManager != null) {
-            permissionManager.requestPermission(PermissionType.ACCESSIBILITY);
-        } else if (localInputManager != null) {
+        if (localInputManager != null) {
             localInputManager.openAccessibilitySettings();
         }
     }

@@ -14,21 +14,9 @@ namespace Inventonater.BleHid
         private bool initialized = false;
         private float initRetryDelay = 0.5f; // Seconds between initialization retries
 
-        /// <summary>
-        /// Permission types that can be checked/requested.
-        /// </summary>
-        public enum PermissionType
-        {
-            Bluetooth = 0,
-            Accessibility = 1
-        }
-
         // Events
         public delegate void AccessibilityStatusChangedHandler(bool enabled);
         public event AccessibilityStatusChangedHandler OnAccessibilityStatusChanged;
-        
-        public delegate void PermissionStatusChangedHandler(PermissionType type, bool granted);
-        public event PermissionStatusChangedHandler OnPermissionStatusChanged;
 
         /// <summary>
         /// Singleton instance.
@@ -83,36 +71,41 @@ namespace Inventonater.BleHid
 
             while (!success && retryCount <= maxRetries)
             {
-                // Try to get bridge instance and initialize local control
-                AndroidJavaClass bridgeClass = null;
-                
                 try
                 {
-                    bridgeClass = new AndroidJavaClass("com.inventonater.blehid.unity.BleHidUnityBridge");
+                    // Get bridge instance
+                    AndroidJavaClass bridgeClass = new AndroidJavaClass("com.inventonater.blehid.unity.BleHidUnityBridge");
                     bridgeInstance = bridgeClass.CallStatic<AndroidJavaObject>("getInstance");
+
+                    // Initialize local control
                     success = bridgeInstance.Call<bool>("initializeLocalControl");
+                    
+                    if (success)
+                    {
+                        initialized = true;
+                        Debug.Log("BleHidLocalControl: Initialized successfully");
+
+                        // Check if accessibility service is enabled
+                        bool serviceEnabled = IsAccessibilityServiceEnabled();
+                        if (!serviceEnabled)
+                        {
+                            Debug.LogWarning("BleHidLocalControl: Accessibility service not enabled. Please enable it in settings.");
+                        }
+                    }
+                    else
+                    {
+                        Debug.LogError($"BleHidLocalControl: Failed to initialize (attempt {retryCount + 1}/{maxRetries + 1})");
+                        retryCount++;
+                        
+                        if (retryCount <= maxRetries)
+                        {
+                            yield return new WaitForSeconds(initRetryDelay);
+                        }
+                    }
                 }
                 catch (Exception e)
                 {
                     Debug.LogException(e);
-                    success = false;
-                }
-                
-                if (success)
-                {
-                    initialized = true;
-                    Debug.Log("BleHidLocalControl: Initialized successfully");
-
-                    // Check if accessibility service is enabled
-                    bool serviceEnabled = IsAccessibilityServiceEnabled();
-                    if (!serviceEnabled)
-                    {
-                        Debug.LogWarning("BleHidLocalControl: Accessibility service not enabled. Please enable it in settings.");
-                    }
-                }
-                else
-                {
-                    Debug.LogError($"BleHidLocalControl: Failed to initialize (attempt {retryCount + 1}/{maxRetries + 1})");
                     retryCount++;
                     
                     if (retryCount <= maxRetries)
@@ -152,43 +145,6 @@ namespace Inventonater.BleHid
 
             bridgeInstance.Call("openAccessibilitySettings");
         }
-
-        #region Permission Methods
-
-        /// <summary>
-        /// Checks if a specific permission is granted.
-        /// </summary>
-        /// <param name="type">The permission type to check</param>
-        /// <returns>True if permission is granted, false otherwise</returns>
-        public bool HasPermission(PermissionType type)
-        {
-            if (!CheckInitialized()) return false;
-            return bridgeInstance.Call<bool>("hasPermission", (int)type);
-        }
-
-        /// <summary>
-        /// Requests a specific permission by opening the appropriate system settings.
-        /// </summary>
-        /// <param name="type">The permission type to request</param>
-        /// <returns>True if settings page was opened, false otherwise</returns>
-        public bool RequestPermission(PermissionType type)
-        {
-            if (!CheckInitialized()) return false;
-            return bridgeInstance.Call<bool>("requestPermission", (int)type);
-        }
-
-        /// <summary>
-        /// Checks if all required permissions for full functionality are granted.
-        /// </summary>
-        /// <returns>True if all permissions are granted, false otherwise</returns>
-        public bool HasAllPermissions()
-        {
-            if (!CheckInitialized()) return false;
-            return HasPermission(PermissionType.Bluetooth) && 
-                   HasPermission(PermissionType.Accessibility);
-        }
-
-        #endregion
 
         #region Media Control Methods
 
