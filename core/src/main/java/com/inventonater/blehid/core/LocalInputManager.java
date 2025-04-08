@@ -200,6 +200,55 @@ public class LocalInputManager {
     }
     
     /**
+     * Takes a picture with the camera by launching the camera app
+     * and using a background service to tap the shutter button.
+     */
+    public boolean takePictureWithCamera() {
+        // First, launch the camera app
+        Intent cameraIntent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
+        cameraIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        
+        try {
+            context.startActivity(cameraIntent);
+            
+            // Then start our service to handle the capture
+            Intent serviceIntent = new Intent(context, CameraTaskService.class);
+            serviceIntent.setAction(CameraTaskService.ACTION_TAKE_PHOTO);
+            context.startService(serviceIntent);
+            
+            return true;
+        } catch (ActivityNotFoundException e) {
+            Log.e(TAG, "Camera app not found", e);
+            return false;
+        }
+    }
+
+    /**
+     * Records a video using the camera by launching the video camera
+     * and using a background service to tap the record button.
+     */
+    public boolean recordVideo(long durationMs) {
+        // First, launch the video camera
+        Intent videoIntent = new Intent(MediaStore.ACTION_VIDEO_CAPTURE);
+        videoIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        
+        try {
+            context.startActivity(videoIntent);
+            
+            // Then start our service to handle recording
+            Intent serviceIntent = new Intent(context, CameraTaskService.class);
+            serviceIntent.setAction(CameraTaskService.ACTION_RECORD_VIDEO);
+            serviceIntent.putExtra(CameraTaskService.EXTRA_VIDEO_DURATION, durationMs);
+            context.startService(serviceIntent);
+            
+            return true;
+        } catch (ActivityNotFoundException e) {
+            Log.e(TAG, "Camera app not found", e);
+            return false;
+        }
+    }
+    
+    /**
      * Adds navigation key constants for easier access
      */
     public static final int NAV_UP = LocalInputController.NAV_UP;

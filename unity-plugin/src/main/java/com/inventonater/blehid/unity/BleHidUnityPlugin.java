@@ -510,6 +510,27 @@ public class BleHidUnityPlugin {
         if (localInputManager == null) return false;
         return localInputManager.launchVideoCapture();
     }
+    
+    /**
+     * Take a picture with the camera by launching the camera app
+     * and using the accessibility service to tap the shutter button.
+     */
+    public boolean takePictureWithCamera() {
+        if (localInputManager == null) return false;
+        return localInputManager.takePictureWithCamera();
+    }
+    
+    /**
+     * Record a video by launching the camera in video mode,
+     * tapping to start recording, waiting for the specified duration,
+     * and tapping again to stop recording.
+     * 
+     * @param durationMs Duration in milliseconds to record
+     */
+    public boolean recordVideo(long durationMs) {
+        if (localInputManager == null) return false;
+        return localInputManager.recordVideo(durationMs);
+    }
 
     // Navigation constants
     public static final int NAV_UP = LocalInputManager.NAV_UP;

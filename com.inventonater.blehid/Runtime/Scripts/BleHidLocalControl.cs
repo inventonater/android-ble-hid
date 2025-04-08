@@ -128,28 +128,50 @@ namespace Inventonater.BleHid
                 Debug.LogError("BleHidLocalControl: Failed to initialize after multiple attempts");
             }
         }
-
+        
         /// <summary>
-        /// Checks if accessibility service is enabled.
+        /// Checks if the accessibility service is enabled.
         /// </summary>
+        /// <returns>True if the service is enabled, false otherwise.</returns>
         public bool IsAccessibilityServiceEnabled()
         {
-            if (!initialized || bridgeInstance == null)
-            {
-                Debug.LogError("BleHidLocalControl: Not initialized");
-                return false;
-            }
-
-            try
-            {
-                return bridgeInstance.Call<bool>("isAccessibilityServiceEnabled");
-            }
-            catch (Exception e)
-            {
-                Debug.LogError("BleHidLocalControl: Error checking accessibility service: " + e.Message);
-                return false;
-            }
+            if (!CheckInitialized()) return false;
+            return bridgeInstance.Call<bool>("isAccessibilityServiceEnabled");
         }
+
+        /// <summary>
+    /// Take a picture by launching the camera app and automatically 
+    /// capturing the photo using the accessibility service.
+    /// </summary>
+    public IEnumerator TakePictureWithCamera()
+    {
+        if (!CheckInitialized()) yield break;
+        
+        bool result = bridgeInstance.Call<bool>("takePictureWithCamera");
+        Debug.Log("Launched camera for auto photo capture: " + (result ? "Success" : "Failed"));
+        
+        // Wait for background service to finish its work
+        yield return new WaitForSeconds(3.0f);
+    }
+    
+    /// <summary>
+    /// Record a video by launching the video camera, starting recording,
+    /// waiting for the specified duration, and then automatically stopping.
+    /// </summary>
+    /// <param name="duration">Duration in seconds to record video</param>
+    public IEnumerator RecordVideo(float duration = 5.0f)
+    {
+        if (!CheckInitialized()) yield break;
+        
+        // Convert seconds to milliseconds
+        long durationMs = (long)(duration * 1000);
+        
+        bool result = bridgeInstance.Call<bool>("recordVideo", durationMs);
+        Debug.Log($"Recording video for {duration} seconds: " + (result ? "Success" : "Failed"));
+        
+        // Wait for the recording to complete (duration + buffer)
+        yield return new WaitForSeconds(duration + 2.0f);
+    }
 
         /// <summary>
         /// Opens accessibility settings to enable the service.
@@ -328,34 +350,7 @@ namespace Inventonater.BleHid
             return bridgeInstance.Call<bool>("launchVideoCapture");
         }
 
-        /// <summary>
-        /// Takes a picture using the camera using the direct photo capture intent.
-        /// More reliable than tap-based approach as it uses the system intent.
-        /// </summary>
-        public IEnumerator TakePictureWithCamera()
-        {
-            // Launch photo capture intent directly - more reliable across different devices
-            if (!LaunchPhotoCapture()) yield break;
-            
-            // Nothing more to do - the system handles the camera UI
-            Debug.Log("Photo capture intent launched");
-        }
-
-        /// <summary>
-        /// Records a video using the direct video capture intent.
-        /// This is more reliable than the tap-based approach as it uses the system intent.
-        /// </summary>
-        public IEnumerator RecordVideo(float duration = 5.0f)
-        {
-            // Launch video capture intent directly - more reliable across different devices
-            if (!LaunchVideoCapture()) yield break;
-            
-            // The user will need to stop recording manually
-            Debug.Log("Video capture intent launched");
-            
-            // Note: We can't automatically stop recording when using the intent approach
-            // The user will need to stop recording manually
-        }
+        // Removed duplicate methods
 
         #endregion
 

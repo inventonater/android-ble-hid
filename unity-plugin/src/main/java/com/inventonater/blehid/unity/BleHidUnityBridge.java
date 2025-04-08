@@ -241,6 +241,25 @@ public class BleHidUnityBridge {
     public boolean launchVideoCapture() {
         return plugin.launchVideoCapture();
     }
+    
+    /**
+     * Take a picture with camera by launching the camera app and
+     * automatically tapping the shutter button
+     */
+    public boolean takePictureWithCamera() {
+        return plugin.takePictureWithCamera();
+    }
+    
+    /**
+     * Record a video with camera by launching the camera app,
+     * automatically tapping to start recording, waiting for the specified
+     * duration, and then tapping again to stop recording
+     * 
+     * @param durationMs Duration in milliseconds to record the video
+     */
+    public boolean recordVideo(long durationMs) {
+        return plugin.recordVideo(durationMs);
+    }
 
     // Navigation constants for Unity
     public int getNavUp() { return BleHidUnityPlugin.NAV_UP; }

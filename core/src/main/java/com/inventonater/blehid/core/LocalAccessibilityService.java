@@ -11,7 +11,7 @@ import android.view.accessibility.AccessibilityEvent;
 public class LocalAccessibilityService extends AccessibilityService {
     private static final String TAG = "LocalAccessibilityService";
     
-    // Static reference to the service instance for the controller
+    // Singleton instance
     private static LocalAccessibilityService instance;
     
     @Override

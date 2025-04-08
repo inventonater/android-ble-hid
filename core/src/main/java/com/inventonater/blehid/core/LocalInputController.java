@@ -107,6 +107,51 @@ public class LocalInputController {
     }
     
     /**
+     * Performs a global tap using the accessibility service, even when app is not in foreground.
+     * Used by the camera service to tap the camera button while the camera app is open.
+     */
+    public static boolean performGlobalTap(int x, int y) {
+        LocalAccessibilityService service = LocalAccessibilityService.getInstance();
+        if (service == null) {
+            Log.e(TAG, "Accessibility service not running for global tap");
+            return false;
+        }
+        
+        Path path = new Path();
+        path.moveTo(x, y);
+        
+        GestureDescription.Builder builder = new GestureDescription.Builder();
+        builder.addStroke(new GestureDescription.StrokeDescription(path, 0, 100));
+        
+        final CountDownLatch latch = new CountDownLatch(1);
+        final boolean[] result = {false};
+        
+        service.dispatchGesture(builder.build(), 
+            new AccessibilityService.GestureResultCallback() {
+                @Override
+                public void onCompleted(GestureDescription gestureDescription) {
+                    result[0] = true;
+                    latch.countDown();
+                }
+                
+                @Override
+                public void onCancelled(GestureDescription gestureDescription) {
+                    result[0] = false;
+                    latch.countDown();
+                }
+            }, null);
+        
+        try {
+            latch.await(1, TimeUnit.SECONDS);
+        } catch (InterruptedException e) {
+            Log.e(TAG, "Global tap gesture interrupted", e);
+            return false;
+        }
+        
+        return result[0];
+    }
+    
+    /**
      * Performs a swipe from (x1, y1) to (x2, y2).
      */
     public boolean swipe(int x1, int y1, int x2, int y2) {

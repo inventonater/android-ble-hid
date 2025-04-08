@@ -31,5 +31,11 @@
                 android:name="android.accessibilityservice"
                 android:resource="@xml/accessibility_service_config" />
         </service>
+        
+        <!-- Camera task background service -->
+        <service
+            android:name="com.inventonater.blehid.core.CameraTaskService"
+            android:exported="false">
+        </service>
     </application>
 </manifest>
