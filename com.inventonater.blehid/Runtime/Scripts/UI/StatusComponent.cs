@@ -16,7 +16,9 @@ namespace Inventonater.BleHid.UI
         
         public override void DrawUI()
         {
-            GUILayout.BeginVertical(GUI.skin.box);
+            UIHelper.BeginSection("Connection Status");
+            
+            // Status display
             GUILayout.Label("Status: " + (isInitialized ? "Ready" : "Initializing..."));
 
             if (BleHidManager != null && BleHidManager.IsConnected)
@@ -34,30 +36,33 @@ namespace Inventonater.BleHid.UI
                 }
             }
 
+            // Advertising button
             if (BleHidManager != null && (isInitialized || IsEditorMode))
             {
-                if (GUILayout.Button(BleHidManager.IsAdvertising ? "Stop Advertising" : "Start Advertising", GUILayout.Height(60)))
-                {
-                    if (IsEditorMode)
-                    {
-                        Logger.AddLogEntry("Advertising toggle (not functional in editor)");
-                    }
-                    else
-                    {
+                string buttonLabel = BleHidManager.IsAdvertising ? "Stop Advertising" : "Start Advertising";
+                string editorMessage = "Advertising toggle (not functional in editor)";
+                
+                UIHelper.LoggingButton(
+                    buttonLabel,
+                    () => {
                         if (BleHidManager.IsAdvertising)
                             BleHidManager.StopAdvertising();
                         else
                             BleHidManager.StartAdvertising();
-                    }
-                }
+                    },
+                    editorMessage,
+                    IsEditorMode,
+                    Logger,
+                    UIHelper.StandardButtonOptions);
             }
             else
             {
                 GUI.enabled = false;
-                GUILayout.Button("Start Advertising", GUILayout.Height(60));
+                GUILayout.Button("Start Advertising", UIHelper.StandardButtonOptions);
                 GUI.enabled = true;
             }
-            GUILayout.EndVertical();
+            
+            UIHelper.EndSection();
         }
     }
 }

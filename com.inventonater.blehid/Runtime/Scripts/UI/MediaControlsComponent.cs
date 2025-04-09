@@ -1,4 +1,5 @@
 using UnityEngine;
+using System;
 
 namespace Inventonater.BleHid.UI
 {
@@ -9,46 +10,51 @@ namespace Inventonater.BleHid.UI
     {
         public override void DrawUI()
         {
-            // Media control buttons row 1
-            GUILayout.BeginHorizontal();
+            UIHelper.BeginSection("Media Controls");
             
-            // Use ActionButton helper for simplified button creation with editor mode handling
-            ActionButton("Previous", 
-                () => BleHidManager.PreviousTrack(), 
-                "Previous track pressed", 
-                new GUILayoutOption[] { GUILayout.Height(80) });
-                
-            ActionButton("Play/Pause", 
-                () => BleHidManager.PlayPause(), 
-                "Play/Pause pressed", 
-                new GUILayoutOption[] { GUILayout.Height(80) });
-                
-            ActionButton("Next", 
-                () => BleHidManager.NextTrack(), 
-                "Next track pressed", 
-                new GUILayoutOption[] { GUILayout.Height(80) });
-                
-            GUILayout.EndHorizontal();
-
-            // Media control buttons row 2
-            GUILayout.BeginHorizontal();
+            // Media control buttons row 1 - using the new ActionButtonRow helper
+            string[] playbackLabels = { "Previous", "Play/Pause", "Next" };
+            Action[] playbackActions = {
+                () => BleHidManager.PreviousTrack(),
+                () => BleHidManager.PlayPause(),
+                () => BleHidManager.NextTrack()
+            };
+            string[] playbackMessages = {
+                "Previous track pressed",
+                "Play/Pause pressed",
+                "Next track pressed"
+            };
             
-            ActionButton("Volume Down", 
-                () => BleHidManager.VolumeDown(), 
-                "Volume down pressed", 
-                new GUILayoutOption[] { GUILayout.Height(80) });
+            UIHelper.ActionButtonRow(
+                playbackLabels,
+                playbackActions,
+                IsEditorMode,
+                Logger,
+                playbackMessages,
+                UIHelper.LargeButtonOptions);
+            
+            // Media control buttons row 2 - using the new ActionButtonRow helper
+            string[] volumeLabels = { "Volume Down", "Mute", "Volume Up" };
+            Action[] volumeActions = {
+                () => BleHidManager.VolumeDown(),
+                () => BleHidManager.Mute(),
+                () => BleHidManager.VolumeUp()
+            };
+            string[] volumeMessages = {
+                "Volume down pressed",
+                "Mute pressed",
+                "Volume up pressed"
+            };
+            
+            UIHelper.ActionButtonRow(
+                volumeLabels,
+                volumeActions,
+                IsEditorMode,
+                Logger,
+                volumeMessages,
+                UIHelper.LargeButtonOptions);
                 
-            ActionButton("Mute", 
-                () => BleHidManager.Mute(), 
-                "Mute pressed", 
-                new GUILayoutOption[] { GUILayout.Height(80) });
-                
-            ActionButton("Volume Up", 
-                () => BleHidManager.VolumeUp(), 
-                "Volume up pressed", 
-                new GUILayoutOption[] { GUILayout.Height(80) });
-                
-            GUILayout.EndHorizontal();
+            UIHelper.EndSection();
         }
     }
 }

@@ -1,4 +1,5 @@
 using UnityEngine;
+using System;
 
 namespace Inventonater.BleHid.UI
 {
@@ -11,112 +12,89 @@ namespace Inventonater.BleHid.UI
         
         public override void DrawUI()
         {
-            // Text input field
+            // Text input section
+            UIHelper.BeginSection("Text Input");
             GUILayout.Label("Text to type:");
-            textToSend = GUILayout.TextField(textToSend, GUILayout.Height(60));
+            textToSend = GUILayout.TextField(textToSend, UIHelper.StandardButtonOptions);
 
             // Send button
-            if (GUILayout.Button("Send Text", GUILayout.Height(60)))
-            {
-                if (!string.IsNullOrEmpty(textToSend))
-                {
-                    if (IsEditorMode)
-                        Logger.AddLogEntry("Text sent: " + textToSend);
-                    else
+            UIHelper.LoggingButton(
+                "Send Text", 
+                () => {
+                    if (!string.IsNullOrEmpty(textToSend)) {
                         BleHidManager.TypeText(textToSend);
+                        textToSend = "";
+                    } else {
+                        Logger.AddLogEntry("Cannot send empty text");
+                    }
+                },
+                !string.IsNullOrEmpty(textToSend) ? "Text sent: " + textToSend : "Cannot send empty text",
+                IsEditorMode,
+                Logger,
+                UIHelper.StandardButtonOptions);
+            UIHelper.EndSection();
 
-                    textToSend = "";
-                }
-                else
-                {
-                    Logger.AddLogEntry("Cannot send empty text");
-                }
-            }
-
-            // Common keys
-            GUILayout.Label("Common Keys:");
-
+            // QWERTY Keyboard section
+            UIHelper.BeginSection("Keyboard");
+            
             // Row 1: Q-P
-            DrawKeyboardRow(new string[] { "Q", "W", "E", "R", "T", "Y", "U", "I", "O", "P" });
+            string[] row1 = { "Q", "W", "E", "R", "T", "Y", "U", "I", "O", "P" };
+            UIHelper.ButtonGrid(row1, index => SendKey(row1[index]), row1.Length, UIHelper.StandardButtonHeight);
 
             // Row 2: A-L
-            DrawKeyboardRow(new string[] { "A", "S", "D", "F", "G", "H", "J", "K", "L" });
+            string[] row2 = { "A", "S", "D", "F", "G", "H", "J", "K", "L" };
+            UIHelper.ButtonGrid(row2, index => SendKey(row2[index]), row2.Length, UIHelper.StandardButtonHeight);
 
             // Row 3: Z-M
-            DrawKeyboardRow(new string[] { "Z", "X", "C", "V", "B", "N", "M" });
+            string[] row3 = { "Z", "X", "C", "V", "B", "N", "M" };
+            UIHelper.ButtonGrid(row3, index => SendKey(row3[index]), row3.Length, UIHelper.StandardButtonHeight);
 
             // Row 4: Special keys
-            GUILayout.BeginHorizontal();
-            if (GUILayout.Button("Enter", GUILayout.Height(60)))
-            {
-                if (IsEditorMode)
-                    Logger.AddLogEntry("Enter key pressed");
-                else
-                    BleHidManager.SendKey(BleHidConstants.KEY_RETURN);
-            }
-
-            if (GUILayout.Button("Space", GUILayout.Height(60), GUILayout.Width(Screen.width * 0.3f)))
-            {
-                if (IsEditorMode)
-                    Logger.AddLogEntry("Space key pressed");
-                else
-                    BleHidManager.SendKey(BleHidConstants.KEY_SPACE);
-            }
-
-            if (GUILayout.Button("Backspace", GUILayout.Height(60)))
-            {
-                if (IsEditorMode)
-                    Logger.AddLogEntry("Backspace key pressed");
-                else
-                    BleHidManager.SendKey(BleHidConstants.KEY_BACKSPACE);
-            }
-            GUILayout.EndHorizontal();
+            string[] specialKeys = { "Enter", "Space", "Backspace" };
+            Action[] specialActions = {
+                () => BleHidManager.SendKey(BleHidConstants.KEY_RETURN),
+                () => BleHidManager.SendKey(BleHidConstants.KEY_SPACE),
+                () => BleHidManager.SendKey(BleHidConstants.KEY_BACKSPACE)
+            };
+            string[] specialMessages = {
+                "Enter key pressed",
+                "Space key pressed",
+                "Backspace key pressed"
+            };
+            
+            UIHelper.ActionButtonRow(
+                specialKeys,
+                specialActions,
+                IsEditorMode,
+                Logger,
+                specialMessages,
+                UIHelper.StandardButtonOptions);
+            UIHelper.EndSection();
             
             // Navigation keys
-            GUILayout.Label("Navigation Keys:");
-            GUILayout.BeginHorizontal();
-            if (GUILayout.Button("Up", GUILayout.Height(60)))
-            {
-                if (IsEditorMode)
-                    Logger.AddLogEntry("Up key pressed");
-                else
-                    BleHidManager.SendKey(BleHidConstants.KEY_UP);
-            }
-            if (GUILayout.Button("Down", GUILayout.Height(60)))
-            {
-                if (IsEditorMode)
-                    Logger.AddLogEntry("Down key pressed");
-                else
-                    BleHidManager.SendKey(BleHidConstants.KEY_DOWN);
-            }
-            if (GUILayout.Button("Left", GUILayout.Height(60)))
-            {
-                if (IsEditorMode)
-                    Logger.AddLogEntry("Left key pressed");
-                else
-                    BleHidManager.SendKey(BleHidConstants.KEY_LEFT);
-            }
-            if (GUILayout.Button("Right", GUILayout.Height(60)))
-            {
-                if (IsEditorMode)
-                    Logger.AddLogEntry("Right key pressed");
-                else
-                    BleHidManager.SendKey(BleHidConstants.KEY_RIGHT);
-            }
-            GUILayout.EndHorizontal();
-        }
-
-        private void DrawKeyboardRow(string[] keys)
-        {
-            GUILayout.BeginHorizontal();
-            foreach (string key in keys)
-            {
-                if (GUILayout.Button(key, GUILayout.Height(60), GUILayout.Width(Screen.width / (keys.Length + 2))))
-                {
-                    SendKey(key);
-                }
-            }
-            GUILayout.EndHorizontal();
+            UIHelper.BeginSection("Navigation Keys");
+            string[] navKeys = { "Up", "Down", "Left", "Right" };
+            Action[] navActions = {
+                () => BleHidManager.SendKey(BleHidConstants.KEY_UP),
+                () => BleHidManager.SendKey(BleHidConstants.KEY_DOWN),
+                () => BleHidManager.SendKey(BleHidConstants.KEY_LEFT),
+                () => BleHidManager.SendKey(BleHidConstants.KEY_RIGHT)
+            };
+            string[] navMessages = {
+                "Up key pressed",
+                "Down key pressed",
+                "Left key pressed",
+                "Right key pressed"
+            };
+            
+            UIHelper.ActionButtonRow(
+                navKeys,
+                navActions,
+                IsEditorMode,
+                Logger,
+                navMessages,
+                UIHelper.StandardButtonOptions);
+            UIHelper.EndSection();
         }
 
         private void SendKey(string key)

@@ -1,4 +1,5 @@
 using UnityEngine;
+using System;
 
 namespace Inventonater.BleHid.UI
 {
@@ -46,6 +47,8 @@ namespace Inventonater.BleHid.UI
         
         public override void DrawUI()
         {
+            UIHelper.BeginSection("Mouse Touchpad");
+            
             // Show touchpad instruction
             GUILayout.Label("Touch & Drag in the area below to move mouse");
 
@@ -71,33 +74,33 @@ namespace Inventonater.BleHid.UI
                 Rect lastRect = GUILayoutUtility.GetLastRect();
                 touchpadRect = new Rect(lastRect.x, lastRect.y, lastRect.width, lastRect.height);
             }
+            
+            UIHelper.EndSection();
 
             // Mouse button controls
-            GUILayout.BeginHorizontal();
-            if (GUILayout.Button("Left Click", GUILayout.Height(80)))
-            {
-                if (IsEditorMode)
-                    Logger.AddLogEntry("Left click pressed");
-                else
-                    BleHidManager.ClickMouseButton(BleHidConstants.BUTTON_LEFT);
-            }
-
-            if (GUILayout.Button("Middle Click", GUILayout.Height(80)))
-            {
-                if (IsEditorMode)
-                    Logger.AddLogEntry("Middle click pressed");
-                else
-                    BleHidManager.ClickMouseButton(BleHidConstants.BUTTON_MIDDLE);
-            }
-
-            if (GUILayout.Button("Right Click", GUILayout.Height(80)))
-            {
-                if (IsEditorMode)
-                    Logger.AddLogEntry("Right click pressed");
-                else
-                    BleHidManager.ClickMouseButton(BleHidConstants.BUTTON_RIGHT);
-            }
-            GUILayout.EndHorizontal();
+            UIHelper.BeginSection("Mouse Buttons");
+            
+            string[] buttonLabels = { "Left Click", "Middle Click", "Right Click" };
+            Action[] buttonActions = {
+                () => BleHidManager.ClickMouseButton(BleHidConstants.BUTTON_LEFT),
+                () => BleHidManager.ClickMouseButton(BleHidConstants.BUTTON_MIDDLE),
+                () => BleHidManager.ClickMouseButton(BleHidConstants.BUTTON_RIGHT)
+            };
+            string[] buttonMessages = {
+                "Left click pressed",
+                "Middle click pressed",
+                "Right click pressed"
+            };
+            
+            UIHelper.ActionButtonRow(
+                buttonLabels, 
+                buttonActions, 
+                IsEditorMode, 
+                Logger, 
+                buttonMessages,
+                UIHelper.LargeButtonOptions);
+                
+            UIHelper.EndSection();
         }
         
         /// <summary>
