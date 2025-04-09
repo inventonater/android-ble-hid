@@ -116,11 +116,11 @@ public class BleHidUnityBridge {
     }
 
     public boolean sendKey(int keyCode) {
-        return plugin.sendKey((byte) keyCode);
+        return plugin.sendKey((byte) keyCode, (byte) 0);
     }
 
     public boolean sendKeyWithModifiers(int keyCode, int modifiers) {
-        return plugin.sendKeyWithModifiers((byte) keyCode, (byte) modifiers);
+        return plugin.sendKey((byte) keyCode, (byte) modifiers);
     }
 
     public boolean typeText(String text) {
@@ -382,31 +382,6 @@ public class BleHidUnityBridge {
         return recordVideo(options);
     }
     
-    // Legacy methods for backward compatibility
-    
-    /**
-     * @deprecated Use takePicture() instead
-     */
-    @Deprecated
-    public boolean takePictureWithCamera() {
-        return takePicture();
-    }
-    
-    /**
-     * @deprecated Use takePictureWithOptions(Bundle) instead
-     */
-    @Deprecated
-    public boolean takePictureWithCameraParams(android.os.Bundle params) {
-        return takePictureWithOptions(params);
-    }
-    
-    /**
-     * @deprecated Use recordVideoWithOptions(Bundle) instead
-     */
-    @Deprecated
-    public boolean recordVideoParams(android.os.Bundle params) {
-        return recordVideoWithOptions(params);
-    }
 
     // Navigation constants for Unity
     public int getNavUp() { return BleHidUnityPlugin.NAV_UP; }

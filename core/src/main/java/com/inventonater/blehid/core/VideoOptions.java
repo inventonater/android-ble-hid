@@ -1,19 +1,28 @@
-package com.inventonater.blehid.unity;
+package com.inventonater.blehid.core;
 
-import android.os.Parcelable;
+import android.os.Bundle;
 
 /**
- * Adapter class for VideoOptions that bridges the Unity interface with the core implementation.
- * This class exists to maintain backward compatibility with the Unity C# API.
+ * Options for video recording operations.
+ * This class provides a clean way to configure video operations
+ * with sensible defaults.
  */
 public class VideoOptions {
-    private com.inventonater.blehid.core.VideoOptions coreOptions;
+    // Default values
+    private long durationMs = 5000; // 5 seconds by default
+    private int tapDelay = 0;
+    private int returnDelay = 0;
+    private float buttonX = 0.5f;
+    private float buttonY = 0.8f;
+    private int acceptDialogDelay = 300;
+    private float acceptXOffset = 0.2f;
+    private float acceptYOffset = 0.05f;
     
     /**
      * Create options with default values
      */
     public VideoOptions() {
-        coreOptions = new com.inventonater.blehid.core.VideoOptions();
+        // Default constructor uses the default values
     }
     
     /**
@@ -21,7 +30,7 @@ public class VideoOptions {
      * @param durationSeconds Duration in seconds
      */
     public VideoOptions(float durationSeconds) {
-        coreOptions = new com.inventonater.blehid.core.VideoOptions(durationSeconds);
+        this.durationMs = (long)(durationSeconds * 1000);
     }
     
     /**
@@ -30,7 +39,7 @@ public class VideoOptions {
      * @return This options object for chaining
      */
     public VideoOptions setDuration(float durationSeconds) {
-        coreOptions.setDuration(durationSeconds);
+        this.durationMs = (long)(durationSeconds * 1000);
         return this;
     }
     
@@ -40,7 +49,7 @@ public class VideoOptions {
      * @return This options object for chaining
      */
     public VideoOptions setTapDelay(int tapDelay) {
-        coreOptions.setTapDelay(tapDelay);
+        this.tapDelay = tapDelay;
         return this;
     }
     
@@ -50,7 +59,7 @@ public class VideoOptions {
      * @return This options object for chaining
      */
     public VideoOptions setReturnDelay(int returnDelay) {
-        coreOptions.setReturnDelay(returnDelay);
+        this.returnDelay = returnDelay;
         return this;
     }
     
@@ -60,7 +69,7 @@ public class VideoOptions {
      * @return This options object for chaining
      */
     public VideoOptions setButtonX(float buttonX) {
-        coreOptions.setButtonX(buttonX);
+        this.buttonX = buttonX;
         return this;
     }
     
@@ -70,7 +79,7 @@ public class VideoOptions {
      * @return This options object for chaining
      */
     public VideoOptions setButtonY(float buttonY) {
-        coreOptions.setButtonY(buttonY);
+        this.buttonY = buttonY;
         return this;
     }
     
@@ -80,7 +89,7 @@ public class VideoOptions {
      * @return This options object for chaining
      */
     public VideoOptions setAcceptDialogDelay(int acceptDialogDelay) {
-        coreOptions.setAcceptDialogDelay(acceptDialogDelay);
+        this.acceptDialogDelay = acceptDialogDelay;
         return this;
     }
     
@@ -90,7 +99,7 @@ public class VideoOptions {
      * @return This options object for chaining
      */
     public VideoOptions setAcceptXOffset(float acceptXOffset) {
-        coreOptions.setAcceptXOffset(acceptXOffset);
+        this.acceptXOffset = acceptXOffset;
         return this;
     }
     
@@ -100,7 +109,7 @@ public class VideoOptions {
      * @return This options object for chaining
      */
     public VideoOptions setAcceptYOffset(float acceptYOffset) {
-        coreOptions.setAcceptYOffset(acceptYOffset);
+        this.acceptYOffset = acceptYOffset;
         return this;
     }
     
@@ -109,7 +118,7 @@ public class VideoOptions {
      * @return Duration in milliseconds
      */
     public long getDurationMs() {
-        return coreOptions.getDurationMs();
+        return durationMs;
     }
     
     /**
@@ -117,7 +126,7 @@ public class VideoOptions {
      * @return Tap delay in milliseconds
      */
     public int getTapDelay() {
-        return coreOptions.getTapDelay();
+        return tapDelay;
     }
     
     /**
@@ -125,7 +134,7 @@ public class VideoOptions {
      * @return Return delay in milliseconds
      */
     public int getReturnDelay() {
-        return coreOptions.getReturnDelay();
+        return returnDelay;
     }
     
     /**
@@ -133,7 +142,7 @@ public class VideoOptions {
      * @return Button X position as ratio (0.0-1.0)
      */
     public float getButtonX() {
-        return coreOptions.getButtonX();
+        return buttonX;
     }
     
     /**
@@ -141,7 +150,7 @@ public class VideoOptions {
      * @return Button Y position as ratio (0.0-1.0)
      */
     public float getButtonY() {
-        return coreOptions.getButtonY();
+        return buttonY;
     }
     
     /**
@@ -149,7 +158,7 @@ public class VideoOptions {
      * @return Accept dialog delay in milliseconds
      */
     public int getAcceptDialogDelay() {
-        return coreOptions.getAcceptDialogDelay();
+        return acceptDialogDelay;
     }
     
     /**
@@ -157,7 +166,7 @@ public class VideoOptions {
      * @return Accept button X offset as ratio (0.0-1.0)
      */
     public float getAcceptXOffset() {
-        return coreOptions.getAcceptXOffset();
+        return acceptXOffset;
     }
     
     /**
@@ -165,14 +174,23 @@ public class VideoOptions {
      * @return Accept button Y offset as ratio (0.0-1.0)
      */
     public float getAcceptYOffset() {
-        return coreOptions.getAcceptYOffset();
+        return acceptYOffset;
     }
     
     /**
-     * Get the underlying core options object
-     * @return Core VideoOptions object
+     * Convert options to a Bundle for legacy API compatibility
+     * @return Bundle with all options as parameters
      */
-    public com.inventonater.blehid.core.VideoOptions toAndroidObject() {
-        return coreOptions;
+    public Bundle toBundle() {
+        Bundle bundle = new Bundle();
+        bundle.putLong("video_duration_ms", durationMs);
+        bundle.putInt("tap_delay_ms", tapDelay);
+        bundle.putInt("return_delay_ms", returnDelay);
+        bundle.putFloat("button_x_position", buttonX);
+        bundle.putFloat("button_y_position", buttonY);
+        bundle.putInt("accept_dialog_delay_ms", acceptDialogDelay);
+        bundle.putFloat("accept_button_x_offset", acceptXOffset);
+        bundle.putFloat("accept_button_y_offset", acceptYOffset);
+        return bundle;
     }
 }

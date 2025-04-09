@@ -202,38 +202,16 @@ public class LocalInputManager {
     /**
      * Takes a picture with the camera by launching the camera app
      * and using a background service to tap the shutter button.
-     */
-    public boolean takePictureWithCamera() {
-        return takePictureWithCamera(0, 0, 0, 0);
-    }
-    
-    /**
-     * Takes a picture with the camera using configurable parameters.
-     * 
-     * @param tapDelayMs Delay in ms before tapping the shutter button (0 = use default)
-     * @param returnDelayMs Delay in ms before returning to app (0 = use default)
-     * @param buttonX X position of shutter button as a ratio (0.0-1.0, 0 = use default)
-     * @param buttonY Y position of shutter button as a ratio (0.0-1.0, 0 = use default)
+     *
+     * @param options Camera options to configure the capture (use null for defaults)
      * @return true if camera was launched successfully
      */
-    public boolean takePictureWithCamera(int tapDelayMs, int returnDelayMs, float buttonX, float buttonY) {
-        return takePictureWithCamera(tapDelayMs, returnDelayMs, buttonX, buttonY, 300, 0.2f, 0.05f);
-    }
-    
-    /**
-     * Takes a picture with the camera using fully configurable parameters including dialog settings.
-     * 
-     * @param tapDelayMs Delay in ms before tapping the shutter button (0 = use default)
-     * @param returnDelayMs Delay in ms before returning to app (0 = use default)
-     * @param buttonX X position of shutter button as a ratio (0.0-1.0, 0 = use default)
-     * @param buttonY Y position of shutter button as a ratio (0.0-1.0, 0 = use default)
-     * @param acceptDialogDelayMs Delay before tapping accept dialog (0 = use default 300ms)
-     * @param acceptXOffset X offset from center for accept button (0.0-1.0, 0 = use default 0.2)
-     * @param acceptYOffset Y offset from center for accept button (0.0-1.0, 0 = use default 0.05)
-     * @return true if camera was launched successfully
-     */
-    public boolean takePictureWithCamera(int tapDelayMs, int returnDelayMs, float buttonX, float buttonY,
-                                      int acceptDialogDelayMs, float acceptXOffset, float acceptYOffset) {
+    public boolean takePictureWithCamera(CameraOptions options) {
+        // Use default options if null
+        if (options == null) {
+            options = new CameraOptions();
+        }
+        
         // First, launch the camera app
         Intent cameraIntent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
         cameraIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
@@ -244,6 +222,15 @@ public class LocalInputManager {
             // Then start our service to handle the capture
             Intent serviceIntent = new Intent(context, CameraTaskService.class);
             serviceIntent.setAction(CameraTaskService.ACTION_TAKE_PHOTO);
+            
+            // Add options as extras
+            int tapDelayMs = options.getTapDelay();
+            int returnDelayMs = options.getReturnDelay();
+            float buttonX = options.getButtonX();
+            float buttonY = options.getButtonY();
+            int acceptDialogDelayMs = options.getAcceptDialogDelay();
+            float acceptXOffset = options.getAcceptXOffset();
+            float acceptYOffset = options.getAcceptYOffset();
             
             // Add optional camera parameters if provided
             if (tapDelayMs > 0) {
@@ -288,44 +275,29 @@ public class LocalInputManager {
             return false;
         }
     }
+    
+    /**
+     * Takes a picture with the camera using default options.
+     * 
+     * @return true if camera was launched successfully
+     */
+    public boolean takePictureWithCamera() {
+        return takePictureWithCamera(null);
+    }
 
     /**
-     * Records a video using the camera by launching the video camera
+     * Records a video with the camera by launching the video camera
      * and using a background service to tap the record button.
-     */
-    public boolean recordVideo(long durationMs) {
-        return recordVideo(durationMs, 0, 0, 0, 0);
-    }
-    
-    /**
-     * Records a video with configurable parameters.
-     * 
-     * @param durationMs Duration of the recording in milliseconds
-     * @param tapDelayMs Delay in ms before tapping the record button (0 = use default)
-     * @param returnDelayMs Delay in ms before returning to app (0 = use default)
-     * @param buttonX X position of record button as a ratio (0.0-1.0, 0 = use default)
-     * @param buttonY Y position of record button as a ratio (0.0-1.0, 0 = use default)
+     *
+     * @param options Video options to configure the recording (use null for defaults)
      * @return true if video recording was launched successfully
      */
-    public boolean recordVideo(long durationMs, int tapDelayMs, int returnDelayMs, float buttonX, float buttonY) {
-        return recordVideo(durationMs, tapDelayMs, returnDelayMs, buttonX, buttonY, 300, 0.2f, 0.05f);
-    }
-    
-    /**
-     * Records a video with fully configurable parameters including dialog settings.
-     * 
-     * @param durationMs Duration of the recording in milliseconds
-     * @param tapDelayMs Delay in ms before tapping the record button (0 = use default)
-     * @param returnDelayMs Delay in ms before returning to app (0 = use default)
-     * @param buttonX X position of record button as a ratio (0.0-1.0, 0 = use default)
-     * @param buttonY Y position of record button as a ratio (0.0-1.0, 0 = use default)
-     * @param acceptDialogDelayMs Delay before tapping accept dialog (0 = use default 300ms)
-     * @param acceptXOffset X offset from center for accept button (0.0-1.0, 0 = use default 0.2)
-     * @param acceptYOffset Y offset from center for accept button (0.0-1.0, 0 = use default 0.05)
-     * @return true if video recording was launched successfully
-     */
-    public boolean recordVideo(long durationMs, int tapDelayMs, int returnDelayMs, float buttonX, float buttonY,
-                             int acceptDialogDelayMs, float acceptXOffset, float acceptYOffset) {
+    public boolean recordVideo(VideoOptions options) {
+        // Use default options if null
+        if (options == null) {
+            options = new VideoOptions();
+        }
+        
         // First, launch the video camera
         Intent videoIntent = new Intent(MediaStore.ACTION_VIDEO_CAPTURE);
         videoIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
@@ -336,6 +308,17 @@ public class LocalInputManager {
             // Then start our service to handle recording
             Intent serviceIntent = new Intent(context, CameraTaskService.class);
             serviceIntent.setAction(CameraTaskService.ACTION_RECORD_VIDEO);
+            
+            // Add options as extras
+            long durationMs = options.getDurationMs();
+            int tapDelayMs = options.getTapDelay();
+            int returnDelayMs = options.getReturnDelay();
+            float buttonX = options.getButtonX();
+            float buttonY = options.getButtonY();
+            int acceptDialogDelayMs = options.getAcceptDialogDelay();
+            float acceptXOffset = options.getAcceptXOffset();
+            float acceptYOffset = options.getAcceptYOffset();
+            
             serviceIntent.putExtra(CameraTaskService.EXTRA_VIDEO_DURATION, durationMs);
             
             // Add optional camera parameters if provided
@@ -380,6 +363,27 @@ public class LocalInputManager {
             Log.e(TAG, "Camera app not found", e);
             return false;
         }
+    }
+    
+    /**
+     * Records a video with default options.
+     * 
+     * @return true if video recording was launched successfully
+     */
+    public boolean recordVideo() {
+        return recordVideo(null);
+    }
+    
+    /**
+     * Records a video with specified duration using default settings.
+     * 
+     * @param durationMs Duration in milliseconds
+     * @return true if video recording was launched successfully
+     */
+    public boolean recordVideo(long durationMs) {
+        VideoOptions options = new VideoOptions();
+        options.setDuration(durationMs / 1000f);
+        return recordVideo(options);
     }
     
     /**

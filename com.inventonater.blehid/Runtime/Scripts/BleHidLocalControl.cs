@@ -196,17 +196,7 @@ namespace Inventonater.BleHid
         /// <returns>Coroutine that completes when the recording is finished</returns>
         public IEnumerator RecordVideo()
         {
-            return RecordVideo(null);
-        }
-        
-        /// <summary>
-        /// Record a video with specified duration using default settings.
-        /// </summary>
-        /// <param name="durationSeconds">Duration in seconds to record</param>
-        /// <returns>Coroutine that completes when the recording is finished</returns>
-        public IEnumerator RecordVideo(float durationSeconds)
-        {
-            return RecordVideo(new VideoOptions(durationSeconds));
+            return RecordVideo(new VideoOptions());
         }
         
         /// <summary>

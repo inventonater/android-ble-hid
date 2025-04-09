@@ -8,8 +8,10 @@ import android.util.Log;
 
 import com.inventonater.blehid.core.BleHidManager;
 import com.inventonater.blehid.core.BlePairingManager;
+import com.inventonater.blehid.core.CameraOptions;
 import com.inventonater.blehid.core.HidConstants;
 import com.inventonater.blehid.core.LocalInputManager;
+import com.inventonater.blehid.core.VideoOptions;
 
 /**
  * Main Unity plugin class for BLE HID functionality.
@@ -492,20 +494,13 @@ public class BleHidUnityPlugin {
     public boolean takePicture(CameraOptions options) {
         if (localInputManager == null) return false;
         
-        if (options == null) {
-            // Use default options
-            return localInputManager.takePictureWithCamera();
-        } else {
-            // Use the options to call the LocalInputManager method
-            return localInputManager.takePictureWithCamera(
-                options.getTapDelay(),
-                options.getReturnDelay(),
-                options.getButtonX(),
-                options.getButtonY(),
-                options.getAcceptDialogDelay(),
-                options.getAcceptXOffset(),
-                options.getAcceptYOffset());
+        // Convert from unity CameraOptions to core CameraOptions if needed
+        com.inventonater.blehid.core.CameraOptions coreOptions = null;
+        if (options != null) {
+            coreOptions = options.toAndroidObject();
         }
+        
+        return localInputManager.takePictureWithCamera(coreOptions);
     }
     
     /**
@@ -527,21 +522,13 @@ public class BleHidUnityPlugin {
     public boolean recordVideo(VideoOptions options) {
         if (localInputManager == null) return false;
         
-        if (options == null) {
-            // Use default options with default duration (5 seconds)
-            return localInputManager.recordVideo(5000);
-        } else {
-            // Use the options to call the LocalInputManager method
-            return localInputManager.recordVideo(
-                options.getDurationMs(),
-                options.getTapDelay(),
-                options.getReturnDelay(),
-                options.getButtonX(),
-                options.getButtonY(),
-                options.getAcceptDialogDelay(),
-                options.getAcceptXOffset(),
-                options.getAcceptYOffset());
+        // Convert from unity VideoOptions to core VideoOptions if needed
+        com.inventonater.blehid.core.VideoOptions coreOptions = null;
+        if (options != null) {
+            coreOptions = options.toAndroidObject();
         }
+        
+        return localInputManager.recordVideo(coreOptions);
     }
     
     /**
@@ -552,9 +539,9 @@ public class BleHidUnityPlugin {
      * @return true if video recording was launched successfully
      */
     public boolean recordVideo(long durationMs) {
-        VideoOptions options = new VideoOptions();
+        com.inventonater.blehid.core.VideoOptions options = new com.inventonater.blehid.core.VideoOptions();
         options.setDuration(durationMs / 1000f);
-        return recordVideo(options);
+        return localInputManager.recordVideo(options);
     }
 
     // Navigation constants
