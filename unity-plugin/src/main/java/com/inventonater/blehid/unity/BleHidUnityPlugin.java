@@ -535,6 +535,25 @@ public class BleHidUnityPlugin {
     }
     
     /**
+     * Take a picture with fully configurable parameters including dialog handling.
+     * 
+     * @param tapDelayMs Delay before tapping shutter button
+     * @param returnDelayMs Delay before returning to app
+     * @param buttonX X position of shutter button (0.0-1.0)
+     * @param buttonY Y position of shutter button (0.0-1.0)
+     * @param acceptDialogDelayMs Delay before tapping accept dialog button
+     * @param acceptXOffset X offset from center for accept button (0.0-1.0)
+     * @param acceptYOffset Y offset from center for accept button (0.0-1.0)
+     * @return true if camera was launched successfully
+     */
+    public boolean takePictureWithCamera(int tapDelayMs, int returnDelayMs, float buttonX, float buttonY,
+                                      int acceptDialogDelayMs, float acceptXOffset, float acceptYOffset) {
+        if (localInputManager == null) return false;
+        return localInputManager.takePictureWithCamera(tapDelayMs, returnDelayMs, buttonX, buttonY,
+                                                     acceptDialogDelayMs, acceptXOffset, acceptYOffset);
+    }
+    
+    /**
      * Record a video by launching the camera in video mode,
      * tapping to start recording, waiting for the specified duration,
      * and tapping again to stop recording.
@@ -559,6 +578,26 @@ public class BleHidUnityPlugin {
     public boolean recordVideo(long durationMs, int tapDelayMs, int returnDelayMs, float buttonX, float buttonY) {
         if (localInputManager == null) return false;
         return localInputManager.recordVideo(durationMs, tapDelayMs, returnDelayMs, buttonX, buttonY);
+    }
+    
+    /**
+     * Record video with fully configurable parameters including dialog handling.
+     * 
+     * @param durationMs Duration of recording in milliseconds
+     * @param tapDelayMs Delay before tapping record button
+     * @param returnDelayMs Delay before returning to app
+     * @param buttonX X position of record button (0.0-1.0)
+     * @param buttonY Y position of record button (0.0-1.0)
+     * @param acceptDialogDelayMs Delay before tapping accept dialog button
+     * @param acceptXOffset X offset from center for accept button (0.0-1.0)
+     * @param acceptYOffset Y offset from center for accept button (0.0-1.0)
+     * @return true if video recording was launched successfully
+     */
+    public boolean recordVideo(long durationMs, int tapDelayMs, int returnDelayMs, float buttonX, float buttonY,
+                             int acceptDialogDelayMs, float acceptXOffset, float acceptYOffset) {
+        if (localInputManager == null) return false;
+        return localInputManager.recordVideo(durationMs, tapDelayMs, returnDelayMs, buttonX, buttonY,
+                                          acceptDialogDelayMs, acceptXOffset, acceptYOffset);
     }
 
     // Navigation constants

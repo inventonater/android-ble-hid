@@ -217,6 +217,23 @@ public class LocalInputManager {
      * @return true if camera was launched successfully
      */
     public boolean takePictureWithCamera(int tapDelayMs, int returnDelayMs, float buttonX, float buttonY) {
+        return takePictureWithCamera(tapDelayMs, returnDelayMs, buttonX, buttonY, 300, 0.2f, 0.05f);
+    }
+    
+    /**
+     * Takes a picture with the camera using fully configurable parameters including dialog settings.
+     * 
+     * @param tapDelayMs Delay in ms before tapping the shutter button (0 = use default)
+     * @param returnDelayMs Delay in ms before returning to app (0 = use default)
+     * @param buttonX X position of shutter button as a ratio (0.0-1.0, 0 = use default)
+     * @param buttonY Y position of shutter button as a ratio (0.0-1.0, 0 = use default)
+     * @param acceptDialogDelayMs Delay before tapping accept dialog (0 = use default 300ms)
+     * @param acceptXOffset X offset from center for accept button (0.0-1.0, 0 = use default 0.2)
+     * @param acceptYOffset Y offset from center for accept button (0.0-1.0, 0 = use default 0.05)
+     * @return true if camera was launched successfully
+     */
+    public boolean takePictureWithCamera(int tapDelayMs, int returnDelayMs, float buttonX, float buttonY,
+                                      int acceptDialogDelayMs, float acceptXOffset, float acceptYOffset) {
         // First, launch the camera app
         Intent cameraIntent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
         cameraIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
@@ -228,7 +245,7 @@ public class LocalInputManager {
             Intent serviceIntent = new Intent(context, CameraTaskService.class);
             serviceIntent.setAction(CameraTaskService.ACTION_TAKE_PHOTO);
             
-            // Add optional parameters if provided
+            // Add optional camera parameters if provided
             if (tapDelayMs > 0) {
                 serviceIntent.putExtra(CameraTaskService.EXTRA_TAP_DELAY, tapDelayMs);
             }
@@ -245,9 +262,25 @@ public class LocalInputManager {
                 serviceIntent.putExtra(CameraTaskService.EXTRA_BUTTON_Y, buttonY);
             }
             
+            // Add dialog parameters if provided
+            if (acceptDialogDelayMs > 0) {
+                serviceIntent.putExtra(CameraTaskService.EXTRA_ACCEPT_DIALOG_DELAY, acceptDialogDelayMs);
+            }
+            
+            if (acceptXOffset > 0) {
+                serviceIntent.putExtra(CameraTaskService.EXTRA_ACCEPT_BUTTON_X_OFFSET, acceptXOffset);
+            }
+            
+            if (acceptYOffset > 0) {
+                serviceIntent.putExtra(CameraTaskService.EXTRA_ACCEPT_BUTTON_Y_OFFSET, acceptYOffset);
+            }
+            
             context.startService(serviceIntent);
-            Log.d(TAG, "Taking picture with parameters: tapDelay=" + tapDelayMs + 
-                  ", returnDelay=" + returnDelayMs + ", buttonPos=(" + buttonX + "," + buttonY + ")");
+            
+            Log.d(TAG, String.format("Taking picture with params: tapDelay=%d, returnDelay=%d, buttonPos=(%.2f,%.2f), " +
+                                    "dialogDelay=%d, acceptPos=(%.2f,%.2f)",
+                    tapDelayMs, returnDelayMs, buttonX, buttonY, 
+                    acceptDialogDelayMs, acceptXOffset, acceptYOffset));
             
             return true;
         } catch (ActivityNotFoundException e) {
@@ -275,6 +308,24 @@ public class LocalInputManager {
      * @return true if video recording was launched successfully
      */
     public boolean recordVideo(long durationMs, int tapDelayMs, int returnDelayMs, float buttonX, float buttonY) {
+        return recordVideo(durationMs, tapDelayMs, returnDelayMs, buttonX, buttonY, 300, 0.2f, 0.05f);
+    }
+    
+    /**
+     * Records a video with fully configurable parameters including dialog settings.
+     * 
+     * @param durationMs Duration of the recording in milliseconds
+     * @param tapDelayMs Delay in ms before tapping the record button (0 = use default)
+     * @param returnDelayMs Delay in ms before returning to app (0 = use default)
+     * @param buttonX X position of record button as a ratio (0.0-1.0, 0 = use default)
+     * @param buttonY Y position of record button as a ratio (0.0-1.0, 0 = use default)
+     * @param acceptDialogDelayMs Delay before tapping accept dialog (0 = use default 300ms)
+     * @param acceptXOffset X offset from center for accept button (0.0-1.0, 0 = use default 0.2)
+     * @param acceptYOffset Y offset from center for accept button (0.0-1.0, 0 = use default 0.05)
+     * @return true if video recording was launched successfully
+     */
+    public boolean recordVideo(long durationMs, int tapDelayMs, int returnDelayMs, float buttonX, float buttonY,
+                             int acceptDialogDelayMs, float acceptXOffset, float acceptYOffset) {
         // First, launch the video camera
         Intent videoIntent = new Intent(MediaStore.ACTION_VIDEO_CAPTURE);
         videoIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
@@ -287,7 +338,7 @@ public class LocalInputManager {
             serviceIntent.setAction(CameraTaskService.ACTION_RECORD_VIDEO);
             serviceIntent.putExtra(CameraTaskService.EXTRA_VIDEO_DURATION, durationMs);
             
-            // Add optional parameters if provided
+            // Add optional camera parameters if provided
             if (tapDelayMs > 0) {
                 serviceIntent.putExtra(CameraTaskService.EXTRA_TAP_DELAY, tapDelayMs);
             }
@@ -304,9 +355,25 @@ public class LocalInputManager {
                 serviceIntent.putExtra(CameraTaskService.EXTRA_BUTTON_Y, buttonY);
             }
             
+            // Add dialog parameters if provided
+            if (acceptDialogDelayMs > 0) {
+                serviceIntent.putExtra(CameraTaskService.EXTRA_ACCEPT_DIALOG_DELAY, acceptDialogDelayMs);
+            }
+            
+            if (acceptXOffset > 0) {
+                serviceIntent.putExtra(CameraTaskService.EXTRA_ACCEPT_BUTTON_X_OFFSET, acceptXOffset);
+            }
+            
+            if (acceptYOffset > 0) {
+                serviceIntent.putExtra(CameraTaskService.EXTRA_ACCEPT_BUTTON_Y_OFFSET, acceptYOffset);
+            }
+            
             context.startService(serviceIntent);
-            Log.d(TAG, "Recording video for " + durationMs + "ms with parameters: tapDelay=" + 
-                  tapDelayMs + ", returnDelay=" + returnDelayMs + ", buttonPos=(" + buttonX + "," + buttonY + ")");
+            
+            Log.d(TAG, String.format("Recording video for %dms with params: tapDelay=%d, returnDelay=%d, " +
+                                    "buttonPos=(%.2f,%.2f), dialogDelay=%d, acceptPos=(%.2f,%.2f)",
+                    durationMs, tapDelayMs, returnDelayMs, buttonX, buttonY, 
+                    acceptDialogDelayMs, acceptXOffset, acceptYOffset));
             
             return true;
         } catch (ActivityNotFoundException e) {

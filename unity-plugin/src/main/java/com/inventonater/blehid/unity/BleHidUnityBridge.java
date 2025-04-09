@@ -258,6 +258,9 @@ public class BleHidUnityBridge {
      *        - return_delay_ms: Delay before returning to app
      *        - button_x_position: X position of shutter button (0.0-1.0)
      *        - button_y_position: Y position of shutter button (0.0-1.0)
+     *        - accept_dialog_delay_ms: Delay before tapping accept dialog
+     *        - accept_button_x_offset: X offset from center for accept button (0.0-1.0)
+     *        - accept_button_y_offset: Y offset from center for accept button (0.0-1.0)
      * @return true if camera was launched successfully
      */
     public boolean takePictureWithCameraParams(android.os.Bundle params) {
@@ -270,7 +273,13 @@ public class BleHidUnityBridge {
         float buttonX = params.getFloat("button_x_position", 0.0f);
         float buttonY = params.getFloat("button_y_position", 0.0f);
         
-        return plugin.takePictureWithCamera(tapDelay, returnDelay, buttonX, buttonY);
+        // Extract dialog handling parameters
+        int acceptDialogDelay = params.getInt("accept_dialog_delay_ms", 0);
+        float acceptXOffset = params.getFloat("accept_button_x_offset", 0.0f);
+        float acceptYOffset = params.getFloat("accept_button_y_offset", 0.0f);
+        
+        return plugin.takePictureWithCamera(tapDelay, returnDelay, buttonX, buttonY,
+                                          acceptDialogDelay, acceptXOffset, acceptYOffset);
     }
     
     /**
@@ -293,6 +302,9 @@ public class BleHidUnityBridge {
      *        - return_delay_ms: Delay before returning to app
      *        - button_x_position: X position of record button (0.0-1.0)
      *        - button_y_position: Y position of record button (0.0-1.0)
+     *        - accept_dialog_delay_ms: Delay before tapping accept dialog
+     *        - accept_button_x_offset: X offset from center for accept button (0.0-1.0)
+     *        - accept_button_y_offset: Y offset from center for accept button (0.0-1.0)
      * @return true if video recording was launched successfully
      */
     public boolean recordVideoParams(android.os.Bundle params) {
@@ -306,7 +318,13 @@ public class BleHidUnityBridge {
         float buttonX = params.getFloat("button_x_position", 0.0f);
         float buttonY = params.getFloat("button_y_position", 0.0f);
         
-        return plugin.recordVideo(durationMs, tapDelay, returnDelay, buttonX, buttonY);
+        // Extract dialog handling parameters
+        int acceptDialogDelay = params.getInt("accept_dialog_delay_ms", 0);
+        float acceptXOffset = params.getFloat("accept_button_x_offset", 0.0f);
+        float acceptYOffset = params.getFloat("accept_button_y_offset", 0.0f);
+        
+        return plugin.recordVideo(durationMs, tapDelay, returnDelay, buttonX, buttonY,
+                                acceptDialogDelay, acceptXOffset, acceptYOffset);
     }
 
     // Navigation constants for Unity

@@ -13,7 +13,6 @@ namespace Inventonater.BleHid
     /// </summary>
     public class BleHidSimpleUI : MonoBehaviour
     {
-        #region Private Fields
         private BleHidManager bleHidManager;
         private int currentTab = 0;
         private string[] tabNames = new string[] { "Media", "Mouse", "Keyboard", "Local" };
@@ -49,9 +48,12 @@ namespace Inventonater.BleHid
         private float _cameraButtonY = 0.92f; // 92% down the screen
         private int _cameraTapDelay = 3500; // Default tap delay in ms
         private int _cameraReturnDelay = 1500; // Default return delay in ms
-        #endregion
+        
+        // Dialog handling parameters
+        private int _acceptDialogDelay = 300; // Delay before tapping accept dialog in ms
+        private float _acceptButtonXOffset = 0.2f; // X offset from center (0.2 = 20% right)
+        private float _acceptButtonYOffset = 0.05f; // Y offset from center (0.05 = 5% down)
 
-        #region Unity Lifecycle
         private void Start()
         {
             // Check if running in the Unity Editor
@@ -443,9 +445,6 @@ namespace Inventonater.BleHid
 
             GUILayout.EndArea();
         }
-        #endregion
-
-        #region Tab UI Methods
         private void DrawMediaControls()
         {
             // Media control buttons row 1
@@ -893,6 +892,28 @@ namespace Inventonater.BleHid
                     GUILayout.Label(_cameraReturnDelay.ToString() + "ms", GUILayout.Width(80));
                     GUILayout.EndHorizontal();
                     
+                    // Dialog handling parameters
+                    GUILayout.Space(5);
+                    GUILayout.Label("Dialog Settings", GUI.skin.box);
+                    
+                    GUILayout.BeginHorizontal();
+                    GUILayout.Label("Dialog Delay:", GUILayout.Width(100));
+                    _acceptDialogDelay = (int)GUILayout.HorizontalSlider(_acceptDialogDelay, 100, 1000);
+                    GUILayout.Label(_acceptDialogDelay.ToString() + "ms", GUILayout.Width(80));
+                    GUILayout.EndHorizontal();
+                    
+                    GUILayout.BeginHorizontal();
+                    GUILayout.Label("X Offset:", GUILayout.Width(100));
+                    _acceptButtonXOffset = GUILayout.HorizontalSlider(_acceptButtonXOffset, 0f, 0.5f);
+                    GUILayout.Label(_acceptButtonXOffset.ToString("F2"), GUILayout.Width(50));
+                    GUILayout.EndHorizontal();
+                    
+                    GUILayout.BeginHorizontal();
+                    GUILayout.Label("Y Offset:", GUILayout.Width(100));
+                    _acceptButtonYOffset = GUILayout.HorizontalSlider(_acceptButtonYOffset, -0.2f, 0.2f);
+                    GUILayout.Label(_acceptButtonYOffset.ToString("F2"), GUILayout.Width(50));
+                    GUILayout.EndHorizontal();
+                    
                     // Reset to default button
                     if (GUILayout.Button("Reset to Defaults", GUILayout.Height(40)))
                     {
@@ -900,6 +921,9 @@ namespace Inventonater.BleHid
                         _cameraButtonY = 0.92f;
                         _cameraTapDelay = 3500;
                         _cameraReturnDelay = 1500;
+                        _acceptDialogDelay = 300;
+                        _acceptButtonXOffset = 0.2f;
+                        _acceptButtonYOffset = 0.05f;
                         AddLogEntry("Camera parameters reset to defaults");
                     }
                     GUILayout.EndVertical();
@@ -1146,9 +1170,7 @@ namespace Inventonater.BleHid
                 default: return 0;
             }
         }
-        #endregion
 
-        #region Event Handlers
         /// <summary>
         /// Draw the permission error UI with specific missing permissions and resolution buttons
         /// </summary>
@@ -1475,9 +1497,7 @@ namespace Inventonater.BleHid
         {
             AddLogEntry("Debug: " + message);
         }
-        #endregion
 
-        #region Helper Methods
         private void AddLogEntry(string entry)
         {
             string timestamp = System.DateTime.Now.ToString("HH:mm:ss");
@@ -1507,6 +1527,5 @@ namespace Inventonater.BleHid
             texture.Apply();
             return texture;
         }
-        #endregion
     }
 }

@@ -157,22 +157,40 @@ namespace Inventonater.BleHid
     /// <param name="buttonY">Y position of shutter button as a ratio (0.0-1.0, 0 = use default)</param>
     public IEnumerator TakePictureWithCamera(int tapDelay, int returnDelay, float buttonX, float buttonY)
     {
+        // Call with standard dialog settings
+        return TakePictureWithCamera(tapDelay, returnDelay, buttonX, buttonY, 300, 0.2f, 0.05f);
+    }
+    
+    /// <summary>
+    /// Take a picture with the camera using fully configurable parameters including dialog handling.
+    /// </summary>
+    /// <param name="tapDelay">Delay in milliseconds before tapping the shutter button (0 = use default)</param>
+    /// <param name="returnDelay">Delay in milliseconds before returning to the app (0 = use default)</param>
+    /// <param name="buttonX">X position of shutter button as a ratio (0.0-1.0, 0 = use default)</param>
+    /// <param name="buttonY">Y position of shutter button as a ratio (0.0-1.0, 0 = use default)</param>
+    /// <param name="acceptDialogDelay">Delay before tapping the accept dialog button (0 = use default)</param>
+    /// <param name="acceptXOffset">X offset from center for accept button (0.0-1.0)</param>
+    /// <param name="acceptYOffset">Y offset from center for accept button (0.0-1.0)</param>
+    public IEnumerator TakePictureWithCamera(int tapDelay, int returnDelay, float buttonX, float buttonY,
+                                            int acceptDialogDelay, float acceptXOffset, float acceptYOffset)
+    {
         if (!CheckInitialized()) yield break;
         
         // Call the extended method in the Android bridge
         bool result = false;
         float waitTime = 3.0f; // Default wait time
         
-        if (tapDelay == 0 && returnDelay == 0 && buttonX == 0 && buttonY == 0)
+        if (tapDelay == 0 && returnDelay == 0 && buttonX == 0 && buttonY == 0 &&
+            acceptDialogDelay == 0 && acceptXOffset == 0 && acceptYOffset == 0)
         {
-            // Use the simpler method if no parameters are provided
+            // Use the simplest method if no parameters are provided
             result = bridgeInstance.Call<bool>("takePictureWithCamera");
         }
         else
         {
             using (AndroidJavaObject cameraParams = new AndroidJavaObject("android.os.Bundle"))
             {
-                // Add parameters to bundle
+                // Add camera parameters to bundle
                 if (tapDelay > 0)
                 {
                     cameraParams.Call("putInt", "tap_delay_ms", tapDelay);
@@ -191,14 +209,26 @@ namespace Inventonater.BleHid
                 if (buttonY > 0)
                     cameraParams.Call("putFloat", "button_y_position", buttonY);
                 
+                // Add dialog parameters to bundle
+                if (acceptDialogDelay > 0)
+                    cameraParams.Call("putInt", "accept_dialog_delay_ms", acceptDialogDelay);
+                
+                if (acceptXOffset > 0)
+                    cameraParams.Call("putFloat", "accept_button_x_offset", acceptXOffset);
+                
+                if (acceptYOffset > 0)
+                    cameraParams.Call("putFloat", "accept_button_y_offset", acceptYOffset);
+                
                 // Call the Java method with parameters
                 result = bridgeInstance.Call<bool>("takePictureWithCameraParams", cameraParams);
             }
         }
         
         Debug.Log("Launched camera for auto photo capture: " + (result ? "Success" : "Failed") +
-                  (tapDelay > 0 || returnDelay > 0 || buttonX > 0 || buttonY > 0 ? 
-                  $" with custom parameters (tapDelay={tapDelay}, returnDelay={returnDelay}, buttonPos=({buttonX},{buttonY}))" : ""));
+                  (tapDelay > 0 || returnDelay > 0 || buttonX > 0 || buttonY > 0 || 
+                   acceptDialogDelay > 0 || acceptXOffset > 0 || acceptYOffset > 0 ? 
+                  $" with custom parameters (tapDelay={tapDelay}, returnDelay={returnDelay}, buttonPos=({buttonX},{buttonY}), " +
+                  $"dialogDelay={acceptDialogDelay}, acceptPos=({acceptXOffset},{acceptYOffset}))" : ""));
         
         // Wait for background service to finish its work
         yield return new WaitForSeconds(waitTime);
