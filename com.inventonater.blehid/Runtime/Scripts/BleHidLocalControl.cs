@@ -140,170 +140,215 @@ namespace Inventonater.BleHid
         }
 
         /// <summary>
-    /// Take a picture by launching the camera app and automatically 
-    /// capturing the photo using the accessibility service.
+    /// Take a picture with the camera using default options.
     /// </summary>
-    public IEnumerator TakePictureWithCamera()
+    /// <returns>Coroutine that completes when the picture is taken</returns>
+    public IEnumerator TakePicture()
     {
-        return TakePictureWithCamera(0, 0, 0, 0);
+        return TakePicture(null);
     }
     
     /// <summary>
-    /// Take a picture with the camera using configurable parameters.
+    /// Take a picture with the camera using specified options.
     /// </summary>
-    /// <param name="tapDelay">Delay in milliseconds before tapping the shutter button (0 = use default)</param>
-    /// <param name="returnDelay">Delay in milliseconds before returning to the app (0 = use default)</param>
-    /// <param name="buttonX">X position of shutter button as a ratio (0.0-1.0, 0 = use default)</param>
-    /// <param name="buttonY">Y position of shutter button as a ratio (0.0-1.0, 0 = use default)</param>
-    public IEnumerator TakePictureWithCamera(int tapDelay, int returnDelay, float buttonX, float buttonY)
-    {
-        // Call with standard dialog settings
-        return TakePictureWithCamera(tapDelay, returnDelay, buttonX, buttonY, 300, 0.2f, 0.05f);
-    }
-    
-    /// <summary>
-    /// Take a picture with the camera using fully configurable parameters including dialog handling.
-    /// </summary>
-    /// <param name="tapDelay">Delay in milliseconds before tapping the shutter button (0 = use default)</param>
-    /// <param name="returnDelay">Delay in milliseconds before returning to the app (0 = use default)</param>
-    /// <param name="buttonX">X position of shutter button as a ratio (0.0-1.0, 0 = use default)</param>
-    /// <param name="buttonY">Y position of shutter button as a ratio (0.0-1.0, 0 = use default)</param>
-    /// <param name="acceptDialogDelay">Delay before tapping the accept dialog button (0 = use default)</param>
-    /// <param name="acceptXOffset">X offset from center for accept button (0.0-1.0)</param>
-    /// <param name="acceptYOffset">Y offset from center for accept button (0.0-1.0)</param>
-    public IEnumerator TakePictureWithCamera(int tapDelay, int returnDelay, float buttonX, float buttonY,
-                                            int acceptDialogDelay, float acceptXOffset, float acceptYOffset)
+    /// <param name="options">Options to configure the camera capture (null for defaults)</param>
+    /// <returns>Coroutine that completes when the picture is taken</returns>
+    public IEnumerator TakePicture(CameraOptions options)
     {
         if (!CheckInitialized()) yield break;
         
-        // Call the extended method in the Android bridge
-        bool result = false;
+        // Use default options if null
+        options = options ?? new CameraOptions();
+        
+        bool result;
         float waitTime = 3.0f; // Default wait time
         
-        if (tapDelay == 0 && returnDelay == 0 && buttonX == 0 && buttonY == 0 &&
-            acceptDialogDelay == 0 && acceptXOffset == 0 && acceptYOffset == 0)
+        // Call the Java bridge with options
+        if (bridgeInstance.Call<bool>("takePicture", options.ToAndroidObject()))
         {
-            // Use the simplest method if no parameters are provided
-            result = bridgeInstance.Call<bool>("takePictureWithCamera");
+            result = true;
+            
+            // Calculate appropriate wait time based on options
+            if (options.TapDelay > 0)
+            {
+                waitTime = options.TapDelay / 1000f + 2f;
+            }
+            
+            if (options.ReturnDelay > 0)
+            {
+                waitTime += options.ReturnDelay / 1000f;
+            }
         }
         else
         {
-            using (AndroidJavaObject cameraParams = new AndroidJavaObject("android.os.Bundle"))
-            {
-                // Add camera parameters to bundle
-                if (tapDelay > 0)
-                {
-                    cameraParams.Call("putInt", "tap_delay_ms", tapDelay);
-                    waitTime = tapDelay / 1000f + 2f; // Adjust wait time based on tap delay
-                }
-                
-                if (returnDelay > 0)
-                {
-                    cameraParams.Call("putInt", "return_delay_ms", returnDelay);
-                    waitTime += returnDelay / 1000f;
-                }
-                
-                if (buttonX > 0)
-                    cameraParams.Call("putFloat", "button_x_position", buttonX);
-                
-                if (buttonY > 0)
-                    cameraParams.Call("putFloat", "button_y_position", buttonY);
-                
-                // Add dialog parameters to bundle
-                if (acceptDialogDelay > 0)
-                    cameraParams.Call("putInt", "accept_dialog_delay_ms", acceptDialogDelay);
-                
-                if (acceptXOffset > 0)
-                    cameraParams.Call("putFloat", "accept_button_x_offset", acceptXOffset);
-                
-                if (acceptYOffset > 0)
-                    cameraParams.Call("putFloat", "accept_button_y_offset", acceptYOffset);
-                
-                // Call the Java method with parameters
-                result = bridgeInstance.Call<bool>("takePictureWithCameraParams", cameraParams);
-            }
+            result = false;
         }
         
-        Debug.Log("Launched camera for auto photo capture: " + (result ? "Success" : "Failed") +
-                  (tapDelay > 0 || returnDelay > 0 || buttonX > 0 || buttonY > 0 || 
-                   acceptDialogDelay > 0 || acceptXOffset > 0 || acceptYOffset > 0 ? 
-                  $" with custom parameters (tapDelay={tapDelay}, returnDelay={returnDelay}, buttonPos=({buttonX},{buttonY}), " +
-                  $"dialogDelay={acceptDialogDelay}, acceptPos=({acceptXOffset},{acceptYOffset}))" : ""));
+        Debug.Log($"Taking picture: {(result ? "Success" : "Failed")}");
         
         // Wait for background service to finish its work
         yield return new WaitForSeconds(waitTime);
     }
     
     /// <summary>
-    /// Record a video by launching the video camera, starting recording,
-    /// waiting for the specified duration, and then automatically stopping.
+    /// Record a video with default settings (5 seconds).
+    /// </summary>
+    /// <returns>Coroutine that completes when the recording is finished</returns>
+    public IEnumerator RecordVideo()
+    {
+        return RecordVideo(null);
+    }
+    
+    /// <summary>
+    /// Record a video with specified duration using default settings.
+    /// </summary>
+    /// <param name="durationSeconds">Duration in seconds to record</param>
+    /// <returns>Coroutine that completes when the recording is finished</returns>
+    public IEnumerator RecordVideo(float durationSeconds)
+    {
+        return RecordVideo(new VideoOptions(durationSeconds));
+    }
+    
+    /// <summary>
+    /// Record a video with fully customizable options.
+    /// </summary>
+    /// <param name="options">Video options to configure the recording (null for defaults)</param>
+    /// <returns>Coroutine that completes when the recording is finished</returns>
+    public IEnumerator RecordVideo(VideoOptions options)
+    {
+        if (!CheckInitialized()) yield break;
+        
+        // Use default options if null
+        options = options ?? new VideoOptions();
+        
+        bool result;
+        float waitTime = options.Duration + 2.0f; // Base wait time on video duration
+        
+        // Call the Java bridge with options
+        if (bridgeInstance.Call<bool>("recordVideo", options.ToAndroidObject()))
+        {
+            result = true;
+            
+            // Calculate appropriate wait time based on options
+            if (options.TapDelay > 0)
+            {
+                waitTime = options.TapDelay / 1000f + options.Duration + 2f;
+            }
+            
+            if (options.ReturnDelay > 0)
+            {
+                waitTime += options.ReturnDelay / 1000f;
+            }
+        }
+        else
+        {
+            result = false;
+        }
+        
+        Debug.Log($"Recording video for {options.Duration} seconds: {(result ? "Success" : "Failed")}");
+        
+        // Wait for the recording to complete
+        yield return new WaitForSeconds(waitTime);
+    }
+    
+    #region Legacy Methods (for backward compatibility)
+    
+    /// <summary>
+    /// Take a picture by launching the camera app and automatically capturing the photo.
+    /// </summary>
+    /// <returns>Coroutine that completes when the picture is taken</returns>
+    [System.Obsolete("Use TakePicture() instead")]
+    public IEnumerator TakePictureWithCamera()
+    {
+        return TakePicture();
+    }
+    
+    /// <summary>
+    /// Take a picture with the camera using configurable parameters.
+    /// </summary>
+    /// <param name="tapDelay">Delay in milliseconds before tapping the shutter button</param>
+    /// <param name="returnDelay">Delay in milliseconds before returning to the app</param>
+    /// <param name="buttonX">X position of shutter button as a ratio (0.0-1.0)</param>
+    /// <param name="buttonY">Y position of shutter button as a ratio (0.0-1.0)</param>
+    /// <returns>Coroutine that completes when the picture is taken</returns>
+    [System.Obsolete("Use TakePicture(CameraOptions) instead")]
+    public IEnumerator TakePictureWithCamera(int tapDelay, int returnDelay, float buttonX, float buttonY)
+    {
+        var options = new CameraOptions
+        {
+            TapDelay = tapDelay,
+            ReturnDelay = returnDelay,
+            ButtonX = buttonX > 0 ? buttonX : 0.5f,
+            ButtonY = buttonY > 0 ? buttonY : 0.8f
+        };
+        
+        return TakePicture(options);
+    }
+    
+    /// <summary>
+    /// Take a picture with the camera using fully configurable parameters including dialog handling.
+    /// </summary>
+    /// <param name="tapDelay">Delay in milliseconds before tapping the shutter button</param>
+    /// <param name="returnDelay">Delay in milliseconds before returning to the app</param>
+    /// <param name="buttonX">X position of shutter button as a ratio (0.0-1.0)</param>
+    /// <param name="buttonY">Y position of shutter button as a ratio (0.0-1.0)</param>
+    /// <param name="acceptDialogDelay">Delay before tapping the accept dialog button</param>
+    /// <param name="acceptXOffset">X offset from center for accept button (0.0-1.0)</param>
+    /// <param name="acceptYOffset">Y offset from center for accept button (0.0-1.0)</param>
+    /// <returns>Coroutine that completes when the picture is taken</returns>
+    [System.Obsolete("Use TakePicture(CameraOptions) instead")]
+    public IEnumerator TakePictureWithCamera(int tapDelay, int returnDelay, float buttonX, float buttonY,
+                                            int acceptDialogDelay, float acceptXOffset, float acceptYOffset)
+    {
+        var options = new CameraOptions
+        {
+            TapDelay = tapDelay,
+            ReturnDelay = returnDelay,
+            ButtonX = buttonX > 0 ? buttonX : 0.5f,
+            ButtonY = buttonY > 0 ? buttonY : 0.8f,
+            AcceptDialogDelay = acceptDialogDelay > 0 ? acceptDialogDelay : 300,
+            AcceptXOffset = acceptXOffset > 0 ? acceptXOffset : 0.2f,
+            AcceptYOffset = acceptYOffset > 0 ? acceptYOffset : 0.05f
+        };
+        
+        return TakePicture(options);
+    }
+    
+    /// <summary>
+    /// Record a video with default duration.
     /// </summary>
     /// <param name="duration">Duration in seconds to record video</param>
+    /// <returns>Coroutine that completes when the recording is finished</returns>
+    [System.Obsolete("Use RecordVideo(float) or RecordVideo(VideoOptions) instead")]
     public IEnumerator RecordVideo(float duration = 5.0f)
     {
-        return RecordVideo(duration, 0, 0, 0, 0);
+        return RecordVideo(new VideoOptions(duration));
     }
     
     /// <summary>
     /// Record a video with configurable parameters.
     /// </summary>
     /// <param name="duration">Duration in seconds to record video</param>
-    /// <param name="tapDelay">Delay in milliseconds before tapping the record button (0 = use default)</param>
-    /// <param name="returnDelay">Delay in milliseconds before returning to the app (0 = use default)</param>
-    /// <param name="buttonX">X position of record button as a ratio (0.0-1.0, 0 = use default)</param>
-    /// <param name="buttonY">Y position of record button as a ratio (0.0-1.0, 0 = use default)</param>
+    /// <param name="tapDelay">Delay in milliseconds before tapping the record button</param>
+    /// <param name="returnDelay">Delay in milliseconds before returning to the app</param>
+    /// <param name="buttonX">X position of record button as a ratio (0.0-1.0)</param>
+    /// <param name="buttonY">Y position of record button as a ratio (0.0-1.0)</param>
+    /// <returns>Coroutine that completes when the recording is finished</returns>
+    [System.Obsolete("Use RecordVideo(VideoOptions) instead")]
     public IEnumerator RecordVideo(float duration, int tapDelay, int returnDelay, float buttonX, float buttonY)
     {
-        if (!CheckInitialized()) yield break;
-        
-        // Convert seconds to milliseconds
-        long durationMs = (long)(duration * 1000);
-        bool result = false;
-        float waitTime = duration + 2.0f; // Default wait time
-        
-        if (tapDelay == 0 && returnDelay == 0 && buttonX == 0 && buttonY == 0)
+        var options = new VideoOptions(duration)
         {
-            // Use the simpler method if no parameters are provided
-            result = bridgeInstance.Call<bool>("recordVideo", durationMs);
-        }
-        else
-        {
-            using (AndroidJavaObject videoParams = new AndroidJavaObject("android.os.Bundle"))
-            {
-                // Always add duration
-                videoParams.Call("putLong", "video_duration_ms", durationMs);
-                
-                // Add optional parameters
-                if (tapDelay > 0)
-                {
-                    videoParams.Call("putInt", "tap_delay_ms", tapDelay);
-                    waitTime = tapDelay / 1000f + duration + 2f; // Adjust wait time
-                }
-                
-                if (returnDelay > 0)
-                {
-                    videoParams.Call("putInt", "return_delay_ms", returnDelay);
-                    waitTime += returnDelay / 1000f;
-                }
-                
-                if (buttonX > 0)
-                    videoParams.Call("putFloat", "button_x_position", buttonX);
-                
-                if (buttonY > 0)
-                    videoParams.Call("putFloat", "button_y_position", buttonY);
-                
-                // Call the Java method with parameters
-                result = bridgeInstance.Call<bool>("recordVideoParams", videoParams);
-            }
-        }
+            TapDelay = tapDelay,
+            ReturnDelay = returnDelay,
+            ButtonX = buttonX > 0 ? buttonX : 0.5f,
+            ButtonY = buttonY > 0 ? buttonY : 0.8f
+        };
         
-        Debug.Log($"Recording video for {duration} seconds: " + (result ? "Success" : "Failed") +
-                  (tapDelay > 0 || returnDelay > 0 || buttonX > 0 || buttonY > 0 ? 
-                  $" with custom parameters (tapDelay={tapDelay}, returnDelay={returnDelay}, buttonPos=({buttonX},{buttonY}))" : ""));
-        
-        // Wait for the recording to complete (duration + buffer)
-        yield return new WaitForSeconds(waitTime);
+        return RecordVideo(options);
     }
+    
+    #endregion
 
         /// <summary>
         /// Opens accessibility settings to enable the service.

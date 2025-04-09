@@ -243,88 +243,169 @@ public class BleHidUnityBridge {
     }
     
     /**
-     * Take a picture with camera by launching the camera app and
-     * automatically tapping the shutter button
-     */
-    public boolean takePictureWithCamera() {
-        return plugin.takePictureWithCamera();
-    }
-    
-    /**
-     * Take a picture with camera with custom parameters
+     * Take a picture with the camera using default options.
      * 
-     * @param params Bundle containing parameters for the camera capture:
-     *        - tap_delay_ms: Delay before tapping the shutter button
-     *        - return_delay_ms: Delay before returning to app
-     *        - button_x_position: X position of shutter button (0.0-1.0)
-     *        - button_y_position: Y position of shutter button (0.0-1.0)
-     *        - accept_dialog_delay_ms: Delay before tapping accept dialog
-     *        - accept_button_x_offset: X offset from center for accept button (0.0-1.0)
-     *        - accept_button_y_offset: Y offset from center for accept button (0.0-1.0)
      * @return true if camera was launched successfully
      */
-    public boolean takePictureWithCameraParams(android.os.Bundle params) {
-        if (params == null) {
-            return plugin.takePictureWithCamera();
-        }
-        
-        int tapDelay = params.getInt("tap_delay_ms", 0);
-        int returnDelay = params.getInt("return_delay_ms", 0);
-        float buttonX = params.getFloat("button_x_position", 0.0f);
-        float buttonY = params.getFloat("button_y_position", 0.0f);
-        
-        // Extract dialog handling parameters
-        int acceptDialogDelay = params.getInt("accept_dialog_delay_ms", 0);
-        float acceptXOffset = params.getFloat("accept_button_x_offset", 0.0f);
-        float acceptYOffset = params.getFloat("accept_button_y_offset", 0.0f);
-        
-        return plugin.takePictureWithCamera(tapDelay, returnDelay, buttonX, buttonY,
-                                          acceptDialogDelay, acceptXOffset, acceptYOffset);
+    public boolean takePicture() {
+        return plugin.takePicture();
     }
     
     /**
-     * Record a video with camera by launching the camera app,
-     * automatically tapping to start recording, waiting for the specified
-     * duration, and then tapping again to stop recording
+     * Take a picture with the camera using the specified options.
      * 
-     * @param durationMs Duration in milliseconds to record the video
+     * @param options Camera options to configure the picture capture
+     * @return true if camera was launched successfully
+     */
+    public boolean takePicture(CameraOptions options) {
+        return plugin.takePicture(options);
+    }
+    
+    /**
+     * Take a picture with custom parameters using a Bundle for compatibility.
+     * 
+     * @param params Bundle containing parameters for the camera capture
+     * @return true if camera was launched successfully
+     */
+    public boolean takePictureWithOptions(android.os.Bundle params) {
+        if (params == null) {
+            return takePicture();
+        }
+        
+        CameraOptions options = new CameraOptions();
+        
+        if (params.containsKey("tap_delay_ms")) {
+            options.setTapDelay(params.getInt("tap_delay_ms"));
+        }
+        
+        if (params.containsKey("return_delay_ms")) {
+            options.setReturnDelay(params.getInt("return_delay_ms"));
+        }
+        
+        if (params.containsKey("button_x_position")) {
+            options.setButtonX(params.getFloat("button_x_position"));
+        }
+        
+        if (params.containsKey("button_y_position")) {
+            options.setButtonY(params.getFloat("button_y_position"));
+        }
+        
+        if (params.containsKey("accept_dialog_delay_ms")) {
+            options.setAcceptDialogDelay(params.getInt("accept_dialog_delay_ms"));
+        }
+        
+        if (params.containsKey("accept_button_x_offset")) {
+            options.setAcceptXOffset(params.getFloat("accept_button_x_offset"));
+        }
+        
+        if (params.containsKey("accept_button_y_offset")) {
+            options.setAcceptYOffset(params.getFloat("accept_button_y_offset"));
+        }
+        
+        return takePicture(options);
+    }
+    
+    /**
+     * Record a video with default duration of 5 seconds.
+     * 
+     * @return true if video recording was launched successfully
+     */
+    public boolean recordVideo() {
+        return plugin.recordVideo(new VideoOptions());
+    }
+    
+    /**
+     * Record a video with the specified duration in milliseconds.
+     * 
+     * @param durationMs Duration in milliseconds to record
+     * @return true if video recording was launched successfully
      */
     public boolean recordVideo(long durationMs) {
         return plugin.recordVideo(durationMs);
     }
     
     /**
-     * Record a video with custom parameters
+     * Record a video with the specified options.
      * 
-     * @param params Bundle containing parameters for the video recording:
-     *        - video_duration_ms: Duration of recording in milliseconds
-     *        - tap_delay_ms: Delay before tapping the record button
-     *        - return_delay_ms: Delay before returning to app
-     *        - button_x_position: X position of record button (0.0-1.0)
-     *        - button_y_position: Y position of record button (0.0-1.0)
-     *        - accept_dialog_delay_ms: Delay before tapping accept dialog
-     *        - accept_button_x_offset: X offset from center for accept button (0.0-1.0)
-     *        - accept_button_y_offset: Y offset from center for accept button (0.0-1.0)
+     * @param options Video options to configure the recording
      * @return true if video recording was launched successfully
      */
-    public boolean recordVideoParams(android.os.Bundle params) {
+    public boolean recordVideo(VideoOptions options) {
+        return plugin.recordVideo(options);
+    }
+    
+    /**
+     * Record a video with custom parameters using a Bundle for compatibility.
+     * 
+     * @param params Bundle containing parameters for the video recording
+     * @return true if video recording was launched successfully
+     */
+    public boolean recordVideoWithOptions(android.os.Bundle params) {
         if (params == null) {
-            return false;
+            return recordVideo();
         }
         
-        long durationMs = params.getLong("video_duration_ms", 5000);
-        int tapDelay = params.getInt("tap_delay_ms", 0);
-        int returnDelay = params.getInt("return_delay_ms", 0);
-        float buttonX = params.getFloat("button_x_position", 0.0f);
-        float buttonY = params.getFloat("button_y_position", 0.0f);
+        VideoOptions options = new VideoOptions();
         
-        // Extract dialog handling parameters
-        int acceptDialogDelay = params.getInt("accept_dialog_delay_ms", 0);
-        float acceptXOffset = params.getFloat("accept_button_x_offset", 0.0f);
-        float acceptYOffset = params.getFloat("accept_button_y_offset", 0.0f);
+        if (params.containsKey("video_duration_ms")) {
+            options.setDuration(params.getLong("video_duration_ms") / 1000f);
+        }
         
-        return plugin.recordVideo(durationMs, tapDelay, returnDelay, buttonX, buttonY,
-                                acceptDialogDelay, acceptXOffset, acceptYOffset);
+        if (params.containsKey("tap_delay_ms")) {
+            options.setTapDelay(params.getInt("tap_delay_ms"));
+        }
+        
+        if (params.containsKey("return_delay_ms")) {
+            options.setReturnDelay(params.getInt("return_delay_ms"));
+        }
+        
+        if (params.containsKey("button_x_position")) {
+            options.setButtonX(params.getFloat("button_x_position"));
+        }
+        
+        if (params.containsKey("button_y_position")) {
+            options.setButtonY(params.getFloat("button_y_position"));
+        }
+        
+        if (params.containsKey("accept_dialog_delay_ms")) {
+            options.setAcceptDialogDelay(params.getInt("accept_dialog_delay_ms"));
+        }
+        
+        if (params.containsKey("accept_button_x_offset")) {
+            options.setAcceptXOffset(params.getFloat("accept_button_x_offset"));
+        }
+        
+        if (params.containsKey("accept_button_y_offset")) {
+            options.setAcceptYOffset(params.getFloat("accept_button_y_offset"));
+        }
+        
+        return recordVideo(options);
+    }
+    
+    // Legacy methods for backward compatibility
+    
+    /**
+     * @deprecated Use takePicture() instead
+     */
+    @Deprecated
+    public boolean takePictureWithCamera() {
+        return takePicture();
+    }
+    
+    /**
+     * @deprecated Use takePictureWithOptions(Bundle) instead
+     */
+    @Deprecated
+    public boolean takePictureWithCameraParams(android.os.Bundle params) {
+        return takePictureWithOptions(params);
+    }
+    
+    /**
+     * @deprecated Use recordVideoWithOptions(Bundle) instead
+     */
+    @Deprecated
+    public boolean recordVideoParams(android.os.Bundle params) {
+        return recordVideoWithOptions(params);
     }
 
     // Navigation constants for Unity

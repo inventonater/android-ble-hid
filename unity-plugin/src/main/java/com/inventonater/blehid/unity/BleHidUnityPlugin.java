@@ -512,92 +512,149 @@ public class BleHidUnityPlugin {
     }
     
     /**
-     * Take a picture with the camera by launching the camera app
-     * and using the accessibility service to tap the shutter button.
-     */
-    public boolean takePictureWithCamera() {
-        if (localInputManager == null) return false;
-        return localInputManager.takePictureWithCamera();
-    }
-    
-    /**
-     * Take a picture with configurable parameters.
+     * Take a picture with the camera using the specified options.
      * 
-     * @param tapDelayMs Delay before tapping shutter button
-     * @param returnDelayMs Delay before returning to app
-     * @param buttonX X position of shutter button (0.0-1.0)
-     * @param buttonY Y position of shutter button (0.0-1.0)
+     * @param options Camera options to configure the picture capture
      * @return true if camera was launched successfully
      */
-    public boolean takePictureWithCamera(int tapDelayMs, int returnDelayMs, float buttonX, float buttonY) {
+    public boolean takePicture(CameraOptions options) {
         if (localInputManager == null) return false;
-        return localInputManager.takePictureWithCamera(tapDelayMs, returnDelayMs, buttonX, buttonY);
+        
+        if (options == null) {
+            // Use default options
+            return localInputManager.takePictureWithCamera();
+        } else {
+            // Use the options to call the LocalInputManager method
+            return localInputManager.takePictureWithCamera(
+                options.getTapDelay(),
+                options.getReturnDelay(),
+                options.getButtonX(),
+                options.getButtonY(),
+                options.getAcceptDialogDelay(),
+                options.getAcceptXOffset(),
+                options.getAcceptYOffset());
+        }
     }
     
     /**
-     * Take a picture with fully configurable parameters including dialog handling.
+     * Take a picture with the camera using default options.
+     * This is a convenience method that uses the default options.
      * 
-     * @param tapDelayMs Delay before tapping shutter button
-     * @param returnDelayMs Delay before returning to app
-     * @param buttonX X position of shutter button (0.0-1.0)
-     * @param buttonY Y position of shutter button (0.0-1.0)
-     * @param acceptDialogDelayMs Delay before tapping accept dialog button
-     * @param acceptXOffset X offset from center for accept button (0.0-1.0)
-     * @param acceptYOffset Y offset from center for accept button (0.0-1.0)
      * @return true if camera was launched successfully
      */
-    public boolean takePictureWithCamera(int tapDelayMs, int returnDelayMs, float buttonX, float buttonY,
-                                      int acceptDialogDelayMs, float acceptXOffset, float acceptYOffset) {
-        if (localInputManager == null) return false;
-        return localInputManager.takePictureWithCamera(tapDelayMs, returnDelayMs, buttonX, buttonY,
-                                                     acceptDialogDelayMs, acceptXOffset, acceptYOffset);
+    public boolean takePicture() {
+        return takePicture(null);
     }
     
     /**
-     * Record a video by launching the camera in video mode,
-     * tapping to start recording, waiting for the specified duration,
-     * and tapping again to stop recording.
+     * Record a video with the specified options.
+     * 
+     * @param options Video options to configure the recording
+     * @return true if video recording was launched successfully
+     */
+    public boolean recordVideo(VideoOptions options) {
+        if (localInputManager == null) return false;
+        
+        if (options == null) {
+            // Use default options with default duration (5 seconds)
+            return localInputManager.recordVideo(5000);
+        } else {
+            // Use the options to call the LocalInputManager method
+            return localInputManager.recordVideo(
+                options.getDurationMs(),
+                options.getTapDelay(),
+                options.getReturnDelay(),
+                options.getButtonX(),
+                options.getButtonY(),
+                options.getAcceptDialogDelay(),
+                options.getAcceptXOffset(),
+                options.getAcceptYOffset());
+        }
+    }
+    
+    /**
+     * Record a video with default options and specified duration.
+     * This is a convenience method for simple recording.
      * 
      * @param durationMs Duration in milliseconds to record
+     * @return true if video recording was launched successfully
      */
     public boolean recordVideo(long durationMs) {
-        if (localInputManager == null) return false;
-        return localInputManager.recordVideo(durationMs);
+        VideoOptions options = new VideoOptions();
+        options.setDuration(durationMs / 1000f);
+        return recordVideo(options);
+    }
+    
+    // Legacy methods for backward compatibility - marked as deprecated
+    
+    /**
+     * @deprecated Use takePicture() instead
+     */
+    @Deprecated
+    public boolean takePictureWithCamera() {
+        return takePicture();
     }
     
     /**
-     * Record video with configurable parameters.
-     * 
-     * @param durationMs Duration of recording in milliseconds
-     * @param tapDelayMs Delay before tapping record button
-     * @param returnDelayMs Delay before returning to app
-     * @param buttonX X position of record button (0.0-1.0)
-     * @param buttonY Y position of record button (0.0-1.0)
-     * @return true if video recording was launched successfully
+     * @deprecated Use takePicture(CameraOptions) instead
      */
+    @Deprecated
+    public boolean takePictureWithCamera(int tapDelayMs, int returnDelayMs, float buttonX, float buttonY) {
+        CameraOptions options = new CameraOptions()
+            .setTapDelay(tapDelayMs)
+            .setReturnDelay(returnDelayMs)
+            .setButtonX(buttonX)
+            .setButtonY(buttonY);
+        return takePicture(options);
+    }
+    
+    /**
+     * @deprecated Use takePicture(CameraOptions) instead
+     */
+    @Deprecated
+    public boolean takePictureWithCamera(int tapDelayMs, int returnDelayMs, float buttonX, float buttonY,
+                                      int acceptDialogDelayMs, float acceptXOffset, float acceptYOffset) {
+        CameraOptions options = new CameraOptions()
+            .setTapDelay(tapDelayMs)
+            .setReturnDelay(returnDelayMs)
+            .setButtonX(buttonX)
+            .setButtonY(buttonY)
+            .setAcceptDialogDelay(acceptDialogDelayMs)
+            .setAcceptXOffset(acceptXOffset)
+            .setAcceptYOffset(acceptYOffset);
+        return takePicture(options);
+    }
+    
+    /**
+     * @deprecated Use recordVideo(VideoOptions) instead
+     */
+    @Deprecated
     public boolean recordVideo(long durationMs, int tapDelayMs, int returnDelayMs, float buttonX, float buttonY) {
-        if (localInputManager == null) return false;
-        return localInputManager.recordVideo(durationMs, tapDelayMs, returnDelayMs, buttonX, buttonY);
+        VideoOptions options = new VideoOptions()
+            .setDuration(durationMs / 1000f)
+            .setTapDelay(tapDelayMs)
+            .setReturnDelay(returnDelayMs)
+            .setButtonX(buttonX)
+            .setButtonY(buttonY);
+        return recordVideo(options);
     }
     
     /**
-     * Record video with fully configurable parameters including dialog handling.
-     * 
-     * @param durationMs Duration of recording in milliseconds
-     * @param tapDelayMs Delay before tapping record button
-     * @param returnDelayMs Delay before returning to app
-     * @param buttonX X position of record button (0.0-1.0)
-     * @param buttonY Y position of record button (0.0-1.0)
-     * @param acceptDialogDelayMs Delay before tapping accept dialog button
-     * @param acceptXOffset X offset from center for accept button (0.0-1.0)
-     * @param acceptYOffset Y offset from center for accept button (0.0-1.0)
-     * @return true if video recording was launched successfully
+     * @deprecated Use recordVideo(VideoOptions) instead
      */
+    @Deprecated
     public boolean recordVideo(long durationMs, int tapDelayMs, int returnDelayMs, float buttonX, float buttonY,
                              int acceptDialogDelayMs, float acceptXOffset, float acceptYOffset) {
-        if (localInputManager == null) return false;
-        return localInputManager.recordVideo(durationMs, tapDelayMs, returnDelayMs, buttonX, buttonY,
-                                          acceptDialogDelayMs, acceptXOffset, acceptYOffset);
+        VideoOptions options = new VideoOptions()
+            .setDuration(durationMs / 1000f)
+            .setTapDelay(tapDelayMs)
+            .setReturnDelay(returnDelayMs)
+            .setButtonX(buttonX)
+            .setButtonY(buttonY)
+            .setAcceptDialogDelay(acceptDialogDelayMs)
+            .setAcceptXOffset(acceptXOffset)
+            .setAcceptYOffset(acceptYOffset);
+        return recordVideo(options);
     }
 
     // Navigation constants
