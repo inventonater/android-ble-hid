@@ -219,41 +219,13 @@ public class BleHidUnityPlugin {
     }
     
     /**
-     * Send a keyboard key press and release.
+     * Send a keyboard key with optional modifier keys.
      * 
      * @param keyCode The HID key code
+     * @param modifiers Modifier keys (bit flags), use 0 for no modifiers
      * @return true if the key was sent successfully, false otherwise
      */
-    public boolean sendKey(byte keyCode) {
-        if (!checkConnected()) return false;
-        
-        boolean result = bleHidManager.sendKey(keyCode, 0); // Add 0 for modifier parameter
-        if (result) {
-            // Release key after a short delay
-            new Thread(new Runnable() {
-                @Override
-                public void run() {
-                    try {
-                        Thread.sleep(100);
-                        bleHidManager.releaseAllKeys(); // Changed to the correct method name
-                    } catch (InterruptedException e) {
-                        // Ignore
-                    }
-                }
-            }).start();
-        }
-        
-        return result;
-    }
-    
-    /**
-     * Send a keyboard key with modifier keys.
-     * 
-     * @param keyCode The HID key code
-     * @param modifiers Modifier keys (bit flags)
-     * @return true if the key was sent successfully, false otherwise
-     */
-    public boolean sendKeyWithModifiers(byte keyCode, byte modifiers) {
+    public boolean sendKey(byte keyCode, byte modifiers) {
         if (!checkConnected()) return false;
         
         boolean result = bleHidManager.sendKey(keyCode, modifiers);
@@ -264,7 +236,7 @@ public class BleHidUnityPlugin {
                 public void run() {
                     try {
                         Thread.sleep(100);
-                        bleHidManager.releaseAllKeys(); // Changed to the correct method name
+                        bleHidManager.releaseAllKeys();
                     } catch (InterruptedException e) {
                         // Ignore
                     }
@@ -582,78 +554,6 @@ public class BleHidUnityPlugin {
     public boolean recordVideo(long durationMs) {
         VideoOptions options = new VideoOptions();
         options.setDuration(durationMs / 1000f);
-        return recordVideo(options);
-    }
-    
-    // Legacy methods for backward compatibility - marked as deprecated
-    
-    /**
-     * @deprecated Use takePicture() instead
-     */
-    @Deprecated
-    public boolean takePictureWithCamera() {
-        return takePicture();
-    }
-    
-    /**
-     * @deprecated Use takePicture(CameraOptions) instead
-     */
-    @Deprecated
-    public boolean takePictureWithCamera(int tapDelayMs, int returnDelayMs, float buttonX, float buttonY) {
-        CameraOptions options = new CameraOptions()
-            .setTapDelay(tapDelayMs)
-            .setReturnDelay(returnDelayMs)
-            .setButtonX(buttonX)
-            .setButtonY(buttonY);
-        return takePicture(options);
-    }
-    
-    /**
-     * @deprecated Use takePicture(CameraOptions) instead
-     */
-    @Deprecated
-    public boolean takePictureWithCamera(int tapDelayMs, int returnDelayMs, float buttonX, float buttonY,
-                                      int acceptDialogDelayMs, float acceptXOffset, float acceptYOffset) {
-        CameraOptions options = new CameraOptions()
-            .setTapDelay(tapDelayMs)
-            .setReturnDelay(returnDelayMs)
-            .setButtonX(buttonX)
-            .setButtonY(buttonY)
-            .setAcceptDialogDelay(acceptDialogDelayMs)
-            .setAcceptXOffset(acceptXOffset)
-            .setAcceptYOffset(acceptYOffset);
-        return takePicture(options);
-    }
-    
-    /**
-     * @deprecated Use recordVideo(VideoOptions) instead
-     */
-    @Deprecated
-    public boolean recordVideo(long durationMs, int tapDelayMs, int returnDelayMs, float buttonX, float buttonY) {
-        VideoOptions options = new VideoOptions()
-            .setDuration(durationMs / 1000f)
-            .setTapDelay(tapDelayMs)
-            .setReturnDelay(returnDelayMs)
-            .setButtonX(buttonX)
-            .setButtonY(buttonY);
-        return recordVideo(options);
-    }
-    
-    /**
-     * @deprecated Use recordVideo(VideoOptions) instead
-     */
-    @Deprecated
-    public boolean recordVideo(long durationMs, int tapDelayMs, int returnDelayMs, float buttonX, float buttonY,
-                             int acceptDialogDelayMs, float acceptXOffset, float acceptYOffset) {
-        VideoOptions options = new VideoOptions()
-            .setDuration(durationMs / 1000f)
-            .setTapDelay(tapDelayMs)
-            .setReturnDelay(returnDelayMs)
-            .setButtonX(buttonX)
-            .setButtonY(buttonY)
-            .setAcceptDialogDelay(acceptDialogDelayMs)
-            .setAcceptXOffset(acceptXOffset)
-            .setAcceptYOffset(acceptYOffset);
         return recordVideo(options);
     }
 
