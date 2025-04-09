@@ -25,6 +25,53 @@ public class CameraOptions {
     }
     
     /**
+     * Create options from a Bundle
+     * @param bundle Bundle containing parameters
+     */
+    public CameraOptions(Bundle bundle) {
+        fromBundle(bundle);
+    }
+    
+    /**
+     * Apply settings from a bundle
+     * @param bundle Bundle containing parameters
+     * @return This options object for chaining
+     */
+    public CameraOptions fromBundle(Bundle bundle) {
+        if (bundle == null) return this;
+        
+        if (bundle.containsKey(OptionsConstants.PARAM_TAP_DELAY)) {
+            this.tapDelay = bundle.getInt(OptionsConstants.PARAM_TAP_DELAY);
+        }
+        
+        if (bundle.containsKey(OptionsConstants.PARAM_RETURN_DELAY)) {
+            this.returnDelay = bundle.getInt(OptionsConstants.PARAM_RETURN_DELAY);
+        }
+        
+        if (bundle.containsKey(OptionsConstants.PARAM_BUTTON_X)) {
+            this.buttonX = bundle.getFloat(OptionsConstants.PARAM_BUTTON_X);
+        }
+        
+        if (bundle.containsKey(OptionsConstants.PARAM_BUTTON_Y)) {
+            this.buttonY = bundle.getFloat(OptionsConstants.PARAM_BUTTON_Y);
+        }
+        
+        if (bundle.containsKey(OptionsConstants.PARAM_ACCEPT_DIALOG_DELAY)) {
+            this.acceptDialogDelay = bundle.getInt(OptionsConstants.PARAM_ACCEPT_DIALOG_DELAY);
+        }
+        
+        if (bundle.containsKey(OptionsConstants.PARAM_ACCEPT_X_OFFSET)) {
+            this.acceptXOffset = bundle.getFloat(OptionsConstants.PARAM_ACCEPT_X_OFFSET);
+        }
+        
+        if (bundle.containsKey(OptionsConstants.PARAM_ACCEPT_Y_OFFSET)) {
+            this.acceptYOffset = bundle.getFloat(OptionsConstants.PARAM_ACCEPT_Y_OFFSET);
+        }
+        
+        return this;
+    }
+    
+    /**
      * Set the delay before tapping the shutter button
      * @param tapDelay Delay in milliseconds
      * @return This options object for chaining

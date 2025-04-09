@@ -73,28 +73,28 @@ namespace Inventonater.BleHid
             using (AndroidJavaObject videoParams = new AndroidJavaObject("android.os.Bundle"))
             {
                 // Always add duration
-                videoParams.Call("putLong", "video_duration_ms", (long)(Duration * 1000));
+                videoParams.Call("putLong", BleHidConstants.OptionsParams.VideoDuration, (long)(Duration * 1000));
                 
                 if (TapDelay > 0)
-                    videoParams.Call("putInt", "tap_delay_ms", TapDelay);
+                    videoParams.Call("putInt", BleHidConstants.OptionsParams.TapDelay, TapDelay);
                     
                 if (ReturnDelay > 0)
-                    videoParams.Call("putInt", "return_delay_ms", ReturnDelay);
+                    videoParams.Call("putInt", BleHidConstants.OptionsParams.ReturnDelay, ReturnDelay);
                     
                 if (ButtonX != 0.5f)
-                    videoParams.Call("putFloat", "button_x_position", ButtonX);
+                    videoParams.Call("putFloat", BleHidConstants.OptionsParams.ButtonX, ButtonX);
                     
                 if (ButtonY != 0.8f)
-                    videoParams.Call("putFloat", "button_y_position", ButtonY);
+                    videoParams.Call("putFloat", BleHidConstants.OptionsParams.ButtonY, ButtonY);
                     
                 if (AcceptDialogDelay != 300)
-                    videoParams.Call("putInt", "accept_dialog_delay_ms", AcceptDialogDelay);
+                    videoParams.Call("putInt", BleHidConstants.OptionsParams.AcceptDialogDelay, AcceptDialogDelay);
                     
                 if (AcceptXOffset != 0.2f)
-                    videoParams.Call("putFloat", "accept_button_x_offset", AcceptXOffset);
+                    videoParams.Call("putFloat", BleHidConstants.OptionsParams.AcceptXOffset, AcceptXOffset);
                     
                 if (AcceptYOffset != 0.05f)
-                    videoParams.Call("putFloat", "accept_button_y_offset", AcceptYOffset);
+                    videoParams.Call("putFloat", BleHidConstants.OptionsParams.AcceptYOffset, AcceptYOffset);
                 
                 return videoParams;
             }

@@ -252,57 +252,24 @@ public class BleHidUnityBridge {
     }
     
     /**
-     * Take a picture with the camera using the specified options.
+     * Take a picture with the camera using the specified options bundle.
      * 
-     * @param options Camera options to configure the picture capture
+     * @param optionsBundle Bundle with camera options parameters
      * @return true if camera was launched successfully
      */
-    public boolean takePicture(CameraOptions options) {
-        return plugin.takePicture(options);
+    public boolean takePicture(android.os.Bundle optionsBundle) {
+        return plugin.takePicture(optionsBundle);
     }
     
     /**
-     * Take a picture with custom parameters using a Bundle for compatibility.
+     * Take a picture with custom parameters.
+     * This method is maintained for backward compatibility and passes the bundle directly.
      * 
      * @param params Bundle containing parameters for the camera capture
      * @return true if camera was launched successfully
      */
     public boolean takePictureWithOptions(android.os.Bundle params) {
-        if (params == null) {
-            return takePicture();
-        }
-        
-        CameraOptions options = new CameraOptions();
-        
-        if (params.containsKey("tap_delay_ms")) {
-            options.setTapDelay(params.getInt("tap_delay_ms"));
-        }
-        
-        if (params.containsKey("return_delay_ms")) {
-            options.setReturnDelay(params.getInt("return_delay_ms"));
-        }
-        
-        if (params.containsKey("button_x_position")) {
-            options.setButtonX(params.getFloat("button_x_position"));
-        }
-        
-        if (params.containsKey("button_y_position")) {
-            options.setButtonY(params.getFloat("button_y_position"));
-        }
-        
-        if (params.containsKey("accept_dialog_delay_ms")) {
-            options.setAcceptDialogDelay(params.getInt("accept_dialog_delay_ms"));
-        }
-        
-        if (params.containsKey("accept_button_x_offset")) {
-            options.setAcceptXOffset(params.getFloat("accept_button_x_offset"));
-        }
-        
-        if (params.containsKey("accept_button_y_offset")) {
-            options.setAcceptYOffset(params.getFloat("accept_button_y_offset"));
-        }
-        
-        return takePicture(options);
+        return plugin.takePicture(params);
     }
     
     /**
@@ -311,7 +278,7 @@ public class BleHidUnityBridge {
      * @return true if video recording was launched successfully
      */
     public boolean recordVideo() {
-        return plugin.recordVideo(new VideoOptions());
+        return plugin.recordVideo((android.os.Bundle)null);
     }
     
     /**
@@ -325,61 +292,24 @@ public class BleHidUnityBridge {
     }
     
     /**
-     * Record a video with the specified options.
+     * Record a video with the specified options bundle.
      * 
-     * @param options Video options to configure the recording
+     * @param optionsBundle Bundle with video options parameters
      * @return true if video recording was launched successfully
      */
-    public boolean recordVideo(VideoOptions options) {
-        return plugin.recordVideo(options);
+    public boolean recordVideo(android.os.Bundle optionsBundle) {
+        return plugin.recordVideo(optionsBundle);
     }
     
     /**
-     * Record a video with custom parameters using a Bundle for compatibility.
+     * Record a video with custom parameters.
+     * This method is maintained for backward compatibility and passes the bundle directly.
      * 
      * @param params Bundle containing parameters for the video recording
      * @return true if video recording was launched successfully
      */
     public boolean recordVideoWithOptions(android.os.Bundle params) {
-        if (params == null) {
-            return recordVideo();
-        }
-        
-        VideoOptions options = new VideoOptions();
-        
-        if (params.containsKey("video_duration_ms")) {
-            options.setDuration(params.getLong("video_duration_ms") / 1000f);
-        }
-        
-        if (params.containsKey("tap_delay_ms")) {
-            options.setTapDelay(params.getInt("tap_delay_ms"));
-        }
-        
-        if (params.containsKey("return_delay_ms")) {
-            options.setReturnDelay(params.getInt("return_delay_ms"));
-        }
-        
-        if (params.containsKey("button_x_position")) {
-            options.setButtonX(params.getFloat("button_x_position"));
-        }
-        
-        if (params.containsKey("button_y_position")) {
-            options.setButtonY(params.getFloat("button_y_position"));
-        }
-        
-        if (params.containsKey("accept_dialog_delay_ms")) {
-            options.setAcceptDialogDelay(params.getInt("accept_dialog_delay_ms"));
-        }
-        
-        if (params.containsKey("accept_button_x_offset")) {
-            options.setAcceptXOffset(params.getFloat("accept_button_x_offset"));
-        }
-        
-        if (params.containsKey("accept_button_y_offset")) {
-            options.setAcceptYOffset(params.getFloat("accept_button_y_offset"));
-        }
-        
-        return recordVideo(options);
+        return plugin.recordVideo(params);
     }
     
 

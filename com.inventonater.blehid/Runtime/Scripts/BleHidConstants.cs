@@ -3,10 +3,26 @@ using UnityEngine;
 namespace Inventonater.BleHid
 {
     /// <summary>
-    /// Contains constants for the HID keyboard, mouse, and media key codes.
+    /// Contains constants for the HID keyboard, mouse, media key codes, and options parameters.
     /// </summary>
     public static class BleHidConstants
     {
+        // Options parameter constants - must match OptionsConstants.java in core module
+        public static class OptionsParams
+        {
+            // Camera options
+            public const string TapDelay = "tap_delay_ms";
+            public const string ReturnDelay = "return_delay_ms";
+            public const string ButtonX = "button_x_position";
+            public const string ButtonY = "button_y_position";
+            public const string AcceptDialogDelay = "accept_dialog_delay_ms";
+            public const string AcceptXOffset = "accept_button_x_offset";
+            public const string AcceptYOffset = "accept_button_y_offset";
+            
+            // Video options
+            public const string VideoDuration = "video_duration_ms";
+        }
+        
         // Mouse buttons - using bit flags to match Android implementation
         // These values represent individual bits rather than indices:
         // 0x01 = 00000001, 0x02 = 00000010, 0x04 = 00000100

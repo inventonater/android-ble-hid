@@ -11,6 +11,7 @@ import com.inventonater.blehid.core.BlePairingManager;
 import com.inventonater.blehid.core.CameraOptions;
 import com.inventonater.blehid.core.HidConstants;
 import com.inventonater.blehid.core.LocalInputManager;
+import com.inventonater.blehid.core.OptionsConstants;
 import com.inventonater.blehid.core.VideoOptions;
 
 /**
@@ -486,18 +487,17 @@ public class BleHidUnityPlugin {
     }
     
     /**
-     * Take a picture with the camera using the specified options.
+     * Take a picture with the camera using the specified options bundle.
      * 
-     * @param options Camera options to configure the picture capture
+     * @param optionsBundle Bundle with camera options parameters
      * @return true if camera was launched successfully
      */
-    public boolean takePicture(CameraOptions options) {
+    public boolean takePicture(android.os.Bundle optionsBundle) {
         if (localInputManager == null) return false;
         
-        // Convert from unity CameraOptions to core CameraOptions if needed
         com.inventonater.blehid.core.CameraOptions coreOptions = null;
-        if (options != null) {
-            coreOptions = options.toAndroidObject();
+        if (optionsBundle != null) {
+            coreOptions = new com.inventonater.blehid.core.CameraOptions(optionsBundle);
         }
         
         return localInputManager.takePictureWithCamera(coreOptions);
@@ -510,22 +510,21 @@ public class BleHidUnityPlugin {
      * @return true if camera was launched successfully
      */
     public boolean takePicture() {
-        return takePicture(null);
+        return takePicture((android.os.Bundle)null);
     }
     
     /**
-     * Record a video with the specified options.
+     * Record a video with the specified options bundle.
      * 
-     * @param options Video options to configure the recording
+     * @param optionsBundle Bundle with video options parameters
      * @return true if video recording was launched successfully
      */
-    public boolean recordVideo(VideoOptions options) {
+    public boolean recordVideo(android.os.Bundle optionsBundle) {
         if (localInputManager == null) return false;
         
-        // Convert from unity VideoOptions to core VideoOptions if needed
         com.inventonater.blehid.core.VideoOptions coreOptions = null;
-        if (options != null) {
-            coreOptions = options.toAndroidObject();
+        if (optionsBundle != null) {
+            coreOptions = new com.inventonater.blehid.core.VideoOptions(optionsBundle);
         }
         
         return localInputManager.recordVideo(coreOptions);

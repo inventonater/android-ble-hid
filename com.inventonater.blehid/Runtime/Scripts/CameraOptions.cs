@@ -59,25 +59,25 @@ namespace Inventonater.BleHid
             using (AndroidJavaObject cameraParams = new AndroidJavaObject("android.os.Bundle"))
             {
                 if (TapDelay > 0)
-                    cameraParams.Call("putInt", "tap_delay_ms", TapDelay);
+                    cameraParams.Call("putInt", BleHidConstants.OptionsParams.TapDelay, TapDelay);
                     
                 if (ReturnDelay > 0)
-                    cameraParams.Call("putInt", "return_delay_ms", ReturnDelay);
+                    cameraParams.Call("putInt", BleHidConstants.OptionsParams.ReturnDelay, ReturnDelay);
                     
                 if (ButtonX != 0.5f)
-                    cameraParams.Call("putFloat", "button_x_position", ButtonX);
+                    cameraParams.Call("putFloat", BleHidConstants.OptionsParams.ButtonX, ButtonX);
                     
                 if (ButtonY != 0.8f)
-                    cameraParams.Call("putFloat", "button_y_position", ButtonY);
+                    cameraParams.Call("putFloat", BleHidConstants.OptionsParams.ButtonY, ButtonY);
                     
                 if (AcceptDialogDelay != 300)
-                    cameraParams.Call("putInt", "accept_dialog_delay_ms", AcceptDialogDelay);
+                    cameraParams.Call("putInt", BleHidConstants.OptionsParams.AcceptDialogDelay, AcceptDialogDelay);
                     
                 if (AcceptXOffset != 0.2f)
-                    cameraParams.Call("putFloat", "accept_button_x_offset", AcceptXOffset);
+                    cameraParams.Call("putFloat", BleHidConstants.OptionsParams.AcceptXOffset, AcceptXOffset);
                     
                 if (AcceptYOffset != 0.05f)
-                    cameraParams.Call("putFloat", "accept_button_y_offset", AcceptYOffset);
+                    cameraParams.Call("putFloat", BleHidConstants.OptionsParams.AcceptYOffset, AcceptYOffset);
                 
                 return cameraParams;
             }
