@@ -122,12 +122,7 @@ public class ErrorHandlingComponent : UIComponent
         public void DrawPermissionErrorUI()
         {
             // Create a style for the error box
-            GUIStyle errorStyle = new GUIStyle(GUI.skin.box);
-            errorStyle.normal.background = MakeColorTexture(new Color(0.8f, 0.2f, 0.2f, 1.0f));
-            errorStyle.normal.textColor = Color.white;
-            errorStyle.fontSize = 22;
-            errorStyle.fontStyle = FontStyle.Bold;
-            errorStyle.padding = new RectOffset(20, 20, 20, 20);
+            GUIStyle errorStyle = UIHelper.CreateErrorStyle(new Color(0.8f, 0.2f, 0.2f, 1.0f));
             
             GUILayout.BeginVertical(errorStyle);
             
@@ -199,12 +194,7 @@ public class ErrorHandlingComponent : UIComponent
         public void DrawAccessibilityErrorUI(bool fullUI)
         {
             // Create a style for the error box
-            GUIStyle errorStyle = new GUIStyle(GUI.skin.box);
-            errorStyle.normal.background = MakeColorTexture(new Color(0.8f, 0.4f, 0.0f, 1.0f)); // Orange for accessibility
-            errorStyle.normal.textColor = Color.white;
-            errorStyle.fontSize = 22;
-            errorStyle.fontStyle = FontStyle.Bold;
-            errorStyle.padding = new RectOffset(20, 20, 20, 20);
+            GUIStyle errorStyle = UIHelper.CreateErrorStyle(new Color(0.8f, 0.4f, 0.0f, 1.0f)); // Orange for accessibility
             
             GUILayout.BeginVertical(errorStyle);
             

@@ -292,7 +292,7 @@ namespace Inventonater.BleHid.UI
                         lastRect.y + lastRect.height * _cameraButtonY - 10, 
                         20, 20
                     ), 
-                    MakeColorTexture(Color.red)
+                    UIHelper.MakeColorTexture(Color.red)
                 );
                 
                 // Camera action buttons

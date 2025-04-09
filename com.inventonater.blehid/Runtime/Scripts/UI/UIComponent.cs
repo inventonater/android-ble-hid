@@ -35,14 +35,11 @@ namespace Inventonater.BleHid.UI
         public virtual void Update() { }
         
         /// <summary>
-        /// Helper method to create a colored texture for UI elements
+        /// Helper method to create an action or log in editor mode
         /// </summary>
-        protected Texture2D MakeColorTexture(Color color)
+        protected bool ActionButton(string label, Action action, string editorMessage, GUILayoutOption[] options = null)
         {
-            Texture2D texture = new Texture2D(1, 1);
-            texture.SetPixel(0, 0, color);
-            texture.Apply();
-            return texture;
+            return UIHelper.LoggingButton(label, action, editorMessage, IsEditorMode, Logger, options);
         }
     }
 }

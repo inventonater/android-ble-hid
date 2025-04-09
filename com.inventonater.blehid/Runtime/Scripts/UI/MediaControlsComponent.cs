@@ -11,56 +11,43 @@ namespace Inventonater.BleHid.UI
         {
             // Media control buttons row 1
             GUILayout.BeginHorizontal();
-            if (GUILayout.Button("Previous", GUILayout.Height(80)))
-            {
-                if (IsEditorMode)
-                    Logger.AddLogEntry("Previous track pressed");
-                else
-                    BleHidManager.PreviousTrack();
-            }
-
-            if (GUILayout.Button("Play/Pause", GUILayout.Height(80)))
-            {
-                if (IsEditorMode)
-                    Logger.AddLogEntry("Play/Pause pressed");
-                else
-                    BleHidManager.PlayPause();
-            }
-
-            if (GUILayout.Button("Next", GUILayout.Height(80)))
-            {
-                if (IsEditorMode)
-                    Logger.AddLogEntry("Next track pressed");
-                else
-                    BleHidManager.NextTrack();
-            }
+            
+            // Use ActionButton helper for simplified button creation with editor mode handling
+            ActionButton("Previous", 
+                () => BleHidManager.PreviousTrack(), 
+                "Previous track pressed", 
+                new GUILayoutOption[] { GUILayout.Height(80) });
+                
+            ActionButton("Play/Pause", 
+                () => BleHidManager.PlayPause(), 
+                "Play/Pause pressed", 
+                new GUILayoutOption[] { GUILayout.Height(80) });
+                
+            ActionButton("Next", 
+                () => BleHidManager.NextTrack(), 
+                "Next track pressed", 
+                new GUILayoutOption[] { GUILayout.Height(80) });
+                
             GUILayout.EndHorizontal();
 
             // Media control buttons row 2
             GUILayout.BeginHorizontal();
-            if (GUILayout.Button("Volume Down", GUILayout.Height(80)))
-            {
-                if (IsEditorMode)
-                    Logger.AddLogEntry("Volume down pressed");
-                else
-                    BleHidManager.VolumeDown();
-            }
-
-            if (GUILayout.Button("Mute", GUILayout.Height(80)))
-            {
-                if (IsEditorMode)
-                    Logger.AddLogEntry("Mute pressed");
-                else
-                    BleHidManager.Mute();
-            }
-
-            if (GUILayout.Button("Volume Up", GUILayout.Height(80)))
-            {
-                if (IsEditorMode)
-                    Logger.AddLogEntry("Volume up pressed");
-                else
-                    BleHidManager.VolumeUp();
-            }
+            
+            ActionButton("Volume Down", 
+                () => BleHidManager.VolumeDown(), 
+                "Volume down pressed", 
+                new GUILayoutOption[] { GUILayout.Height(80) });
+                
+            ActionButton("Mute", 
+                () => BleHidManager.Mute(), 
+                "Mute pressed", 
+                new GUILayoutOption[] { GUILayout.Height(80) });
+                
+            ActionButton("Volume Up", 
+                () => BleHidManager.VolumeUp(), 
+                "Volume up pressed", 
+                new GUILayoutOption[] { GUILayout.Height(80) });
+                
             GUILayout.EndHorizontal();
         }
     }
