@@ -30,20 +30,24 @@ namespace Inventonater.BleHid.UI
         public override void DrawUI()
         {
             // Initialize if not already done
-            if (!localControlInitialized && !IsEditorMode && owner != null)
+            if (!localControlInitialized && owner != null)
             {
-                #if UNITY_ANDROID
                 owner.StartCoroutine(InitializeLocalControl());
-                #endif
             }
             
             // Check if we have an initialized instance
             bool canUseLocalControls = false;
             bool accessibilityEnabled = false;
             
-            #if UNITY_ANDROID
-            if (!IsEditorMode)
+            if (IsEditorMode)
             {
+                // In editor mode, we simulate that local controls are available
+                canUseLocalControls = true;
+                accessibilityEnabled = true;
+            }
+            else
+            {
+                #if UNITY_ANDROID
                 try
                 {
                     var instance = BleHidLocalControl.Instance;
@@ -65,30 +69,40 @@ namespace Inventonater.BleHid.UI
                 {
                     canUseLocalControls = false;
                 }
+                #endif
             }
-            #endif
             
             if (!canUseLocalControls && !IsEditorMode)
             {
-                // Show initializing status
-                GUILayout.Label("Initializing local control...");
+                // Show initializing status with better styling
+                GUILayout.BeginVertical();
+                GUILayout.Label("Local Device Control", GUI.skin.box);
+                GUILayout.BeginVertical(GUI.skin.box);
+                GUILayout.Label("Initializing local control...", GUI.skin.box);
+                GUILayout.Space(10);
+                GUILayout.Label("Please wait while the local control features are being initialized...");
+                GUILayout.EndVertical();
+                GUILayout.EndVertical();
                 return;
             }
             
-            if (!accessibilityEnabled && !IsEditorMode)
-            {
-                // This component doesn't handle drawing the accessibility error UI
-                // That's handled by the parent UI manager
-                return;
-            }
+            // Always display the UI, even when accessibility service is not enabled
+            // If accessibility is not enabled, the parent UI manager will show an error dialog
+            // but we'll still show the controls (they will be disabled in the parent UI)
             
             // Add local controls once initialized (or in editor mode)
-            GUILayout.Label("Local Device Control");
+            GUILayout.BeginVertical();
+            GUILayout.Label("Local Device Control", GUI.skin.box);
             
-            // Two main sections - media and navigation
+            // Three main sections with consistent spacing
             DrawMediaControlsSection();
+            GUILayout.Space(10); // Consistent spacing between sections
+            
             DrawCameraControlsSection();
+            GUILayout.Space(10); // Consistent spacing between sections
+            
             DrawNavigationSection();
+            GUILayout.EndVertical();
         }
         
         private void DrawMediaControlsSection()
@@ -200,7 +214,9 @@ namespace Inventonater.BleHid.UI
             
             if (!hasCameraPermission)
             {
+                GUILayout.Space(5);
                 GUILayout.Label("Camera permission required for camera features");
+                GUILayout.Space(5);
                 if (GUILayout.Button("Request Camera Permission", GUILayout.Height(60)))
                 {
                     if (owner != null)
@@ -213,10 +229,9 @@ namespace Inventonater.BleHid.UI
             else
             #endif
             {
-                // Camera parameters UI
-                GUILayout.BeginVertical(GUI.skin.box);
-                GUILayout.Label("Camera Button Position", GUI.skin.box);
-                GUILayout.EndVertical();
+                // Camera parameters UI - simplified to match other sections
+                GUILayout.Label("Camera Button Position");
+                GUILayout.Space(5); // Consistent spacing
 
                 // Direct launch buttons
                 GUILayout.BeginHorizontal();
@@ -260,6 +275,9 @@ namespace Inventonater.BleHid.UI
             // Navigation section
             GUILayout.BeginVertical(GUI.skin.box);
             GUILayout.Label("Navigation", GUI.skin.box);
+            
+            // Add consistent spacing at the top of controls
+            GUILayout.Space(5);
             
             // Navigation row 1 (Back, Home, Recents)
             GUILayout.BeginHorizontal();
@@ -373,7 +391,7 @@ namespace Inventonater.BleHid.UI
         }
         
         /// <summary>
-        /// Initialize the local control component for Android
+        /// Initialize the local control component for Android or safely handle in Editor mode
         /// </summary>
         private IEnumerator InitializeLocalControl()
         {
@@ -384,7 +402,8 @@ namespace Inventonater.BleHid.UI
             
             Logger.AddLogEntry("Initializing local control...");
             
-            // First, ensure we can get an instance
+            #if UNITY_ANDROID && !UNITY_EDITOR
+            // Android-specific initialization
             BleHidLocalControl localControlInstance = null;
             
             try
@@ -414,6 +433,12 @@ namespace Inventonater.BleHid.UI
             {
                 Logger.AddLogEntry("Local control fully initialized");
             }
+            #else
+            // Editor-mode initialization
+            Logger.AddLogEntry("Editor mode: Local control simulated initialization");
+            yield return new WaitForSeconds(0.5f); // Simulate initialization delay
+            Logger.AddLogEntry("Editor mode: Local control initialization complete");
+            #endif
         }
     }
 }

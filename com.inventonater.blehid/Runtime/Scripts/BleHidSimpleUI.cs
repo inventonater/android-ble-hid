@@ -12,22 +12,25 @@ namespace Inventonater.BleHid
     /// </summary>
     public class BleHidSimpleUI : MonoBehaviour
     {
-        private BleHidManager bleHidManager;
-        private int currentTab = 0;
-        private string[] tabNames = new string[] { "Media", "Mouse", "Keyboard", "Local" };
-        private bool isInitialized = false;
-        
-        // Flag to enable UI in editor even without full BLE functionality
-        private bool isEditorMode = false;
-        
-        // UI Components
-        private LoggingManager logger;
-        private StatusComponent statusComponent;
-        private MediaControlsComponent mediaComponent;
-        private MouseControlsComponent mouseComponent;
-        private KeyboardControlsComponent keyboardComponent;
-        private LocalControlComponent localComponent;
-        private ErrorHandlingComponent errorComponent;
+    private BleHidManager bleHidManager;
+    private int currentTab = 0;
+    private string[] tabNames = new string[] { "Media", "Mouse", "Keyboard", "Local" };
+    private bool isInitialized = false;
+    
+    // Flag to enable UI in editor even without full BLE functionality
+    private bool isEditorMode = false;
+    
+    // UI Components
+    private LoggingManager logger;
+    private StatusComponent statusComponent;
+    private MediaControlsComponent mediaComponent;
+    private MouseControlsComponent mouseComponent;
+    private KeyboardControlsComponent keyboardComponent;
+    private LocalControlComponent localComponent;
+    private ErrorHandlingComponent errorComponent;
+    
+    // Scroll position for Local tab
+    private Vector2 localTabScrollPosition = Vector2.zero;
         
         // Track if we've attempted to initialize local control
         private bool localControlInitialized = false;
@@ -186,8 +189,15 @@ namespace Inventonater.BleHid
             // Tab selection
             currentTab = GUILayout.Toolbar(currentTab, tabNames, GUILayout.Height(60));
 
-            // Tab content
-            GUILayout.BeginVertical(GUI.skin.box, GUILayout.Height(Screen.height * 0.45f));
+            // Tab content - use flexible height for Local tab
+            if (currentTab == 3) // Local tab
+            {
+                GUILayout.BeginVertical(GUI.skin.box); // No fixed height for Local tab
+            }
+            else
+            {
+                GUILayout.BeginVertical(GUI.skin.box, GUILayout.Height(Screen.height * 0.45f));
+            }
 
             // Check if BLE HID is initialized and a device is connected (or in editor mode)
             if (bleHidManager != null && (isInitialized || isEditorMode))
@@ -216,14 +226,26 @@ namespace Inventonater.BleHid
                         // Local controls always enabled since they don't rely on a BLE connection
                         GUI.enabled = true;
                         
-                        // If we have an accessibility error, show that UI
-                        if (errorComponent.HasAccessibilityError && !isEditorMode)
+                        // Only show the accessibility UI if there's an error
+                        // In editor mode, we'll show it initially, but after "enabling" it should show the normal UI
+                        if (errorComponent.HasAccessibilityError)
                         {
+                            // Display the accessibility service UI which allows enabling the service
                             errorComponent.DrawAccessibilityErrorUI(true);
                         }
                         else
                         {
+                            // Wrap local controls in a scroll view
+                            float viewHeight = Screen.height * 0.45f; // Maintain consistent view height
+                            localTabScrollPosition = GUILayout.BeginScrollView(
+                                localTabScrollPosition, 
+                                GUILayout.MinHeight(viewHeight), 
+                                GUILayout.ExpandHeight(true)
+                            );
+                            
                             localComponent.DrawUI();
+                            
+                            GUILayout.EndScrollView();
                         }
                         break;
                 }

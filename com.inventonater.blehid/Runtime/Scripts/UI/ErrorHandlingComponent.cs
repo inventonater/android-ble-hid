@@ -41,6 +41,14 @@ public class ErrorHandlingComponent : UIComponent
         public override void Initialize(BleHidManager bleHidManager, LoggingManager logger, bool isEditorMode)
         {
             base.Initialize(bleHidManager, logger, isEditorMode);
+            
+            // In editor mode, initially set accessibility error to true
+            // so we can show the accessibility UI for testing
+            if (isEditorMode)
+            {
+                hasAccessibilityError = true;
+                Logger.AddLogEntry("Editor mode: Simulating accessibility service not enabled for testing");
+            }
         }
         
         public void SetMonoBehaviourOwner(MonoBehaviour owner)
@@ -224,6 +232,12 @@ public class ErrorHandlingComponent : UIComponent
                             BleHidLocalControl.Instance.OpenAccessibilitySettings();
                             Logger.AddLogEntry("Opening accessibility settings");
                         }
+                        #else
+                        // In editor mode, simulate enabling the accessibility service
+                        Logger.AddLogEntry("Editor mode: Simulating enabling accessibility service");
+                        hasAccessibilityError = false;
+                        accessibilityServiceEnabled = true;
+                        Logger.AddLogEntry("Editor mode: Accessibility service enabled successfully");
                         #endif
                     }
                     
