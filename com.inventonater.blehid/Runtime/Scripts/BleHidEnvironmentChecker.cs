@@ -170,6 +170,50 @@ namespace Inventonater.BleHid
         }
         
         /// <summary>
+        /// Check if the accessibility service is enabled.
+        /// </summary>
+        /// <param name="errorMsg">Output error message if check fails</param>
+        /// <returns>True if the accessibility service is enabled, false otherwise</returns>
+        public static bool CheckAccessibilityServiceEnabled(out string errorMsg)
+        {
+            errorMsg = "";
+            
+            if (Application.platform != RuntimePlatform.Android)
+            {
+                errorMsg = "Accessibility check only works on Android";
+                return false;
+            }
+            
+            try
+            {
+                // Try to get the local control instance
+                BleHidLocalControl localControl = BleHidLocalControl.Instance;
+                
+                if (localControl == null)
+                {
+                    errorMsg = "BleHidLocalControl instance not available";
+                    return false;
+                }
+                
+                // Check if accessibility service is enabled
+                bool isEnabled = localControl.IsAccessibilityServiceEnabled();
+                
+                if (!isEnabled)
+                {
+                    errorMsg = "Accessibility service is not enabled";
+                }
+                
+                return isEnabled;
+            }
+            catch (Exception e)
+            {
+                errorMsg = "Failed to check accessibility service status: " + e.Message;
+                Debug.LogError(errorMsg);
+                return false;
+            }
+        }
+        
+        /// <summary>
         /// Run diagnostic checks and return a comprehensive report of the system state.
         /// </summary>
         /// <returns>A string containing the diagnostic information.</returns>
@@ -246,6 +290,14 @@ namespace Inventonater.BleHid
                 {
                     report.AppendLine("Permissions: Not applicable for Android API " + sdkInt);
                 }
+            }
+            
+            // Accessibility service check
+            bool accessibilityEnabled = CheckAccessibilityServiceEnabled(out errorMsg);
+            report.AppendLine("Accessibility Service Enabled: " + (accessibilityEnabled ? "YES" : "NO"));
+            if (!accessibilityEnabled)
+            {
+                report.AppendLine("Accessibility Error: " + errorMsg);
             }
             
             // Bridge instance check

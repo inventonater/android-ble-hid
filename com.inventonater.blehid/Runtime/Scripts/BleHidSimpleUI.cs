@@ -31,6 +31,13 @@ namespace Inventonater.BleHid
     
     // Scroll position for Local tab
     private Vector2 localTabScrollPosition = Vector2.zero;
+    
+    // Permission checking
+    private float nextPermissionCheckTime = 0f;
+    private const float PERMISSION_CHECK_INTERVAL = 3.0f; // Check every 3 seconds
+    
+    // Application focus tracking
+    private bool wasInBackground = false;
         
         // Track if we've attempted to initialize local control
         private bool localControlInitialized = false;
@@ -66,9 +73,10 @@ namespace Inventonater.BleHid
             // Add log message
             logger.AddLogEntry("Starting BLE HID initialization...");
             
-            // Check permissions on startup (Android only)
+            // Check permissions and accessibility service on startup (Android only)
             #if UNITY_ANDROID && !UNITY_EDITOR
             errorComponent.CheckMissingPermissions();
+            errorComponent.CheckAccessibilityServiceStatus();
             #endif
         }
 
@@ -133,6 +141,31 @@ namespace Inventonater.BleHid
             {
                 mouseComponent.Update();
             }
+            
+            // Periodic permission checking if needed
+            #if UNITY_ANDROID && !UNITY_EDITOR
+            // Check if we need to check permissions
+            if ((errorComponent.HasPermissionError || errorComponent.HasAccessibilityError) && 
+                Time.time >= nextPermissionCheckTime)
+            {
+                // Schedule next check
+                nextPermissionCheckTime = Time.time + PERMISSION_CHECK_INTERVAL;
+                
+                // Check permissions
+                if (errorComponent.HasPermissionError)
+                {
+                    errorComponent.CheckMissingPermissions();
+                    logger.AddLogEntry("Periodic permission check");
+                }
+                
+                // Check accessibility service
+                if (errorComponent.HasAccessibilityError)
+                {
+                    errorComponent.CheckAccessibilityServiceStatus();
+                    logger.AddLogEntry("Periodic accessibility check");
+                }
+            }
+            #endif
         }
 
         private void OnDestroy()
@@ -169,18 +202,19 @@ namespace Inventonater.BleHid
                 GUILayout.Space(20);
             }
             
-            // Accessibility error - show if we're not in the Local tab
-            if (errorComponent.HasAccessibilityError && currentTab != 3)
+            // Accessibility error - always show full UI at the top with other permissions
+            if (errorComponent.HasAccessibilityError)
             {
-                errorComponent.DrawAccessibilityErrorUI(false); // Simple notification when not on Local tab
+                errorComponent.DrawAccessibilityErrorUI(true); // Show full UI with button
                 GUILayout.Space(20);
             }
 
             // Status area
             statusComponent.DrawUI();
 
-            // If we have a permission error, don't show the rest of the UI
-            if (errorComponent.HasPermissionError)
+            // If we have a permission error or accessibility error, don't show the rest of the UI
+            // Treat accessibility service as a critical requirement like other permissions
+            if (errorComponent.HasPermissionError || errorComponent.HasAccessibilityError)
             {
                 GUILayout.EndArea();
                 return;
@@ -226,27 +260,20 @@ namespace Inventonater.BleHid
                         // Local controls always enabled since they don't rely on a BLE connection
                         GUI.enabled = true;
                         
-                        // Only show the accessibility UI if there's an error
-                        // In editor mode, we'll show it initially, but after "enabling" it should show the normal UI
-                        if (errorComponent.HasAccessibilityError)
-                        {
-                            // Display the accessibility service UI which allows enabling the service
-                            errorComponent.DrawAccessibilityErrorUI(true);
-                        }
-                        else
-                        {
-                            // Wrap local controls in a scroll view
-                            float viewHeight = Screen.height * 0.45f; // Maintain consistent view height
-                            localTabScrollPosition = GUILayout.BeginScrollView(
-                                localTabScrollPosition, 
-                                GUILayout.MinHeight(viewHeight), 
-                                GUILayout.ExpandHeight(true)
-                            );
-                            
-                            localComponent.DrawUI();
-                            
-                            GUILayout.EndScrollView();
-                        }
+                        // Always show the Local Control UI
+                        // The accessibility error is now displayed at the top of the screen
+                        
+                        // Wrap local controls in a scroll view
+                        float viewHeight = Screen.height * 0.45f; // Maintain consistent view height
+                        localTabScrollPosition = GUILayout.BeginScrollView(
+                            localTabScrollPosition, 
+                            GUILayout.MinHeight(viewHeight), 
+                            GUILayout.ExpandHeight(true)
+                        );
+                        
+                        localComponent.DrawUI();
+                        
+                        GUILayout.EndScrollView();
                         break;
                 }
             }
@@ -337,6 +364,69 @@ namespace Inventonater.BleHid
         private void OnDebugLog(string message)
         {
             logger.AddLogEntry("Debug: " + message);
+        }
+        
+        // Handle application focus and pause to detect when user returns from Android settings
+        private void OnApplicationFocus(bool hasFocus)
+        {
+            if (hasFocus && wasInBackground)
+            {
+                // App has regained focus after being in background
+                logger.AddLogEntry("Application regained focus");
+                wasInBackground = false;
+                
+                #if UNITY_ANDROID && !UNITY_EDITOR
+                // Check if we need to reinitialize the local control
+                StartCoroutine(HandleApplicationFocusGained());
+                #endif
+            }
+        }
+        
+        private void OnApplicationPause(bool isPaused)
+        {
+            // App was paused (e.g., user went to settings)
+            if (isPaused)
+            {
+                logger.AddLogEntry("Application paused");
+                wasInBackground = true;
+            }
+        }
+        
+        // Handle app returning from background (e.g., returning from accessibility settings)
+        private IEnumerator HandleApplicationFocusGained()
+        {
+            // Wait a short delay for Android to settle
+            yield return new WaitForSeconds(0.5f);
+            
+            logger.AddLogEntry("Checking accessibility status after focus gained");
+            
+            // Use the direct check method to see if accessibility service was enabled
+            bool isAccessibilityEnabled = BleHidLocalControl.CheckAccessibilityServiceEnabledDirect();
+            logger.AddLogEntry($"Direct accessibility check: {(isAccessibilityEnabled ? "ENABLED" : "NOT ENABLED")}");
+            
+            // Update UI if accessibility status has changed
+            if (isAccessibilityEnabled && errorComponent.HasAccessibilityError)
+            {
+                logger.AddLogEntry("Accessibility service was enabled in settings, updating UI");
+                errorComponent.SetAccessibilityError(false);
+            }
+            else if (!isAccessibilityEnabled && errorComponent.HasAccessibilityError)
+            {
+                // Still not enabled, reinitialize local control and recheck
+                logger.AddLogEntry("Reinitializing local control after returning from settings");
+                StartCoroutine(BleHidLocalControl.ReinitializeAfterFocusGained(this));
+                
+                // Extra delay and then check accessibility status again
+                yield return new WaitForSeconds(1.0f);
+                errorComponent.CheckAccessibilityServiceStatus();
+            }
+            
+            // Re-check permissions too
+            if (errorComponent.HasPermissionError)
+            {
+                logger.AddLogEntry("Checking permissions after focus gained");
+                errorComponent.CheckMissingPermissions();
+            }
         }
     }
 }

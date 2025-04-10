@@ -79,6 +79,9 @@ public class ErrorHandlingComponent : UIComponent
             }
         }
         
+        /// <summary>
+        /// Check accessibility service status using the environment checker
+        /// </summary>
         public void CheckAccessibilityServiceStatus()
         {
             if (owner == null) return;
@@ -91,37 +94,43 @@ public class ErrorHandlingComponent : UIComponent
         {
             yield return null; // Wait a frame to let UI update
             
-            #if UNITY_ANDROID && !UNITY_EDITOR
-            if (BleHidLocalControl.Instance != null)
+            // First try using the direct method that doesn't require initialization
+            bool isEnabled = BleHidLocalControl.CheckAccessibilityServiceEnabledDirect();
+            
+            // If that fails, fall back to the environment checker
+            if (!isEnabled)
             {
-                try
+                string errorMsg;
+                isEnabled = BleHidEnvironmentChecker.CheckAccessibilityServiceEnabled(out errorMsg);
+                
+                if (!isEnabled)
                 {
-                    accessibilityServiceEnabled = BleHidLocalControl.Instance.IsAccessibilityServiceEnabled();
-                    hasAccessibilityError = !accessibilityServiceEnabled;
-                    
-                    if (accessibilityServiceEnabled)
-                    {
-                        Logger.AddLogEntry("Accessibility service is enabled");
-                    }
-                    else
-                    {
-                        Logger.AddLogEntry("Accessibility service is not enabled");
-                    }
+                    Logger.AddLogEntry("Accessibility service check failed: " + errorMsg);
                 }
-                catch (Exception e)
-                {
-                    hasAccessibilityError = true;
-                    Logger.AddLogEntry("Error checking accessibility service: " + e.Message);
-                }
+            }
+            
+            // Update accessibility status
+            accessibilityServiceEnabled = isEnabled;
+            hasAccessibilityError = !isEnabled;
+            
+            if (isEnabled)
+            {
+                Logger.AddLogEntry("Accessibility service is enabled");
             }
             else
             {
-                hasAccessibilityError = true;
-                Logger.AddLogEntry("BleHidLocalControl instance not available");
+                Logger.AddLogEntry("Accessibility service is not enabled");
             }
-            #endif
             
             checkingAccessibilityService = false;
+            
+            // Add exponential backoff for repeated checks when service is not enabled
+            if (!isEnabled && owner != null)
+            {
+                // Schedule a delayed check with exponential backoff up to a maximum
+                // If the UI is already periodically checking, this will just add an extra check
+                owner.StartCoroutine(DelayedAccessibilityCheck(2.0f)); // Add an extra check after 2 seconds
+            }
         }
 
         /// <summary>
@@ -226,11 +235,26 @@ public class ErrorHandlingComponent : UIComponent
                     
                     if (GUILayout.Button("Open Accessibility Settings", GUILayout.Height(60)))
                     {
+                        Logger.AddLogEntry("Opening accessibility settings");
+                        
                         #if UNITY_ANDROID && !UNITY_EDITOR
-                        if (BleHidLocalControl.Instance != null)
+                        try
                         {
-                            BleHidLocalControl.Instance.OpenAccessibilitySettings();
-                            Logger.AddLogEntry("Opening accessibility settings");
+                            // Use the improved method with fallback mechanism
+                            if (BleHidLocalControl.Instance != null)
+                            {
+                                BleHidLocalControl.Instance.OpenAccessibilitySettings();
+                            }
+                            
+                            // Schedule a check after a delay to see if the settings change
+                            if (owner != null)
+                            {
+                                owner.StartCoroutine(DelayedAccessibilityCheck(3.0f));
+                            }
+                        }
+                        catch (Exception e)
+                        {
+                            Logger.AddLogEntry("Error opening accessibility settings: " + e.Message);
                         }
                         #else
                         // In editor mode, simulate enabling the accessibility service
@@ -294,6 +318,20 @@ public class ErrorHandlingComponent : UIComponent
             #endif
             
             checkingPermissions = false;
+        }
+        
+        /// <summary>
+        /// Check accessibility service status after a delay
+        /// </summary>
+        /// <param name="delaySeconds">How long to wait before checking</param>
+        private IEnumerator DelayedAccessibilityCheck(float delaySeconds)
+        {
+            // Wait for the specified delay
+            yield return new WaitForSeconds(delaySeconds);
+            
+            // Check accessibility status
+            Logger.AddLogEntry("Performing delayed accessibility service check");
+            CheckAccessibilityServiceStatus();
         }
         
         /// <summary>

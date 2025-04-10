@@ -243,16 +243,79 @@ namespace Inventonater.BleHid
 
         /// <summary>
         /// Opens accessibility settings to enable the service.
+        /// Uses a robust approach with fallback mechanism.
         /// </summary>
         public void OpenAccessibilitySettings()
         {
-            if (!initialized || bridgeInstance == null)
+            bool success = false;
+            string errorMessage = "";
+            
+            // First try using the bridge if available
+            if (initialized && bridgeInstance != null)
             {
-                Debug.LogError("BleHidLocalControl: Not initialized");
-                return;
+                try
+                {
+                    Debug.Log("BleHidLocalControl: Opening accessibility settings via bridge");
+                    bridgeInstance.Call("openAccessibilitySettings");
+                    success = true;
+                }
+                catch (Exception e)
+                {
+                    errorMessage = e.Message;
+                    Debug.LogWarning("BleHidLocalControl: Bridge call failed: " + errorMessage);
+                    // Will fall back to direct intent approach
+                }
             }
-
-            bridgeInstance.Call("openAccessibilitySettings");
+            else
+            {
+                Debug.LogWarning("BleHidLocalControl: Not initialized, falling back to direct intent");
+            }
+            
+            // If bridge approach failed, try the direct intent approach
+            if (!success)
+            {
+                try
+                {
+                    Debug.Log("BleHidLocalControl: Opening accessibility settings via direct intent");
+                    OpenAccessibilitySettingsDirect();
+                    success = true;
+                }
+                catch (Exception e)
+                {
+                    Debug.LogError("BleHidLocalControl: Failed to open accessibility settings: " + e.Message);
+                }
+            }
+        }
+        
+        /// <summary>
+        /// Opens accessibility settings using a direct intent approach.
+        /// This serves as a fallback if the bridge method fails.
+        /// </summary>
+        private void OpenAccessibilitySettingsDirect()
+        {
+            if (Application.platform != RuntimePlatform.Android)
+                return;
+                
+            try
+            {
+                AndroidJavaClass unityPlayer = new AndroidJavaClass("com.unity3d.player.UnityPlayer");
+                AndroidJavaObject currentActivity = unityPlayer.GetStatic<AndroidJavaObject>("currentActivity");
+                
+                AndroidJavaClass intentClass = new AndroidJavaClass("android.content.Intent");
+                AndroidJavaObject intent = new AndroidJavaObject(
+                    "android.content.Intent", 
+                    "android.settings.ACCESSIBILITY_SETTINGS");
+                
+                intent.Call<AndroidJavaObject>("addFlags", intentClass.GetStatic<int>("FLAG_ACTIVITY_NEW_TASK"));
+                
+                currentActivity.Call("startActivity", intent);
+                Debug.Log("BleHidLocalControl: Opened accessibility settings via direct intent");
+            }
+            catch (Exception e)
+            {
+                Debug.LogError("BleHidLocalControl: Failed to open accessibility settings: " + e.Message);
+                throw; // Rethrow to allow the caller to handle it
+            }
         }
 
         #region Media Control Methods
@@ -420,6 +483,87 @@ namespace Inventonater.BleHid
 
         #endregion
 
+        #region Direct Static Methods
+
+        /// <summary>
+        /// Directly checks if the accessibility service is enabled at the OS level.
+        /// This method works without requiring initialization, similar to permission checks.
+        /// </summary>
+        /// <returns>True if accessibility service is enabled, false otherwise</returns>
+        public static bool CheckAccessibilityServiceEnabledDirect()
+        {
+            if (Application.platform != RuntimePlatform.Android)
+                return false;
+            
+            try
+            {
+                // Create a direct connection to Settings.Secure to check if our service is enabled
+                AndroidJavaClass unityPlayer = new AndroidJavaClass("com.unity3d.player.UnityPlayer");
+                AndroidJavaObject currentActivity = unityPlayer.GetStatic<AndroidJavaObject>("currentActivity");
+                AndroidJavaObject context = currentActivity.Call<AndroidJavaObject>("getApplicationContext");
+                
+                // Get a reference to Settings.Secure
+                AndroidJavaClass settingsSecure = new AndroidJavaClass("android.provider.Settings$Secure");
+                
+                // Get the content resolver
+                AndroidJavaObject contentResolver = context.Call<AndroidJavaObject>("getContentResolver");
+                
+                // Get the enabled accessibility services string
+                string enabledServices = settingsSecure.CallStatic<string>("getString", contentResolver, 
+                    "enabled_accessibility_services");
+                
+                // Get our package name and service class
+                string packageName = context.Call<string>("getPackageName");
+                string serviceName = packageName + "/com.inventonater.blehid.core.LocalAccessibilityService";
+                
+                // Check if our service is in the enabled services string
+                bool isEnabled = enabledServices != null && enabledServices.Contains(serviceName);
+                
+                Debug.Log($"BleHidLocalControl: Direct accessibility check - Service {(isEnabled ? "IS" : "is NOT")} enabled");
+                
+                return isEnabled;
+            }
+            catch (Exception e)
+            {
+                Debug.LogError("BleHidLocalControl: Error checking accessibility service status: " + e.Message);
+                return false;
+            }
+        }
+        
+        /// <summary>
+        /// Reinitializes the BleHidLocalControl when the application regains focus.
+        /// </summary>
+        public static IEnumerator ReinitializeAfterFocusGained(MonoBehaviour owner)
+        {
+            Debug.Log("BleHidLocalControl: Reinitializing after focus gained");
+            
+            if (instance != null && !instance.initialized)
+            {
+                yield return owner.StartCoroutine(instance.Initialize());
+            }
+            else if (instance == null)
+            {
+                // Create instance if needed
+                var control = Instance;
+                yield return owner.StartCoroutine(control.Initialize());
+            }
+            
+            // Short delay before checking accessibility status
+            yield return new WaitForSeconds(0.5f);
+            
+            // Check if accessibility service is enabled
+            bool isEnabled = CheckAccessibilityServiceEnabledDirect();
+            Debug.Log($"BleHidLocalControl: After reinitialization, accessibility service is {(isEnabled ? "enabled" : "not enabled")}");
+            
+            // Fire event if instance exists
+            if (instance != null && instance.OnAccessibilityStatusChanged != null)
+            {
+                instance.OnAccessibilityStatusChanged(isEnabled);
+            }
+        }
+        
+        #endregion
+        
         #region Helper Methods
 
         private bool CheckInitialized()
@@ -441,7 +585,7 @@ namespace Inventonater.BleHid
             }
             return true;
         }
-
+        
         #endregion
     }
 }
