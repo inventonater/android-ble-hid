@@ -19,11 +19,11 @@ import java.util.Map;
 public class BleConnectionManager {
     private static final String TAG = "BleConnectionManager";
     
-    // Default connection parameters
-    private static final int DEFAULT_CONNECTION_INTERVAL = 30; // 30 ms
-    private static final int DEFAULT_SLAVE_LATENCY = 0;
+    // Default connection parameters optimized for lowest latency and high signal strength
+    private static final int DEFAULT_CONNECTION_INTERVAL = 7; // Targeting minimum 7.5ms (rounded to 7)
+    private static final int DEFAULT_SLAVE_LATENCY = 0; // No skipped events for lowest latency
     private static final int DEFAULT_SUPERVISION_TIMEOUT = 2000; // 2000 ms
-    private static final int DEFAULT_MTU_SIZE = 23; // Default BLE MTU size
+    private static final int DEFAULT_MTU_SIZE = 512; // Maximum MTU size for best throughput
     
     // Connection priorities
     public static final int CONNECTION_PRIORITY_HIGH = BluetoothGatt.CONNECTION_PRIORITY_HIGH;        // 0
@@ -44,12 +44,12 @@ public class BleConnectionManager {
     private int supervisionTimeout = DEFAULT_SUPERVISION_TIMEOUT;
     private int mtuSize = DEFAULT_MTU_SIZE;
     private int rssi = 0;
-    private int txPowerLevel = TX_POWER_LEVEL_MEDIUM;
+    private int txPowerLevel = TX_POWER_LEVEL_HIGH;
     
-    // Parameter tracking
-    private int requestedConnectionPriority = CONNECTION_PRIORITY_BALANCED;
+    // Parameter tracking - optimized for performance
+    private int requestedConnectionPriority = CONNECTION_PRIORITY_HIGH;
     private int requestedMtu = DEFAULT_MTU_SIZE;
-    private int requestedTxPowerLevel = TX_POWER_LEVEL_MEDIUM;
+    private int requestedTxPowerLevel = TX_POWER_LEVEL_HIGH;
     
     // Connection parameter update listener
     public interface ConnectionParameterListener {
@@ -285,9 +285,9 @@ public class BleConnectionManager {
         return result;
     }
     
-    // RSSI monitoring
+    // RSSI monitoring - more frequent monitoring for better signal tracking
     private boolean rssiMonitoringEnabled = false;
-    private static final long RSSI_MONITORING_INTERVAL = 2000; // 2 seconds
+    private static final long RSSI_MONITORING_INTERVAL = 500; // 500 milliseconds for more responsive monitoring
     
     private final Runnable rssiMonitoringRunnable = new Runnable() {
         @Override

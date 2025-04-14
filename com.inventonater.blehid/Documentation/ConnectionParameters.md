@@ -78,11 +78,24 @@ Bluetooth Low Energy (BLE) connection parameters play a critical role in determi
 
 **Notes:** RSSI values around -70 dBm or higher generally indicate a good connection. Values below -80 dBm may experience connectivity issues.
 
+## Default Settings for Maximum Performance
+
+This implementation is optimized for maximum performance, prioritizing lowest possible latency and strongest signal over battery life considerations. The following default settings are applied automatically:
+
+- **Connection Priority:** HIGH (minimum latency)
+- **Connection Interval:** 7.5ms (targeting minimum possible value)
+- **Slave Latency:** 0 (no skipped connection events)
+- **MTU Size:** 512 bytes (maximizing data throughput)
+- **Transmit Power Level:** HIGH (maximizing signal strength)
+- **RSSI Monitoring Frequency:** 500ms (more frequent updates for better signal tracking)
+
+These settings provide the most responsive and reliable connection possible, suitable for real-time control applications where instantaneous response is critical. Battery consumption on connected devices will be higher with these settings, but reliability and low latency are prioritized.
+
 ## Connection Priority Presets
 
-Our application provides three connection priority presets:
+Our application provides three connection priority presets, with HIGH being the default:
 
-### High Priority (Low Latency)
+### High Priority (Low Latency) - DEFAULT
 - **Connection Interval:** 7.5-15ms
 - **Slave Latency:** 0
 - **Suitable for:** Gaming, real-time controls, immediate response applications

@@ -267,8 +267,8 @@ public class BleGattServerManager {
                 if (newState == BluetoothProfile.STATE_CONNECTED) {
                     Log.i(TAG, "Client GATT connected to " + address);
                     
-                    // Discover services after connecting
-                    gatt.requestConnectionPriority(BluetoothGatt.CONNECTION_PRIORITY_BALANCED);
+                    // Discover services after connecting - use HIGH priority for lowest latency
+                    gatt.requestConnectionPriority(BluetoothGatt.CONNECTION_PRIORITY_HIGH);
                     gatt.discoverServices();
                     
                 } else if (newState == BluetoothProfile.STATE_DISCONNECTED) {
