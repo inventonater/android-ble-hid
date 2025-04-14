@@ -213,12 +213,8 @@ public class BleGattServerManager {
         }
         
         try {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                // Use TRANSPORT_LE to ensure BLE connection
-                clientGatt = device.connectGatt(context, false, gattClientCallback, BluetoothDevice.TRANSPORT_LE);
-            } else {
-                clientGatt = device.connectGatt(context, false, gattClientCallback);
-            }
+            // Always use TRANSPORT_LE to ensure BLE connection (API 23+)
+            clientGatt = device.connectGatt(context, false, gattClientCallback, BluetoothDevice.TRANSPORT_LE);
             
             if (clientGatt != null) {
                 deviceGattMap.put(device, clientGatt);
@@ -272,9 +268,7 @@ public class BleGattServerManager {
                     Log.i(TAG, "Client GATT connected to " + address);
                     
                     // Discover services after connecting
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-                        gatt.requestConnectionPriority(BluetoothGatt.CONNECTION_PRIORITY_BALANCED);
-                    }
+                    gatt.requestConnectionPriority(BluetoothGatt.CONNECTION_PRIORITY_BALANCED);
                     gatt.discoverServices();
                     
                 } else if (newState == BluetoothProfile.STATE_DISCONNECTED) {
@@ -306,11 +300,8 @@ public class BleGattServerManager {
             if (status == BluetoothGatt.GATT_SUCCESS) {
                 Log.i(TAG, "GATT services discovered on " + gatt.getDevice().getAddress());
                 
-                // At this point we could do things like request MTU or connection parameters
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-                    // Request max MTU for better throughput
-                    gatt.requestMtu(512);
-                }
+                // Request max MTU for better throughput (standard for API 23+)
+                gatt.requestMtu(512);
             } else {
                 Log.e(TAG, "Service discovery failed: " + status);
             }
@@ -344,7 +335,7 @@ public class BleGattServerManager {
             }
         }
         
-        // Custom method for handling connection parameter updates - not actually in BluetoothGattCallback for API 21
+        // This is a newer API method (doesn't exist in older BluetoothGattCallback versions)
         public void onConnectionUpdated(BluetoothGatt gatt, int interval, int latency, int timeout, int status) {
             if (status == BluetoothGatt.GATT_SUCCESS) {
                 // Convert from units (1.25ms) to milliseconds
@@ -513,7 +504,7 @@ public class BleGattServerManager {
                 }
             } 
             else {
-                // Delegate other characteristics to the mouse service handler - fixed comma issue
+                // Delegate other characteristics to the mouse service handler
                 success = bleHidManager.getHidMediaService()
                         .handleCharacteristicWrite(charUuid, value);
             }
@@ -541,7 +532,7 @@ public class BleGattServerManager {
                 gattServer.sendResponse(device, requestId, BluetoothGatt.GATT_SUCCESS, 
                         0, value);
             } else {
-                // Get descriptor value from mouse service handler - fixed comma issue
+                // Get descriptor value from mouse service handler
                 byte[] response = bleHidManager.getHidMediaService()
                         .handleDescriptorRead(descriptor.getUuid(), descriptor.getCharacteristic().getUuid());
                 
@@ -598,7 +589,7 @@ public class BleGattServerManager {
                     success = true;
                 }
             } else {
-                // Delegate to mouse service handler for other descriptors - fixed comma and params
+                // Delegate to mouse service handler for other descriptors
                 success = bleHidManager.getHidMediaService()
                         .handleDescriptorWrite(descriptor.getUuid(), 
                                 descriptor.getCharacteristic().getUuid(), 

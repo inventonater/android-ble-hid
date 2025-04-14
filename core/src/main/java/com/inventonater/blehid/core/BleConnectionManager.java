@@ -162,28 +162,18 @@ public class BleConnectionManager {
         // Store requested value
         requestedConnectionPriority = priority;
         
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-            boolean result = gatt.requestConnectionPriority(priority);
+        boolean result = gatt.requestConnectionPriority(priority);
+        
+        if (result) {
+            Log.d(TAG, "Connection priority request sent: " + priority);
             
-            if (result) {
-                Log.d(TAG, "Connection priority request sent: " + priority);
-                
-                // Actual values will be reported in the connection parameter update callback
-                return true;
-            } else {
-                Log.e(TAG, "Failed to request connection priority");
-                
-                if (listener != null) {
-                    listener.onRequestComplete("connectionPriority", false, "Request failed");
-                }
-                
-                return false;
-            }
+            // Actual values will be reported in the connection parameter update callback
+            return true;
         } else {
-            Log.e(TAG, "Connection priority requests not supported on this Android version");
+            Log.e(TAG, "Failed to request connection priority");
             
             if (listener != null) {
-                listener.onRequestComplete("connectionPriority", false, "Not supported on this Android version");
+                listener.onRequestComplete("connectionPriority", false, "Request failed");
             }
             
             return false;
@@ -217,28 +207,18 @@ public class BleConnectionManager {
         // Store requested value
         requestedMtu = mtu;
         
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-            boolean result = gatt.requestMtu(mtu);
+        boolean result = gatt.requestMtu(mtu);
+        
+        if (result) {
+            Log.d(TAG, "MTU request sent: " + mtu);
             
-            if (result) {
-                Log.d(TAG, "MTU request sent: " + mtu);
-                
-                // Actual value will be reported in the MTU changed callback
-                return true;
-            } else {
-                Log.e(TAG, "Failed to request MTU");
-                
-                if (listener != null) {
-                    listener.onRequestComplete("mtu", false, "Request failed");
-                }
-                
-                return false;
-            }
+            // Actual value will be reported in the MTU changed callback
+            return true;
         } else {
-            Log.e(TAG, "MTU requests not supported on this Android version");
+            Log.e(TAG, "Failed to request MTU");
             
             if (listener != null) {
-                listener.onRequestComplete("mtu", false, "Not supported on this Android version");
+                listener.onRequestComplete("mtu", false, "Request failed");
             }
             
             return false;
