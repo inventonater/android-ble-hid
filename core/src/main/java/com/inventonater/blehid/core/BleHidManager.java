@@ -20,6 +20,7 @@ public class BleHidManager {
     private final BleAdvertiser advertiser;
     private final BleGattServerManager gattServerManager;
     private final BlePairingManager pairingManager;
+    private final BleConnectionManager connectionManager;
     // Using media service for HID functionality
     private final HidMediaService hidMediaService;
 
@@ -47,6 +48,7 @@ public class BleHidManager {
         advertiser = new BleAdvertiser(this);
         gattServerManager = new BleGattServerManager(this);
         pairingManager = new BlePairingManager(this);
+        connectionManager = new BleConnectionManager(this);
         hidMediaService = new HidMediaService(this);
     }
 
@@ -172,6 +174,15 @@ public class BleHidManager {
 
     public HidMediaService getHidMediaService() {
         return hidMediaService;
+    }
+    
+    /**
+     * Returns the BleConnectionManager instance.
+     * 
+     * @return The BleConnectionManager instance
+     */
+    public BleConnectionManager getConnectionManager() {
+        return connectionManager;
     }
     
     // ==================== Media Control Methods ====================
@@ -448,6 +459,14 @@ public class BleHidManager {
         
         // Stop advertising once connected
         stopAdvertising();
+        
+        // Create client GATT connection to monitor connection parameters
+        if (gattServerManager.createClientConnection(device)) {
+            Log.d(TAG, "Created client GATT connection for parameter monitoring");
+        }
+        
+        // Notify connection manager
+        connectionManager.onDeviceConnected(device);
     }
 
     /**
@@ -457,6 +476,10 @@ public class BleHidManager {
      */
     void onDeviceDisconnected(BluetoothDevice device) {
         Log.i(TAG, "Device disconnected: " + device.getAddress());
+        
+        // Notify connection manager
+        connectionManager.onDeviceDisconnected();
+        
         connectedDevice = null;
         
         // Restart advertising after disconnect

@@ -6,6 +6,7 @@ import android.bluetooth.BluetoothDevice;
 import android.content.Context;
 import android.util.Log;
 
+import com.inventonater.blehid.core.BleConnectionManager;
 import com.inventonater.blehid.core.BleHidManager;
 import com.inventonater.blehid.core.BlePairingManager;
 import com.inventonater.blehid.core.CameraOptions;
@@ -13,6 +14,8 @@ import com.inventonater.blehid.core.HidConstants;
 import com.inventonater.blehid.core.LocalInputManager;
 import com.inventonater.blehid.core.OptionsConstants;
 import com.inventonater.blehid.core.VideoOptions;
+
+import java.util.Map;
 
 /**
  * Main Unity plugin class for BLE HID functionality.
@@ -120,6 +123,39 @@ public class BleHidUnityPlugin {
         
         if (initialized) {
             Log.d(TAG, "BLE HID initialized successfully");
+            
+            // Set up connection parameter listener
+            if (bleHidManager.getConnectionManager() != null) {
+                bleHidManager.getConnectionManager().setConnectionParameterListener(
+                        new BleConnectionManager.ConnectionParameterListener() {
+                    @Override
+                    public void onConnectionParametersChanged(int interval, int latency, int timeout, int mtu) {
+                        if (callback != null) {
+                            Log.d(TAG, "Connection parameters changed: interval=" + interval + 
+                                   "ms, latency=" + latency + ", timeout=" + timeout + "ms, MTU=" + mtu);
+                            callback.onConnectionParametersChanged(interval, latency, timeout, mtu);
+                        }
+                    }
+                    
+                    @Override
+                    public void onRssiRead(int rssi) {
+                        if (callback != null) {
+                            Log.d(TAG, "RSSI: " + rssi + " dBm");
+                            callback.onRssiRead(rssi);
+                        }
+                    }
+                    
+                    @Override
+                    public void onRequestComplete(String parameterName, boolean success, String actualValue) {
+                        if (callback != null) {
+                            Log.d(TAG, "Parameter request complete: " + parameterName + 
+                                   " success=" + success + " actual=" + actualValue);
+                            callback.onConnectionParameterRequestComplete(parameterName, success, actualValue);
+                        }
+                    }
+                });
+            }
+            
             if (callback != null) {
                 callback.onInitializeComplete(true, "BLE HID initialized successfully");
             }
@@ -552,6 +588,90 @@ public class BleHidUnityPlugin {
     public static final int NAV_HOME = LocalInputManager.NAV_HOME;
     public static final int NAV_RECENTS = LocalInputManager.NAV_RECENTS;
     
+    // ==================== Connection Parameter Methods ====================
+    
+    /**
+     * Request a change in connection priority.
+     * 
+     * @param priority The connection priority: 0=HIGH, 1=BALANCED, 2=LOW_POWER
+     * @return true if the request was sent, false otherwise
+     */
+    public boolean requestConnectionPriority(int priority) {
+        if (!checkConnected()) return false;
+        
+        if (priority < 0 || priority > 2) {
+            Log.e(TAG, "Invalid connection priority: " + priority);
+            if (callback != null) {
+                callback.onError(ERROR_INVALID_PARAMETER, "Invalid connection priority: " + priority);
+            }
+            return false;
+        }
+        
+        return bleHidManager.getConnectionManager().requestConnectionPriority(priority);
+    }
+    
+    /**
+     * Request a change in MTU size.
+     * 
+     * @param mtu The MTU size (23-517)
+     * @return true if the request was sent, false otherwise
+     */
+    public boolean requestMtu(int mtu) {
+        if (!checkConnected()) return false;
+        
+        if (mtu < 23 || mtu > 517) {
+            Log.e(TAG, "Invalid MTU size: " + mtu);
+            if (callback != null) {
+                callback.onError(ERROR_INVALID_PARAMETER, "Invalid MTU size: " + mtu);
+            }
+            return false;
+        }
+        
+        return bleHidManager.getConnectionManager().requestMtu(mtu);
+    }
+    
+    /**
+     * Set the transmit power level for advertising.
+     * 
+     * @param level The power level: 0=LOW, 1=MEDIUM, 2=HIGH
+     * @return true if successful, false otherwise
+     */
+    public boolean setTransmitPowerLevel(int level) {
+        if (!checkInitialized()) return false;
+        
+        if (level < 0 || level > 2) {
+            Log.e(TAG, "Invalid TX power level: " + level);
+            if (callback != null) {
+                callback.onError(ERROR_INVALID_PARAMETER, "Invalid TX power level: " + level);
+            }
+            return false;
+        }
+        
+        return bleHidManager.getConnectionManager().setTransmitPowerLevel(level);
+    }
+    
+    /**
+     * Read the current RSSI value.
+     * 
+     * @return true if the read request was sent, false otherwise
+     */
+    public boolean readRssi() {
+        if (!checkConnected()) return false;
+        
+        return bleHidManager.getConnectionManager().readRssi();
+    }
+    
+    /**
+     * Get all connection parameters as a string map.
+     * 
+     * @return Map of parameter names to values, or null if not connected
+     */
+    public Map<String, String> getConnectionParameters() {
+        if (!checkConnected()) return null;
+        
+        return bleHidManager.getConnectionManager().getAllConnectionParameters();
+    }
+    
     /**
      * Get diagnostic information about the BLE HID state.
      * 
@@ -570,6 +690,17 @@ public class BleHidUnityPlugin {
             if (device != null) {
                 info.append("Device: ").append(getDeviceInfo(device)).append("\n");
                 info.append("Bond State: ").append(bondStateToString(device.getBondState())).append("\n");
+                
+                // Add connection parameters
+                if (bleHidManager.getConnectionManager() != null) {
+                    Map<String, String> params = bleHidManager.getConnectionManager().getAllConnectionParameters();
+                    if (params != null) {
+                        info.append("\nCONNECTION PARAMETERS:\n");
+                        for (Map.Entry<String, String> entry : params.entrySet()) {
+                            info.append("- ").append(entry.getKey()).append(": ").append(entry.getValue()).append("\n");
+                        }
+                    }
+                }
             }
         }
         

@@ -2,6 +2,7 @@ package com.inventonater.blehid.core;
 
 import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothGatt;
+import android.bluetooth.BluetoothGattCallback;
 import android.bluetooth.BluetoothGattCharacteristic;
 import android.bluetooth.BluetoothGattDescriptor;
 import android.bluetooth.BluetoothGattServer;
@@ -10,9 +11,12 @@ import android.bluetooth.BluetoothGattService;
 import android.bluetooth.BluetoothManager;
 import android.bluetooth.BluetoothProfile;
 import android.content.Context;
+import android.os.Build;
 import android.util.Log;
 
 import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.UUID;
 
 /**
@@ -36,6 +40,10 @@ public class BleGattServerManager {
     
     private BluetoothGattServer gattServer;
     private BluetoothGattService hidService;
+    
+    // Client-side GATT connection to the connected device
+    private BluetoothGatt clientGatt;
+    private final Map<BluetoothDevice, BluetoothGatt> deviceGattMap = new HashMap<>();
     
     /**
      * Creates a new GATT server manager.
@@ -185,9 +193,193 @@ public class BleGattServerManager {
     }
     
     /**
-     * Closes the GATT server and cleans up resources.
+     * Creates a client-side GATT connection to the specified device.
+     * This allows us to perform operations like reading RSSI and 
+     * requesting connection parameter changes.
+     * 
+     * @param device The device to connect to
+     * @return true if connection was initiated, false otherwise
+     */
+    public boolean createClientConnection(BluetoothDevice device) {
+        if (device == null) {
+            Log.e(TAG, "Cannot create client connection: Device is null");
+            return false;
+        }
+        
+        // Check if we already have a connection to this device
+        if (deviceGattMap.containsKey(device)) {
+            Log.d(TAG, "Already have client connection to " + device.getAddress());
+            return true;
+        }
+        
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                // Use TRANSPORT_LE to ensure BLE connection
+                clientGatt = device.connectGatt(context, false, gattClientCallback, BluetoothDevice.TRANSPORT_LE);
+            } else {
+                clientGatt = device.connectGatt(context, false, gattClientCallback);
+            }
+            
+            if (clientGatt != null) {
+                deviceGattMap.put(device, clientGatt);
+                Log.i(TAG, "Created client GATT connection to " + device.getAddress());
+                return true;
+            } else {
+                Log.e(TAG, "Failed to create client GATT connection");
+                return false;
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "Error creating client GATT connection", e);
+            return false;
+        }
+    }
+    
+    /**
+     * Gets the GATT client connection for the connected device.
+     * 
+     * @return The BluetoothGatt instance for the connected device, or null if not connected
+     */
+    public BluetoothGatt getGattForConnectedDevice() {
+        BluetoothDevice device = bleHidManager.getConnectedDevice();
+        if (device == null) {
+            return null;
+        }
+        
+        return deviceGattMap.get(device);
+    }
+    
+    /**
+     * Client-side GATT callback to handle connection events and parameter updates.
+     */
+    private final BluetoothGattCallback gattClientCallback = new BluetoothGattCallback() {
+        @Override
+        public void onConnectionStateChange(BluetoothGatt gatt, int status, int newState) {
+            if (gatt == null) {
+                Log.e(TAG, "onConnectionStateChange: gatt is null");
+                return;
+            }
+            
+            BluetoothDevice device = gatt.getDevice();
+            if (device == null) {
+                Log.e(TAG, "onConnectionStateChange: device is null");
+                return;
+            }
+            
+            String address = device.getAddress();
+            
+            if (status == BluetoothGatt.GATT_SUCCESS) {
+                if (newState == BluetoothProfile.STATE_CONNECTED) {
+                    Log.i(TAG, "Client GATT connected to " + address);
+                    
+                    // Discover services after connecting
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                        gatt.requestConnectionPriority(BluetoothGatt.CONNECTION_PRIORITY_BALANCED);
+                    }
+                    gatt.discoverServices();
+                    
+                } else if (newState == BluetoothProfile.STATE_DISCONNECTED) {
+                    Log.i(TAG, "Client GATT disconnected from " + address);
+                    
+                    // Clean up GATT resources
+                    deviceGattMap.remove(device);
+                    gatt.close();
+                    
+                    if (gatt == clientGatt) {
+                        clientGatt = null;
+                    }
+                }
+            } else {
+                Log.e(TAG, "Error in client GATT connection state change: " + status);
+                
+                // Clean up on error
+                deviceGattMap.remove(device);
+                gatt.close();
+                
+                if (gatt == clientGatt) {
+                    clientGatt = null;
+                }
+            }
+        }
+        
+        @Override
+        public void onServicesDiscovered(BluetoothGatt gatt, int status) {
+            if (status == BluetoothGatt.GATT_SUCCESS) {
+                Log.i(TAG, "GATT services discovered on " + gatt.getDevice().getAddress());
+                
+                // At this point we could do things like request MTU or connection parameters
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                    // Request max MTU for better throughput
+                    gatt.requestMtu(512);
+                }
+            } else {
+                Log.e(TAG, "Service discovery failed: " + status);
+            }
+        }
+        
+        @Override
+        public void onMtuChanged(BluetoothGatt gatt, int mtu, int status) {
+            if (status == BluetoothGatt.GATT_SUCCESS) {
+                Log.i(TAG, "MTU changed to " + mtu);
+                
+                // Notify the connection manager
+                if (bleHidManager.getConnectionManager() != null) {
+                    bleHidManager.getConnectionManager().onMtuChanged(mtu);
+                }
+            } else {
+                Log.e(TAG, "MTU change failed: " + status);
+            }
+        }
+        
+        @Override
+        public void onReadRemoteRssi(BluetoothGatt gatt, int rssi, int status) {
+            if (status == BluetoothGatt.GATT_SUCCESS) {
+                Log.d(TAG, "RSSI: " + rssi + " dBm");
+                
+                // Notify the connection manager
+                if (bleHidManager.getConnectionManager() != null) {
+                    bleHidManager.getConnectionManager().onRssiRead(rssi);
+                }
+            } else {
+                Log.e(TAG, "RSSI read failed: " + status);
+            }
+        }
+        
+        @Override
+        public void onConnectionUpdated(BluetoothGatt gatt, int interval, int latency, int timeout, int status) {
+            if (status == BluetoothGatt.GATT_SUCCESS) {
+                // Convert from units (1.25ms) to milliseconds
+                int intervalMs = interval * 5 / 4;
+                
+                // Convert from units (10ms) to milliseconds
+                int timeoutMs = timeout * 10;
+                
+                Log.i(TAG, "Connection parameters updated - interval: " + intervalMs + 
+                        "ms, latency: " + latency + ", timeout: " + timeoutMs + "ms");
+                
+                // Notify the connection manager
+                if (bleHidManager.getConnectionManager() != null) {
+                    bleHidManager.getConnectionManager().onConnectionUpdated(intervalMs, latency, timeoutMs);
+                }
+            } else {
+                Log.e(TAG, "Connection parameter update failed: " + status);
+            }
+        }
+    };
+    
+    /**
+     * Closes the GATT server and client connections, and cleans up resources.
      */
     public void close() {
+        // Close all client GATT connections
+        for (BluetoothGatt gatt : deviceGattMap.values()) {
+            if (gatt != null) {
+                gatt.close();
+            }
+        }
+        deviceGattMap.clear();
+        clientGatt = null;
+        
+        // Close the GATT server
         if (gattServer != null) {
             gattServer.close();
             gattServer = null;

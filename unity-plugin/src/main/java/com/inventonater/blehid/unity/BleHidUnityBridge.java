@@ -313,6 +313,56 @@ public class BleHidUnityBridge {
     }
     
 
+    // ==================== Connection Parameter Methods ====================
+    
+    /**
+     * Request a change in connection priority.
+     * 
+     * @param priority The connection priority: 0=HIGH, 1=BALANCED, 2=LOW_POWER
+     * @return true if the request was sent, false otherwise
+     */
+    public boolean requestConnectionPriority(int priority) {
+        return plugin.requestConnectionPriority(priority);
+    }
+    
+    /**
+     * Request a change in MTU size.
+     * 
+     * @param mtu The MTU size (23-517)
+     * @return true if the request was sent, false otherwise
+     */
+    public boolean requestMtu(int mtu) {
+        return plugin.requestMtu(mtu);
+    }
+    
+    /**
+     * Set the transmit power level for advertising.
+     * 
+     * @param level The power level: 0=LOW, 1=MEDIUM, 2=HIGH
+     * @return true if successful, false otherwise
+     */
+    public boolean setTransmitPowerLevel(int level) {
+        return plugin.setTransmitPowerLevel(level);
+    }
+    
+    /**
+     * Read the current RSSI value.
+     * 
+     * @return true if the read request was sent, false otherwise
+     */
+    public boolean readRssi() {
+        return plugin.readRssi();
+    }
+    
+    /**
+     * Get all connection parameters as a string map.
+     * 
+     * @return Map of parameter names to values, or null if not connected
+     */
+    public java.util.Map<String, String> getConnectionParameters() {
+        return plugin.getConnectionParameters();
+    }
+    
     // Navigation constants for Unity
     public int getNavUp() { return BleHidUnityPlugin.NAV_UP; }
     public int getNavDown() { return BleHidUnityPlugin.NAV_DOWN; }
@@ -321,4 +371,14 @@ public class BleHidUnityBridge {
     public int getNavBack() { return BleHidUnityPlugin.NAV_BACK; }
     public int getNavHome() { return BleHidUnityPlugin.NAV_HOME; }
     public int getNavRecents() { return BleHidUnityPlugin.NAV_RECENTS; }
+    
+    // Connection priority constants for Unity
+    public int getConnectionPriorityHigh() { return BleConnectionManager.CONNECTION_PRIORITY_HIGH; }
+    public int getConnectionPriorityBalanced() { return BleConnectionManager.CONNECTION_PRIORITY_BALANCED; }
+    public int getConnectionPriorityLowPower() { return BleConnectionManager.CONNECTION_PRIORITY_LOW_POWER; }
+    
+    // TX power level constants for Unity
+    public int getTxPowerLevelHigh() { return BleConnectionManager.TX_POWER_LEVEL_HIGH; }
+    public int getTxPowerLevelMedium() { return BleConnectionManager.TX_POWER_LEVEL_MEDIUM; }
+    public int getTxPowerLevelLow() { return BleConnectionManager.TX_POWER_LEVEL_LOW; }
 }

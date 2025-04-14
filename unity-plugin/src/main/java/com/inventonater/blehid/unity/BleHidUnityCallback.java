@@ -36,6 +36,29 @@ public interface BleHidUnityCallback {
     void onPairingStateChanged(String status, String deviceAddress);
     
     /**
+     * Called when connection parameters are updated.
+     * @param interval Connection interval in milliseconds
+     * @param latency Slave latency (number of connection events that slave can skip)
+     * @param timeout Supervision timeout in milliseconds
+     * @param mtu MTU size in bytes
+     */
+    void onConnectionParametersChanged(int interval, int latency, int timeout, int mtu);
+    
+    /**
+     * Called when RSSI is read.
+     * @param rssi RSSI value in dBm
+     */
+    void onRssiRead(int rssi);
+    
+    /**
+     * Called when a connection parameter change request is completed.
+     * @param parameterName Name of the parameter that was changed
+     * @param success Whether the change was successful
+     * @param actualValue The actual value that was applied by the remote device
+     */
+    void onConnectionParameterRequestComplete(String parameterName, boolean success, String actualValue);
+    
+    /**
      * Called when an error occurs.
      * @param errorCode Numeric error code
      * @param errorMessage Human-readable error message

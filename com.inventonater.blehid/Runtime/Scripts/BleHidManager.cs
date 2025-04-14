@@ -46,6 +46,37 @@ namespace Inventonater.BleHid
         /// </summary>
         public int LastErrorCode { get; internal set; }
         
+        // Connection parameters
+        /// <summary>
+        /// Current connection interval in milliseconds.
+        /// </summary>
+        public int ConnectionInterval { get; internal set; }
+        
+        /// <summary>
+        /// Current slave latency (number of connection events that can be skipped).
+        /// </summary>
+        public int SlaveLatency { get; internal set; }
+        
+        /// <summary>
+        /// Current supervision timeout in milliseconds.
+        /// </summary>
+        public int SupervisionTimeout { get; internal set; }
+        
+        /// <summary>
+        /// Current MTU size in bytes.
+        /// </summary>
+        public int MtuSize { get; internal set; }
+        
+        /// <summary>
+        /// Current RSSI value in dBm.
+        /// </summary>
+        public int Rssi { get; internal set; }
+        
+        /// <summary>
+        /// Current transmit power level (0=Low, 1=Medium, 2=High).
+        /// </summary>
+        public int TxPowerLevel { get; internal set; }
+        
         /// <summary>
         /// The bridge instance used to communicate with Java.
         /// </summary>
@@ -77,6 +108,19 @@ namespace Inventonater.BleHid
             callbackHandler.OnAdvertisingStateChanged += (advertising, message) => OnAdvertisingStateChanged?.Invoke(advertising, message);
             callbackHandler.OnConnectionStateChanged += (connected, deviceName, deviceAddress) => OnConnectionStateChanged?.Invoke(connected, deviceName, deviceAddress);
             callbackHandler.OnPairingStateChanged += (status, deviceAddress) => OnPairingStateChanged?.Invoke(status, deviceAddress);
+            callbackHandler.OnConnectionParametersChanged += (interval, latency, timeout, mtu) => {
+                ConnectionInterval = interval;
+                SlaveLatency = latency;
+                SupervisionTimeout = timeout;
+                MtuSize = mtu;
+                OnConnectionParametersChanged?.Invoke(interval, latency, timeout, mtu);
+            };
+            callbackHandler.OnRssiRead += (rssi) => {
+                Rssi = rssi;
+                OnRssiRead?.Invoke(rssi);
+            };
+            callbackHandler.OnConnectionParameterRequestComplete += (paramName, success, actualValue) => 
+                OnConnectionParameterRequestComplete?.Invoke(paramName, success, actualValue);
             callbackHandler.OnError += (errorCode, errorMessage) => OnError?.Invoke(errorCode, errorMessage);
             callbackHandler.OnDebugLog += (message) => OnDebugLog?.Invoke(message);
             
@@ -90,6 +134,9 @@ namespace Inventonater.BleHid
         public event BleHidCallbackHandler.AdvertisingStateChangedHandler OnAdvertisingStateChanged;
         public event BleHidCallbackHandler.ConnectionStateChangedHandler OnConnectionStateChanged;
         public event BleHidCallbackHandler.PairingStateChangedHandler OnPairingStateChanged;
+        public event BleHidCallbackHandler.ConnectionParametersChangedHandler OnConnectionParametersChanged;
+        public event BleHidCallbackHandler.RssiReadHandler OnRssiRead;
+        public event BleHidCallbackHandler.ConnectionParameterRequestCompleteHandler OnConnectionParameterRequestComplete;
         public event BleHidCallbackHandler.ErrorHandler OnError;
         public event BleHidCallbackHandler.DebugLogHandler OnDebugLog;
         #endregion
@@ -572,6 +619,166 @@ namespace Inventonater.BleHid
             }
         }
         
+        #region Connection Parameter Methods
+        
+        /// <summary>
+        /// Request a change in connection priority.
+        /// Connection priority affects latency and power consumption.
+        /// </summary>
+        /// <param name="priority">The priority to request (0=HIGH, 1=BALANCED, 2=LOW_POWER)</param>
+        /// <returns>True if the request was sent, false otherwise.</returns>
+        public bool RequestConnectionPriority(int priority)
+        {
+            if (!CheckConnected()) return false;
+            
+            try
+            {
+                return bridgeInstance.Call<bool>("requestConnectionPriority", priority);
+            }
+            catch (Exception e)
+            {
+                string message = "Exception requesting connection priority: " + e.Message;
+                Debug.LogException(e);
+                LastErrorMessage = message;
+                OnError?.Invoke(BleHidConstants.ERROR_NOT_CONNECTED, message);
+                return false;
+            }
+        }
+        
+        /// <summary>
+        /// Request a change in MTU (Maximum Transmission Unit) size.
+        /// Larger MTU sizes can improve throughput.
+        /// </summary>
+        /// <param name="mtu">The MTU size to request (23-517 bytes)</param>
+        /// <returns>True if the request was sent, false otherwise.</returns>
+        public bool RequestMtu(int mtu)
+        {
+            if (!CheckConnected()) return false;
+            
+            if (mtu < 23 || mtu > 517)
+            {
+                string message = "Invalid MTU size: " + mtu + ". Must be between 23 and 517.";
+                Debug.LogError(message);
+                LastErrorMessage = message;
+                OnError?.Invoke(BleHidConstants.ERROR_INVALID_PARAMETER, message);
+                return false;
+            }
+            
+            try
+            {
+                return bridgeInstance.Call<bool>("requestMtu", mtu);
+            }
+            catch (Exception e)
+            {
+                string message = "Exception requesting MTU: " + e.Message;
+                Debug.LogException(e);
+                LastErrorMessage = message;
+                OnError?.Invoke(BleHidConstants.ERROR_NOT_CONNECTED, message);
+                return false;
+            }
+        }
+        
+        /// <summary>
+        /// Sets the transmit power level for advertising.
+        /// Higher power increases range but consumes more battery.
+        /// </summary>
+        /// <param name="level">The power level (0=LOW, 1=MEDIUM, 2=HIGH)</param>
+        /// <returns>True if successful, false otherwise.</returns>
+        public bool SetTransmitPowerLevel(int level)
+        {
+            if (!CheckInitialized()) return false;
+            
+            if (level < 0 || level > 2)
+            {
+                string message = "Invalid TX power level: " + level + ". Must be between 0 and 2.";
+                Debug.LogError(message);
+                LastErrorMessage = message;
+                OnError?.Invoke(BleHidConstants.ERROR_INVALID_PARAMETER, message);
+                return false;
+            }
+            
+            try
+            {
+                return bridgeInstance.Call<bool>("setTransmitPowerLevel", level);
+            }
+            catch (Exception e)
+            {
+                string message = "Exception setting TX power level: " + e.Message;
+                Debug.LogException(e);
+                LastErrorMessage = message;
+                OnError?.Invoke(BleHidConstants.ERROR_INVALID_PARAMETER, message);
+                return false;
+            }
+        }
+        
+        /// <summary>
+        /// Reads the current RSSI (signal strength) value.
+        /// </summary>
+        /// <returns>True if the read request was sent, false otherwise.</returns>
+        public bool ReadRssi()
+        {
+            if (!CheckConnected()) return false;
+            
+            try
+            {
+                return bridgeInstance.Call<bool>("readRssi");
+            }
+            catch (Exception e)
+            {
+                string message = "Exception reading RSSI: " + e.Message;
+                Debug.LogException(e);
+                LastErrorMessage = message;
+                OnError?.Invoke(BleHidConstants.ERROR_NOT_CONNECTED, message);
+                return false;
+            }
+        }
+        
+        /// <summary>
+        /// Gets all connection parameters as a dictionary.
+        /// </summary>
+        /// <returns>Dictionary of parameter names to values, or null if not connected.</returns>
+        public System.Collections.Generic.Dictionary<string, string> GetConnectionParameters()
+        {
+            if (!CheckConnected()) return null;
+            
+            try
+            {
+                AndroidJavaObject parametersMap = bridgeInstance.Call<AndroidJavaObject>("getConnectionParameters");
+                if (parametersMap == null)
+                {
+                    return null;
+                }
+                
+                System.Collections.Generic.Dictionary<string, string> result = new System.Collections.Generic.Dictionary<string, string>();
+                
+                // Convert Java Map to C# Dictionary
+                using (AndroidJavaObject entrySet = parametersMap.Call<AndroidJavaObject>("entrySet"))
+                using (AndroidJavaObject iterator = entrySet.Call<AndroidJavaObject>("iterator"))
+                {
+                    while (iterator.Call<bool>("hasNext"))
+                    {
+                        using (AndroidJavaObject entry = iterator.Call<AndroidJavaObject>("next"))
+                        {
+                            string key = entry.Call<AndroidJavaObject>("getKey").Call<string>("toString");
+                            string value = entry.Call<AndroidJavaObject>("getValue").Call<string>("toString");
+                            result[key] = value;
+                        }
+                    }
+                }
+                
+                return result;
+            }
+            catch (Exception e)
+            {
+                string message = "Exception getting connection parameters: " + e.Message;
+                Debug.LogException(e);
+                LastErrorMessage = message;
+                return null;
+            }
+        }
+        
+        #endregion
+        
         /// <summary>
         /// Get diagnostic information from the plugin.
         /// </summary>
@@ -668,6 +875,30 @@ namespace Inventonater.BleHid
         public void HandleDebugLog(string message)
         {
             callbackHandler.HandleDebugLog(message);
+        }
+        
+        /// <summary>
+        /// Called when connection parameters are updated.
+        /// </summary>
+        public void HandleConnectionParametersChanged(string message)
+        {
+            callbackHandler.HandleConnectionParametersChanged(message);
+        }
+        
+        /// <summary>
+        /// Called when RSSI is read.
+        /// </summary>
+        public void HandleRssiRead(string message)
+        {
+            callbackHandler.HandleRssiRead(message);
+        }
+        
+        /// <summary>
+        /// Called when a connection parameter change request is completed.
+        /// </summary>
+        public void HandleConnectionParameterRequestComplete(string message)
+        {
+            callbackHandler.HandleConnectionParameterRequestComplete(message);
         }
         #endregion
         

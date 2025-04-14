@@ -15,6 +15,9 @@ namespace Inventonater.BleHid
         public delegate void AdvertisingStateChangedHandler(bool advertising, string message);
         public delegate void ConnectionStateChangedHandler(bool connected, string deviceName, string deviceAddress);
         public delegate void PairingStateChangedHandler(string status, string deviceAddress);
+        public delegate void ConnectionParametersChangedHandler(int interval, int latency, int timeout, int mtu);
+        public delegate void RssiReadHandler(int rssi);
+        public delegate void ConnectionParameterRequestCompleteHandler(string parameterName, bool success, string actualValue);
         public delegate void ErrorHandler(int errorCode, string errorMessage);
         public delegate void DebugLogHandler(string message);
         
@@ -23,6 +26,9 @@ namespace Inventonater.BleHid
         public event AdvertisingStateChangedHandler OnAdvertisingStateChanged;
         public event ConnectionStateChangedHandler OnConnectionStateChanged;
         public event PairingStateChangedHandler OnPairingStateChanged;
+        public event ConnectionParametersChangedHandler OnConnectionParametersChanged;
+        public event RssiReadHandler OnRssiRead;
+        public event ConnectionParameterRequestCompleteHandler OnConnectionParameterRequestComplete;
         public event ErrorHandler OnError;
         public event DebugLogHandler OnDebugLog;
         
@@ -145,6 +151,55 @@ namespace Inventonater.BleHid
             Debug.LogError($"BLE HID error {errorCode}: {errorMessage}");
             
             OnError?.Invoke(errorCode, errorMessage);
+        }
+        
+        /// <summary>
+        /// Called when connection parameters are updated.
+        /// </summary>
+        public void HandleConnectionParametersChanged(string message)
+        {
+            string[] parts = message.Split(':');
+            if (parts.Length >= 4)
+            {
+                int interval = int.Parse(parts[0]);
+                int latency = int.Parse(parts[1]);
+                int timeout = int.Parse(parts[2]);
+                int mtu = int.Parse(parts[3]);
+                
+                Debug.Log($"Connection parameters changed: interval={interval}ms, latency={latency}, timeout={timeout}ms, MTU={mtu}");
+                
+                OnConnectionParametersChanged?.Invoke(interval, latency, timeout, mtu);
+            }
+        }
+        
+        /// <summary>
+        /// Called when RSSI is read.
+        /// </summary>
+        public void HandleRssiRead(string message)
+        {
+            int rssi = int.Parse(message);
+            
+            Debug.Log($"RSSI: {rssi} dBm");
+            
+            OnRssiRead?.Invoke(rssi);
+        }
+        
+        /// <summary>
+        /// Called when a connection parameter change request is completed.
+        /// </summary>
+        public void HandleConnectionParameterRequestComplete(string message)
+        {
+            string[] parts = message.Split(new char[] { ':' }, 3);
+            if (parts.Length >= 3)
+            {
+                string parameterName = parts[0];
+                bool success = bool.Parse(parts[1]);
+                string actualValue = parts[2];
+                
+                Debug.Log($"Parameter request complete: {parameterName}, success={success}, actual={actualValue}");
+                
+                OnConnectionParameterRequestComplete?.Invoke(parameterName, success, actualValue);
+            }
         }
         
         /// <summary>

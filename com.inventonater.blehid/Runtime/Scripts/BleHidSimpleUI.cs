@@ -14,7 +14,7 @@ namespace Inventonater.BleHid
     {
     private BleHidManager bleHidManager;
     private int currentTab = 0;
-    private string[] tabNames = new string[] { "Media", "Mouse", "Keyboard", "Local" };
+    private string[] tabNames = new string[] { "Media", "Mouse", "Keyboard", "Local", "Connection" };
     private bool isInitialized = false;
     
     // Flag to enable UI in editor even without full BLE functionality
@@ -28,6 +28,7 @@ namespace Inventonater.BleHid
     private KeyboardControlsComponent keyboardComponent;
     private LocalControlComponent localComponent;
     private ErrorHandlingComponent errorComponent;
+    private ConnectionParametersComponent connectionParametersComponent;
     
     // Scroll position for Local tab
     private Vector2 localTabScrollPosition = Vector2.zero;
@@ -104,6 +105,7 @@ namespace Inventonater.BleHid
             keyboardComponent = new KeyboardControlsComponent();
             localComponent = new LocalControlComponent();
             errorComponent = new ErrorHandlingComponent();
+            connectionParametersComponent = new ConnectionParametersComponent();
             
             // Initialize components
             statusComponent.Initialize(bleHidManager, logger, isEditorMode);
@@ -112,6 +114,7 @@ namespace Inventonater.BleHid
             keyboardComponent.Initialize(bleHidManager, logger, isEditorMode);
             localComponent.Initialize(bleHidManager, logger, isEditorMode);
             errorComponent.Initialize(bleHidManager, logger, isEditorMode);
+            connectionParametersComponent.Initialize(bleHidManager, logger, isEditorMode);
             
             // Additional setup for components that need MonoBehaviour reference
             errorComponent.SetMonoBehaviourOwner(this);
@@ -274,6 +277,12 @@ namespace Inventonater.BleHid
                         localComponent.DrawUI();
                         
                         GUILayout.EndScrollView();
+                        break;
+                    case 4: // Connection Parameters tab
+                        // Connection parameters need a connected device
+                        GUI.enabled = bleHidManager.IsConnected || isEditorMode;
+                        connectionParametersComponent.DrawUI();
+                        GUI.enabled = true;
                         break;
                 }
             }

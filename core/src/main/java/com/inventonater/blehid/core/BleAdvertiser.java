@@ -51,6 +51,9 @@ public class BleAdvertiser {
     private int advertisingFailures = 0;
     private long lastAdvertisingStartTime = 0;
     
+    // TX power level (matches the constants in BleConnectionManager)
+    private int txPowerLevel = AdvertiseSettings.ADVERTISE_TX_POWER_MEDIUM; // Default to medium power
+    
     // New options
     private boolean forceAdvertising = true; // Override capability check
     
@@ -308,15 +311,15 @@ public class BleAdvertiser {
      * @return The configured AdvertiseSettings
      */
     private AdvertiseSettings buildAdvertiseSettings() {
-        // Simple but effective settings for maximum visibility
+        // Build settings using the configured TX power level
         AdvertiseSettings settings = new AdvertiseSettings.Builder()
                 .setAdvertiseMode(AdvertiseSettings.ADVERTISE_MODE_LOW_LATENCY)
                 .setConnectable(true)
                 .setTimeout(0) 
-                .setTxPowerLevel(AdvertiseSettings.ADVERTISE_TX_POWER_HIGH)
+                .setTxPowerLevel(txPowerLevel)
                 .build();
                 
-        Log.d(TAG, "🔧 Using high-power advertising settings for maximum visibility");
+        Log.d(TAG, "🔧 Using advertising settings with power level: " + powerToString(txPowerLevel));
         return settings;
     }
 
@@ -427,6 +430,33 @@ public class BleAdvertiser {
         return bluetoothAdapter != null && 
                bluetoothAdapter.isMultipleAdvertisementSupported() && 
                bluetoothAdapter.getBluetoothLeAdvertiser() != null;
+    }
+    
+    /**
+     * Sets the transmit power level to use for advertising.
+     * This will take effect on the next startAdvertising() call.
+     * 
+     * @param level The power level to use (ADVERTISE_TX_POWER_*)
+     * @return true if successful, false otherwise
+     */
+    public boolean setTxPowerLevel(int level) {
+        if (level < AdvertiseSettings.ADVERTISE_TX_POWER_ULTRA_LOW || 
+            level > AdvertiseSettings.ADVERTISE_TX_POWER_HIGH) {
+            Log.e(TAG, "Invalid TX power level: " + level);
+            return false;
+        }
+        
+        this.txPowerLevel = level;
+        Log.i(TAG, "TX power level set to: " + powerToString(level));
+        
+        // If already advertising, restart to apply new power level
+        if (isAdvertising) {
+            Log.i(TAG, "Restarting advertising to apply new TX power level");
+            stopAdvertising();
+            return startAdvertising();
+        }
+        
+        return true;
     }
     
     /**
