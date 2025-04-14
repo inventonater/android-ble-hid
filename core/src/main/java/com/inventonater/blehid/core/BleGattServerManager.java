@@ -344,7 +344,7 @@ public class BleGattServerManager {
             }
         }
         
-        @Override
+        // Custom method for handling connection parameter updates - not actually in BluetoothGattCallback for API 21
         public void onConnectionUpdated(BluetoothGatt gatt, int interval, int latency, int timeout, int status) {
             if (status == BluetoothGatt.GATT_SUCCESS) {
                 // Convert from units (1.25ms) to milliseconds

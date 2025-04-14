@@ -3,6 +3,7 @@ package com.inventonater.blehid.unity;
 import android.app.Activity;
 import android.util.Log;
 import com.unity3d.player.UnityPlayer;
+import com.inventonater.blehid.core.BleConnectionManager;
 
 /**
  * Bridge class between Unity and the BLE HID plugin.
@@ -61,6 +62,21 @@ public class BleHidUnityBridge {
             @Override
             public void onPairingStateChanged(String status, String deviceAddress) {
                 sendMessageToUnity("HandlePairingStateChanged", status + ":" + deviceAddress);
+            }
+            
+            @Override
+            public void onConnectionParametersChanged(int interval, int latency, int timeout, int mtu) {
+                sendMessageToUnity("HandleConnectionParametersChanged", interval + ":" + latency + ":" + timeout + ":" + mtu);
+            }
+            
+            @Override
+            public void onRssiRead(int rssi) {
+                sendMessageToUnity("HandleRssiRead", String.valueOf(rssi));
+            }
+            
+            @Override
+            public void onConnectionParameterRequestComplete(String parameterName, boolean success, String actualValue) {
+                sendMessageToUnity("HandleConnectionParameterRequestComplete", parameterName + ":" + success + ":" + actualValue);
             }
 
             @Override
