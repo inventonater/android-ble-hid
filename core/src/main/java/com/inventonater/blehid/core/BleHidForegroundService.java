@@ -100,10 +100,8 @@ public class BleHidForegroundService extends Service {
         
         // Using Android 12's improved foreground service type specification
         // FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE is appropriate for BLE operations
-        if (ServiceCompat.startForeground(this, NOTIFICATION_ID, notification, 
-                ServiceInfo.FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE)) {
-            Log.d(TAG, "Foreground service started with proper type");
-        }
+        startForeground(NOTIFICATION_ID, notification);
+        Log.d(TAG, "Foreground service started with proper type");
         
         // Ensure accessibility service is running and monitored
         establishAccessibilityServiceConnection();
