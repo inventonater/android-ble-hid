@@ -92,6 +92,14 @@ namespace Inventonater.BleHid.UI
         private Vector2 lastTouchPosition;
         private bool isMouseDragging = false;
         
+        // Global scale applies to all mouse movement
+        private float _globalScale = 1.0f;
+        public float GlobalScale
+        {
+            get => _globalScale;
+            set => _globalScale = value;
+        }
+        
         // Mouse motion parameters with properties for automatic filter updates
         private float _horizontalSensitivity = 3.0f;
         public float HorizontalSensitivity 
@@ -220,7 +228,8 @@ namespace Inventonater.BleHid.UI
             UIHelper.BeginSection("Mouse Touchpad");
             
             // Show touchpad instruction
-            GUILayout.Label("Touch & Drag in the area below to move mouse");
+            GUILayout.Label("Touchpad Area: Touch and drag to control mouse pointer");
+            GUILayout.Label("Drag in touchpad area to send mouse movement to connected device");
 
             // Draw touchpad area using a Box with visual style to make it obvious
             GUIStyle touchpadStyle = new GUIStyle(GUI.skin.box);
@@ -236,7 +245,7 @@ namespace Inventonater.BleHid.UI
             #endif
 
             // Draw the touchpad with clear visual feedback
-            GUILayout.Box(touchpadLabel, touchpadStyle, GUILayout.Width(300), GUILayout.Height(200));
+            GUILayout.Box(touchpadLabel, touchpadStyle, GUILayout.Height(200));
 
             // Update touchpad rect after layout to get the actual position
             if (Event.current.type == EventType.Repaint)
@@ -250,9 +259,22 @@ namespace Inventonater.BleHid.UI
             // Mouse motion tuning controls
             UIHelper.BeginSection("Mouse Tuning");
             
+            // Global scale slider
+            GUILayout.Label("Global Speed: Adjusts overall mouse movement speed");
+            float newGlobalScale = UIHelper.SliderWithLabels(
+                "Slow", _globalScale, 0.25f, 10.0f, "Fast", 
+                "Global Speed: {0:F2}×", UIHelper.StandardSliderOptions);
+                
+            if (newGlobalScale != _globalScale)
+            {
+                GlobalScale = newGlobalScale;
+            }
+            
+            GUILayout.Space(10);
+            
             // Preset selector
             GUILayout.BeginHorizontal();
-            GUILayout.Label("Presets:", GUILayout.Width(60));
+            GUILayout.Label("Presets:", GUILayout.Width(80));
             for (int i = 0; i < presetNames.Length; i++)
             {
                 GUI.enabled = currentPresetIndex != i;
@@ -267,9 +289,10 @@ namespace Inventonater.BleHid.UI
             GUILayout.Space(10);
             
             // Horizontal sensitivity slider
+            GUILayout.Label("Horizontal Speed: Adjusts left-right sensitivity");
             float newHorizontalSensitivity = UIHelper.SliderWithLabels(
                 "Low", _horizontalSensitivity, 1.0f, 10.0f, "High", 
-                "Horizontal: {0:F1}", UIHelper.StandardSliderOptions);
+                "Horizontal Speed: {0:F1}", UIHelper.StandardSliderOptions);
                 
             if (newHorizontalSensitivity != _horizontalSensitivity)
             {
@@ -277,9 +300,10 @@ namespace Inventonater.BleHid.UI
             }
             
             // Vertical sensitivity slider
+            GUILayout.Label("Vertical Speed: Adjusts up-down sensitivity");
             float newVerticalSensitivity = UIHelper.SliderWithLabels(
                 "Low", _verticalSensitivity, 1.0f, 10.0f, "High", 
-                "Vertical: {0:F1}", UIHelper.StandardSliderOptions);
+                "Vertical Speed: {0:F1}", UIHelper.StandardSliderOptions);
                 
             if (newVerticalSensitivity != _verticalSensitivity)
             {
@@ -287,9 +311,10 @@ namespace Inventonater.BleHid.UI
             }
             
             // Smoothing parameter (Min Cutoff)
+            GUILayout.Label("Motion Smoothing: Reduces jitter in mouse movement");
             float newMinCutoff = UIHelper.SliderWithLabels(
-                "High", _minCutoff, 0.1f, 5f, "Low", 
-                "Smoothing: {0:F1}", UIHelper.StandardSliderOptions);
+                "Strong", _minCutoff, 0.1f, 5f, "Light", 
+                "Motion Smoothing: {0:F1}", UIHelper.StandardSliderOptions);
                 
             if (newMinCutoff != _minCutoff)
             {
@@ -297,9 +322,10 @@ namespace Inventonater.BleHid.UI
             }
             
             // Responsiveness parameter (Beta)
+            GUILayout.Label("Acceleration Response: How quickly cursor responds to fast movements");
             float newBeta = UIHelper.SliderWithLabels(
                 "Smooth", _betaValue, 0.001f, 0.5f, "Responsive", 
-                "Responsiveness: {0:F3}", UIHelper.StandardSliderOptions);
+                "Acceleration Response: {0:F3}", UIHelper.StandardSliderOptions);
                 
             if (newBeta != _betaValue)
             {
@@ -310,6 +336,8 @@ namespace Inventonater.BleHid.UI
 
             // Mouse button controls
             UIHelper.BeginSection("Mouse Buttons");
+            
+            GUILayout.Label("Click buttons to send mouse button actions to the connected device");
             
             string[] buttonLabels = { "Left Click", "Middle Click", "Right Click" };
             Action[] buttonActions = {
@@ -330,7 +358,7 @@ namespace Inventonater.BleHid.UI
                 Logger, 
                 buttonMessages,
                 UIHelper.LargeButtonOptions);
-                
+            
             UIHelper.EndSection();
         }
         
@@ -432,9 +460,9 @@ namespace Inventonater.BleHid.UI
             float filteredDeltaX = xFilter.Filter(rawDelta.x, timestamp);
             float filteredDeltaY = yFilter.Filter(rawDelta.y, timestamp);
             
-            // Apply sensitivity
-            int scaledDeltaX = (int)(filteredDeltaX * _horizontalSensitivity);
-            int scaledDeltaY = (int)(filteredDeltaY * _verticalSensitivity);
+            // Apply sensitivity and global scale
+            int scaledDeltaX = (int)(filteredDeltaX * _horizontalSensitivity * _globalScale);
+            int scaledDeltaY = (int)(filteredDeltaY * _verticalSensitivity * _globalScale);
 
             // Only process if movement is significant
             if (Mathf.Abs(scaledDeltaX) > 0 || Mathf.Abs(scaledDeltaY) > 0)
