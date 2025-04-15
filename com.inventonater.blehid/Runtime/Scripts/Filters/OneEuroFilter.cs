@@ -9,6 +9,8 @@ namespace Inventonater.BleHid
     /// </summary>
     public class OneEuroFilter : IInputFilter
     {
+        private static LoggingManager logger => LoggingManager.Instance;
+
         // Filter parameters
         private float _minCutoff;    // Minimum cutoff frequency
         private float _beta;         // Cutoff slope (speed coefficient)
@@ -69,8 +71,7 @@ namespace Inventonater.BleHid
         /// <summary>
         /// Draw the filter's parameter controls in the current GUI layout
         /// </summary>
-        /// <param name="logger">Logger for UI events</param>
-        public void DrawParameterControls(LoggingManager logger)
+        public void DrawParameterControls()
         {
             // Draw min cutoff slider (smoothing strength)
             GUILayout.Label("Smoothing: Adjusts filtering strength");
@@ -81,7 +82,7 @@ namespace Inventonater.BleHid
             if (newMinCutoff != _minCutoff)
             {
                 _minCutoff = newMinCutoff;
-                logger.AddLogEntry($"Changed 1€ filter smoothing to: {_minCutoff:F2}");
+                LoggingManager.Instance.AddLogEntry($"Changed 1€ filter smoothing to: {_minCutoff:F2}");
             }
             
             // Draw beta slider (speed response)

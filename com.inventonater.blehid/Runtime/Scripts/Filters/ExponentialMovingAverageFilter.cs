@@ -8,6 +8,8 @@ namespace Inventonater.BleHid
     /// </summary>
     public class ExponentialMovingAverageFilter : IInputFilter
     {
+        private static LoggingManager Logger => LoggingManager.Instance;
+
         // Filter parameters
         private float _alpha;        // Smoothing factor (0-1): higher = less smoothing
         private float _minChange;    // Minimum change threshold
@@ -51,7 +53,7 @@ namespace Inventonater.BleHid
         /// Draw the filter's parameter controls in the current GUI layout
         /// </summary>
         /// <param name="logger">Logger for UI events</param>
-        public void DrawParameterControls(LoggingManager logger)
+        public void DrawParameterControls()
         {
             // Draw alpha slider (smoothing amount)
             GUILayout.Label("Smoothing Factor: Adjusts filtering strength");
@@ -62,7 +64,7 @@ namespace Inventonater.BleHid
             if (newAlpha != _alpha)
             {
                 _alpha = newAlpha;
-                logger.AddLogEntry($"Changed EMA filter smoothing to: {_alpha:F2}");
+                Logger.AddLogEntry($"Changed EMA filter smoothing to: {_alpha:F2}");
             }
             
             // Draw min change threshold
@@ -74,7 +76,7 @@ namespace Inventonater.BleHid
             if (newMinChange != _minChange)
             {
                 _minChange = newMinChange;
-                logger.AddLogEntry($"Changed EMA filter minimum change to: {_minChange:F4}");
+                Logger.AddLogEntry($"Changed EMA filter minimum change to: {_minChange:F4}");
             }
         }
         

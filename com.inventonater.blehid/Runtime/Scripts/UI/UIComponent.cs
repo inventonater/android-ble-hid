@@ -11,16 +11,15 @@ namespace Inventonater.BleHid
     public abstract class UIComponent
     {
         protected BleHidManager BleHidManager { get; private set; }
-        protected LoggingManager Logger { get; private set; }
-        protected bool isEditorMode => Application.isEditor;
+        protected LoggingManager Logger => LoggingManager.Instance;
+        protected bool IsEditorMode => Application.isEditor;
 
         /// <summary>
         /// Initialize the UI component with required dependencies
         /// </summary>
-        public virtual void Initialize(BleHidManager bleHidManager, LoggingManager logger)
+        public virtual void Initialize(BleHidManager bleHidManager)
         {
             BleHidManager = bleHidManager;
-            Logger = logger;
         }
     }
 }

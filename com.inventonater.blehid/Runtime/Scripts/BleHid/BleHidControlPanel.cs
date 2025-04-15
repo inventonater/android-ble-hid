@@ -75,7 +75,7 @@ namespace Inventonater.BleHid
         private void InitializeManagers()
         {
             // Create logging manager
-            logger = new LoggingManager();
+            logger = LoggingManager.Instance;
             
             // Create BleHidManager
             GameObject managerObj = new GameObject("BleHidManager");
@@ -119,7 +119,7 @@ namespace Inventonater.BleHid
         {
             if (component != null)
             {
-                component.Initialize(bleHidManager, logger);
+                component.Initialize(bleHidManager);
             }
         }
         

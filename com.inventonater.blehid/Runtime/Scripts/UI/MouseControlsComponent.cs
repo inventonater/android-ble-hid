@@ -103,9 +103,9 @@ namespace Inventonater.BleHid
             }
         }
         
-        public override void Initialize(BleHidManager bleHidManager, LoggingManager logger)
+        public override void Initialize(BleHidManager bleHidManager)
         {
-            base.Initialize(bleHidManager, logger);
+            base.Initialize(bleHidManager);
             
             // Initialize filters with the default type
             _currentFilterType = InputFilterFactory.FilterType.OneEuro;
@@ -120,7 +120,7 @@ namespace Inventonater.BleHid
             _performanceTracker = new PerformanceTracker();
             
             // Initialize input processor
-            _inputProcessor = new PointerInputProcessor(bleHidManager, logger, isEditorMode);
+            _inputProcessor = new PointerInputProcessor(bleHidManager);
             _inputProcessor.SetInputFilter(inputFilter);
             _inputProcessor.SetSensitivity(_globalScale, _horizontalSensitivity, _verticalSensitivity);
             
@@ -154,7 +154,7 @@ namespace Inventonater.BleHid
             }
             // Process mouse input (editor/desktop)
             #if UNITY_EDITOR
-            else if (isEditorMode)
+            else if (IsEditorMode)
             {
                 HandleMouseInput();
             }
@@ -180,7 +180,7 @@ namespace Inventonater.BleHid
             // Add current drag status if in editor mode
             string touchpadLabel = "Click and drag (can drag outside)";
             #if UNITY_EDITOR
-            if (isEditorMode && _inputProcessor.IsDragging())
+            if (IsEditorMode && _inputProcessor.IsDragging())
             {
                 touchpadLabel = "DRAGGING - Move mouse to control";
             }
@@ -273,7 +273,7 @@ namespace Inventonater.BleHid
             // Let the filter draw its own parameter controls
             if (inputFilter != null)
             {
-                inputFilter.DrawParameterControls(Logger);
+                inputFilter.DrawParameterControls();
             }
             
             UIHelper.EndSection();
@@ -398,7 +398,7 @@ namespace Inventonater.BleHid
         /// </summary>
         private bool IsActive()
         {
-            return BleHidManager != null && (BleHidManager.IsConnected || isEditorMode);
+            return BleHidManager != null && (BleHidManager.IsConnected || IsEditorMode);
         }
 
         /// <summary>

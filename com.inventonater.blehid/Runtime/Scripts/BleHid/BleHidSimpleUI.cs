@@ -13,6 +13,7 @@ namespace Inventonater.BleHid
     public class BleHidSimpleUI : MonoBehaviour
     {
         private bool IsEditorMode => Application.isEditor;
+        private static LoggingManager Logger => LoggingManager.Instance;
 
         private BleHidManager bleHidManager;
         private int currentTab = 0;
@@ -20,7 +21,6 @@ namespace Inventonater.BleHid
         private bool isInitialized = false;
 
         // UI Components
-        private LoggingManager logger;
         private StatusComponent statusComponent;
         private MediaControlsComponent mediaComponent;
         private MouseControlsComponent mouseComponent;
@@ -70,7 +70,7 @@ namespace Inventonater.BleHid
 #endif
 
             // Add log message
-            logger.AddLogEntry("Starting BLE HID initialization...");
+            Logger.AddLogEntry("Starting BLE HID initialization...");
 
             // Check permissions and accessibility service on startup (Android only)
 #if UNITY_ANDROID && !UNITY_EDITOR
@@ -81,16 +81,13 @@ namespace Inventonater.BleHid
 
         private void InitializeManagers()
         {
-            // Create logging manager
-            logger = new LoggingManager();
-
             // Create BleHidManager
             GameObject managerObj = new GameObject("BleHidManager");
             bleHidManager = managerObj.AddComponent<BleHidManager>();
 
             if (IsEditorMode)
             {
-                logger.AddLogEntry("Running in Editor mode - BLE functionality limited");
+                LoggingManager.Instance.AddLogEntry("Running in Editor mode - BLE functionality limited");
             }
         }
 
@@ -106,13 +103,13 @@ namespace Inventonater.BleHid
             connectionParametersComponent = new ConnectionParametersComponent();
 
             // Initialize components
-            statusComponent.Initialize(bleHidManager, logger);
-            mediaComponent.Initialize(bleHidManager, logger);
-            mouseComponent.Initialize(bleHidManager, logger);
-            keyboardComponent.Initialize(bleHidManager, logger);
-            localComponent.Initialize(bleHidManager, logger);
-            errorComponent.Initialize(bleHidManager, logger);
-            connectionParametersComponent.Initialize(bleHidManager, logger);
+            statusComponent.Initialize(bleHidManager);
+            mediaComponent.Initialize(bleHidManager);
+            mouseComponent.Initialize(bleHidManager);
+            keyboardComponent.Initialize(bleHidManager);
+            localComponent.Initialize(bleHidManager);
+            errorComponent.Initialize(bleHidManager);
+            connectionParametersComponent.Initialize(bleHidManager);
 
             // Additional setup for components that need MonoBehaviour reference
             errorComponent.SetMonoBehaviourOwner(this);
@@ -156,14 +153,14 @@ namespace Inventonater.BleHid
                 if (errorComponent.HasPermissionError)
                 {
                     errorComponent.CheckMissingPermissions();
-                    logger.AddLogEntry("Periodic permission check");
+                    LoggingManager.Instance.AddLogEntry("Periodic permission check");
                 }
 
                 // Check accessibility service
                 if (errorComponent.HasAccessibilityError)
                 {
                     errorComponent.CheckAccessibilityServiceStatus();
-                    logger.AddLogEntry("Periodic accessibility check");
+                    LoggingManager.Instance.AddLogEntry("Periodic accessibility check");
                 }
             }
 #endif
@@ -292,7 +289,7 @@ namespace Inventonater.BleHid
             GUILayout.EndVertical();
 
             // Log area
-            logger.DrawLogUI();
+            LoggingManager.Instance.DrawLogUI();
 
             GUILayout.EndArea();
         }
@@ -304,11 +301,11 @@ namespace Inventonater.BleHid
 
             if (success)
             {
-                logger.AddLogEntry("BLE HID initialized successfully: " + message);
+                LoggingManager.Instance.AddLogEntry("BLE HID initialized successfully: " + message);
             }
             else
             {
-                logger.AddLogEntry("BLE HID initialization failed: " + message);
+                LoggingManager.Instance.AddLogEntry("BLE HID initialization failed: " + message);
 
                 // Check if this is a permission error
                 if (message.Contains("permission"))
@@ -322,11 +319,11 @@ namespace Inventonater.BleHid
         {
             if (advertising)
             {
-                logger.AddLogEntry("BLE advertising started: " + message);
+                Logger.AddLogEntry("BLE advertising started: " + message);
             }
             else
             {
-                logger.AddLogEntry("BLE advertising stopped: " + message);
+                Logger.AddLogEntry("BLE advertising stopped: " + message);
             }
         }
 
@@ -334,17 +331,17 @@ namespace Inventonater.BleHid
         {
             if (connected)
             {
-                logger.AddLogEntry("Device connected: " + deviceName + " (" + deviceAddress + ")");
+                Logger.AddLogEntry("Device connected: " + deviceName + " (" + deviceAddress + ")");
             }
             else
             {
-                logger.AddLogEntry("Device disconnected");
+                Logger.AddLogEntry("Device disconnected");
             }
         }
 
         private void OnPairingStateChanged(string status, string deviceAddress)
         {
-            logger.AddLogEntry("Pairing state changed: " + status + (deviceAddress != null ? " (" + deviceAddress + ")" : ""));
+            Logger.AddLogEntry("Pairing state changed: " + status + (deviceAddress != null ? " (" + deviceAddress + ")" : ""));
         }
 
         private void OnError(int errorCode, string errorMessage)
@@ -357,20 +354,20 @@ namespace Inventonater.BleHid
             else if (errorCode == BleHidConstants.ERROR_ACCESSIBILITY_NOT_ENABLED)
             {
                 errorComponent.SetAccessibilityError(true);
-                logger.AddLogEntry("Accessibility error: " + errorMessage);
+                Logger.AddLogEntry("Accessibility error: " + errorMessage);
 
                 // Check accessibility service status
                 errorComponent.CheckAccessibilityServiceStatus();
             }
             else
             {
-                logger.AddLogEntry("Error " + errorCode + ": " + errorMessage);
+                Logger.AddLogEntry("Error " + errorCode + ": " + errorMessage);
             }
         }
 
         private void OnDebugLog(string message)
         {
-            logger.AddLogEntry("Debug: " + message);
+            Logger.AddLogEntry("Debug: " + message);
         }
 
         // Handle application focus and pause to detect when user returns from Android settings
@@ -379,7 +376,7 @@ namespace Inventonater.BleHid
             if (hasFocus && wasInBackground)
             {
                 // App has regained focus after being in background
-                logger.AddLogEntry("Application regained focus");
+                Logger.AddLogEntry("Application regained focus");
                 wasInBackground = false;
 
 #if UNITY_ANDROID && !UNITY_EDITOR
@@ -394,7 +391,7 @@ namespace Inventonater.BleHid
             // App was paused (e.g., user went to settings)
             if (isPaused)
             {
-                logger.AddLogEntry("Application paused");
+                Logger.AddLogEntry("Application paused");
                 wasInBackground = true;
             }
         }
@@ -405,22 +402,22 @@ namespace Inventonater.BleHid
             // Wait a short delay for Android to settle
             yield return new WaitForSeconds(0.5f);
 
-            logger.AddLogEntry("Checking accessibility status after focus gained");
+            Logger.AddLogEntry("Checking accessibility status after focus gained");
 
             // Use the direct check method to see if accessibility service was enabled
             bool isAccessibilityEnabled = BleHidLocalControl.CheckAccessibilityServiceEnabledDirect();
-            logger.AddLogEntry($"Direct accessibility check: {(isAccessibilityEnabled ? "ENABLED" : "NOT ENABLED")}");
+            Logger.AddLogEntry($"Direct accessibility check: {(isAccessibilityEnabled ? "ENABLED" : "NOT ENABLED")}");
 
             // Update UI if accessibility status has changed
             if (isAccessibilityEnabled && errorComponent.HasAccessibilityError)
             {
-                logger.AddLogEntry("Accessibility service was enabled in settings, updating UI");
+                Logger.AddLogEntry("Accessibility service was enabled in settings, updating UI");
                 errorComponent.SetAccessibilityError(false);
             }
             else if (!isAccessibilityEnabled && errorComponent.HasAccessibilityError)
             {
                 // Still not enabled, reinitialize local control and recheck
-                logger.AddLogEntry("Reinitializing local control after returning from settings");
+                Logger.AddLogEntry("Reinitializing local control after returning from settings");
                 StartCoroutine(BleHidLocalControl.ReinitializeAfterFocusGained(this));
 
                 // Extra delay and then check accessibility status again
@@ -431,7 +428,7 @@ namespace Inventonater.BleHid
             // Re-check permissions too
             if (errorComponent.HasPermissionError)
             {
-                logger.AddLogEntry("Checking permissions after focus gained");
+                Logger.AddLogEntry("Checking permissions after focus gained");
                 errorComponent.CheckMissingPermissions();
             }
         }

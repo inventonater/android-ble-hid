@@ -58,7 +58,7 @@ namespace Inventonater.BleHid
                 // Not connected - show appropriate message
                 GUILayout.Label("Not connected");
 
-                if (isEditorMode)
+                if (IsEditorMode)
                 {
                     GUILayout.Label("EDITOR MODE: UI visible but BLE functions disabled");
                 }
@@ -105,7 +105,7 @@ namespace Inventonater.BleHid
         /// </summary>
         private bool CanControlAdvertising()
         {
-            return BleHidManager != null && (isInitialized || isEditorMode);
+            return BleHidManager != null && (isInitialized || IsEditorMode);
         }
 
         /// <summary>

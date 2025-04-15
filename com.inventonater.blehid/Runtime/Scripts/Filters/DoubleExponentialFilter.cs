@@ -9,6 +9,8 @@ namespace Inventonater.BleHid
     /// </summary>
     public class DoubleExponentialFilter : IInputFilter
     {
+        private static LoggingManager Logger => LoggingManager.Instance;
+
         // Filter parameters
         private float _alpha;        // Level smoothing factor (0-1)
         private float _beta;         // Trend smoothing factor (0-1)
@@ -49,12 +51,11 @@ namespace Inventonater.BleHid
             _level = Vector2.zero;
             _trend = Vector2.zero;
         }
-        
+
         /// <summary>
         /// Draw the filter's parameter controls in the current GUI layout
         /// </summary>
-        /// <param name="logger">Logger for UI events</param>
-        public void DrawParameterControls(LoggingManager logger)
+        public void DrawParameterControls()
         {
             // Draw alpha slider (level smoothing)
             GUILayout.Label("Level Smoothing: Smoothing applied to position");
@@ -65,7 +66,7 @@ namespace Inventonater.BleHid
             if (newAlpha != _alpha)
             {
                 _alpha = newAlpha;
-                logger.AddLogEntry($"Changed double exp. level smoothing to: {_alpha:F2}");
+                Logger.AddLogEntry($"Changed double exp. level smoothing to: {_alpha:F2}");
             }
             
             // Draw beta slider (trend smoothing)
@@ -77,7 +78,7 @@ namespace Inventonater.BleHid
             if (newBeta != _beta)
             {
                 _beta = newBeta;
-                logger.AddLogEntry($"Changed double exp. trend smoothing to: {_beta:F3}");
+                Logger.AddLogEntry($"Changed double exp. trend smoothing to: {_beta:F3}");
             }
         }
         

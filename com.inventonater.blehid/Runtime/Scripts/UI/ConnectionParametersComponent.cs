@@ -52,9 +52,9 @@ namespace Inventonater.BleHid
         private Color intervalColor = Color.white;
         private Color mtuColor = Color.white;
 
-        public override void Initialize(BleHidManager bleManager, LoggingManager logger)
+        public override void Initialize(BleHidManager bleManager)
         {
-            base.Initialize(bleManager, logger);
+            base.Initialize(bleManager);
 
             // Initialize performance metrics
             _lastFpsUpdateTime = Time.time;
@@ -171,7 +171,7 @@ namespace Inventonater.BleHid
             GUILayout.BeginVertical(GUI.skin.box);
             GUILayout.Label("Connection Priority:", boldStyle);
 
-            GUI.enabled = connected || isEditorMode;
+            GUI.enabled = connected || IsEditorMode;
 
             // Get the current priority name
             string currentPriority = "Unknown";
@@ -204,7 +204,7 @@ namespace Inventonater.BleHid
             GUILayout.BeginVertical(GUI.skin.box);
             GUILayout.Label("MTU Size:", boldStyle);
 
-            GUI.enabled = connected || isEditorMode;
+            GUI.enabled = connected || IsEditorMode;
 
             // Track previous value to detect changes
             int previousMtu = requestedMtu;
@@ -265,7 +265,7 @@ namespace Inventonater.BleHid
             GUILayout.BeginVertical(GUI.skin.box);
             GUILayout.Label("Transmit Power:", boldStyle);
 
-            GUI.enabled = initialized || isEditorMode;
+            GUI.enabled = initialized || IsEditorMode;
 
             // Get the current TX power level name
             string currentLevel = "Unknown";
@@ -298,7 +298,7 @@ namespace Inventonater.BleHid
             GUILayout.BeginVertical(GUI.skin.box);
             GUILayout.Label("Actions:", boldStyle);
 
-            GUI.enabled = connected || isEditorMode;
+            GUI.enabled = connected || IsEditorMode;
 
             if (UIHelper.ActionButton("Read RSSI",
                     () => ReadRssi(),

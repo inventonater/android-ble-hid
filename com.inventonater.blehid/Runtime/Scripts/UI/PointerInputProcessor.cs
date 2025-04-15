@@ -7,7 +7,8 @@ namespace Inventonater.BleHid
     /// </summary>
     public class PointerInputProcessor
     {
-        private LoggingManager logger;
+        private static LoggingManager logger => LoggingManager.Instance;
+
         private BleHidManager bleHidManager;
         private bool isEditorMode;
         private Vector2 lastPosition;
@@ -25,11 +26,9 @@ namespace Inventonater.BleHid
         /// <summary>
         /// Initialize the processor with dependencies
         /// </summary>
-        public PointerInputProcessor(BleHidManager manager, LoggingManager logger, bool editorMode)
+        public PointerInputProcessor(BleHidManager manager)
         {
             this.bleHidManager = manager;
-            this.logger = logger;
-            this.isEditorMode = editorMode;
         }
         
         /// <summary>

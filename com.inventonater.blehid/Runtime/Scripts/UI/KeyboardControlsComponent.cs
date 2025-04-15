@@ -168,7 +168,7 @@ namespace Inventonater.BleHid
         {
             if (!string.IsNullOrEmpty(textToSend))
             {
-                if (!isEditorMode)
+                if (!IsEditorMode)
                 {
                     BleHidManager.TypeText(textToSend);
                 }
@@ -200,7 +200,7 @@ namespace Inventonater.BleHid
             byte keyCode = GetKeyCode(key);
             if (keyCode > 0)
             {
-                if (isEditorMode)
+                if (IsEditorMode)
                 {
                     Logger.AddLogEntry("Key pressed: " + key);
                 }
@@ -216,7 +216,7 @@ namespace Inventonater.BleHid
         /// </summary>
         private void SendSpecialKey(byte keyCode, string keyName)
         {
-            if (isEditorMode)
+            if (IsEditorMode)
             {
                 Logger.AddLogEntry($"{keyName} key pressed");
             }

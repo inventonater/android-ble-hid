@@ -8,6 +8,7 @@ namespace Inventonater.BleHid
     /// </summary>
     public class KalmanFilter : IInputFilter
     {
+        private LoggingManager logger => LoggingManager.Instance;
         // Filter parameters
         private float _processNoise;       // Process noise covariance
         private float _measurementNoise;   // Measurement noise covariance
@@ -59,12 +60,11 @@ namespace Inventonater.BleHid
                 new Vector4(0, 0, 0, 1)
             );
         }
-        
+
         /// <summary>
         /// Draw the filter's parameter controls in the current GUI layout
         /// </summary>
-        /// <param name="logger">Logger for UI events</param>
-        public void DrawParameterControls(LoggingManager logger)
+        public void DrawParameterControls()
         {
             // Draw process noise slider
             GUILayout.Label("Process Noise: Flexibility in motion model");

@@ -25,12 +25,11 @@ namespace Inventonater.BleHid
         /// <param name="timestamp">Current timestamp (seconds)</param>
         /// <returns>Filtered output vector</returns>
         Vector2 Filter(Vector2 point, float timestamp);
-        
+
         /// <summary>
         /// Draw the filter's parameter controls in the current GUI layout
         /// </summary>
-        /// <param name="logger">Logger for UI events</param>
-        void DrawParameterControls(LoggingManager logger);
+        void DrawParameterControls();
         
         /// <summary>
         /// Reset filter state

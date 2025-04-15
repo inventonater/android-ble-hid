@@ -9,6 +9,8 @@ namespace Inventonater.BleHid
     /// </summary>
     public class PredictiveFilter : IInputFilter
     {
+        private LoggingManager Logger => LoggingManager.Instance;
+
         // Filter parameters
         private float _predictionTime;    // Time to predict ahead (seconds)
         private float _smoothingFactor;   // Smoothing factor for velocity (0-1)
@@ -51,12 +53,11 @@ namespace Inventonater.BleHid
             _velocity = Vector2.zero;
             _lastTime = 0;
         }
-        
+
         /// <summary>
         /// Draw the filter's parameter controls in the current GUI layout
         /// </summary>
-        /// <param name="logger">Logger for UI events</param>
-        public void DrawParameterControls(LoggingManager logger)
+        public void DrawParameterControls()
         {
             // Draw prediction time slider
             GUILayout.Label("Prediction Time: How far ahead to predict (higher = more aggressive)");
@@ -67,7 +68,7 @@ namespace Inventonater.BleHid
             if (newPredictionTime != _predictionTime)
             {
                 _predictionTime = newPredictionTime;
-                logger.AddLogEntry($"Changed prediction time to: {_predictionTime:F3}s");
+                Logger.AddLogEntry($"Changed prediction time to: {_predictionTime:F3}s");
             }
             
             // Draw smoothing factor slider
@@ -79,7 +80,7 @@ namespace Inventonater.BleHid
             if (newSmoothingFactor != _smoothingFactor)
             {
                 _smoothingFactor = newSmoothingFactor;
-                logger.AddLogEntry($"Changed predictive filter smoothing to: {_smoothingFactor:F2}");
+                Logger.AddLogEntry($"Changed predictive filter smoothing to: {_smoothingFactor:F2}");
             }
         }
         

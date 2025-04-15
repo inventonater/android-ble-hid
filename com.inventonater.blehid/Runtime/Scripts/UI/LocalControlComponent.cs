@@ -32,7 +32,7 @@ namespace Inventonater.BleHid
             // Check if we have an initialized instance
             bool canUseLocalControls = CheckCanUseLocalControls();
 
-            if (!canUseLocalControls && !isEditorMode)
+            if (!canUseLocalControls && !IsEditorMode)
             {
                 ShowInitializingUI();
                 return;
@@ -189,7 +189,7 @@ namespace Inventonater.BleHid
 
         private void ExecuteLocalControl(Func<BleHidLocalControl, bool> action, string editorMessage)
         {
-            if (isEditorMode)
+            if (IsEditorMode)
             {
                 Logger.AddLogEntry(editorMessage);
             }
@@ -218,7 +218,7 @@ namespace Inventonater.BleHid
 
         private bool CheckCanUseLocalControls()
         {
-            if (isEditorMode)
+            if (IsEditorMode)
             {
                 return true;
             }

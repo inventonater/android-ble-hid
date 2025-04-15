@@ -25,12 +25,11 @@ namespace Inventonater.BleHid
         {
             // No state to reset
         }
-        
+
         /// <summary>
         /// Draw the filter's parameter controls in the current GUI layout
         /// </summary>
-        /// <param name="logger">Logger for UI events</param>
-        public void DrawParameterControls(LoggingManager logger)
+        public void DrawParameterControls()
         {
             // No parameters to display for this filter
             GUILayout.Label("This filter has no adjustable parameters.");

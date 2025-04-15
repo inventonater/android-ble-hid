@@ -8,6 +8,9 @@ namespace Inventonater.BleHid
     /// </summary>
     public class LoggingManager
     {
+        public static LoggingManager Instance { get; private set; } = new();
+        private LoggingManager() { }
+
         private List<string> logMessages = new List<string>();
         private Vector2 scrollPosition;
         

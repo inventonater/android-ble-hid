@@ -35,13 +35,13 @@ namespace Inventonater.BleHid
         public bool HasAccessibilityError => hasAccessibilityError;
 
 
-        public override void Initialize(BleHidManager bleHidManager, LoggingManager logger)
+        public override void Initialize(BleHidManager bleHidManager)
         {
-            base.Initialize(bleHidManager, logger);
+            base.Initialize(bleHidManager);
 
             // In editor mode, initially set accessibility error to true
             // so we can show the accessibility UI for testing
-            if (isEditorMode)
+            if (IsEditorMode)
             {
                 hasAccessibilityError = true;
                 Logger.AddLogEntry("Editor mode: Simulating accessibility service not enabled for testing");
