@@ -24,6 +24,7 @@ import java.util.UUID;
  */
 public class BleGattServerManager {
     private static final String TAG = "BleGattServerManager";
+    private static final boolean VERBOSE_LOGGING = false; // Disable verbose logging by default
     
     // Standard UUIDs for HID service required characteristics
     private static final UUID HID_SERVICE_UUID = UUID.fromString("00001812-0000-1000-8000-00805f9b34fb");
@@ -328,7 +329,10 @@ public class BleGattServerManager {
         @Override
         public void onReadRemoteRssi(BluetoothGatt gatt, int rssi, int status) {
             if (status == BluetoothGatt.GATT_SUCCESS) {
-                Log.d(TAG, "RSSI: " + rssi + " dBm");
+                // Only log RSSI values if verbose logging is enabled
+                if (VERBOSE_LOGGING) {
+                    Log.d(TAG, "RSSI: " + rssi + " dBm");
+                }
                 
                 // Notify the connection manager
                 if (bleHidManager.getConnectionManager() != null) {

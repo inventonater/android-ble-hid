@@ -24,6 +24,7 @@ import java.util.Map;
  */
 public class BleHidUnityPlugin {
     private static final String TAG = "BleHidUnityPlugin";
+    private static final boolean VERBOSE_LOGGING = true;
     
     // Error codes
     public static final int ERROR_INITIALIZATION_FAILED = 1001;
@@ -808,6 +809,8 @@ public class BleHidUnityPlugin {
      * @return true if the service start request was sent
      */
     public static boolean startForegroundService() {
+        Log.d(TAG, "startForegroundService called from Unity");
+        
         try {
             Context context = com.unity3d.player.UnityPlayer.currentActivity;
             if (context == null) {
@@ -815,10 +818,28 @@ public class BleHidUnityPlugin {
                 return false;
             }
             
+            if (VERBOSE_LOGGING) {
+                Log.d(TAG, "Creating intent for BleHidForegroundService");
+            }
+            
             Intent serviceIntent = new Intent(context, com.inventonater.blehid.core.BleHidForegroundService.class);
             serviceIntent.setAction("START_FOREGROUND");
-            context.startForegroundService(serviceIntent);
-            Log.d(TAG, "Foreground service start requested");
+            
+            if (VERBOSE_LOGGING) {
+                Log.d(TAG, "Calling startForegroundService with intent: " + serviceIntent);
+            }
+            
+            // Try-catch specifically for the startForegroundService call to get better error info
+            try {
+                context.startForegroundService(serviceIntent);
+            } catch (Exception e) {
+                Log.e(TAG, "Failed to start foreground service via startForegroundService call", e);
+                // Fallback to regular start
+                Log.d(TAG, "Trying fallback with regular startService");
+                context.startService(serviceIntent);
+            }
+            
+            Log.d(TAG, "Foreground service start requested successfully");
             return true;
         } catch (Exception e) {
             Log.e(TAG, "Error starting foreground service", e);
@@ -832,6 +853,8 @@ public class BleHidUnityPlugin {
      * @return true if the service stop request was sent
      */
     public static boolean stopForegroundService() {
+        Log.d(TAG, "stopForegroundService called from Unity");
+        
         try {
             Context context = com.unity3d.player.UnityPlayer.currentActivity;
             if (context == null) {
@@ -839,10 +862,19 @@ public class BleHidUnityPlugin {
                 return false;
             }
             
+            if (VERBOSE_LOGGING) {
+                Log.d(TAG, "Creating intent to stop BleHidForegroundService");
+            }
+            
             Intent serviceIntent = new Intent(context, com.inventonater.blehid.core.BleHidForegroundService.class);
             serviceIntent.setAction("STOP_FOREGROUND");
+            
+            if (VERBOSE_LOGGING) {
+                Log.d(TAG, "Calling startService with stop action: " + serviceIntent);
+            }
+            
             context.startService(serviceIntent);
-            Log.d(TAG, "Foreground service stop requested");
+            Log.d(TAG, "Foreground service stop requested successfully");
             return true;
         } catch (Exception e) {
             Log.e(TAG, "Error stopping foreground service", e);

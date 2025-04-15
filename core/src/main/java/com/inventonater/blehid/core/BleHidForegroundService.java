@@ -28,6 +28,7 @@ public class BleHidForegroundService extends Service {
     private static final String CHANNEL_ID = "BleHidForegroundServiceChannel";
     private static final int NOTIFICATION_ID = 1001;
     private static final String TAG = "BleHidForegroundSvc";
+    private static final boolean VERBOSE_LOGGING = true;
     
     // Service state
     private boolean isRunning = false;
@@ -76,11 +77,16 @@ public class BleHidForegroundService extends Service {
      * Creates the notification channel required for Android 8.0+
      */
     private void createNotificationChannel() {
+        // Using IMPORTANCE_DEFAULT instead of LOW to make notification more visible
         NotificationChannel channel = new NotificationChannel(
             CHANNEL_ID,
             "BleHID Background Service",
-            NotificationManager.IMPORTANCE_LOW
+            NotificationManager.IMPORTANCE_DEFAULT
         );
+        
+        if (VERBOSE_LOGGING) {
+            Log.d(TAG, "Creating notification channel: " + CHANNEL_ID);
+        }
         
         channel.setDescription("Keeps BleHID accessibility service running in the background");
         channel.enableLights(false);
@@ -95,22 +101,37 @@ public class BleHidForegroundService extends Service {
      * Starts the foreground service with a persistent notification
      */
     private void startForegroundService() {
-        // Create notification
-        Notification notification = buildNotification();
+        if (VERBOSE_LOGGING) {
+            Log.d(TAG, "Starting foreground service...");
+        }
         
-        // Using Android 12's improved foreground service type specification
-        // FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE is appropriate for BLE operations
-        startForeground(NOTIFICATION_ID, notification);
-        Log.d(TAG, "Foreground service started with proper type");
-        
-        // Ensure accessibility service is running and monitored
-        establishAccessibilityServiceConnection();
+        try {
+            // Create notification
+            Notification notification = buildNotification();
+            
+            if (VERBOSE_LOGGING) {
+                Log.d(TAG, "Notification built successfully, calling startForeground...");
+            }
+            
+            // Using Android 12's improved foreground service type specification
+            // FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE is appropriate for BLE operations
+            startForeground(NOTIFICATION_ID, notification);
+            Log.d(TAG, "Foreground service started with proper type");
+            
+            // Ensure accessibility service is running and monitored
+            establishAccessibilityServiceConnection();
+        } catch (Exception e) {
+            Log.e(TAG, "Error starting foreground service", e);
+        }
     }
     
     /**
      * Builds the persistent notification for the foreground service
      */
     private Notification buildNotification() {
+        if (VERBOSE_LOGGING) {
+            Log.d(TAG, "Building notification...");
+        }
         // Create a pending intent to open the main Unity activity when notification is tapped
         Intent notificationIntent;
         try {
@@ -132,16 +153,22 @@ public class BleHidForegroundService extends Service {
                 notificationIntent, PendingIntent.FLAG_IMMUTABLE);
         
         // Build the notification with Android 12 design guidelines
-        return new NotificationCompat.Builder(this, CHANNEL_ID)
+        Notification notification = new NotificationCompat.Builder(this, CHANNEL_ID)
             .setContentTitle("BleHID Active")
             .setContentText("Maintaining background connection for accessibility services")
             .setSmallIcon(android.R.drawable.ic_dialog_info) // Using system icon as placeholder
             .setContentIntent(pendingIntent)
             .setForegroundServiceBehavior(NotificationCompat.FOREGROUND_SERVICE_IMMEDIATE)
-            .setPriority(NotificationCompat.PRIORITY_LOW)
+            .setPriority(NotificationCompat.PRIORITY_DEFAULT) // Increased from LOW to DEFAULT
             .setCategory(NotificationCompat.CATEGORY_SERVICE)
             .setOngoing(true)
             .build();
+            
+        if (VERBOSE_LOGGING) {
+            Log.d(TAG, "Notification built: " + notification);
+        }
+        
+        return notification;
     }
     
     /**

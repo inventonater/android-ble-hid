@@ -18,6 +18,7 @@ import java.util.Map;
  */
 public class BleConnectionManager {
     private static final String TAG = "BleConnectionManager";
+    private static final boolean VERBOSE_LOGGING = false; // Disable verbose logging by default
     
     // Default connection parameters optimized for lowest latency and high signal strength
     private static final int DEFAULT_CONNECTION_INTERVAL = 7; // Targeting minimum 7.5ms (rounded to 7)
@@ -136,6 +137,7 @@ public class BleConnectionManager {
     void onRssiRead(int rssi) {
         this.rssi = rssi;
         
+        // Always notify the listener for UI updates, regardless of logging preference
         if (listener != null) {
             listener.onRssiRead(rssi);
         }
@@ -316,9 +318,9 @@ public class BleConnectionManager {
         return result;
     }
     
-    // RSSI monitoring - more frequent monitoring for better signal tracking
+    // RSSI monitoring - maintain higher frequency for responsive UI
     private boolean rssiMonitoringEnabled = false;
-    private static final long RSSI_MONITORING_INTERVAL = 500; // 500 milliseconds for more responsive monitoring
+    private static final long RSSI_MONITORING_INTERVAL = 500; // Keep at 500ms for responsive UI updates
     
     private final Runnable rssiMonitoringRunnable = new Runnable() {
         @Override
