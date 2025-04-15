@@ -114,11 +114,11 @@ public class BleHidForegroundService extends Service {
      * Creates the notification channel required for Android 8.0+
      */
     private void createNotificationChannel() {
-        // Using IMPORTANCE_DEFAULT instead of LOW to make notification more visible
+        // Use IMPORTANCE_HIGH to ensure the notification is visible
         NotificationChannel channel = new NotificationChannel(
             CHANNEL_ID,
             "BleHID Background Service",
-            NotificationManager.IMPORTANCE_DEFAULT
+            NotificationManager.IMPORTANCE_HIGH
         );
         
         if (VERBOSE_LOGGING) {
@@ -218,17 +218,23 @@ public class BleHidForegroundService extends Service {
         PendingIntent pendingIntent = PendingIntent.getActivity(this, 0, 
                 notificationIntent, PendingIntent.FLAG_IMMUTABLE);
         
-        // Build the notification with Android 12 design guidelines
+        // Build the notification with enhanced visibility
         NotificationCompat.Builder builder = new NotificationCompat.Builder(this, CHANNEL_ID)
-            .setContentTitle("BleHID Active")
-            .setContentText("Maintaining background connection for accessibility services")
-            .setSmallIcon(android.R.drawable.stat_sys_data_bluetooth) // Better icon for BLE
+            .setContentTitle("BleHID Service Active")
+            .setContentText("ACTIVE: Maintaining background connection for accessibility services")
+            .setSmallIcon(android.R.drawable.ic_secure) // More attention-grabbing icon
             .setContentIntent(pendingIntent)
             .setForegroundServiceBehavior(NotificationCompat.FOREGROUND_SERVICE_IMMEDIATE)
-            .setPriority(NotificationCompat.PRIORITY_HIGH) // Try with HIGH for better visibility
+            .setPriority(NotificationCompat.PRIORITY_MAX) // MAX to ensure it's shown
             .setCategory(NotificationCompat.CATEGORY_SERVICE)
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC) // Make visible on lock screen
-            .setOngoing(true);
+            .setOngoing(true)
+            .setAutoCancel(false)
+            .setTicker("BleHID service is active") // For older devices
+            .setWhen(System.currentTimeMillis());
+            
+        // Add a color to make it more noticeable
+        builder.setColor(getColor(android.R.color.holo_blue_bright));
             
         Notification notification = builder.build();
             
