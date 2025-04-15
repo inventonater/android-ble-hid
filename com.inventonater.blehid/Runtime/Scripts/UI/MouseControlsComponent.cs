@@ -1,5 +1,6 @@
 using UnityEngine;
 using System;
+using Inventonater.BleHid.UI.Filters;
 
 namespace Inventonater.BleHid.UI
 {
@@ -8,85 +9,6 @@ namespace Inventonater.BleHid.UI
     /// </summary>
     public class MouseControlsComponent : UIComponent
     {
-        // One Euro Filter implementation for mouse pointer smoothing
-        private class OneEuroFilter
-        {
-            private float mincutoff;    // Minimum cutoff frequency
-            private float beta;         // Cutoff slope (speed coefficient)
-            private float dcutoff;      // Derivative cutoff frequency
-            
-            private float x_prev;       // Previous filtered value
-            private float dx_prev;      // Previous derivative
-            private float lastTime;     // Last update timestamp
-            private bool initialized;   // Whether filter has been initialized
-            
-            public OneEuroFilter(float mincutoff = 1.0f, float beta = 0.007f, float dcutoff = 1.0f)
-            {
-                this.mincutoff = mincutoff;
-                this.beta = beta;
-                this.dcutoff = dcutoff;
-                initialized = false;
-            }
-            
-            private float LowPassFilter(float x, float alpha, float y_prev)
-            {
-                return alpha * x + (1.0f - alpha) * y_prev;
-            }
-            
-            private float ComputeAlpha(float cutoff, float deltaTime)
-            {
-                float tau = 1.0f / (2.0f * Mathf.PI * cutoff);
-                return 1.0f / (1.0f + tau / deltaTime);
-            }
-            
-            public float Filter(float x, float timestamp)
-            {
-                if (!initialized)
-                {
-                    x_prev = x;
-                    dx_prev = 0.0f;
-                    lastTime = timestamp;
-                    initialized = true;
-                    return x;
-                }
-                
-                float deltaTime = timestamp - lastTime;
-                if (deltaTime <= 0.0f) deltaTime = 0.001f; // Prevent division by zero
-                lastTime = timestamp;
-                
-                // Estimate derivative
-                float dx = (x - x_prev) / deltaTime;
-                
-                // Filter derivative
-                float edx = LowPassFilter(dx, ComputeAlpha(dcutoff, deltaTime), dx_prev);
-                dx_prev = edx;
-                
-                // Adjust cutoff based on derivative
-                float cutoff = mincutoff + beta * Mathf.Abs(edx);
-                
-                // Filter signal
-                float ex = LowPassFilter(x, ComputeAlpha(cutoff, deltaTime), x_prev);
-                x_prev = ex;
-                
-                return ex;
-            }
-            
-            // Method to filter Unity's Vector2 directly
-            public Vector2 Filter(Vector2 point, float timestamp)
-            {
-                return new Vector2(
-                    Filter(point.x, timestamp),
-                    Filter(point.y, timestamp)
-                );
-            }
-            
-            // Set new parameters
-            public void SetParameters(float mincutoff, float beta)
-            {
-                this.mincutoff = mincutoff;
-                this.beta = beta;
-            }
-        }
         
         private Rect touchpadRect;
         private Vector2 lastTouchPosition;
@@ -141,17 +63,54 @@ namespace Inventonater.BleHid.UI
         private int currentPresetIndex = 1; // Default to "Standard"
         private readonly string[] presetNames = { "Precision", "Standard", "Fast" };
         
-        // One Euro Filters (one for each axis)
-        private OneEuroFilter xFilter;
-        private OneEuroFilter yFilter;
+        // Input filters for X and Y axis
+        private IInputFilter xFilter;
+        private IInputFilter yFilter;
         
-        // Updates both filters with current parameters
+        // Current filter type and parameters
+        private InputFilterFactory.FilterType _currentFilterType = InputFilterFactory.FilterType.OneEuro;
+        private float _filterParam1 = 1.0f;
+        private float _filterParam2 = 0.007f;
+        
+        /// <summary>
+        /// Get or set the current filter type
+        /// </summary>
+        public InputFilterFactory.FilterType CurrentFilterType
+        {
+            get => _currentFilterType;
+            set
+            {
+                if (_currentFilterType != value)
+                {
+                    _currentFilterType = value;
+                    
+                    // Get default parameters for this filter type
+                    InputFilterFactory.GetParameterInfo(
+                        _currentFilterType,
+                        out _, out _, out _, out _filterParam1,
+                        out _, out _, out _, out _filterParam2);
+                    
+                    // Create new filter instances with default parameters
+                    xFilter = InputFilterFactory.CreateFilter(_currentFilterType, _filterParam1, _filterParam2);
+                    yFilter = InputFilterFactory.CreateFilter(_currentFilterType, _filterParam1, _filterParam2);
+                    
+                    Logger.AddLogEntry($"Changed input filter to: {InputFilterFactory.GetFilterName(_currentFilterType)}");
+                }
+            }
+        }
+        
+        // Updates current filter parameters
         private void UpdateFilterParameters()
         {
             if (xFilter != null && yFilter != null)
             {
-                xFilter.SetParameters(_minCutoff, _betaValue);
-                yFilter.SetParameters(_minCutoff, _betaValue);
+                // Store current parameter values
+                _filterParam1 = _minCutoff;
+                _filterParam2 = _betaValue;
+                
+                // Update filter parameters
+                xFilter.SetParameters(_filterParam1, _filterParam2);
+                yFilter.SetParameters(_filterParam1, _filterParam2);
             }
         }
         
@@ -191,9 +150,8 @@ namespace Inventonater.BleHid.UI
         {
             base.Initialize(bleHidManager, logger, isEditorMode);
             
-            // Initialize filters
-            xFilter = new OneEuroFilter(_minCutoff, _betaValue);
-            yFilter = new OneEuroFilter(_minCutoff, _betaValue);
+            // Initialize filters with the default type
+            CurrentFilterType = InputFilterFactory.FilterType.OneEuro;
             
             // Initialize touchpad area (will be in the center of the mouse tab)
             touchpadRect = new Rect(Screen.width / 2 - 150, Screen.height / 2 - 100, 300, 200);
@@ -272,6 +230,33 @@ namespace Inventonater.BleHid.UI
             
             GUILayout.Space(10);
             
+            // Filter type selection
+            GUILayout.Label("Input Filter: Determines how mouse movement is processed");
+            GUILayout.BeginHorizontal();
+            foreach (var filterType in InputFilterFactory.GetAvailableFilterTypes())
+            {
+                bool isSelected = filterType == _currentFilterType;
+                GUI.enabled = !isSelected;
+                
+                if (GUILayout.Button(InputFilterFactory.GetFilterName(filterType), 
+                                     isSelected ? GUI.skin.box : GUI.skin.button, 
+                                     GUILayout.Height(30)))
+                {
+                    CurrentFilterType = filterType;
+                }
+                
+                GUI.enabled = true;
+            }
+            GUILayout.EndHorizontal();
+            
+            // Show filter description if available
+            if (xFilter != null)
+            {
+                GUILayout.Label(xFilter.Description, GUI.skin.box);
+            }
+            
+            GUILayout.Space(10);
+            
             // Preset selector
             GUILayout.BeginHorizontal();
             GUILayout.Label("Presets:", GUILayout.Width(80));
@@ -310,26 +295,62 @@ namespace Inventonater.BleHid.UI
                 VerticalSensitivity = newVerticalSensitivity;
             }
             
-            // Smoothing parameter (Min Cutoff)
-            GUILayout.Label("Motion Smoothing: Reduces jitter in mouse movement");
-            float newMinCutoff = UIHelper.SliderWithLabels(
-                "Strong", _minCutoff, 0.1f, 5f, "Light", 
-                "Motion Smoothing: {0:F1}", UIHelper.StandardSliderOptions);
-                
-            if (newMinCutoff != _minCutoff)
+            // Only show filter parameters if we have a filter that uses them
+            if (_currentFilterType != InputFilterFactory.FilterType.None)
             {
-                MinCutoff = newMinCutoff;
-            }
-            
-            // Responsiveness parameter (Beta)
-            GUILayout.Label("Acceleration Response: How quickly cursor responds to fast movements");
-            float newBeta = UIHelper.SliderWithLabels(
-                "Smooth", _betaValue, 0.001f, 0.5f, "Responsive", 
-                "Acceleration Response: {0:F3}", UIHelper.StandardSliderOptions);
+                // Get parameter info for current filter type
+                InputFilterFactory.GetParameterInfo(
+                    _currentFilterType,
+                    out string param1Name, out float param1Min, out float param1Max, out _,
+                    out string param2Name, out float param2Min, out float param2Max, out _);
                 
-            if (newBeta != _betaValue)
-            {
-                BetaValue = newBeta;
+                // First parameter slider (usually smoothing)
+                GUILayout.Label($"{param1Name}: Adjusts filtering strength");
+                float newParam1 = UIHelper.SliderWithLabels(
+                    "Strong", _filterParam1, param1Min, param1Max, "Light", 
+                    $"{param1Name}: {{0:F2}}", UIHelper.StandardSliderOptions);
+                    
+                if (newParam1 != _filterParam1)
+                {
+                    _filterParam1 = newParam1;
+                    
+                    // Update MinCutoff to maintain compatibility with the old code
+                    if (_currentFilterType == InputFilterFactory.FilterType.OneEuro)
+                    {
+                        _minCutoff = _filterParam1;
+                    }
+                    
+                    // Update filter parameters
+                    if (xFilter != null && yFilter != null)
+                    {
+                        xFilter.SetParameters(_filterParam1, _filterParam2);
+                        yFilter.SetParameters(_filterParam1, _filterParam2);
+                    }
+                }
+                
+                // Second parameter slider (usually response)
+                GUILayout.Label($"{param2Name}: Fine-tunes filter behavior");
+                float newParam2 = UIHelper.SliderWithLabels(
+                    "Low", _filterParam2, param2Min, param2Max, "High", 
+                    $"{param2Name}: {{0:F3}}", UIHelper.StandardSliderOptions);
+                    
+                if (newParam2 != _filterParam2)
+                {
+                    _filterParam2 = newParam2;
+                    
+                    // Update BetaValue to maintain compatibility with the old code
+                    if (_currentFilterType == InputFilterFactory.FilterType.OneEuro)
+                    {
+                        _betaValue = _filterParam2;
+                    }
+                    
+                    // Update filter parameters
+                    if (xFilter != null && yFilter != null)
+                    {
+                        xFilter.SetParameters(_filterParam1, _filterParam2);
+                        yFilter.SetParameters(_filterParam1, _filterParam2);
+                    }
+                }
             }
             
             UIHelper.EndSection();
