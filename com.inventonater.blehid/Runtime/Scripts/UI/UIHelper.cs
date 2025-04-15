@@ -170,7 +170,7 @@ namespace Inventonater.BleHid.UI
             
             GUIStyle thumbStyle = new GUIStyle(GUI.skin.horizontalSliderThumb);
             thumbStyle.fixedHeight = 0; // Allow thumb height to adapt
-            thumbStyle.fixedWidth = 30; // Wider thumb for easier touch
+            thumbStyle.fixedWidth = 60; // Wider thumb for easier touch
             
             // Create the slider
             return GUILayout.HorizontalSlider(currentValue, minValue, maxValue, sliderStyle, thumbStyle, options);
@@ -197,15 +197,15 @@ namespace Inventonater.BleHid.UI
             // Top row with current value display
             GUILayout.BeginHorizontal();
             GUILayout.FlexibleSpace();
-            GUILayout.Label(string.Format(valueFormat, currentValue), GUILayout.MinWidth(80));
+            GUILayout.Label(string.Format(valueFormat, currentValue), GUILayout.MinWidth(200));
             GUILayout.FlexibleSpace();
             GUILayout.EndHorizontal();
             
             // Slider row with min/max labels
             GUILayout.BeginHorizontal();
-            GUILayout.Label(leftLabel, GUILayout.Width(60));
+            GUILayout.Label(leftLabel, GUILayout.Width(100));
             float newValue = EnhancedSlider(currentValue, minValue, maxValue, valueFormat, options);
-            GUILayout.Label(rightLabel, GUILayout.Width(60));
+            GUILayout.Label(rightLabel, GUILayout.Width(100));
             GUILayout.EndHorizontal();
             
             GUILayout.EndVertical();

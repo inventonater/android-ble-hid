@@ -8,6 +8,17 @@ namespace Inventonater.BleHid.UI
     /// </summary>
     public class ConnectionParametersComponent : UIComponent
     {
+        // Performance metrics
+        private float _fpsUpdateInterval = 0.5f; // How often to update FPS (in seconds)
+        private float _lastFpsUpdateTime;
+        private int _frameCount = 0;
+        private float _currentFps = 0;
+        
+        // Target framerate control
+        private int _targetFrameRate = 60; // Default to 60 FPS
+        private const int MIN_FRAMERATE = 30;
+        private const int MAX_FRAMERATE = 90;
+        
         // Requested values
         private int requestedMtu = 512; // Default to maximum for best performance
         private int requestedConnectionPriority = 0; // Default to HIGH (0) for best performance
@@ -45,6 +56,14 @@ namespace Inventonater.BleHid.UI
         {
             base.Initialize(bleManager, logger, isEditorMode);
             
+            // Initialize performance metrics
+            _lastFpsUpdateTime = Time.time;
+            _currentFps = 0;
+            
+            // Set the default target framerate
+            _targetFrameRate = 60;
+            Application.targetFrameRate = _targetFrameRate;
+            
             // Register to events
             if (BleHidManager != null)
             {
@@ -58,12 +77,47 @@ namespace Inventonater.BleHid.UI
             UpdateValuesFromManager();
         }
         
+        public override void Update()
+        {
+            // Update FPS counter
+            _frameCount++;
+            float currentTime = Time.time;
+            
+            // Calculate FPS and reset counter if update interval has elapsed
+            if (currentTime - _lastFpsUpdateTime > _fpsUpdateInterval)
+            {
+                _currentFps = _frameCount / (currentTime - _lastFpsUpdateTime);
+                _frameCount = 0;
+                _lastFpsUpdateTime = currentTime;
+            }
+        }
+        
         public override void DrawUI()
         {
             bool connected = BleHidManager != null && BleHidManager.IsConnected;
             bool initialized = BleHidManager != null && BleHidManager.IsInitialized;
             
             UIHelper.BeginSection("Connection Parameters");
+            
+            // Performance metrics
+            GUILayout.Label($"FPS: {_currentFps:F1}", 
+                           new GUIStyle(GUI.skin.label) { fontStyle = FontStyle.Bold });
+            
+            // Target framerate slider
+            GUILayout.Label("Target FPS: Limits maximum frame rate");
+            float newFrameRate = UIHelper.SliderWithLabels(
+                "Low", (float)_targetFrameRate, MIN_FRAMERATE, MAX_FRAMERATE, "High", 
+                "Target FPS: {0:F0}", UIHelper.StandardSliderOptions);
+                
+            int roundedFrameRate = Mathf.RoundToInt(newFrameRate);
+            if (roundedFrameRate != _targetFrameRate)
+            {
+                _targetFrameRate = roundedFrameRate;
+                Application.targetFrameRate = _targetFrameRate;
+                Logger.AddLogEntry($"Target framerate set to: {_targetFrameRate}");
+            }
+            
+            GUILayout.Space(10);
             
             // Status message
             GUILayout.Label("Status: " + (string.IsNullOrEmpty(statusMessage) ? 
