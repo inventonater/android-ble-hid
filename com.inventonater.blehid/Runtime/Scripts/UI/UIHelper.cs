@@ -156,20 +156,13 @@ namespace Inventonater.BleHid.UI
         }
         
         /// <summary>
-        /// Enhanced slider with touch-friendly height and better visual appearance
+        /// Enhanced slider with touch-friendly height and better visual appearance (float version)
         /// </summary>
-        /// <param name="currentValue">Current int value of the slider</param>
-        /// <param name="minValue">Minimum value</param>
-        /// <param name="maxValue">Maximum value</param>
-        /// <param name="labelFormat">Optional format string for value label, e.g. "{0} ms"</param>
-        /// <param name="options">Optional additional layout options</param>
-        /// <returns>The new slider value</returns>
-        public static int EnhancedSlider(int currentValue, int minValue, int maxValue, 
+        public static float EnhancedSlider(float currentValue, float minValue, float maxValue, 
             string labelFormat = "{0}", GUILayoutOption[] options = null)
         {
             // Use standard slider options if none provided
-            if (options == null)
-                options = StandardSliderOptions;
+            options = options ?? StandardSliderOptions;
             
             // Create a custom slider style with larger thumb
             GUIStyle sliderStyle = new GUIStyle(GUI.skin.horizontalSlider);
@@ -180,24 +173,23 @@ namespace Inventonater.BleHid.UI
             thumbStyle.fixedWidth = 30; // Wider thumb for easier touch
             
             // Create the slider
-            float floatValue = GUILayout.HorizontalSlider(currentValue, minValue, maxValue, sliderStyle, thumbStyle, options);
-            int newValue = Mathf.RoundToInt(floatValue);
-            
-            return newValue;
+            return GUILayout.HorizontalSlider(currentValue, minValue, maxValue, sliderStyle, thumbStyle, options);
+        }
+        
+        /// <summary>
+        /// Enhanced slider with touch-friendly height and better visual appearance (int version)
+        /// </summary>
+        public static int EnhancedSliderInt(int currentValue, int minValue, int maxValue, 
+            string labelFormat = "{0}", GUILayoutOption[] options = null)
+        {
+            float result = EnhancedSlider((float)currentValue, (float)minValue, (float)maxValue, labelFormat, options);
+            return Mathf.RoundToInt(result);
         }
         
         /// <summary>
         /// Slider with min/max labels and current value display
         /// </summary>
-        /// <param name="leftLabel">Label displayed on the left (typically min value)</param>
-        /// <param name="currentValue">Current slider value</param>
-        /// <param name="minValue">Minimum value</param>
-        /// <param name="maxValue">Maximum value</param>
-        /// <param name="rightLabel">Label displayed on the right (typically max value)</param>
-        /// <param name="valueFormat">Optional format string for value display</param>
-        /// <param name="options">Optional additional layout options</param>
-        /// <returns>The new slider value</returns>
-        public static int SliderWithLabels(string leftLabel, int currentValue, int minValue, int maxValue, 
+        public static float SliderWithLabels(string leftLabel, float currentValue, float minValue, float maxValue, 
             string rightLabel, string valueFormat = "{0}", GUILayoutOption[] options = null)
         {
             GUILayout.BeginVertical();
@@ -212,13 +204,24 @@ namespace Inventonater.BleHid.UI
             // Slider row with min/max labels
             GUILayout.BeginHorizontal();
             GUILayout.Label(leftLabel, GUILayout.Width(60));
-            int newValue = EnhancedSlider(currentValue, minValue, maxValue, valueFormat, options);
+            float newValue = EnhancedSlider(currentValue, minValue, maxValue, valueFormat, options);
             GUILayout.Label(rightLabel, GUILayout.Width(60));
             GUILayout.EndHorizontal();
             
             GUILayout.EndVertical();
             
             return newValue;
+        }
+        
+        /// <summary>
+        /// Slider with min/max labels and current value display (int version)
+        /// </summary>
+        public static int SliderWithLabels(string leftLabel, int currentValue, int minValue, int maxValue, 
+            string rightLabel, string valueFormat = "{0}", GUILayoutOption[] options = null)
+        {
+            float result = SliderWithLabels(leftLabel, (float)currentValue, (float)minValue, (float)maxValue, 
+                rightLabel, valueFormat, options);
+            return Mathf.RoundToInt(result);
         }
         
         /// <summary>
