@@ -9,7 +9,7 @@ namespace Inventonater.BleHid
     {
         private static LoggingManager logger => LoggingManager.Instance;
 
-        private BleHidManager bleHidManager;
+        private BleHidManager bleHidManager => BleHidManager.Instance;
         private bool isEditorMode;
         private Vector2 lastPosition;
         private bool isDragging = false;
@@ -22,15 +22,7 @@ namespace Inventonater.BleHid
         private float globalScale = 1.0f;
         private float horizontalSensitivity = 3.0f;
         private float verticalSensitivity = 3.0f;
-        
-        /// <summary>
-        /// Initialize the processor with dependencies
-        /// </summary>
-        public PointerInputProcessor(BleHidManager manager)
-        {
-            this.bleHidManager = manager;
-        }
-        
+
         /// <summary>
         /// Set the touchpad boundaries in screen coordinates
         /// </summary>

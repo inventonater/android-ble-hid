@@ -103,10 +103,8 @@ namespace Inventonater.BleHid
             }
         }
         
-        public override void Initialize(BleHidManager bleHidManager)
+        public override void Initialize()
         {
-            base.Initialize(bleHidManager);
-            
             // Initialize filters with the default type
             _currentFilterType = InputFilterFactory.FilterType.OneEuro;
             
@@ -120,7 +118,7 @@ namespace Inventonater.BleHid
             _performanceTracker = new PerformanceTracker();
             
             // Initialize input processor
-            _inputProcessor = new PointerInputProcessor(bleHidManager);
+            _inputProcessor = new PointerInputProcessor();
             _inputProcessor.SetInputFilter(inputFilter);
             _inputProcessor.SetSensitivity(_globalScale, _horizontalSensitivity, _verticalSensitivity);
             
@@ -297,7 +295,7 @@ namespace Inventonater.BleHid
             
             UIHelper.ActionButtonRow(
                 buttonLabels, 
-                buttonActions, 
+                buttonActions,
                 Logger, 
                 buttonMessages,
                 UIHelper.LargeButtonOptions);

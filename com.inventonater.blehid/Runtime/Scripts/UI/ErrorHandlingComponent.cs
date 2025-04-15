@@ -34,11 +34,8 @@ namespace Inventonater.BleHid
         public bool HasPermissionError => hasPermissionError;
         public bool HasAccessibilityError => hasAccessibilityError;
 
-
-        public override void Initialize(BleHidManager bleHidManager)
+        public override void Initialize()
         {
-            base.Initialize(bleHidManager);
-
             // In editor mode, initially set accessibility error to true
             // so we can show the accessibility UI for testing
             if (IsEditorMode)

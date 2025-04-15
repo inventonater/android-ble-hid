@@ -1,7 +1,7 @@
 using System;
 using System.Collections;
+using System.Collections.Generic;
 using UnityEngine;
-using Inventonater.BleHid;
 
 namespace Inventonater.BleHid
 {
@@ -17,10 +17,10 @@ namespace Inventonater.BleHid
         private int currentTab = 0;
         private string[] tabNames = new string[] { "Media", "Mouse", "Keyboard", "Local", "Connection" };
         private bool isInitialized = false;
-        
+
         // Flag to enable UI in editor even without full BLE functionality
         private bool isEditorMode = false;
-        
+
         // UI Components
         private LoggingManager logger;
         private StatusComponent statusComponent;
@@ -30,17 +30,21 @@ namespace Inventonater.BleHid
         private LocalControlComponent localComponent;
         private ErrorHandlingComponent errorComponent;
         private ConnectionParametersComponent connectionParametersComponent;
-        
+
+        // Dictionary to map tab names to their corresponding components
+        private Dictionary<string, UIComponent> tabComponents;
+        private string previousTabName = null;
+
         // Scroll position for Local tab
         private Vector2 localTabScrollPosition = Vector2.zero;
-        
+
         // Permission checking
         private float nextPermissionCheckTime = 0f;
         private const float PERMISSION_CHECK_INTERVAL = 3.0f; // Check every 3 seconds
-        
+
         // Application focus tracking
         private bool wasInBackground = false;
-        
+
         // Track if we've attempted to initialize local control
         private bool localControlInitialized = false;
 
@@ -50,15 +54,15 @@ namespace Inventonater.BleHid
             InitializeManagers();
             InitializeUIComponents();
             RegisterEvents();
-            
+
             // Initialize BLE HID
             StartCoroutine(bleHidManager.Initialize());
-            
+
             InitializeLocalControl();
-            
+
             // Add log message
             logger.AddLogEntry("Starting BLE HID initialization...");
-            
+
             // Check permissions and accessibility service on startup (Android only)
             CheckPlatformRequirements();
         }
@@ -66,27 +70,27 @@ namespace Inventonater.BleHid
         private void InitializeEditorMode()
         {
             // Check if running in the Unity Editor
-            #if UNITY_EDITOR
+#if UNITY_EDITOR
             isEditorMode = true;
             isInitialized = true; // Auto-initialize in editor
-            #endif
+#endif
         }
 
         private void InitializeManagers()
         {
             // Create logging manager
             logger = LoggingManager.Instance;
-            
+
             // Create BleHidManager
             GameObject managerObj = new GameObject("BleHidManager");
             bleHidManager = managerObj.AddComponent<BleHidManager>();
-            
+
             if (isEditorMode)
             {
                 logger.AddLogEntry("Running in Editor mode - BLE functionality limited");
             }
         }
-        
+
         private void InitializeUIComponents()
         {
             // Create components
@@ -97,51 +101,59 @@ namespace Inventonater.BleHid
             localComponent = new LocalControlComponent();
             errorComponent = new ErrorHandlingComponent();
             connectionParametersComponent = new ConnectionParametersComponent();
-            
+
             // Initialize components
-            InitializeComponent(statusComponent);
-            InitializeComponent(mediaComponent);
-            InitializeComponent(mouseComponent);
-            InitializeComponent(keyboardComponent);
-            InitializeComponent(localComponent);
-            InitializeComponent(errorComponent);
-            InitializeComponent(connectionParametersComponent);
-            
+            statusComponent.Initialize();
+            mediaComponent.Initialize();
+            mouseComponent.Initialize();
+            keyboardComponent.Initialize();
+            localComponent.Initialize();
+            errorComponent.Initialize();
+            connectionParametersComponent.Initialize();
+
+            // Set up the tab mapping dictionary
+            tabComponents = new Dictionary<string, UIComponent>
+            {
+                { "Media", mediaComponent },
+                { "Mouse", mouseComponent },
+                { "Keyboard", keyboardComponent },
+                { "Local", localComponent },
+                { "Connection", connectionParametersComponent }
+            };
+
+            // Store the tab name in each component
+            foreach (var kvp in tabComponents)
+            {
+                kvp.Value.TabName = kvp.Key;
+            }
+
             // Additional setup for components that need MonoBehaviour reference
             errorComponent.SetMonoBehaviourOwner(this);
             localComponent.SetMonoBehaviourOwner(this);
-            
+
             // Set initial state
             statusComponent.SetInitialized(isInitialized);
         }
-        
-        private void InitializeComponent(UIComponent component)
-        {
-            if (component != null)
-            {
-                component.Initialize(bleHidManager);
-            }
-        }
-        
+
         private void InitializeLocalControl()
         {
             // Initialize BleHidLocalControl for Android
-            #if UNITY_ANDROID && !UNITY_EDITOR
+#if UNITY_ANDROID && !UNITY_EDITOR
             if (localComponent != null)
             {
                 localComponent.SetMonoBehaviourOwner(this);
             }
-            #endif
+#endif
         }
-        
+
         private void CheckPlatformRequirements()
         {
-            #if UNITY_ANDROID && !UNITY_EDITOR
+#if UNITY_ANDROID && !UNITY_EDITOR
             errorComponent.CheckMissingPermissions();
             errorComponent.CheckAccessibilityServiceStatus();
-            #endif
+#endif
         }
-        
+
         private void RegisterEvents()
         {
             if (bleHidManager != null)
@@ -159,11 +171,11 @@ namespace Inventonater.BleHid
         {
             // Handle update logic in the active component
             UpdateActiveComponent();
-            
+
             // Periodic permission checking if needed
             PerformPeriodicPermissionChecks();
         }
-        
+
         private void UpdateActiveComponent()
         {
             if (currentTab == 1) // Mouse tab
@@ -171,24 +183,24 @@ namespace Inventonater.BleHid
                 mouseComponent.Update();
             }
         }
-        
+
         private void PerformPeriodicPermissionChecks()
         {
-            #if UNITY_ANDROID && !UNITY_EDITOR
+#if UNITY_ANDROID && !UNITY_EDITOR
             // Check if we need to check permissions
-            if ((errorComponent.HasPermissionError || errorComponent.HasAccessibilityError) && 
+            if ((errorComponent.HasPermissionError || errorComponent.HasAccessibilityError) &&
                 Time.time >= nextPermissionCheckTime)
             {
                 // Schedule next check
                 nextPermissionCheckTime = Time.time + PERMISSION_CHECK_INTERVAL;
-                
+
                 // Check permissions
                 if (errorComponent.HasPermissionError)
                 {
                     errorComponent.CheckMissingPermissions();
                     logger.AddLogEntry("Periodic permission check");
                 }
-                
+
                 // Check accessibility service
                 if (errorComponent.HasAccessibilityError)
                 {
@@ -196,14 +208,14 @@ namespace Inventonater.BleHid
                     logger.AddLogEntry("Periodic accessibility check");
                 }
             }
-            #endif
+#endif
         }
 
         private void OnDestroy()
         {
             UnregisterEvents();
         }
-        
+
         private void UnregisterEvents()
         {
             // Unregister events to prevent memory leaks
@@ -223,7 +235,7 @@ namespace Inventonater.BleHid
             SetupGUIStyles();
             DrawLayoutArea();
         }
-        
+
         private void SetupGUIStyles()
         {
             // Set up GUI style for better touch targets
@@ -232,7 +244,7 @@ namespace Inventonater.BleHid
             GUI.skin.textField.fontSize = 20;
             GUI.skin.box.fontSize = 20;
         }
-        
+
         private void DrawLayoutArea()
         {
             // Adjust layout to fill the screen
@@ -242,7 +254,7 @@ namespace Inventonater.BleHid
 
             DrawErrorWarnings();
             DrawStatusArea();
-            
+
             // If we have a permission error or accessibility error, don't show the rest of the UI
             if (HasCriticalErrors())
             {
@@ -256,7 +268,7 @@ namespace Inventonater.BleHid
 
             GUILayout.EndArea();
         }
-        
+
         private void DrawErrorWarnings()
         {
             // Permission error warning - show at the top with a red background
@@ -265,7 +277,7 @@ namespace Inventonater.BleHid
                 errorComponent.DrawPermissionErrorUI();
                 GUILayout.Space(20);
             }
-            
+
             // Accessibility error - always show full UI at the top with other permissions
             if (errorComponent.HasAccessibilityError)
             {
@@ -273,29 +285,53 @@ namespace Inventonater.BleHid
                 GUILayout.Space(20);
             }
         }
-        
+
         private void DrawStatusArea()
         {
             // Status area
             statusComponent.DrawUI();
         }
-        
+
         private bool HasCriticalErrors()
         {
             // Treat accessibility service as a critical requirement like other permissions
             return errorComponent.HasPermissionError || errorComponent.HasAccessibilityError;
         }
-        
+
         private void DrawTabSelection()
         {
             // Tab selection
             currentTab = GUILayout.Toolbar(currentTab, tabNames, GUILayout.Height(60));
         }
-        
+
         private void DrawTabContent()
         {
+            // Get the current tab name
+            string currentTabName = tabNames[currentTab];
+
+            // Notify components about tab activation/deactivation if changed
+            if (previousTabName != currentTabName)
+            {
+                // Deactivate previous tab component
+                if (previousTabName != null && tabComponents.ContainsKey(previousTabName))
+                {
+                    tabComponents[previousTabName].OnDeactivate();
+                    logger.AddLogEntry($"Tab '{previousTabName}' deactivated");
+                }
+
+                // Activate current tab component
+                if (tabComponents.ContainsKey(currentTabName))
+                {
+                    tabComponents[currentTabName].OnActivate();
+                    logger.AddLogEntry($"Tab '{currentTabName}' activated");
+                }
+
+                // Update previous tab
+                previousTabName = currentTabName;
+            }
+
             // Tab content - use flexible height for Local tab
-            if (currentTab == 3) // Local tab
+            if (currentTabName == "Local")
             {
                 GUILayout.BeginVertical(GUI.skin.box); // No fixed height for Local tab
             }
@@ -316,7 +352,7 @@ namespace Inventonater.BleHid
 
             GUILayout.EndVertical();
         }
-        
+
         private void DrawSelectedTab()
         {
             switch (currentTab)
@@ -338,7 +374,7 @@ namespace Inventonater.BleHid
                     break;
             }
         }
-        
+
         private void DrawMediaTab()
         {
             // Remote BLE controls need a connected device
@@ -346,7 +382,7 @@ namespace Inventonater.BleHid
             mediaComponent.DrawUI();
             GUI.enabled = true;
         }
-        
+
         private void DrawMouseTab()
         {
             // Remote BLE controls need a connected device
@@ -354,7 +390,7 @@ namespace Inventonater.BleHid
             mouseComponent.DrawUI();
             GUI.enabled = true;
         }
-        
+
         private void DrawKeyboardTab()
         {
             // Remote BLE controls need a connected device
@@ -362,28 +398,28 @@ namespace Inventonater.BleHid
             keyboardComponent.DrawUI();
             GUI.enabled = true;
         }
-        
+
         private void DrawLocalControlTab()
         {
             // Local controls always enabled since they don't rely on a BLE connection
             GUI.enabled = true;
-            
+
             // Always show the Local Control UI
             // The accessibility error is now displayed at the top of the screen
-            
+
             // Wrap local controls in a scroll view
             float viewHeight = Screen.height * 0.45f; // Maintain consistent view height
             localTabScrollPosition = GUILayout.BeginScrollView(
-                localTabScrollPosition, 
-                GUILayout.MinHeight(viewHeight), 
+                localTabScrollPosition,
+                GUILayout.MinHeight(viewHeight),
                 GUILayout.ExpandHeight(true)
             );
-            
+
             localComponent.DrawUI();
-            
+
             GUILayout.EndScrollView();
         }
-        
+
         private void DrawConnectionParametersTab()
         {
             // Connection parameters need a connected device
@@ -391,7 +427,7 @@ namespace Inventonater.BleHid
             connectionParametersComponent.DrawUI();
             GUI.enabled = true;
         }
-        
+
         private void DrawLogArea()
         {
             // Log area
@@ -410,7 +446,7 @@ namespace Inventonater.BleHid
             else
             {
                 logger.AddLogEntry("BLE HID initialization failed: " + message);
-                
+
                 // Check if this is a permission error
                 if (message.Contains("permission"))
                 {
@@ -459,7 +495,7 @@ namespace Inventonater.BleHid
             {
                 errorComponent.SetAccessibilityError(true);
                 logger.AddLogEntry("Accessibility error: " + errorMessage);
-                
+
                 // Check accessibility service status
                 errorComponent.CheckAccessibilityServiceStatus();
             }
@@ -473,7 +509,7 @@ namespace Inventonater.BleHid
         {
             logger.AddLogEntry("Debug: " + message);
         }
-        
+
         // Handle application focus and pause to detect when user returns from Android settings
         private void OnApplicationFocus(bool hasFocus)
         {
@@ -482,14 +518,14 @@ namespace Inventonater.BleHid
                 // App has regained focus after being in background
                 logger.AddLogEntry("Application regained focus");
                 wasInBackground = false;
-                
-                #if UNITY_ANDROID && !UNITY_EDITOR
+
+#if UNITY_ANDROID && !UNITY_EDITOR
                 // Check if we need to reinitialize the local control
                 StartCoroutine(HandleApplicationFocusGained());
-                #endif
+#endif
             }
         }
-        
+
         private void OnApplicationPause(bool isPaused)
         {
             // App was paused (e.g., user went to settings)
@@ -499,19 +535,19 @@ namespace Inventonater.BleHid
                 wasInBackground = true;
             }
         }
-        
+
         // Handle app returning from background (e.g., returning from accessibility settings)
         private IEnumerator HandleApplicationFocusGained()
         {
             // Wait a short delay for Android to settle
             yield return new WaitForSeconds(0.5f);
-            
+
             logger.AddLogEntry("Checking accessibility status after focus gained");
-            
+
             // Use the direct check method to see if accessibility service was enabled
             bool isAccessibilityEnabled = BleHidLocalControl.CheckAccessibilityServiceEnabledDirect();
             logger.AddLogEntry($"Direct accessibility check: {(isAccessibilityEnabled ? "ENABLED" : "NOT ENABLED")}");
-            
+
             // Update UI if accessibility status has changed
             if (isAccessibilityEnabled && errorComponent.HasAccessibilityError)
             {
@@ -523,12 +559,12 @@ namespace Inventonater.BleHid
                 // Still not enabled, reinitialize local control and recheck
                 logger.AddLogEntry("Reinitializing local control after returning from settings");
                 StartCoroutine(BleHidLocalControl.ReinitializeAfterFocusGained(this));
-                
+
                 // Extra delay and then check accessibility status again
                 yield return new WaitForSeconds(1.0f);
                 errorComponent.CheckAccessibilityServiceStatus();
             }
-            
+
             // Re-check permissions too
             if (errorComponent.HasPermissionError)
             {

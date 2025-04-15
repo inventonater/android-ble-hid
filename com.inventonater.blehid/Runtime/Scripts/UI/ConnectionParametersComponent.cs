@@ -52,10 +52,8 @@ namespace Inventonater.BleHid
         private Color intervalColor = Color.white;
         private Color mtuColor = Color.white;
 
-        public override void Initialize(BleHidManager bleManager)
+        public override void Initialize()
         {
-            base.Initialize(bleManager);
-
             // Initialize performance metrics
             _lastFpsUpdateTime = Time.time;
             _currentFps = 0;
@@ -321,20 +319,6 @@ namespace Inventonater.BleHid
 
             GUILayout.Space(10);
 
-            // Documentation section
-            GUILayout.BeginVertical(GUI.skin.box);
-            GUILayout.Label("Documentation:", boldStyle);
-
-            if (UIHelper.ActionButton("Connection Parameters Help",
-                    () => ShowDocumentation(),
-                    "Show documentation on connection parameters", Logger,
-                    UIHelper.StandardButtonOptions))
-            {
-                SetStatus("Opening Connection Parameters documentation...", Color.cyan);
-            }
-
-            GUILayout.EndVertical();
-
             UIHelper.EndSection();
         }
 
@@ -416,43 +400,6 @@ namespace Inventonater.BleHid
             else
             {
                 SetStatus("Failed to get parameters", Color.red);
-            }
-        }
-
-        private void ShowDocumentation()
-        {
-            string documentationPath = "Documentation/ConnectionParameters.md";
-
-            try
-            {
-#if UNITY_EDITOR
-                // In the editor, try to open the file directly
-                string fullPath = System.IO.Path.Combine(Application.dataPath, "..", documentationPath);
-                fullPath = System.IO.Path.GetFullPath(fullPath);
-
-                // Use OpenURL as a fallback
-                Application.OpenURL("file://" + fullPath);
-
-                SetStatus("Documentation opened in default application", Color.green);
-#elif UNITY_ANDROID
-                // On Android, display helpful information
-                SetStatus("Documentation available in package at: " + documentationPath, Color.green);
-
-                // Show more detailed info in the log
-                if (Logger != null)
-                {
-                    Logger.AddLogEntry("Connection Parameters documentation is available in the package at: " + documentationPath);
-                    Logger.AddLogEntry("The documentation provides details about each parameter and recommended settings for different use cases.");
-                }
-#else
-                // For other platforms, just log where to find it
-                SetStatus("Documentation available in package at: " + documentationPath, Color.green);
-#endif
-            }
-            catch (System.Exception e)
-            {
-                Debug.LogError("Error opening documentation: " + e.Message);
-                SetStatus("Error opening documentation. See logs for details.", Color.red);
             }
         }
 

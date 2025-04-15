@@ -10,6 +10,7 @@ namespace Inventonater.BleHid
     {
         private bool isInitialized = false;
 
+        public override void Initialize(){}
 
         public void SetInitialized(bool initialized)
         {

@@ -11,7 +11,6 @@ namespace Inventonater.BleHid
     /// </summary>
     public class BleHidManager : MonoBehaviour
     {
-        #region Properties
         /// <summary>
         /// Whether the BLE HID manager is initialized.
         /// </summary>
@@ -82,9 +81,7 @@ namespace Inventonater.BleHid
         /// The bridge instance used to communicate with Java.
         /// </summary>
         internal AndroidJavaObject BridgeInstance => bridgeInstance;
-        #endregion
-        
-        #region Singleton
+
         /// <summary>
         /// Singleton instance of the BleHidManager.
         /// </summary>
@@ -127,9 +124,7 @@ namespace Inventonater.BleHid
             
             Debug.Log("BleHidManager initialized");
         }
-        #endregion
-        
-        #region Events
+
         // Event declarations that will be forwarded from the callback handler
         public event BleHidCallbackHandler.InitializeCompleteHandler OnInitializeComplete;
         public event BleHidCallbackHandler.AdvertisingStateChangedHandler OnAdvertisingStateChanged;
@@ -140,23 +135,17 @@ namespace Inventonater.BleHid
         public event BleHidCallbackHandler.ConnectionParameterRequestCompleteHandler OnConnectionParameterRequestComplete;
         public event BleHidCallbackHandler.ErrorHandler OnError;
         public event BleHidCallbackHandler.DebugLogHandler OnDebugLog;
-        #endregion
-        
-        #region Private Fields
+
         // Fields to track state
         private bool isInitializing = false;
         private AndroidJavaObject bridgeInstance = null;
         private BleHidCallbackHandler callbackHandler;
-        #endregion
-        
-        #region Unity Lifecycle
+
         private void OnDestroy()
         {
             Close();
         }
-        #endregion
-        
-        #region Public Methods
+
         /// <summary>
         /// Initialize the BLE HID functionality.
         /// </summary>
@@ -631,8 +620,6 @@ namespace Inventonater.BleHid
             }
         }
         
-        #region Connection Parameter Methods
-        
         /// <summary>
         /// Request a change in connection priority.
         /// Connection priority affects latency and power consumption.
@@ -789,8 +776,7 @@ namespace Inventonater.BleHid
             }
         }
         
-        #endregion
-        
+
         /// <summary>
         /// Get diagnostic information from the plugin.
         /// </summary>
@@ -916,9 +902,7 @@ namespace Inventonater.BleHid
                 return false;
             }
         }
-        #endregion
-        
-        #region Callback Methods (Called from Java)
+
         /// <summary>
         /// Called when initialization is complete.
         /// </summary>
@@ -990,9 +974,7 @@ namespace Inventonater.BleHid
         {
             callbackHandler.HandleConnectionParameterRequestComplete(message);
         }
-        #endregion
-        
-        #region Helper Methods
+
         private bool CheckInitialized()
         {
             if (!IsInitialized || bridgeInstance == null)
@@ -1018,6 +1000,5 @@ namespace Inventonater.BleHid
             }
             return true;
         }
-        #endregion
     }
 }

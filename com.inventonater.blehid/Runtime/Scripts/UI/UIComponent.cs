@@ -10,16 +10,25 @@ namespace Inventonater.BleHid
     /// </summary>
     public abstract class UIComponent
     {
-        protected BleHidManager BleHidManager { get; private set; }
+        protected BleHidManager BleHidManager => BleHidManager.Instance;
         protected LoggingManager Logger => LoggingManager.Instance;
         protected bool IsEditorMode => Application.isEditor;
+        
+        /// <summary>
+        /// The name of the tab this component is associated with
+        /// </summary>
+        public string TabName { get; set; }
+
+        public abstract void Initialize();
 
         /// <summary>
-        /// Initialize the UI component with required dependencies
+        /// Called when the component's tab becomes active
         /// </summary>
-        public virtual void Initialize(BleHidManager bleHidManager)
-        {
-            BleHidManager = bleHidManager;
-        }
+        public virtual void OnActivate() { }
+
+        /// <summary>
+        /// Called when the component's tab becomes inactive
+        /// </summary>
+        public virtual void OnDeactivate() { }
     }
 }

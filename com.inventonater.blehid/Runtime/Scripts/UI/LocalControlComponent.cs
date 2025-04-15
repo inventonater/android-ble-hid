@@ -12,6 +12,9 @@ namespace Inventonater.BleHid
         private bool localControlInitialized = false;
         private bool hasCameraPermission = false;
         private MonoBehaviour owner;
+        
+        // Track the foreground service status
+        private bool isForegroundServiceRunning = false;
 
         // Button height constant
         private const float BUTTON_HEIGHT = 60f;
@@ -19,6 +22,57 @@ namespace Inventonater.BleHid
         public void SetMonoBehaviourOwner(MonoBehaviour owner)
         {
             this.owner = owner;
+        }
+
+        public override void Initialize(){}
+
+        /// <summary>
+        /// Called when the Local tab becomes active
+        /// </summary>
+        public override void OnActivate()
+        {
+            // Skip in editor mode
+            if (IsEditorMode || BleHidManager == null)
+                return;
+            
+            #if UNITY_ANDROID && !UNITY_EDITOR
+            try 
+            {
+                BleHidManager.StartForegroundService();
+                Logger.AddLogEntry("Started foreground service for Local tab");
+                isForegroundServiceRunning = true;
+            }
+            catch (Exception e)
+            {
+                Logger.AddLogEntry("Failed to start foreground service: " + e.Message);
+            }
+            #endif
+        }
+
+        /// <summary>
+        /// Called when the Local tab becomes inactive
+        /// </summary>
+        public override void OnDeactivate()
+        {
+            // Skip in editor mode
+            if (IsEditorMode || BleHidManager == null)
+                return;
+            
+            #if UNITY_ANDROID && !UNITY_EDITOR
+            try
+            {
+                if (isForegroundServiceRunning)
+                {
+                    BleHidManager.StopForegroundService();
+                    Logger.AddLogEntry("Stopped foreground service when leaving Local tab");
+                    isForegroundServiceRunning = false;
+                }
+            }
+            catch (Exception e)
+            {
+                Logger.AddLogEntry("Failed to stop foreground service: " + e.Message);
+            }
+            #endif
         }
 
         public virtual void DrawUI()
