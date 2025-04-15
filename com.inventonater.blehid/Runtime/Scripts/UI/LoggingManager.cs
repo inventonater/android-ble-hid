@@ -19,6 +19,7 @@ namespace Inventonater.BleHid
         /// </summary>
         public void AddLogEntry(string entry)
         {
+            if (string.IsNullOrEmpty(entry)) return;
             string timestamp = System.DateTime.Now.ToString("HH:mm:ss");
             string logEntry = timestamp + " - " + entry;
 

@@ -300,7 +300,7 @@ namespace Inventonater.BleHid
         /// <returns>True if advertising was started successfully, false otherwise.</returns>
         public bool StartAdvertising()
         {
-            if (!CheckInitialized()) return false;
+            if (!ConfirmIsInitialized()) return false;
             
             try
             {
@@ -362,7 +362,7 @@ namespace Inventonater.BleHid
         /// </summary>
         public void StopAdvertising()
         {
-            if (!CheckInitialized()) return;
+            if (!ConfirmIsInitialized()) return;
             
             try
             {
@@ -382,7 +382,7 @@ namespace Inventonater.BleHid
         /// <returns>True if advertising is active, false otherwise.</returns>
         public bool GetAdvertisingState()
         {
-            if (!CheckInitialized()) return false;
+            if (!ConfirmIsInitialized()) return false;
             
             try
             {
@@ -402,7 +402,7 @@ namespace Inventonater.BleHid
         /// <returns>True if successful, false otherwise.</returns>
         public bool SendKey(byte keyCode)
         {
-            if (!CheckConnected()) return false;
+            if (!ConfirmIsConnected()) return false;
             
             try
             {
@@ -423,7 +423,7 @@ namespace Inventonater.BleHid
         /// <returns>True if successful, false otherwise.</returns>
         public bool SendKeyWithModifiers(byte keyCode, byte modifiers)
         {
-            if (!CheckConnected()) return false;
+            if (!ConfirmIsConnected()) return false;
             
             try
             {
@@ -443,7 +443,7 @@ namespace Inventonater.BleHid
         /// <returns>True if successful, false otherwise.</returns>
         public bool TypeText(string text)
         {
-            if (!CheckConnected()) return false;
+            if (!ConfirmIsConnected()) return false;
             
             try
             {
@@ -464,7 +464,7 @@ namespace Inventonater.BleHid
         /// <returns>True if successful, false otherwise.</returns>
         public bool MoveMouse(int deltaX, int deltaY)
         {
-            if (!CheckConnected()) return false;
+            if (!ConfirmIsConnected()) return false;
             
             try
             {
@@ -493,7 +493,7 @@ namespace Inventonater.BleHid
         /// <returns>True if successful, false otherwise.</returns>
         public bool ClickMouseButton(int button)
         {
-            if (!CheckConnected()) return false;
+            if (!ConfirmIsConnected()) return false;
             
             try
             {
@@ -512,7 +512,7 @@ namespace Inventonater.BleHid
         /// <returns>True if successful, false otherwise.</returns>
         public bool PlayPause()
         {
-            if (!CheckConnected()) return false;
+            if (!ConfirmIsConnected()) return false;
             
             try
             {
@@ -531,7 +531,7 @@ namespace Inventonater.BleHid
         /// <returns>True if successful, false otherwise.</returns>
         public bool NextTrack()
         {
-            if (!CheckConnected()) return false;
+            if (!ConfirmIsConnected()) return false;
             
             try
             {
@@ -550,7 +550,7 @@ namespace Inventonater.BleHid
         /// <returns>True if successful, false otherwise.</returns>
         public bool PreviousTrack()
         {
-            if (!CheckConnected()) return false;
+            if (!ConfirmIsConnected()) return false;
             
             try
             {
@@ -569,7 +569,7 @@ namespace Inventonater.BleHid
         /// <returns>True if successful, false otherwise.</returns>
         public bool VolumeUp()
         {
-            if (!CheckConnected()) return false;
+            if (!ConfirmIsConnected()) return false;
             
             try
             {
@@ -588,7 +588,7 @@ namespace Inventonater.BleHid
         /// <returns>True if successful, false otherwise.</returns>
         public bool VolumeDown()
         {
-            if (!CheckConnected()) return false;
+            if (!ConfirmIsConnected()) return false;
             
             try
             {
@@ -607,7 +607,7 @@ namespace Inventonater.BleHid
         /// <returns>True if successful, false otherwise.</returns>
         public bool Mute()
         {
-            if (!CheckConnected()) return false;
+            if (!ConfirmIsConnected()) return false;
             
             try
             {
@@ -628,7 +628,7 @@ namespace Inventonater.BleHid
         /// <returns>True if the request was sent, false otherwise.</returns>
         public bool RequestConnectionPriority(int priority)
         {
-            if (!CheckConnected()) return false;
+            if (!ConfirmIsConnected()) return false;
             
             try
             {
@@ -652,7 +652,7 @@ namespace Inventonater.BleHid
         /// <returns>True if the request was sent, false otherwise.</returns>
         public bool RequestMtu(int mtu)
         {
-            if (!CheckConnected()) return false;
+            if (!ConfirmIsConnected()) return false;
             
             if (mtu < 23 || mtu > 517)
             {
@@ -685,7 +685,7 @@ namespace Inventonater.BleHid
         /// <returns>True if successful, false otherwise.</returns>
         public bool SetTransmitPowerLevel(int level)
         {
-            if (!CheckInitialized()) return false;
+            if (!ConfirmIsInitialized()) return false;
             
             if (level < 0 || level > 2)
             {
@@ -716,7 +716,7 @@ namespace Inventonater.BleHid
         /// <returns>True if the read request was sent, false otherwise.</returns>
         public bool ReadRssi()
         {
-            if (!CheckConnected()) return false;
+            if (!ConfirmIsConnected()) return false;
             
             try
             {
@@ -738,7 +738,7 @@ namespace Inventonater.BleHid
         /// <returns>Dictionary of parameter names to values, or null if not connected.</returns>
         public System.Collections.Generic.Dictionary<string, string> GetConnectionParameters()
         {
-            if (!CheckConnected()) return null;
+            if (!ConfirmIsConnected()) return null;
             
             try
             {
@@ -783,7 +783,7 @@ namespace Inventonater.BleHid
         /// <returns>A string with diagnostic information.</returns>
         public string GetDiagnosticInfo()
         {
-            if (!CheckInitialized()) return "Not initialized";
+            if (!ConfirmIsInitialized()) return "Not initialized";
             
             try
             {
@@ -975,30 +975,25 @@ namespace Inventonater.BleHid
             callbackHandler.HandleConnectionParameterRequestComplete(message);
         }
 
-        private bool CheckInitialized()
+        public bool ConfirmIsInitialized()
         {
-            if (!IsInitialized || bridgeInstance == null)
-            {
-                string message = "BLE HID plugin not initialized";
-                Debug.LogError(message);
-                OnError?.Invoke(BleHidConstants.ERROR_NOT_INITIALIZED, message);
-                return false;
-            }
-            return true;
+            if (IsInitialized && bridgeInstance != null) return true;
+
+            string message = "BLE HID plugin not initialized";
+            Debug.LogError(message);
+            OnError?.Invoke(BleHidConstants.ERROR_NOT_INITIALIZED, message);
+            return false;
         }
         
-        private bool CheckConnected()
+        public bool ConfirmIsConnected()
         {
-            if (!CheckInitialized()) return false;
-            
-            if (!IsConnected)
-            {
-                string message = "No BLE device connected";
-                Debug.LogError(message);
-                OnError?.Invoke(BleHidConstants.ERROR_NOT_CONNECTED, message);
-                return false;
-            }
-            return true;
+            if (!ConfirmIsInitialized()) return false;
+            if (IsConnected) return true;
+
+            string message = "No BLE device connected";
+            Debug.LogError(message);
+            OnError?.Invoke(BleHidConstants.ERROR_NOT_CONNECTED, message);
+            return false;
         }
     }
 }

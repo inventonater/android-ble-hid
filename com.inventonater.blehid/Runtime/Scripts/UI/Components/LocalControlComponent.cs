@@ -126,7 +126,6 @@ namespace Inventonater.BleHid
             UIHelper.ActionButtonRow(
                 mediaRow1Labels,
                 mediaRow1Actions,
-                Logger,
                 mediaRow1Labels,
                 UIHelper.StandardButtonOptions);
 
@@ -142,7 +141,6 @@ namespace Inventonater.BleHid
             UIHelper.ActionButtonRow(
                 mediaRow2Labels,
                 mediaRow2Actions,
-                Logger,
                 mediaRow2Labels,
                 UIHelper.StandardButtonOptions);
 
@@ -176,7 +174,6 @@ namespace Inventonater.BleHid
                 UIHelper.ActionButtonRow(
                     cameraButtonLabels,
                     cameraButtonActions,
-                    Logger,
                     cameraButtonLabels,
                     UIHelper.StandardButtonOptions);
             }
@@ -202,7 +199,6 @@ namespace Inventonater.BleHid
             UIHelper.ActionButtonRow(
                 navRow1Labels,
                 navRow1Actions,
-                Logger,
                 new string[] { "Local Back pressed", "Local Home pressed", "Local Recents pressed" },
                 UIHelper.StandardButtonOptions);
 
@@ -210,10 +206,9 @@ namespace Inventonater.BleHid
             GUILayout.BeginHorizontal();
             GUILayout.FlexibleSpace();
 
-            if (UIHelper.ActionButton("Up",
-                    () => NavigateTo(BleHidLocalControl.NavigationDirection.Up),
-                    "Local Up pressed", Logger,
-                    new GUILayoutOption[] { GUILayout.Height(BUTTON_HEIGHT), GUILayout.Width(Screen.width / 3) }))
+            Action action = () => NavigateTo(BleHidLocalControl.NavigationDirection.Up);
+            GUILayoutOption[] options = new GUILayoutOption[] { GUILayout.Height(BUTTON_HEIGHT), GUILayout.Width(Screen.width / 3) };
+            if (UIHelper.Button("Up", action, "Local Up pressed", options))
             {
                 // Button action handled by ActionButton
             }
@@ -233,7 +228,6 @@ namespace Inventonater.BleHid
             UIHelper.ActionButtonRow(
                 navRow3Labels,
                 navRow3Actions,
-                Logger,
                 new string[] { "Local Left pressed", "Local Down pressed", "Local Right pressed" },
                 UIHelper.StandardButtonOptions);
 
@@ -318,18 +312,16 @@ namespace Inventonater.BleHid
             GUILayout.Label("Camera permission required for camera features");
             GUILayout.Space(5);
 
-            if (UIHelper.ActionButton("Request Camera Permission",
-                    () =>
-                    {
+            Action action = () =>
+            {
 #if UNITY_ANDROID
                         if (owner != null)
                         {
                             owner.StartCoroutine(BleHidPermissionHandler.RequestCameraPermission());
                         }
 #endif
-                    },
-                    "Requesting camera permission",Logger,
-                    UIHelper.StandardButtonOptions))
+            };
+            if (UIHelper.Button("Request Camera Permission", action, "Requesting camera permission", UIHelper.StandardButtonOptions))
             {
                 // Button action handled by ActionButton
             }

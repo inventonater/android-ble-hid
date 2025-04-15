@@ -81,7 +81,6 @@ namespace Inventonater.BleHid
                 UIHelper.ActionButtonRow(
                     labels,
                     actions,
-                    Logger,
                     messages,
                     UIHelper.StandardButtonOptions);
             }

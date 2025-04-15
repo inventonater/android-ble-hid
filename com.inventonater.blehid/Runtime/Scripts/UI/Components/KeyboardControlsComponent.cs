@@ -71,10 +71,9 @@ namespace Inventonater.BleHid
             textToSend = GUILayout.TextField(textToSend, UIHelper.StandardButtonOptions);
 
             // Send button using ActionButton to maintain consistency
-            if (UIHelper.ActionButton("Send Text",
-                    () => SendTextMessage(),
-                    GetTextActionMessage(), Logger,
-                    UIHelper.StandardButtonOptions))
+            Action action = () => SendTextMessage();
+            string editorMessage = GetTextActionMessage();
+            if (UIHelper.Button("Send Text", action, editorMessage, UIHelper.StandardButtonOptions))
             {
                 // ActionButton handles the action
             }
@@ -126,7 +125,6 @@ namespace Inventonater.BleHid
             UIHelper.ActionButtonRow(
                 specialKeys,
                 specialActions,
-                Logger,
                 specialMessages,
                 UIHelper.StandardButtonOptions);
         }
@@ -157,7 +155,6 @@ namespace Inventonater.BleHid
             UIHelper.ActionButtonRow(
                 navKeys,
                 navActions,
-                Logger,
                 navMessages,
                 UIHelper.StandardButtonOptions);
 

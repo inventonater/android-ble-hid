@@ -14,54 +14,26 @@ namespace Inventonater.BleHid
         public static readonly float StandardSliderHeight = 40f; // Taller slider for better touch interaction
         public static readonly float LargeSliderHeight = 60f;
         
-        // Predefined layout options
         public static readonly GUILayoutOption[] StandardButtonOptions = new GUILayoutOption[] { GUILayout.Height(StandardButtonHeight) };
         public static readonly GUILayoutOption[] LargeButtonOptions = new GUILayoutOption[] { GUILayout.Height(LargeButtonHeight) };
         public static readonly GUILayoutOption[] StandardSliderOptions = new GUILayoutOption[] { GUILayout.Height(StandardSliderHeight) };
         public static readonly GUILayoutOption[] LargeSliderOptions = new GUILayoutOption[] { GUILayout.Height(LargeSliderHeight) };
-        
-        /// <summary>
-        /// Create a standard button that handles both editor mode and runtime functionality
-        /// </summary>
-        public static bool Button(string label, Action runtimeAction, Action editorAction,
-            LoggingManager logger, GUILayoutOption[] options = null)
+
+        public static bool Button(string label, Action runtimeAction, string logMessage = null, GUILayoutOption[] options = null)
         {
+
             bool buttonPressed = options != null ? GUILayout.Button(label, options) : GUILayout.Button(label);
-            
             if (buttonPressed)
             {
-                ExecuteWithEditorFallback(runtimeAction, editorAction);
+                if (!IsEditorMode) runtimeAction?.Invoke();
+                LoggingManager.Instance.AddLogEntry(logMessage);
             }
-            
+
             return buttonPressed;
-        }
-        
-        /// <summary>
-        /// Create a standard button that logs a message in editor mode and performs an action in runtime
-        /// </summary>
-        public static bool LoggingButton(string label, Action runtimeAction, string editorLogMessage,
-            LoggingManager logger, GUILayoutOption[] options = null)
-        {
-            return Button(label, runtimeAction, () => logger.AddLogEntry(editorLogMessage), logger, options);
         }
 
         private static bool IsEditorMode => Application.isEditor;
 
-        /// <summary>
-        /// Execute the appropriate action based on editor mode
-        /// </summary>
-        public static void ExecuteWithEditorFallback(Action runtimeAction, Action editorAction)
-        {
-            if (IsEditorMode)
-            {
-                editorAction?.Invoke();
-            }
-            else
-            {
-                runtimeAction?.Invoke();
-            }
-        }
-        
         /// <summary>
         /// Create a standard styled box for error displays
         /// </summary>
@@ -85,14 +57,6 @@ namespace Inventonater.BleHid
             texture.SetPixel(0, 0, color);
             texture.Apply();
             return texture;
-        }
-
-        /// <summary>
-        /// Helper method to create an action or log in editor mode
-        /// </summary>
-        public static bool ActionButton(string label, Action action, string editorMessage, LoggingManager logger, GUILayoutOption[] options = null)
-        {
-            return LoggingButton(label, action, editorMessage, logger, options);
         }
 
         /// <summary>
@@ -120,26 +84,15 @@ namespace Inventonater.BleHid
         /// <summary>
         /// Create a row of action buttons with consistent styling
         /// </summary>
-        public static void ActionButtonRow(string[] buttonLabels, Action[] actions,
-            LoggingManager logger, string[] editorMessages, GUILayoutOption[] options = null)
+        public static void ActionButtonRow(string[] buttonLabels, Action[] actions, string[] editorMessages, GUILayoutOption[] options = null)
         {
-            if (options == null)
-                options = StandardButtonOptions;
+            if (options == null) options = StandardButtonOptions;
                 
             GUILayout.BeginHorizontal();
             for (int i = 0; i < buttonLabels.Length; i++)
             {
-                int index = i; // Capture for lambda
-                string message = (editorMessages != null && i < editorMessages.Length) 
-                    ? editorMessages[i] 
-                    : buttonLabels[i] + " pressed";
-                    
-                LoggingButton(
-                    buttonLabels[i], 
-                    actions[i], 
-                    message,
-                    logger, 
-                    options);
+                string message = (editorMessages != null && i < editorMessages.Length) ? editorMessages[i] : buttonLabels[i] + " pressed";
+                Button(buttonLabels[i], actions[i], message, options);
             }
             GUILayout.EndHorizontal();
         }
@@ -150,10 +103,7 @@ namespace Inventonater.BleHid
         public static void BeginSection(string title = null)
         {
             GUILayout.BeginVertical(GUI.skin.box);
-            if (!string.IsNullOrEmpty(title))
-            {
-                GUILayout.Label(title);
-            }
+            if (!string.IsNullOrEmpty(title)) GUILayout.Label(title);
         }
         
         /// <summary>
@@ -167,8 +117,7 @@ namespace Inventonater.BleHid
         /// <summary>
         /// Enhanced slider with touch-friendly height and better visual appearance (float version)
         /// </summary>
-        public static float EnhancedSlider(float currentValue, float minValue, float maxValue, 
-            string labelFormat = "{0}", GUILayoutOption[] options = null)
+        public static float EnhancedSlider(float currentValue, float minValue, float maxValue, string labelFormat = "{0}", GUILayoutOption[] options = null)
         {
             // Use standard slider options if none provided
             options = options ?? StandardSliderOptions;

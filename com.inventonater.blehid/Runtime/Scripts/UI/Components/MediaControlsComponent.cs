@@ -32,7 +32,6 @@ namespace Inventonater.BleHid
             UIHelper.ActionButtonRow(
                 playbackLabels,
                 playbackActions,
-                Logger,
                 playbackMessages,
                 UIHelper.LargeButtonOptions);
             
@@ -52,7 +51,6 @@ namespace Inventonater.BleHid
             UIHelper.ActionButtonRow(
                 volumeLabels,
                 volumeActions,
-                Logger,
                 volumeMessages,
                 UIHelper.LargeButtonOptions);
                 

@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -301,18 +302,12 @@ namespace Inventonater.BleHid
 
             GUI.enabled = connected || IsEditorMode;
 
-            if (UIHelper.ActionButton("Read RSSI",
-                    () => ReadRssi(),
-                    "Read current RSSI value", Logger,
-                    UIHelper.StandardButtonOptions))
+            if (UIHelper.Button("Read RSSI", ReadRssi, "Read current RSSI value", UIHelper.StandardButtonOptions))
             {
                 SetStatus("Reading RSSI...", Color.yellow);
             }
 
-            if (UIHelper.ActionButton("Refresh Parameters",
-                    () => RefreshParameters(),
-                    "Refresh connection parameters", Logger,
-                    UIHelper.StandardButtonOptions))
+            if (UIHelper.Button("Refresh Parameters", RefreshParameters, "Refresh connection parameters", UIHelper.StandardButtonOptions))
             {
                 SetStatus("Refreshing parameters...", Color.yellow);
             }
@@ -329,16 +324,12 @@ namespace Inventonater.BleHid
         {
             statusMessage = message;
             statusColor = color;
-
-            if (Logger != null)
-            {
-                Logger.AddLogEntry(message);
-            }
+            Logger.AddLogEntry(message);
         }
 
         private void UpdateValuesFromManager()
         {
-            if (BleHidManager == null || !BleHidManager.IsConnected)
+            if (!BleHidManager.IsConnected)
             {
                 // Clear all parameter values
                 connectionInterval = "--";
@@ -359,35 +350,27 @@ namespace Inventonater.BleHid
 
         private void RequestConnectionPriority(int priority)
         {
-            if (BleHidManager == null || !BleHidManager.IsConnected) return;
-
-            BleHidManager.RequestConnectionPriority(priority);
+            if (BleHidManager.IsConnected) BleHidManager.RequestConnectionPriority(priority);
         }
 
         private void RequestMtu()
         {
-            if (BleHidManager == null || !BleHidManager.IsConnected) return;
-
-            BleHidManager.RequestMtu(requestedMtu);
+            if (BleHidManager.IsConnected) BleHidManager.RequestMtu(requestedMtu);
         }
 
         private void SetTransmitPowerLevel(int level)
         {
-            if (BleHidManager == null || !BleHidManager.IsInitialized) return;
-
-            BleHidManager.SetTransmitPowerLevel(level);
+            if (BleHidManager.IsInitialized) BleHidManager.SetTransmitPowerLevel(level);
         }
 
         private void ReadRssi()
         {
-            if (BleHidManager == null || !BleHidManager.IsConnected) return;
-
-            BleHidManager.ReadRssi();
+            if (BleHidManager.IsConnected) BleHidManager.ReadRssi();
         }
 
         private void RefreshParameters()
         {
-            if (BleHidManager == null || !BleHidManager.IsConnected) return;
+            if (!BleHidManager.IsConnected) return;
 
             Dictionary<string, string> parameters = BleHidManager.GetConnectionParameters();
             if (parameters != null)

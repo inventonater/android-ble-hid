@@ -7,56 +7,23 @@ namespace Inventonater.BleHid
     /// </summary>
     public class PointerInputProcessor
     {
-        private static LoggingManager logger => LoggingManager.Instance;
+        private static LoggingManager Logger => LoggingManager.Instance;
+        private static BleHidManager BleHidManager => BleHidManager.Instance;
 
-        private BleHidManager bleHidManager => BleHidManager.Instance;
         private bool isEditorMode;
         private Vector2 lastPosition;
         private bool isDragging = false;
         private Rect touchpadScreenRect;
-        
-        // Input filters
-        private IInputFilter inputFilter;
-        
-        // Sensitivity settings
-        private float globalScale = 1.0f;
-        private float horizontalSensitivity = 3.0f;
-        private float verticalSensitivity = 3.0f;
 
-        /// <summary>
-        /// Set the touchpad boundaries in screen coordinates
-        /// </summary>
-        public void SetTouchpadRect(Rect screenRect)
-        {
-            touchpadScreenRect = screenRect;
-        }
-        
-        /// <summary>
-        /// Set input filter to use for processing
-        /// </summary>
-        public void SetInputFilter(IInputFilter filter)
-        {
-            inputFilter = filter;
-        }
-        
-        /// <summary>
-        /// Set sensitivity parameters
-        /// </summary>
-        public void SetSensitivity(float globalScale, float horizontalSensitivity, float verticalSensitivity)
-        {
-            this.globalScale = globalScale;
-            this.horizontalSensitivity = horizontalSensitivity;
-            this.verticalSensitivity = verticalSensitivity;
-        }
-        
-        /// <summary>
-        /// Is the processor actively tracking a drag operation
-        /// </summary>
-        public bool IsDragging()
-        {
-            return isDragging;
-        }
-        
+        private IInputFilter _inputFilter;
+        public float GlobalScale = 1.0f;
+        public float HorizontalSensitivity = 3.0f;
+        public float VerticalSensitivity = 3.0f;
+
+        public void SetTouchpadRect(Rect screenRect) => touchpadScreenRect = screenRect;
+        public void SetInputFilter(IInputFilter filter) => _inputFilter = filter;
+        public bool IsDragging() => isDragging;
+
         /// <summary>
         /// Handle pointer input from any source (touch, mouse, external devices)
         /// </summary>
@@ -67,105 +34,70 @@ namespace Inventonater.BleHid
         public bool HandlePointerInput(Vector2 position, PointerInputState state, string inputSource = "External")
         {
             // Skip if components are missing
-            if (bleHidManager == null || inputFilter == null)
+            if (_inputFilter == null)
                 return false;
-                
+
             // Determine if we should process input (connected or in editor mode)
-            bool shouldProcess = bleHidManager.IsConnected || isEditorMode;
+            bool shouldProcess = BleHidManager.IsConnected || isEditorMode;
             if (!shouldProcess)
                 return false;
-                
+
             // Log touchpad boundaries for debugging when input begins
             if (state == PointerInputState.Begin)
             {
-                logger?.AddLogEntry($"Touchpad screen rect: ({touchpadScreenRect.x}, {touchpadScreenRect.y}, w:{touchpadScreenRect.width}, h:{touchpadScreenRect.height})");
-                logger?.AddLogEntry($"{inputSource} input began at: ({position.x}, {position.y})");
+                Logger?.AddLogEntry($"Touchpad screen rect: ({touchpadScreenRect.x}, {touchpadScreenRect.y}, w:{touchpadScreenRect.width}, h:{touchpadScreenRect.height})");
+                Logger?.AddLogEntry($"{inputSource} input began at: ({position.x}, {position.y})");
             }
 
             bool didSendMove = false;
-            
-            switch (state)
+
+            if (state == PointerInputState.Begin)
             {
-                case PointerInputState.Begin:
-                    // Start dragging if input begins inside touchpad
-                    if (touchpadScreenRect.Contains(position))
-                    {
-                        lastPosition = position;
-                        isDragging = true;
-                        logger?.AddLogEntry($"{inputSource} drag started inside touchpad");
-                    }
-                    break;
-
-                case PointerInputState.Move:
-                    // Process movement if we're dragging
-                    if (isDragging)
-                    {
-                        didSendMove = ProcessPointerMovement(position, inputSource);
-                    }
-                    break;
-
-                case PointerInputState.End:
-                    if (isDragging)
-                    {
-                        isDragging = false;
-                        logger?.AddLogEntry($"{inputSource} drag ended");
-                    }
-                    break;
+                if (touchpadScreenRect.Contains(position))
+                {
+                    lastPosition = position;
+                    isDragging = true;
+                    Logger.AddLogEntry($"{inputSource} drag started inside touchpad");
+                }
             }
-            
+            else if (state == PointerInputState.Move)
+            {
+                if (!isDragging) return didSendMove;
+
+                // Calculate raw delta since last position
+                Vector2 rawDelta = position - lastPosition;
+
+                float timestamp = Time.time;
+                Vector2 filteredDelta = _inputFilter.Filter(rawDelta, timestamp);
+
+                if (filteredDelta.sqrMagnitude > 0.0001f)
+                {
+                    Vector2 processedDelta = ProcessMotionVector(filteredDelta);
+                    int finalDeltaX = Mathf.RoundToInt(processedDelta.x);
+                    int finalDeltaY = Mathf.RoundToInt(processedDelta.y);
+
+                    if (finalDeltaX != 0 || finalDeltaY != 0)
+                    {
+                        finalDeltaY = -finalDeltaY;
+                        if (!isEditorMode) BleHidManager.MoveMouse(finalDeltaX, finalDeltaY);
+                        else Logger?.AddLogEntry($"{inputSource} delta: ({finalDeltaX}, {finalDeltaY})");
+                        lastPosition = position;
+                        didSendMove = true;
+                    }
+                }
+            }
+            else if (state == PointerInputState.End)
+            {
+                if (isDragging)
+                {
+                    isDragging = false;
+                    Logger.AddLogEntry($"{inputSource} drag ended");
+                }
+            }
+
             return didSendMove;
         }
 
-        /// <summary>
-        /// Processes pointer movement for both touch and mouse input
-        /// </summary>
-        private bool ProcessPointerMovement(Vector2 currentPosition, string source = "Pointer")
-        {
-            // Calculate raw delta since last position
-            Vector2 rawDelta = currentPosition - lastPosition;
-            
-            // Apply unified vector filter
-            float timestamp = Time.time;
-            Vector2 filteredDelta = inputFilter.Filter(rawDelta, timestamp);
-            
-            // Don't process extremely small movements
-            if (filteredDelta.sqrMagnitude < 0.0001f)
-            {
-                return false;
-            }
-            
-            // Process the movement
-            Vector2 processedDelta = ProcessMotionVector(filteredDelta);
-            
-            // Only convert to int at the final step
-            int finalDeltaX = Mathf.RoundToInt(processedDelta.x);
-            int finalDeltaY = Mathf.RoundToInt(processedDelta.y);
-            
-            // Only process if movement is significant
-            if (finalDeltaX != 0 || finalDeltaY != 0)
-            {
-                // Invert Y direction for mouse movement (screen Y goes down, mouse Y goes up)
-                finalDeltaY = -finalDeltaY;
-
-                // Send movement or log in editor mode
-                if (!isEditorMode)
-                {
-                    bleHidManager.MoveMouse(finalDeltaX, finalDeltaY);
-                }
-                else
-                {
-                    logger?.AddLogEntry($"{source} delta: ({finalDeltaX}, {finalDeltaY})");
-                }
-                
-                // Update last position for next calculation
-                lastPosition = currentPosition;
-                
-                return true;
-            }
-            
-            return false;
-        }
-        
         /// <summary>
         /// Processes a motion vector by applying sensitivities and scaling
         /// </summary>
@@ -174,20 +106,17 @@ namespace Inventonater.BleHid
             // Get the direction and magnitude separately
             float magnitude = motionVector.magnitude;
             Vector2 direction = motionVector / magnitude;
-            
+
             // Apply different sensitivities to each axis but keep as float
-            direction.x *= horizontalSensitivity;
-            direction.y *= verticalSensitivity;
-            
+            direction.x *= HorizontalSensitivity;
+            direction.y *= VerticalSensitivity;
+
             // Re-normalize after applying different axis sensitivities
-            if (direction.sqrMagnitude > 0)
-            {
-                direction = direction.normalized;
-            }
-            
+            if (direction.sqrMagnitude > 0) { direction = direction.normalized; }
+
             // Apply global scale to the magnitude
-            float scaledMagnitude = magnitude * globalScale;
-            
+            float scaledMagnitude = magnitude * GlobalScale;
+
             // Reconstruct the vector with proper direction and scaled magnitude
             return direction * scaledMagnitude;
         }
