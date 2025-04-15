@@ -802,6 +802,71 @@ public class BleHidUnityPlugin {
     }
     
     /**
+     * The Unity player activity class name used in this project
+     * This is the specific activity class used by this Unity project
+     */
+    private static final String UNITY_PLAYER_ACTIVITY_CLASS = "com.unity3d.player.UnityPlayerGameActivity";
+    
+    /**
+     * Get the current context from the Unity player.
+     * This method attempts multiple strategies to get a valid context.
+     *
+     * @return The current context, or null if not available
+     */
+    private static Context getCurrentContext() {
+        Log.e(TAG, "Attempting to get current context for service");
+        
+        // Try approach #1: Direct access through Unity's UnityPlayer class
+        try {
+            Class<?> unityPlayerClass = Class.forName("com.unity3d.player.UnityPlayer");
+            java.lang.reflect.Field currentActivityField = unityPlayerClass.getDeclaredField("currentActivity");
+            currentActivityField.setAccessible(true);
+            Context context = (Context) currentActivityField.get(null);
+            if (context != null) {
+                Log.e(TAG, "Got context through UnityPlayer.currentActivity: " + context.getClass().getName());
+                return context;
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "Failed to get context through UnityPlayer: " + e.getMessage());
+        }
+        
+        // Try approach #2: Try to load the specific activity class
+        try {
+            Class<?> activityClass = Class.forName(UNITY_PLAYER_ACTIVITY_CLASS);
+            Log.e(TAG, "Found activity class: " + activityClass.getName());
+            
+            // The class exists, but we can't get an instance directly
+            // Let's try to get the application context
+            try {
+                Class<?> activityThreadClass = Class.forName("android.app.ActivityThread");
+                java.lang.reflect.Method currentActivityThreadMethod = activityThreadClass.getDeclaredMethod("currentActivityThread");
+                currentActivityThreadMethod.setAccessible(true);
+                Object activityThread = currentActivityThreadMethod.invoke(null);
+                
+                java.lang.reflect.Method getApplicationMethod = activityThreadClass.getDeclaredMethod("getApplication");
+                Context context = (Context) getApplicationMethod.invoke(activityThread);
+                if (context != null) {
+                    Log.e(TAG, "Got context from ActivityThread: " + context.getPackageName());
+                    return context;
+                }
+            } catch (Exception e) {
+                Log.e(TAG, "Error getting context from ActivityThread: " + e.getMessage());
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "Failed to load activity class: " + e.getMessage());
+        }
+        
+        // Final fallback
+        try {
+            // This is deprecated but still works in many cases
+            return com.unity3d.player.UnityPlayer.currentActivity;
+        } catch (Exception e) {
+            Log.e(TAG, "All context retrieval attempts failed");
+            return null;
+        }
+    }
+    
+    /**
      * Start the foreground service to keep accessibility service alive.
      * This should be called when your app needs to ensure the service
      * continues to run in the background.
@@ -809,40 +874,67 @@ public class BleHidUnityPlugin {
      * @return true if the service start request was sent
      */
     public static boolean startForegroundService() {
-        Log.d(TAG, "startForegroundService called from Unity");
+        Log.e(TAG, "startForegroundService called from Unity - CRITICAL SERVICE STARTUP LOG");
         
         try {
-            Context context = com.unity3d.player.UnityPlayer.currentActivity;
+            // Get the current context - directly attempt to use the known activity class
+            Context context = getCurrentContext();
             if (context == null) {
                 Log.e(TAG, "Unable to start foreground service: context is null");
                 return false;
             }
             
-            if (VERBOSE_LOGGING) {
-                Log.d(TAG, "Creating intent for BleHidForegroundService");
-            }
+            Log.e(TAG, "Application context package: " + context.getPackageName());
+            Log.e(TAG, "Current context class: " + context.getClass().getName());
             
-            Intent serviceIntent = new Intent(context, com.inventonater.blehid.core.BleHidForegroundService.class);
+            // Create intent with explicit component name to avoid package confusion
+            Intent serviceIntent = new Intent();
+            
+            // Set component with explicit package
+            serviceIntent.setClassName(
+                context.getPackageName(), 
+                "com.inventonater.blehid.core.BleHidForegroundService"
+            );
             serviceIntent.setAction("START_FOREGROUND");
             
-            if (VERBOSE_LOGGING) {
-                Log.d(TAG, "Calling startForegroundService with intent: " + serviceIntent);
-            }
+            // For debugging
+            Log.e(TAG, "Starting service with: " + serviceIntent.toString());
+            Log.e(TAG, "Component: " + serviceIntent.getComponent());
             
-            // Try-catch specifically for the startForegroundService call to get better error info
-            try {
-                context.startForegroundService(serviceIntent);
-            } catch (Exception e) {
-                Log.e(TAG, "Failed to start foreground service via startForegroundService call", e);
-                // Fallback to regular start
-                Log.d(TAG, "Trying fallback with regular startService");
+            // Try to start the service with the most direct method using explicit intent
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+                Log.e(TAG, "Using startForegroundService (Android 8+)");
+                try {
+                    context.startForegroundService(serviceIntent);
+                    Log.e(TAG, "startForegroundService called successfully");
+                } catch (Exception e) {
+                    Log.e(TAG, "startForegroundService failed: " + e.getMessage(), e);
+                    // Last resort - try direct startService
+                    Log.e(TAG, "Trying regular startService as fallback");
+                    context.startService(serviceIntent);
+                    Log.e(TAG, "Fallback startService called successfully");
+                }
+            } else {
+                Log.e(TAG, "Using startService (pre-Android 8)");
                 context.startService(serviceIntent);
+                Log.e(TAG, "startService called successfully");
             }
             
-            Log.d(TAG, "Foreground service start requested successfully");
+            // Verify service running
+            boolean isServiceRunning = false;
+            try {
+                Class<?> serviceClass = Class.forName("com.inventonater.blehid.core.BleHidForegroundService");
+                java.lang.reflect.Method isRunningMethod = serviceClass.getMethod("isRunning");
+                isServiceRunning = (boolean) isRunningMethod.invoke(null);
+                Log.e(TAG, "Service running check: " + isServiceRunning);
+            } catch (Exception e) {
+                Log.e(TAG, "Failed to check if service is running", e);
+            }
+            
+            Log.e(TAG, "Foreground service start request process completed");
             return true;
         } catch (Exception e) {
-            Log.e(TAG, "Error starting foreground service", e);
+            Log.e(TAG, "Critical error starting foreground service", e);
             return false;
         }
     }
@@ -856,22 +948,20 @@ public class BleHidUnityPlugin {
         Log.d(TAG, "stopForegroundService called from Unity");
         
         try {
-            Context context = com.unity3d.player.UnityPlayer.currentActivity;
+            Context context = getCurrentContext();
             if (context == null) {
                 Log.e(TAG, "Unable to stop foreground service: context is null");
                 return false;
             }
             
-            if (VERBOSE_LOGGING) {
-                Log.d(TAG, "Creating intent to stop BleHidForegroundService");
-            }
-            
-            Intent serviceIntent = new Intent(context, com.inventonater.blehid.core.BleHidForegroundService.class);
+            Intent serviceIntent = new Intent();
+            serviceIntent.setClassName(
+                context.getPackageName(),
+                "com.inventonater.blehid.core.BleHidForegroundService"
+            );
             serviceIntent.setAction("STOP_FOREGROUND");
             
-            if (VERBOSE_LOGGING) {
-                Log.d(TAG, "Calling startService with stop action: " + serviceIntent);
-            }
+            Log.d(TAG, "Calling startService with stop action: " + serviceIntent);
             
             context.startService(serviceIntent);
             Log.d(TAG, "Foreground service stop requested successfully");

@@ -34,28 +34,65 @@ public class BleHidForegroundService extends Service {
     private boolean isRunning = false;
     private Handler handler;
     
+    /**
+     * Static flag to track if service is running
+     */
+    private static boolean isServiceRunning = false;
+    
+    /**
+     * Check if service is running
+     */
+    public static boolean isRunning() {
+        return isServiceRunning;
+    }
+    
     @Override
     public void onCreate() {
+        Log.e(TAG, "SERVICE ONCREATE CALLED - VERY FIRST LOG"); // This line will help see if the service starts at all
         super.onCreate();
         handler = new Handler(Looper.getMainLooper());
-        createNotificationChannel();
+        
+        try {
+            Log.d(TAG, "Creating notification channel in onCreate");
+            createNotificationChannel();
+            Log.d(TAG, "Notification channel created successfully");
+        } catch (Exception e) {
+            Log.e(TAG, "ERROR creating notification channel", e);
+        }
+        
+        // Set static running flag
+        isServiceRunning = true;
     }
     
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
-        String action = intent != null ? intent.getAction() : null;
+        Log.e(TAG, "onStartCommand received with startId: " + startId); // Early logging
         
-        if ("START_FOREGROUND".equals(action)) {
-            if (!isRunning) {
-                startForegroundService();
-                isRunning = true;
-                Log.d(TAG, "Foreground service started");
+        String action = intent != null ? intent.getAction() : null;
+        Log.d(TAG, "Service action received: " + action);
+        
+        try {
+            if ("START_FOREGROUND".equals(action)) {
+                if (!isRunning) {
+                    Log.d(TAG, "Starting foreground service from onStartCommand");
+                    startForegroundService();
+                    isRunning = true;
+                    Log.d(TAG, "Foreground service started");
+                } else {
+                    Log.d(TAG, "Service already running, not starting again");
+                }
+            } else if ("STOP_FOREGROUND".equals(action)) {
+                Log.d(TAG, "Stopping foreground service");
+                stopForeground(Service.STOP_FOREGROUND_REMOVE);
+                stopSelf();
+                isRunning = false;
+                isServiceRunning = false;
+                Log.d(TAG, "Foreground service stopped");
+            } else {
+                Log.w(TAG, "Unknown action received: " + action);
             }
-        } else if ("STOP_FOREGROUND".equals(action)) {
-            stopForeground(Service.STOP_FOREGROUND_REMOVE);
-            stopSelf();
-            isRunning = false;
-            Log.d(TAG, "Foreground service stopped");
+        } catch (Exception e) {
+            Log.e(TAG, "Error in onStartCommand", e);
         }
         
         return START_STICKY;
@@ -113,10 +150,30 @@ public class BleHidForegroundService extends Service {
                 Log.d(TAG, "Notification built successfully, calling startForeground...");
             }
             
-            // Using Android 12's improved foreground service type specification
-            // FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE is appropriate for BLE operations
-            startForeground(NOTIFICATION_ID, notification);
-            Log.d(TAG, "Foreground service started with proper type");
+            try {
+                // Handle different Android versions for starting foreground service
+                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
+                    Log.d(TAG, "Using startForeground with FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE for Android 10+");
+                    // On Android 10+, specify the foreground service type
+                    startForeground(NOTIFICATION_ID, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE);
+                } else {
+                    // For older Android versions
+                    startForeground(NOTIFICATION_ID, notification);
+                }
+                Log.d(TAG, "Foreground service started successfully");
+            } catch (Exception e) {
+                Log.e(TAG, "Failed to start foreground service", e);
+                
+                // Fallback method - just try the basic version
+                try {
+                    Log.d(TAG, "Trying fallback to basic startForeground");
+                    startForeground(NOTIFICATION_ID, notification);
+                    Log.d(TAG, "Fallback to basic startForeground succeeded");
+                } catch (Exception e2) {
+                    Log.e(TAG, "All startForeground attempts failed", e2);
+                    throw e2; // Re-throw to be caught by outer try-catch
+                }
+            }
             
             // Ensure accessibility service is running and monitored
             establishAccessibilityServiceConnection();
@@ -132,18 +189,27 @@ public class BleHidForegroundService extends Service {
         if (VERBOSE_LOGGING) {
             Log.d(TAG, "Building notification...");
         }
+        
         // Create a pending intent to open the main Unity activity when notification is tapped
         Intent notificationIntent;
+        
+        // The exact activity class name used by this Unity project
+        final String UNITY_ACTIVITY_CLASS = "com.unity3d.player.UnityPlayerGameActivity";
+        
         try {
-            // Try to get the Unity player activity class
-            Class<?> unityPlayerClass = Class.forName("com.unity3d.player.UnityPlayerActivity");
-            notificationIntent = new Intent(this, unityPlayerClass);
+            // Direct approach using the correct class name
+            Log.e(TAG, "Creating notification intent for activity: " + UNITY_ACTIVITY_CLASS);
+            Class<?> activityClass = Class.forName(UNITY_ACTIVITY_CLASS);
+            notificationIntent = new Intent(this, activityClass);
+            Log.e(TAG, "Created intent with explicit activity class");
         } catch (ClassNotFoundException e) {
-            // Fallback if Unity class not found
+            Log.e(TAG, "Couldn't find activity class, using launcher intent: " + e.getMessage());
+            // If we can't load the class directly, fall back to a launcher intent
             notificationIntent = new Intent();
             notificationIntent.setPackage(getPackageName());
             notificationIntent.setAction(Intent.ACTION_MAIN);
             notificationIntent.addCategory(Intent.CATEGORY_LAUNCHER);
+            Log.e(TAG, "Using launcher intent for package: " + getPackageName());
         }
         
         notificationIntent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
@@ -153,16 +219,18 @@ public class BleHidForegroundService extends Service {
                 notificationIntent, PendingIntent.FLAG_IMMUTABLE);
         
         // Build the notification with Android 12 design guidelines
-        Notification notification = new NotificationCompat.Builder(this, CHANNEL_ID)
+        NotificationCompat.Builder builder = new NotificationCompat.Builder(this, CHANNEL_ID)
             .setContentTitle("BleHID Active")
             .setContentText("Maintaining background connection for accessibility services")
-            .setSmallIcon(android.R.drawable.ic_dialog_info) // Using system icon as placeholder
+            .setSmallIcon(android.R.drawable.stat_sys_data_bluetooth) // Better icon for BLE
             .setContentIntent(pendingIntent)
             .setForegroundServiceBehavior(NotificationCompat.FOREGROUND_SERVICE_IMMEDIATE)
-            .setPriority(NotificationCompat.PRIORITY_DEFAULT) // Increased from LOW to DEFAULT
+            .setPriority(NotificationCompat.PRIORITY_HIGH) // Try with HIGH for better visibility
             .setCategory(NotificationCompat.CATEGORY_SERVICE)
-            .setOngoing(true)
-            .build();
+            .setVisibility(NotificationCompat.VISIBILITY_PUBLIC) // Make visible on lock screen
+            .setOngoing(true);
+            
+        Notification notification = builder.build();
             
         if (VERBOSE_LOGGING) {
             Log.d(TAG, "Notification built: " + notification);
