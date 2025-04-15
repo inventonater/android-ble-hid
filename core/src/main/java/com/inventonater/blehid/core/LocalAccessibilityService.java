@@ -2,6 +2,7 @@ package com.inventonater.blehid.core;
 
 import android.accessibilityservice.AccessibilityService;
 import android.content.Intent;
+import android.os.Build;
 import android.os.Handler;
 import android.os.Looper;
 import android.util.Log;
@@ -36,6 +37,9 @@ public class LocalAccessibilityService extends AccessibilityService {
         isConnected = true;
         Log.d(TAG, "Accessibility service connected and ready for use");
         
+        // Start the foreground service to ensure we stay alive
+        startForegroundServiceIfNeeded();
+        
         // Register with controller if available
         LocalInputManager manager = LocalInputManager.getInstance();
         if (manager != null) {
@@ -47,6 +51,19 @@ public class LocalAccessibilityService extends AccessibilityService {
         
         // Start periodic self-checks to verify service is running
         startPeriodicChecks();
+    }
+    
+    /**
+     * Starts the foreground service to keep this accessibility service alive
+     */
+    private void startForegroundServiceIfNeeded() {
+        Intent serviceIntent = new Intent(this, BleHidForegroundService.class);
+        serviceIntent.setAction("START_FOREGROUND");
+        
+        // Android 12+ (API 31+) can directly call startForegroundService
+        startForegroundService(serviceIntent);
+        
+        Log.d(TAG, "Requested foreground service to start");
     }
     
     /**

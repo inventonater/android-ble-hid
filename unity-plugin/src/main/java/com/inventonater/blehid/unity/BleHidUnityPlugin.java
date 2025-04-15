@@ -798,4 +798,54 @@ public class BleHidUnityPlugin {
         }
         return true;
     }
+    
+    /**
+     * Start the foreground service to keep accessibility service alive.
+     * This should be called when your app needs to ensure the service
+     * continues to run in the background.
+     * 
+     * @return true if the service start request was sent
+     */
+    public static boolean startForegroundService() {
+        try {
+            Context context = com.unity3d.player.UnityPlayer.currentActivity;
+            if (context == null) {
+                Log.e(TAG, "Unable to start foreground service: context is null");
+                return false;
+            }
+            
+            Intent serviceIntent = new Intent(context, com.inventonater.blehid.core.BleHidForegroundService.class);
+            serviceIntent.setAction("START_FOREGROUND");
+            context.startForegroundService(serviceIntent);
+            Log.d(TAG, "Foreground service start requested");
+            return true;
+        } catch (Exception e) {
+            Log.e(TAG, "Error starting foreground service", e);
+            return false;
+        }
+    }
+    
+    /**
+     * Stop the foreground service when it's no longer needed.
+     * 
+     * @return true if the service stop request was sent
+     */
+    public static boolean stopForegroundService() {
+        try {
+            Context context = com.unity3d.player.UnityPlayer.currentActivity;
+            if (context == null) {
+                Log.e(TAG, "Unable to stop foreground service: context is null");
+                return false;
+            }
+            
+            Intent serviceIntent = new Intent(context, com.inventonater.blehid.core.BleHidForegroundService.class);
+            serviceIntent.setAction("STOP_FOREGROUND");
+            context.startService(serviceIntent);
+            Log.d(TAG, "Foreground service stop requested");
+            return true;
+        } catch (Exception e) {
+            Log.e(TAG, "Error stopping foreground service", e);
+            return false;
+        }
+    }
 }

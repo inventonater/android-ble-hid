@@ -135,5 +135,6 @@ namespace Inventonater.BleHid
         public const int ERROR_PERMISSIONS_NOT_GRANTED = 1008;
         public const int ERROR_ACCESSIBILITY_NOT_ENABLED = 1009;
         public const int ERROR_MOUSE_MOVEMENT_OUT_OF_RANGE = 1010;
+        public const int ERROR_GENERAL_ERROR = 1011;
     }
 }
