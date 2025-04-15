@@ -9,34 +9,36 @@ namespace Inventonater.BleHid.UI
     /// <summary>
     /// Handles error UI for permissions and accessibility
     /// </summary>
-public class ErrorHandlingComponent : UIComponent
-{
-    /// <summary>
-    /// Implementation of the abstract DrawUI method.
-    /// This class has specialized drawing methods called directly by the main UI.
-    /// </summary>
-    public override void DrawUI()
+    public class ErrorHandlingComponent : UIComponent
     {
-        // This component uses specialized drawing methods that are called directly
-        // from the main UI class based on error conditions:
-        // - DrawPermissionErrorUI()
-        // - DrawAccessibilityErrorUI(bool)
-    }
-    
-    private bool hasPermissionError = false;
+        #region Properties
+        
+        // Permission state
+        private bool hasPermissionError = false;
         private string permissionErrorMessage = "";
         private List<BleHidPermissionHandler.AndroidPermission> missingPermissions = new List<BleHidPermissionHandler.AndroidPermission>();
         private bool checkingPermissions = false;
         
+        // Accessibility state
         private bool hasAccessibilityError = false;
         private string accessibilityErrorMessage = "Accessibility Service is required for local device control";
         private bool accessibilityServiceEnabled = false;
         private bool checkingAccessibilityService = false;
         
+        // External reference
         private MonoBehaviour owner;
         
+        // Error styling
+        private readonly Color permissionErrorColor = new Color(0.8f, 0.2f, 0.2f, 1.0f);
+        private readonly Color accessibilityErrorColor = new Color(0.8f, 0.4f, 0.0f, 1.0f);
+        
+        // Public properties
         public bool HasPermissionError => hasPermissionError;
         public bool HasAccessibilityError => hasAccessibilityError;
+        
+        #endregion
+        
+        #region Initialization and Setup
         
         public override void Initialize(BleHidManager bleHidManager, LoggingManager logger, bool isEditorMode)
         {
@@ -56,6 +58,19 @@ public class ErrorHandlingComponent : UIComponent
             this.owner = owner;
         }
         
+        #endregion
+        
+        #region Public Methods
+        
+        public override void DrawUI()
+        {
+            // This component uses specialized drawing methods that are called directly
+            // from the main UI class based on error conditions
+        }
+        
+        /// <summary>
+        /// Set a permission error
+        /// </summary>
         public void SetPermissionError(string errorMessage)
         {
             hasPermissionError = true;
@@ -66,17 +81,15 @@ public class ErrorHandlingComponent : UIComponent
             CheckMissingPermissions();
         }
         
+        /// <summary>
+        /// Set accessibility error state
+        /// </summary>
         public void SetAccessibilityError(bool hasError)
         {
             hasAccessibilityError = hasError;
-            if (!hasError)
-            {
-                Logger.AddLogEntry("Accessibility service is enabled");
-            }
-            else
-            {
-                Logger.AddLogEntry("Accessibility service is not enabled");
-            }
+            Logger.AddLogEntry(hasError 
+                ? "Accessibility service is not enabled" 
+                : "Accessibility service is enabled");
         }
         
         /// <summary>
@@ -90,62 +103,32 @@ public class ErrorHandlingComponent : UIComponent
             owner.StartCoroutine(CheckAccessibilityServiceCoroutine());
         }
         
-        private IEnumerator CheckAccessibilityServiceCoroutine()
+        /// <summary>
+        /// Check for missing permissions and update the UI
+        /// </summary>
+        public void CheckMissingPermissions()
         {
-            yield return null; // Wait a frame to let UI update
+            if (owner == null) return;
             
-            // First try using the direct method that doesn't require initialization
-            bool isEnabled = BleHidLocalControl.CheckAccessibilityServiceEnabledDirect();
-            
-            // If that fails, fall back to the environment checker
-            if (!isEnabled)
-            {
-                string errorMsg;
-                isEnabled = BleHidEnvironmentChecker.CheckAccessibilityServiceEnabled(out errorMsg);
-                
-                if (!isEnabled)
-                {
-                    Logger.AddLogEntry("Accessibility service check failed: " + errorMsg);
-                }
-            }
-            
-            // Update accessibility status
-            accessibilityServiceEnabled = isEnabled;
-            hasAccessibilityError = !isEnabled;
-            
-            if (isEnabled)
-            {
-                Logger.AddLogEntry("Accessibility service is enabled");
-            }
-            else
-            {
-                Logger.AddLogEntry("Accessibility service is not enabled");
-            }
-            
-            checkingAccessibilityService = false;
-            
-            // Add exponential backoff for repeated checks when service is not enabled
-            if (!isEnabled && owner != null)
-            {
-                // Schedule a delayed check with exponential backoff up to a maximum
-                // If the UI is already periodically checking, this will just add an extra check
-                owner.StartCoroutine(DelayedAccessibilityCheck(2.0f)); // Add an extra check after 2 seconds
-            }
+            checkingPermissions = true;
+            owner.StartCoroutine(CheckMissingPermissionsCoroutine());
         }
-
+        
+        #endregion
+        
+        #region UI Drawing Methods
+        
         /// <summary>
         /// Draw the permission error UI with instructions
         /// </summary>
         public void DrawPermissionErrorUI()
         {
-            // Create a style for the error box
-            GUIStyle errorStyle = UIHelper.CreateErrorStyle(new Color(0.8f, 0.2f, 0.2f, 1.0f));
+            GUIStyle errorStyle = UIHelper.CreateErrorStyle(permissionErrorColor);
             
             GUILayout.BeginVertical(errorStyle);
             
             // Header
-            GUILayout.Label("Missing Permissions", GUIStyle.none);
-            GUILayout.Space(5);
+            DrawPermissionErrorHeader();
             
             if (checkingPermissions)
             {
@@ -153,54 +136,15 @@ public class ErrorHandlingComponent : UIComponent
             }
             else if (missingPermissions.Count > 0)
             {
-                // Show general error message
-                GUILayout.Label(permissionErrorMessage, GUIStyle.none);
-                GUILayout.Space(10);
-                
-                // List each missing permission with a request button
-                GUILayout.Label("The following permissions are required:", GUIStyle.none);
-                GUILayout.Space(5);
-                
-                foreach (var permission in missingPermissions)
-                {
-                    GUILayout.BeginHorizontal();
-                    GUILayout.Label($"• {permission.Name}: {permission.Description}", GUIStyle.none, GUILayout.Width(Screen.width * 0.6f));
-                    
-                    if (GUILayout.Button("Request", GUILayout.Height(40)))
-                    {
-                        Logger.AddLogEntry($"Requesting permission: {permission.Name}");
-                        if (owner != null)
-                        {
-                            owner.StartCoroutine(RequestSinglePermission(permission));
-                        }
-                    }
-                    GUILayout.EndHorizontal();
-                }
-                
-                // Open settings button
-                GUILayout.Space(10);
-                GUILayout.Label("If permission requests don't work, try granting them manually:", GUIStyle.none);
-                
-                if (GUILayout.Button("Open App Settings", GUILayout.Height(50)))
-                {
-                    Logger.AddLogEntry("Opening app settings");
-                    BleHidPermissionHandler.OpenAppSettings();
-                }
+                DrawMissingPermissionsList();
             }
             else
             {
-                GUILayout.Label("Permission error occurred but no missing permissions were found.", GUIStyle.none);
-                GUILayout.Label("This could be a temporary issue. Please try again.", GUIStyle.none);
+                DrawGenericPermissionError();
             }
             
             // Retry button
-            GUILayout.Space(10);
-            if (GUILayout.Button("Check Permissions Again", GUILayout.Height(60)))
-            {
-                // Re-check permissions
-                CheckMissingPermissions();
-                Logger.AddLogEntry("Rechecking permissions...");
-            }
+            DrawPermissionRetryButton();
             
             GUILayout.EndVertical();
         }
@@ -210,8 +154,7 @@ public class ErrorHandlingComponent : UIComponent
         /// </summary>
         public void DrawAccessibilityErrorUI(bool fullUI)
         {
-            // Create a style for the error box
-            GUIStyle errorStyle = UIHelper.CreateErrorStyle(new Color(0.8f, 0.4f, 0.0f, 1.0f)); // Orange for accessibility
+            GUIStyle errorStyle = UIHelper.CreateErrorStyle(accessibilityErrorColor);
             
             GUILayout.BeginVertical(errorStyle);
             
@@ -230,71 +173,221 @@ public class ErrorHandlingComponent : UIComponent
                 
                 if (fullUI)
                 {
-                    // Full UI with detailed instructions
-                    GUILayout.Space(10);
-                    
-                    if (GUILayout.Button("Open Accessibility Settings", GUILayout.Height(60)))
-                    {
-                        Logger.AddLogEntry("Opening accessibility settings");
-                        
-                        #if UNITY_ANDROID && !UNITY_EDITOR
-                        try
-                        {
-                            // Use the improved method with fallback mechanism
-                            if (BleHidLocalControl.Instance != null)
-                            {
-                                BleHidLocalControl.Instance.OpenAccessibilitySettings();
-                            }
-                            
-                            // Schedule a check after a delay to see if the settings change
-                            if (owner != null)
-                            {
-                                owner.StartCoroutine(DelayedAccessibilityCheck(3.0f));
-                            }
-                        }
-                        catch (Exception e)
-                        {
-                            Logger.AddLogEntry("Error opening accessibility settings: " + e.Message);
-                        }
-                        #else
-                        // In editor mode, simulate enabling the accessibility service
-                        Logger.AddLogEntry("Editor mode: Simulating enabling accessibility service");
-                        hasAccessibilityError = false;
-                        accessibilityServiceEnabled = true;
-                        Logger.AddLogEntry("Editor mode: Accessibility service enabled successfully");
-                        #endif
-                    }
-                    
-                    // Detailed instructions
-                    GUILayout.Space(10);
-                    GUILayout.Label("To enable the accessibility service:", GUIStyle.none);
-                    GUILayout.Label("1. Tap 'Open Accessibility Settings'", GUIStyle.none);
-                    GUILayout.Label("2. Find 'BLE HID' in the list", GUIStyle.none);
-                    GUILayout.Label("3. Toggle it ON", GUIStyle.none);
-                    GUILayout.Label("4. Accept the permissions", GUIStyle.none);
+                    DrawFullAccessibilityUI();
                 }
                 else
                 {
-                    // Simple notification with link to Local tab
-                    GUILayout.Space(5);
-                    GUILayout.Label("Go to the Local tab to enable this feature", GUIStyle.none);
+                    DrawSimpleAccessibilityNotice();
                 }
             }
             
             GUILayout.EndVertical();
         }
         
-        /// <summary>
-        /// Check for missing permissions and update the UI
-        /// </summary>
-        public void CheckMissingPermissions()
+        private void DrawPermissionErrorHeader()
         {
-            if (owner == null) return;
-            
-            checkingPermissions = true;
-            owner.StartCoroutine(CheckMissingPermissionsCoroutine());
+            GUILayout.Label("Missing Permissions", GUIStyle.none);
+            GUILayout.Space(5);
         }
         
+        private void DrawMissingPermissionsList()
+        {
+            // Show general error message
+            GUILayout.Label(permissionErrorMessage, GUIStyle.none);
+            GUILayout.Space(10);
+            
+            // List each missing permission with a request button
+            GUILayout.Label("The following permissions are required:", GUIStyle.none);
+            GUILayout.Space(5);
+            
+            foreach (var permission in missingPermissions)
+            {
+                DrawPermissionRequestRow(permission);
+            }
+            
+            // Open settings button
+            DrawOpenSettingsButton();
+        }
+        
+        private void DrawPermissionRequestRow(BleHidPermissionHandler.AndroidPermission permission)
+        {
+            GUILayout.BeginHorizontal();
+            
+            GUILayout.Label($"• {permission.Name}: {permission.Description}", 
+                          GUIStyle.none, GUILayout.Width(Screen.width * 0.6f));
+            
+            if (GUILayout.Button("Request", GUILayout.Height(40)))
+            {
+                RequestPermission(permission);
+            }
+            
+            GUILayout.EndHorizontal();
+        }
+        
+        private void DrawOpenSettingsButton()
+        {
+            GUILayout.Space(10);
+            GUILayout.Label("If permission requests don't work, try granting them manually:", GUIStyle.none);
+            
+            if (GUILayout.Button("Open App Settings", GUILayout.Height(50)))
+            {
+                Logger.AddLogEntry("Opening app settings");
+                OpenAppSettings();
+            }
+        }
+        
+        private void DrawGenericPermissionError()
+        {
+            GUILayout.Label("Permission error occurred but no missing permissions were found.", GUIStyle.none);
+            GUILayout.Label("This could be a temporary issue. Please try again.", GUIStyle.none);
+        }
+        
+        private void DrawPermissionRetryButton()
+        {
+            GUILayout.Space(10);
+            
+            if (GUILayout.Button("Check Permissions Again", GUILayout.Height(60)))
+            {
+                // Re-check permissions
+                CheckMissingPermissions();
+                Logger.AddLogEntry("Rechecking permissions...");
+            }
+        }
+        
+        private void DrawFullAccessibilityUI()
+        {
+            GUILayout.Space(10);
+            
+            if (GUILayout.Button("Open Accessibility Settings", GUILayout.Height(60)))
+            {
+                OpenAccessibilitySettings();
+            }
+            
+            // Detailed instructions
+            GUILayout.Space(10);
+            GUILayout.Label("To enable the accessibility service:", GUIStyle.none);
+            GUILayout.Label("1. Tap 'Open Accessibility Settings'", GUIStyle.none);
+            GUILayout.Label("2. Find 'BLE HID' in the list", GUIStyle.none);
+            GUILayout.Label("3. Toggle it ON", GUIStyle.none);
+            GUILayout.Label("4. Accept the permissions", GUIStyle.none);
+        }
+        
+        private void DrawSimpleAccessibilityNotice()
+        {
+            GUILayout.Space(5);
+            GUILayout.Label("Go to the Local tab to enable this feature", GUIStyle.none);
+        }
+        
+        #endregion
+        
+        #region Helper Methods
+        
+        private void RequestPermission(BleHidPermissionHandler.AndroidPermission permission)
+        {
+            Logger.AddLogEntry($"Requesting permission: {permission.Name}");
+            
+            if (owner != null)
+            {
+                owner.StartCoroutine(RequestSinglePermission(permission));
+            }
+        }
+        
+        private void OpenAppSettings()
+        {
+            #if UNITY_ANDROID && !UNITY_EDITOR
+            BleHidPermissionHandler.OpenAppSettings();
+            #else
+            Logger.AddLogEntry("Editor mode: Open app settings (not available in editor)");
+            #endif
+        }
+        
+        private void OpenAccessibilitySettings()
+        {
+            Logger.AddLogEntry("Opening accessibility settings");
+            
+            #if UNITY_ANDROID && !UNITY_EDITOR
+            try
+            {
+                // Use the improved method with fallback mechanism
+                if (BleHidLocalControl.Instance != null)
+                {
+                    BleHidLocalControl.Instance.OpenAccessibilitySettings();
+                }
+                
+                // Schedule a check after a delay to see if the settings change
+                if (owner != null)
+                {
+                    owner.StartCoroutine(DelayedAccessibilityCheck(3.0f));
+                }
+            }
+            catch (Exception e)
+            {
+                Logger.AddLogEntry("Error opening accessibility settings: " + e.Message);
+            }
+            #else
+            // In editor mode, simulate enabling the accessibility service
+            Logger.AddLogEntry("Editor mode: Simulating enabling accessibility service");
+            hasAccessibilityError = false;
+            accessibilityServiceEnabled = true;
+            Logger.AddLogEntry("Editor mode: Accessibility service enabled successfully");
+            #endif
+        }
+        
+        #endregion
+        
+        #region Coroutines
+        
+        /// <summary>
+        /// Coroutine to check accessibility service status
+        /// </summary>
+        private IEnumerator CheckAccessibilityServiceCoroutine()
+        {
+            yield return null; // Wait a frame to let UI update
+            
+            bool isEnabled = false;
+            
+            #if UNITY_ANDROID && !UNITY_EDITOR
+            // First try using the direct method that doesn't require initialization
+            isEnabled = BleHidLocalControl.CheckAccessibilityServiceEnabledDirect();
+            
+            // If that fails, fall back to the environment checker
+            if (!isEnabled)
+            {
+                string errorMsg;
+                isEnabled = BleHidEnvironmentChecker.CheckAccessibilityServiceEnabled(out errorMsg);
+                
+                if (!isEnabled)
+                {
+                    Logger.AddLogEntry("Accessibility service check failed: " + errorMsg);
+                }
+            }
+            #else
+            // Editor mode - use simulated state
+            isEnabled = !hasAccessibilityError;
+            #endif
+            
+            // Update accessibility status
+            accessibilityServiceEnabled = isEnabled;
+            hasAccessibilityError = !isEnabled;
+            
+            Logger.AddLogEntry(isEnabled 
+                ? "Accessibility service is enabled" 
+                : "Accessibility service is not enabled");
+            
+            checkingAccessibilityService = false;
+            
+            // Add exponential backoff for repeated checks when service is not enabled
+            if (!isEnabled && owner != null)
+            {
+                // Schedule a delayed check with exponential backoff up to a maximum
+                // If the UI is already periodically checking, this will just add an extra check
+                owner.StartCoroutine(DelayedAccessibilityCheck(2.0f)); // Add an extra check after 2 seconds
+            }
+        }
+        
+        /// <summary>
+        /// Coroutine to check missing permissions
+        /// </summary>
         private IEnumerator CheckMissingPermissionsCoroutine()
         {
             yield return null; // Wait a frame to let UI update
@@ -315,6 +408,10 @@ public class ErrorHandlingComponent : UIComponent
                 Logger.AddLogEntry("All required permissions are granted");
                 hasPermissionError = false;
             }
+            #else
+            // Editor mode simulation
+            missingPermissions.Clear();
+            hasPermissionError = false;
             #endif
             
             checkingPermissions = false;
@@ -358,8 +455,12 @@ public class ErrorHandlingComponent : UIComponent
                 }
             }
             #else
-            yield return null;
+            // Editor mode simulation
+            yield return new WaitForSeconds(0.5f);
+            Logger.AddLogEntry($"Editor mode: Granted permission {permission.Name}");
             #endif
         }
+        
+        #endregion
     }
 }
