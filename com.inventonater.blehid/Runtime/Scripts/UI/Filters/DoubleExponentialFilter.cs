@@ -13,8 +13,8 @@ namespace Inventonater.BleHid.UI.Filters
         private float _beta;         // Trend smoothing factor (0-1)
         
         // Filter state
-        private float _level;        // Current smoothed value (position)
-        private float _trend;        // Current trend (velocity)
+        private Vector2 _level;      // Current smoothed position vector
+        private Vector2 _trend;      // Current trend (velocity) vector
         private bool _initialized;   // Whether filter has been initialized
         
         /// <summary>
@@ -45,8 +45,8 @@ namespace Inventonater.BleHid.UI.Filters
         public void Reset()
         {
             _initialized = false;
-            _level = 0f;
-            _trend = 0f;
+            _level = Vector2.zero;
+            _trend = Vector2.zero;
         }
         
         /// <summary>
@@ -61,47 +61,33 @@ namespace Inventonater.BleHid.UI.Filters
         }
         
         /// <summary>
-        /// Filter a single float value
+        /// Filter a 2D vector using double exponential smoothing
         /// </summary>
-        /// <param name="value">Input value</param>
+        /// <param name="point">Input vector</param>
         /// <param name="timestamp">Current timestamp (unused in this filter)</param>
-        /// <returns>Filtered output value</returns>
-        public float Filter(float value, float timestamp)
+        /// <returns>Filtered output vector</returns>
+        public Vector2 Filter(Vector2 point, float timestamp)
         {
             // Initialize if needed
             if (!_initialized)
             {
-                _level = value;
-                _trend = 0f;
+                _level = point;
+                _trend = Vector2.zero;
                 _initialized = true;
-                return value;
+                return point;
             }
             
             // Store old level for trend calculation
-            float oldLevel = _level;
+            Vector2 oldLevel = _level;
             
-            // Update level (position estimate)
-            _level = _alpha * value + (1 - _alpha) * (_level + _trend);
+            // Update level (position estimate) treating the vector as a whole
+            _level = _alpha * point + (1 - _alpha) * (_level + _trend);
             
-            // Update trend (velocity estimate)
+            // Update trend (velocity estimate) treating the vector as a whole
             _trend = _beta * (_level - oldLevel) + (1 - _beta) * _trend;
             
             // Return smoothed value with trend component
             return _level;
-        }
-        
-        /// <summary>
-        /// Filter a 2D vector by applying the filter separately to each component
-        /// </summary>
-        /// <param name="point">Input vector</param>
-        /// <param name="timestamp">Current timestamp</param>
-        /// <returns>Filtered output vector</returns>
-        public Vector2 Filter(Vector2 point, float timestamp)
-        {
-            return new Vector2(
-                Filter(point.x, timestamp),
-                Filter(point.y, timestamp)
-            );
         }
     }
 }

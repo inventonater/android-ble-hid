@@ -12,7 +12,7 @@ namespace Inventonater.BleHid.UI.Filters
         private float minChange;    // Minimum change threshold
         
         // Filter state
-        private float lastValue;    // Last filtered value
+        private Vector2 lastValue;  // Last filtered vector
         private bool initialized;   // Whether filter has been initialized
         
         /// <summary>
@@ -43,7 +43,7 @@ namespace Inventonater.BleHid.UI.Filters
         public void Reset()
         {
             initialized = false;
-            lastValue = 0;
+            lastValue = Vector2.zero;
         }
         
         /// <summary>
@@ -58,45 +58,31 @@ namespace Inventonater.BleHid.UI.Filters
         }
         
         /// <summary>
-        /// Filter a single float value
-        /// </summary>
-        /// <param name="value">Input value</param>
-        /// <param name="timestamp">Current timestamp (unused in this filter)</param>
-        /// <returns>Filtered output value</returns>
-        public float Filter(float value, float timestamp)
-        {
-            // Initialize if needed
-            if (!initialized)
-            {
-                lastValue = value;
-                initialized = true;
-                return value;
-            }
-            
-            // Apply EMA formula: output = alpha * current + (1 - alpha) * lastOutput
-            float filteredValue = (alpha * value) + ((1 - alpha) * lastValue);
-            
-            // Only update if change is significant
-            if (Mathf.Abs(filteredValue - lastValue) >= minChange)
-            {
-                lastValue = filteredValue;
-            }
-            
-            return lastValue;
-        }
-        
-        /// <summary>
-        /// Filter a 2D vector by applying the filter separately to each component
+        /// Filter a 2D vector using exponential moving average
         /// </summary>
         /// <param name="point">Input vector</param>
         /// <param name="timestamp">Current timestamp (unused in this filter)</param>
         /// <returns>Filtered output vector</returns>
         public Vector2 Filter(Vector2 point, float timestamp)
         {
-            return new Vector2(
-                Filter(point.x, timestamp),
-                Filter(point.y, timestamp)
-            );
+            // Initialize if needed
+            if (!initialized)
+            {
+                lastValue = point;
+                initialized = true;
+                return point;
+            }
+            
+            // Apply EMA formula to the entire vector: output = alpha * current + (1 - alpha) * lastOutput
+            Vector2 filteredValue = (alpha * point) + ((1 - alpha) * lastValue);
+            
+            // Only update if change is significant
+            if ((filteredValue - lastValue).sqrMagnitude >= minChange * minChange)
+            {
+                lastValue = filteredValue;
+            }
+            
+            return lastValue;
         }
     }
 }

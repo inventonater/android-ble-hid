@@ -71,15 +71,6 @@ namespace Inventonater.BleHid.UI.Filters
         /// <summary>
         /// Add a new sample to the history buffer
         /// </summary>
-        private void AddSample(float value, float timestamp)
-        {
-            // Add as Vector2 with Y=0 for consistency
-            AddSample(new Vector2(value, 0), timestamp);
-        }
-        
-        /// <summary>
-        /// Add a new sample to the history buffer
-        /// </summary>
         private void AddSample(Vector2 position, float timestamp)
         {
             // Add to history
@@ -121,38 +112,6 @@ namespace Inventonater.BleHid.UI.Filters
             _estimatedVelocity = Vector2.Lerp(_estimatedVelocity, instantVelocity, _smoothingFactor);
             
             return _estimatedVelocity;
-        }
-        
-        /// <summary>
-        /// Filter a single float value
-        /// </summary>
-        /// <param name="value">Input value</param>
-        /// <param name="timestamp">Current timestamp</param>
-        /// <returns>Filtered (predicted) output value</returns>
-        public float Filter(float value, float timestamp)
-        {
-            // Initialize if needed
-            if (!_initialized)
-            {
-                AddSample(value, timestamp);
-                _lastOutput = new Vector2(value, 0);
-                _initialized = true;
-                return value;
-            }
-            
-            // Add to history
-            AddSample(value, timestamp);
-            
-            // Estimate velocity
-            Vector2 velocity = EstimateVelocity();
-            
-            // Calculate predicted position
-            float predictedValue = value + (velocity.x * _predictionTime);
-            
-            // Update last output
-            _lastOutput = new Vector2(predictedValue, 0);
-            
-            return predictedValue;
         }
         
         /// <summary>

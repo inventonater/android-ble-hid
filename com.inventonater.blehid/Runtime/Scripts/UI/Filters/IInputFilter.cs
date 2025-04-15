@@ -18,21 +18,13 @@ namespace Inventonater.BleHid.UI.Filters
         string Description { get; }
         
         /// <summary>
-        /// Filter a single float value
-        /// </summary>
-        /// <param name="value">Input value</param>
-        /// <param name="timestamp">Current timestamp (seconds)</param>
-        /// <returns>Filtered output value</returns>
-        float Filter(float value, float timestamp);
-        
-        /// <summary>
-        /// Filter a 2D vector
+        /// Filter a 2D vector - primary method for unified vector filtering
         /// </summary>
         /// <param name="point">Input vector</param>
         /// <param name="timestamp">Current timestamp (seconds)</param>
         /// <returns>Filtered output vector</returns>
         Vector2 Filter(Vector2 point, float timestamp);
-        
+
         /// <summary>
         /// Update filter parameters
         /// </summary>

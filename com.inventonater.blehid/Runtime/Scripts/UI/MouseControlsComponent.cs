@@ -37,24 +37,23 @@ namespace Inventonater.BleHid.UI
             set => _verticalSensitivity = value;
         }
         
-        private float _minCutoff = 1.0f;    // Higher = less smoothing
+        // Filter parameters properties - these directly use _filterParam1 and _filterParam2
         public float MinCutoff 
         {
-            get => _minCutoff;
+            get => _filterParam1;
             set 
             {
-                _minCutoff = value;
+                _filterParam1 = value;
                 UpdateFilterParameters();
             }
         }
         
-        private float _betaValue = 0.007f;  // Higher = less lag when moving fast
         public float BetaValue 
         {
-            get => _betaValue;
+            get => _filterParam2;
             set 
             {
-                _betaValue = value;
+                _filterParam2 = value;
                 UpdateFilterParameters();
             }
         }
@@ -63,9 +62,8 @@ namespace Inventonater.BleHid.UI
         private int currentPresetIndex = 1; // Default to "Standard"
         private readonly string[] presetNames = { "Precision", "Standard", "Fast" };
         
-        // Input filters for X and Y axis
-        private IInputFilter xFilter;
-        private IInputFilter yFilter;
+        // Unified input filter for mouse movement
+        private IInputFilter inputFilter;
         
         // Current filter type and parameters
         private InputFilterFactory.FilterType _currentFilterType = InputFilterFactory.FilterType.OneEuro;
@@ -90,9 +88,8 @@ namespace Inventonater.BleHid.UI
                         out _, out _, out _, out _filterParam1,
                         out _, out _, out _, out _filterParam2);
                     
-                    // Create new filter instances with default parameters
-                    xFilter = InputFilterFactory.CreateFilter(_currentFilterType, _filterParam1, _filterParam2);
-                    yFilter = InputFilterFactory.CreateFilter(_currentFilterType, _filterParam1, _filterParam2);
+                    // Create new filter instance with default parameters
+                    inputFilter = InputFilterFactory.CreateFilter(_currentFilterType, _filterParam1, _filterParam2);
                     
                     Logger.AddLogEntry($"Changed input filter to: {InputFilterFactory.GetFilterName(_currentFilterType)}");
                 }
@@ -102,15 +99,10 @@ namespace Inventonater.BleHid.UI
         // Updates current filter parameters
         private void UpdateFilterParameters()
         {
-            if (xFilter != null && yFilter != null)
+            if (inputFilter != null)
             {
-                // Store current parameter values
-                _filterParam1 = _minCutoff;
-                _filterParam2 = _betaValue;
-                
-                // Update filter parameters
-                xFilter.SetParameters(_filterParam1, _filterParam2);
-                yFilter.SetParameters(_filterParam1, _filterParam2);
+                // Apply parameters directly to the filter
+                inputFilter.SetParameters(_filterParam1, _filterParam2);
             }
         }
         
@@ -250,9 +242,9 @@ namespace Inventonater.BleHid.UI
             GUILayout.EndHorizontal();
             
             // Show filter description if available
-            if (xFilter != null)
+            if (inputFilter != null)
             {
-                GUILayout.Label(xFilter.Description, GUI.skin.box);
+                GUILayout.Label(inputFilter.Description, GUI.skin.box);
             }
             
             GUILayout.Space(10);
@@ -314,17 +306,12 @@ namespace Inventonater.BleHid.UI
                 {
                     _filterParam1 = newParam1;
                     
-                    // Update MinCutoff to maintain compatibility with the old code
-                    if (_currentFilterType == InputFilterFactory.FilterType.OneEuro)
-                    {
-                        _minCutoff = _filterParam1;
-                    }
+                    // No need for this anymore - we use _filterParam1 directly
                     
                     // Update filter parameters
-                    if (xFilter != null && yFilter != null)
+                    if (inputFilter != null)
                     {
-                        xFilter.SetParameters(_filterParam1, _filterParam2);
-                        yFilter.SetParameters(_filterParam1, _filterParam2);
+                        inputFilter.SetParameters(_filterParam1, _filterParam2);
                     }
                 }
                 
@@ -338,17 +325,12 @@ namespace Inventonater.BleHid.UI
                 {
                     _filterParam2 = newParam2;
                     
-                    // Update BetaValue to maintain compatibility with the old code
-                    if (_currentFilterType == InputFilterFactory.FilterType.OneEuro)
-                    {
-                        _betaValue = _filterParam2;
-                    }
+                    // No need for this anymore - we use _filterParam2 directly
                     
                     // Update filter parameters
-                    if (xFilter != null && yFilter != null)
+                    if (inputFilter != null)
                     {
-                        xFilter.SetParameters(_filterParam1, _filterParam2);
-                        yFilter.SetParameters(_filterParam1, _filterParam2);
+                        inputFilter.SetParameters(_filterParam1, _filterParam2);
                     }
                 }
             }
@@ -476,13 +458,9 @@ namespace Inventonater.BleHid.UI
             // Calculate raw delta since last position
             Vector2 rawDelta = currentPosition - lastTouchPosition;
             
-            // Apply 1€ filter to each axis
+            // Apply unified vector filter
             float timestamp = Time.time;
-            float filteredDeltaX = xFilter.Filter(rawDelta.x, timestamp);
-            float filteredDeltaY = yFilter.Filter(rawDelta.y, timestamp);
-            
-            // Create filtered vector
-            Vector2 filteredDelta = new Vector2(filteredDeltaX, filteredDeltaY);
+            Vector2 filteredDelta = inputFilter.Filter(rawDelta, timestamp);
             
             // Don't process extremely small movements
             if (filteredDelta.sqrMagnitude < 0.0001f)

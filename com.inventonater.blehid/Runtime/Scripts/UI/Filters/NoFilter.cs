@@ -18,11 +18,6 @@ namespace Inventonater.BleHid.UI.Filters
         public string Description => "Direct input with no processing (lowest latency)";
         
         /// <summary>
-        /// Creates a new NoFilter instance
-        /// </summary>
-        public NoFilter() { }
-        
-        /// <summary>
         /// Reset filter state - no effect for this filter type
         /// </summary>
         public void Reset() 
@@ -36,17 +31,6 @@ namespace Inventonater.BleHid.UI.Filters
         public void SetParameters(float param1, float param2)
         {
             // No parameters to update
-        }
-        
-        /// <summary>
-        /// Filter a single float value - returns value unchanged
-        /// </summary>
-        /// <param name="value">Input value</param>
-        /// <param name="timestamp">Current timestamp (unused)</param>
-        /// <returns>Original input value</returns>
-        public float Filter(float value, float timestamp)
-        {
-            return value;
         }
         
         /// <summary>

@@ -178,9 +178,6 @@ namespace Inventonater.BleHid
         public void HandleRssiRead(string message)
         {
             int rssi = int.Parse(message);
-            
-            Debug.Log($"RSSI: {rssi} dBm");
-            
             OnRssiRead?.Invoke(rssi);
         }
         
