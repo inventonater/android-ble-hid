@@ -75,7 +75,7 @@ namespace Inventonater.BleHid
             UpdateValuesFromManager();
         }
 
-        public virtual void Update()
+        public override void Update()
         {
             // Update FPS counter
             _frameCount++;

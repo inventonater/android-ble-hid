@@ -9,6 +9,7 @@ namespace Inventonater.BleHid
     public class MediaControlsComponent : UIComponent
     {
         public override void Initialize(){}
+        public override void Update(){}
 
         public virtual void DrawUI()
         {

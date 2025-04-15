@@ -134,7 +134,7 @@ namespace Inventonater.BleHid
             }
         }
         
-        public virtual void Update()
+        public override void Update()
         {
             // Update performance metrics
             _performanceTracker.Update();

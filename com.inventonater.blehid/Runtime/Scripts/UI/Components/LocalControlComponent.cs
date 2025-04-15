@@ -25,6 +25,7 @@ namespace Inventonater.BleHid
         }
 
         public override void Initialize(){}
+        public override void Update(){}
 
         /// <summary>
         /// Called when the Local tab becomes active

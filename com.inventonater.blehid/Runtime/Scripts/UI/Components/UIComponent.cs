@@ -20,6 +20,7 @@ namespace Inventonater.BleHid
         public string TabName { get; set; }
 
         public abstract void Initialize();
+        public abstract void Update();
 
         /// <summary>
         /// Called when the component's tab becomes active
@@ -30,5 +31,6 @@ namespace Inventonater.BleHid
         /// Called when the component's tab becomes inactive
         /// </summary>
         public virtual void OnDeactivate() { }
+
     }
 }

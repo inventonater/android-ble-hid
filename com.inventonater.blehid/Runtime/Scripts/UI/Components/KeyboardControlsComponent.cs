@@ -49,6 +49,7 @@ namespace Inventonater.BleHid
         private readonly string[] row3 = { "Z", "X", "C", "V", "B", "N", "M" };
 
         public override void Initialize(){}
+        public override void Update(){}
 
         public virtual void DrawUI()
         {

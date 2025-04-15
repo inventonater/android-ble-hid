@@ -45,6 +45,8 @@ namespace Inventonater.BleHid
             }
         }
 
+        public override void Update() {}
+
         public void SetMonoBehaviourOwner(MonoBehaviour owner)
         {
             this.owner = owner;
