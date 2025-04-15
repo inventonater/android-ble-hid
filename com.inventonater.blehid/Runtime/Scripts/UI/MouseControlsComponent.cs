@@ -455,30 +455,59 @@ namespace Inventonater.BleHid.UI
             // Calculate raw delta since last position
             Vector2 rawDelta = currentPosition - lastTouchPosition;
             
-            // Apply 1€ filter
+            // Apply 1€ filter to each axis
             float timestamp = Time.time;
             float filteredDeltaX = xFilter.Filter(rawDelta.x, timestamp);
             float filteredDeltaY = yFilter.Filter(rawDelta.y, timestamp);
             
-            // Apply sensitivity and global scale
-            int scaledDeltaX = (int)(filteredDeltaX * _horizontalSensitivity * _globalScale);
-            int scaledDeltaY = (int)(filteredDeltaY * _verticalSensitivity * _globalScale);
-
+            // Create filtered vector
+            Vector2 filteredDelta = new Vector2(filteredDeltaX, filteredDeltaY);
+            
+            // Don't process extremely small movements
+            if (filteredDelta.sqrMagnitude < 0.0001f)
+            {
+                return;
+            }
+            
+            // Get the direction and magnitude separately
+            float magnitude = filteredDelta.magnitude;
+            Vector2 direction = filteredDelta / magnitude;
+            
+            // Apply different sensitivities to each axis but keep as float
+            direction.x *= _horizontalSensitivity;
+            direction.y *= _verticalSensitivity;
+            
+            // Re-normalize after applying different axis sensitivities
+            if (direction.sqrMagnitude > 0)
+            {
+                direction = direction.normalized;
+            }
+            
+            // Apply global scale to the magnitude
+            float scaledMagnitude = magnitude * _globalScale;
+            
+            // Reconstruct the vector with proper direction and scaled magnitude
+            Vector2 scaledDelta = direction * scaledMagnitude;
+            
+            // Only convert to int at the final step
+            int finalDeltaX = Mathf.RoundToInt(scaledDelta.x);
+            int finalDeltaY = Mathf.RoundToInt(scaledDelta.y);
+            
             // Only process if movement is significant
-            if (Mathf.Abs(scaledDeltaX) > 0 || Mathf.Abs(scaledDeltaY) > 0)
+            if (finalDeltaX != 0 || finalDeltaY != 0)
             {
                 // Invert Y direction for mouse movement (screen Y goes down, mouse Y goes up)
-                scaledDeltaY = -scaledDeltaY;
+                finalDeltaY = -finalDeltaY;
 
                 // Send movement or log in editor mode
                 if (!IsEditorMode)
                 {
-                    BleHidManager.MoveMouse(scaledDeltaX, scaledDeltaY);
-                    Logger.AddLogEntry($"Sending mouse delta: ({scaledDeltaX}, {scaledDeltaY})");
+                    BleHidManager.MoveMouse(finalDeltaX, finalDeltaY);
+                    Logger.AddLogEntry($"Sending mouse delta: ({finalDeltaX}, {finalDeltaY})");
                 }
                 else
                 {
-                    Logger.AddLogEntry($"Mouse delta: ({scaledDeltaX}, {scaledDeltaY})");
+                    Logger.AddLogEntry($"Mouse delta: ({finalDeltaX}, {finalDeltaY})");
                 }
 
                 // Update last position for next calculation
