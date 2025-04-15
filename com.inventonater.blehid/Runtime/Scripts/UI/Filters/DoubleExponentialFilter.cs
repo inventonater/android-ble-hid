@@ -50,14 +50,34 @@ namespace Inventonater.BleHid.UI.Filters
         }
         
         /// <summary>
-        /// Update filter parameters
+        /// Draw the filter's parameter controls in the current GUI layout
         /// </summary>
-        /// <param name="alpha">Level smoothing factor (0-1)</param>
-        /// <param name="beta">Trend smoothing factor (0-1)</param>
-        public void SetParameters(float alpha, float beta)
+        /// <param name="logger">Logger for UI events</param>
+        public void DrawParameterControls(LoggingManager logger)
         {
-            _alpha = Mathf.Clamp01(alpha);
-            _beta = Mathf.Clamp01(beta);
+            // Draw alpha slider (level smoothing)
+            GUILayout.Label("Level Smoothing: Smoothing applied to position");
+            float newAlpha = UIHelper.SliderWithLabels(
+                "Strong", _alpha, 0.1f, 0.9f, "Light", 
+                "Level Smoothing: {0:F2}", UIHelper.StandardSliderOptions);
+                
+            if (newAlpha != _alpha)
+            {
+                _alpha = newAlpha;
+                logger.AddLogEntry($"Changed double exp. level smoothing to: {_alpha:F2}");
+            }
+            
+            // Draw beta slider (trend smoothing)
+            GUILayout.Label("Trend Smoothing: Smoothing applied to velocity");
+            float newBeta = UIHelper.SliderWithLabels(
+                "Strong", _beta, 0.01f, 0.5f, "Light", 
+                "Trend Smoothing: {0:F3}", UIHelper.StandardSliderOptions);
+                
+            if (newBeta != _beta)
+            {
+                _beta = newBeta;
+                logger.AddLogEntry($"Changed double exp. trend smoothing to: {_beta:F3}");
+            }
         }
         
         /// <summary>

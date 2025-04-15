@@ -9,15 +9,15 @@ namespace Inventonater.BleHid.UI.Filters
     public class OneEuroFilter : IInputFilter
     {
         // Filter parameters
-        private float mincutoff;    // Minimum cutoff frequency
-        private float beta;         // Cutoff slope (speed coefficient)
-        private float dcutoff;      // Derivative cutoff frequency
+        private float _minCutoff;    // Minimum cutoff frequency
+        private float _beta;         // Cutoff slope (speed coefficient)
+        private float _dcutoff;      // Derivative cutoff frequency
         
         // Filter state
-        private Vector2 x_prev;     // Previous filtered position vector
-        private Vector2 dx_prev;    // Previous derivative vector
-        private float lastTime;     // Last update timestamp
-        private bool initialized;   // Whether filter has been initialized
+        private Vector2 _xPrev;     // Previous filtered position vector
+        private Vector2 _dxPrev;    // Previous derivative vector
+        private float _lastTime;     // Last update timestamp
+        private bool _initialized;   // Whether filter has been initialized
         
         /// <summary>
         /// Display name of the filter for UI
@@ -32,14 +32,14 @@ namespace Inventonater.BleHid.UI.Filters
         /// <summary>
         /// Creates a new instance of the 1€ Filter
         /// </summary>
-        /// <param name="mincutoff">Minimum cutoff frequency (default: 1.0)</param>
+        /// <param name="minCutoff">Minimum cutoff frequency (default: 1.0)</param>
         /// <param name="beta">Beta parameter for speed coefficient (default: 0.007)</param>
         /// <param name="dcutoff">Derivative cutoff frequency (default: 1.0)</param>
-        public OneEuroFilter(float mincutoff = 1.0f, float beta = 0.007f, float dcutoff = 1.0f)
+        public OneEuroFilter(float minCutoff = 1.0f, float beta = 0.007f, float dcutoff = 1.0f)
         {
-            this.mincutoff = mincutoff;
-            this.beta = beta;
-            this.dcutoff = dcutoff;
+            _minCutoff = minCutoff;
+            _beta = beta;
+            _dcutoff = dcutoff;
             Reset();
         }
         
@@ -48,21 +48,52 @@ namespace Inventonater.BleHid.UI.Filters
         /// </summary>
         public void Reset()
         {
-            initialized = false;
-            x_prev = Vector2.zero;
-            dx_prev = Vector2.zero;
-            lastTime = 0;
+            _initialized = false;
+            _xPrev = Vector2.zero;
+            _dxPrev = Vector2.zero;
+            _lastTime = 0;
         }
         
         /// <summary>
-        /// Update filter parameters
+        /// Configure filter parameters with meaningful names
         /// </summary>
-        /// <param name="mincutoff">Minimum cutoff frequency</param>
-        /// <param name="beta">Beta parameter (speed coefficient)</param>
-        public void SetParameters(float mincutoff, float beta)
+        /// <param name="minCutoff">Minimum cutoff frequency (smoothing amount)</param>
+        /// <param name="beta">Beta parameter (speed sensitivity)</param>
+        public void Configure(float minCutoff, float beta)
         {
-            this.mincutoff = mincutoff;
-            this.beta = beta;
+            _minCutoff = minCutoff;
+            _beta = beta;
+        }
+        
+        /// <summary>
+        /// Draw the filter's parameter controls in the current GUI layout
+        /// </summary>
+        /// <param name="logger">Logger for UI events</param>
+        public void DrawParameterControls(LoggingManager logger)
+        {
+            // Draw min cutoff slider (smoothing strength)
+            GUILayout.Label("Smoothing: Adjusts filtering strength");
+            float newMinCutoff = UIHelper.SliderWithLabels(
+                "Strong", _minCutoff, 0.1f, 5.0f, "Light", 
+                "Smoothing: {0:F2}", UIHelper.StandardSliderOptions);
+                
+            if (newMinCutoff != _minCutoff)
+            {
+                _minCutoff = newMinCutoff;
+                logger.AddLogEntry($"Changed 1€ filter smoothing to: {_minCutoff:F2}");
+            }
+            
+            // Draw beta slider (speed response)
+            GUILayout.Label("Response: Adjusts sensitivity to rapid movement");
+            float newBeta = UIHelper.SliderWithLabels(
+                "Low", _beta, 0.001f, 0.1f, "High", 
+                "Response: {0:F3}", UIHelper.StandardSliderOptions);
+                
+            if (newBeta != _beta)
+            {
+                _beta = newBeta;
+                logger.AddLogEntry($"Changed 1€ filter response to: {_beta:F3}");
+            }
         }
         
         /// <summary>
@@ -90,43 +121,40 @@ namespace Inventonater.BleHid.UI.Filters
         /// <returns>Filtered output vector</returns>
         public Vector2 Filter(Vector2 point, float timestamp)
         {
-            if (!initialized)
+            if (!_initialized)
             {
-                x_prev = point;
-                dx_prev = Vector2.zero;
-                lastTime = timestamp;
-                initialized = true;
+                _xPrev = point;
+                _dxPrev = Vector2.zero;
+                _lastTime = timestamp;
+                _initialized = true;
                 return point;
             }
             
-            float deltaTime = timestamp - lastTime;
+            float deltaTime = timestamp - _lastTime;
             if (deltaTime <= 0.0f) deltaTime = 0.001f; // Prevent division by zero
-            lastTime = timestamp;
+            _lastTime = timestamp;
             
             // Estimate derivative as a vector
-            Vector2 dx = (point - x_prev) / deltaTime;
-            
-            // Calculate derivative magnitude for adaptive cutoff
-            float dxMagnitude = dx.magnitude;
+            Vector2 dx = (point - _xPrev) / deltaTime;
             
             // Filter derivative components
-            float alpha_d = ComputeAlpha(dcutoff, deltaTime);
+            float alpha_d = ComputeAlpha(_dcutoff, deltaTime);
             Vector2 edx = new Vector2(
-                LowPassFilter(dx.x, alpha_d, dx_prev.x),
-                LowPassFilter(dx.y, alpha_d, dx_prev.y)
+                LowPassFilter(dx.x, alpha_d, _dxPrev.x),
+                LowPassFilter(dx.y, alpha_d, _dxPrev.y)
             );
-            dx_prev = edx;
+            _dxPrev = edx;
             
             // Adjust cutoff based on derivative magnitude
-            float cutoff = mincutoff + beta * edx.magnitude;
+            float cutoff = _minCutoff + _beta * edx.magnitude;
             
             // Filter signal components
             float alpha_c = ComputeAlpha(cutoff, deltaTime);
             Vector2 ex = new Vector2(
-                LowPassFilter(point.x, alpha_c, x_prev.x),
-                LowPassFilter(point.y, alpha_c, x_prev.y)
+                LowPassFilter(point.x, alpha_c, _xPrev.x),
+                LowPassFilter(point.y, alpha_c, _xPrev.y)
             );
-            x_prev = ex;
+            _xPrev = ex;
             
             return ex;
         }

@@ -37,27 +37,6 @@ namespace Inventonater.BleHid.UI
             set => _verticalSensitivity = value;
         }
         
-        // Filter parameters properties - these directly use _filterParam1 and _filterParam2
-        public float MinCutoff 
-        {
-            get => _filterParam1;
-            set 
-            {
-                _filterParam1 = value;
-                UpdateFilterParameters();
-            }
-        }
-        
-        public float BetaValue 
-        {
-            get => _filterParam2;
-            set 
-            {
-                _filterParam2 = value;
-                UpdateFilterParameters();
-            }
-        }
-        
         // Preset configuration index
         private int currentPresetIndex = 1; // Default to "Standard"
         private readonly string[] presetNames = { "Precision", "Standard", "Fast" };
@@ -65,10 +44,8 @@ namespace Inventonater.BleHid.UI
         // Unified input filter for mouse movement
         private IInputFilter inputFilter;
         
-        // Current filter type and parameters
+        // Current filter type
         private InputFilterFactory.FilterType _currentFilterType = InputFilterFactory.FilterType.OneEuro;
-        private float _filterParam1 = 1.0f;
-        private float _filterParam2 = 0.007f;
         
         /// <summary>
         /// Get or set the current filter type
@@ -78,35 +55,26 @@ namespace Inventonater.BleHid.UI
             get => _currentFilterType;
             set
             {
-                if (_currentFilterType != value)
-                {
-                    _currentFilterType = value;
-                    
-                    // Get default parameters for this filter type
-                    InputFilterFactory.GetParameterInfo(
-                        _currentFilterType,
-                        out _, out _, out _, out _filterParam1,
-                        out _, out _, out _, out _filterParam2);
-                    
-                    // Create new filter instance with default parameters
-                    inputFilter = InputFilterFactory.CreateFilter(_currentFilterType, _filterParam1, _filterParam2);
-                    
-                    Logger.AddLogEntry($"Changed input filter to: {InputFilterFactory.GetFilterName(_currentFilterType)}");
-                }
-            }
-        }
-        
-        // Updates current filter parameters
-        private void UpdateFilterParameters()
-        {
-            if (inputFilter != null)
+            if (_currentFilterType != value)
             {
-                // Apply parameters directly to the filter
-                inputFilter.SetParameters(_filterParam1, _filterParam2);
+                // Store old filter to check if we're changing types
+                var oldFilter = inputFilter;
+                
+                _currentFilterType = value;
+                
+                // Create a new filter or reuse existing one
+                inputFilter = InputFilterFactory.CreateFilter(_currentFilterType);
+                
+                // Reset the filter to clear any state
+                inputFilter.Reset();
+                
+                Logger.AddLogEntry($"Changed input filter to: {inputFilter.Name}");
+            }
             }
         }
         
-        // Apply a preset configuration
+        
+        // Apply a preset configuration - now just handles global settings
         private void ApplyPreset(int presetIndex)
         {
             currentPresetIndex = presetIndex;
@@ -116,22 +84,19 @@ namespace Inventonater.BleHid.UI
                 case 0: // Precision
                     HorizontalSensitivity = 2.0f;
                     VerticalSensitivity = 2.0f;
-                    MinCutoff = 0.5f;  // More smoothing
-                    BetaValue = 0.004f; // Less acceleration sensitivity
+                    GlobalScale = 0.5f;
                     break;
                     
                 case 1: // Standard
                     HorizontalSensitivity = 3.0f;
                     VerticalSensitivity = 3.0f;
-                    MinCutoff = 1.0f;   // Default smoothing
-                    BetaValue = 0.007f; // Default acceleration response
+                    GlobalScale = 1.0f;
                     break;
                     
                 case 2: // Fast
                     HorizontalSensitivity = 5.0f;
-                    VerticalSensitivity = 5.0f;
-                    MinCutoff = 2.0f;   // Less smoothing
-                    BetaValue = 0.015f; // More acceleration sensitivity
+                    VerticalSensitivity = 5.0f; 
+                    GlobalScale = 2.0f;
                     break;
             }
             
@@ -287,52 +252,11 @@ namespace Inventonater.BleHid.UI
                 VerticalSensitivity = newVerticalSensitivity;
             }
             
-            // Only show filter parameters if we have a filter that uses them
-            if (_currentFilterType != InputFilterFactory.FilterType.None)
+            // Let the filter draw its own parameter controls
+            if (inputFilter != null)
             {
-                // Get parameter info for current filter type
-                InputFilterFactory.GetParameterInfo(
-                    _currentFilterType,
-                    out string param1Name, out float param1Min, out float param1Max, out _,
-                    out string param2Name, out float param2Min, out float param2Max, out _);
-                
-                // First parameter slider (usually smoothing)
-                GUILayout.Label($"{param1Name}: Adjusts filtering strength");
-                float newParam1 = UIHelper.SliderWithLabels(
-                    "Strong", _filterParam1, param1Min, param1Max, "Light", 
-                    $"{param1Name}: {{0:F2}}", UIHelper.StandardSliderOptions);
-                    
-                if (newParam1 != _filterParam1)
-                {
-                    _filterParam1 = newParam1;
-                    
-                    // No need for this anymore - we use _filterParam1 directly
-                    
-                    // Update filter parameters
-                    if (inputFilter != null)
-                    {
-                        inputFilter.SetParameters(_filterParam1, _filterParam2);
-                    }
-                }
-                
-                // Second parameter slider (usually response)
-                GUILayout.Label($"{param2Name}: Fine-tunes filter behavior");
-                float newParam2 = UIHelper.SliderWithLabels(
-                    "Low", _filterParam2, param2Min, param2Max, "High", 
-                    $"{param2Name}: {{0:F3}}", UIHelper.StandardSliderOptions);
-                    
-                if (newParam2 != _filterParam2)
-                {
-                    _filterParam2 = newParam2;
-                    
-                    // No need for this anymore - we use _filterParam2 directly
-                    
-                    // Update filter parameters
-                    if (inputFilter != null)
-                    {
-                        inputFilter.SetParameters(_filterParam1, _filterParam2);
-                    }
-                }
+                GUILayout.Space(10);
+                inputFilter.DrawParameterControls(Logger);
             }
             
             UIHelper.EndSection();

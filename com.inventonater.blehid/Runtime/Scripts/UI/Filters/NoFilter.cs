@@ -26,11 +26,13 @@ namespace Inventonater.BleHid.UI.Filters
         }
         
         /// <summary>
-        /// Update filter parameters - no effect for this filter type
+        /// Draw the filter's parameter controls in the current GUI layout
         /// </summary>
-        public void SetParameters(float param1, float param2)
+        /// <param name="logger">Logger for UI events</param>
+        public void DrawParameterControls(LoggingManager logger)
         {
-            // No parameters to update
+            // No parameters to display for this filter
+            GUILayout.Label("This filter has no adjustable parameters.");
         }
         
         /// <summary>

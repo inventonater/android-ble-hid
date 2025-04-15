@@ -65,10 +65,8 @@ namespace Inventonater.BleHid.UI.Filters
         /// Create a new input filter instance of the specified type
         /// </summary>
         /// <param name="type">Type of filter to create</param>
-        /// <param name="param1">First parameter value</param>
-        /// <param name="param2">Second parameter value</param>
-        /// <returns>New filter instance</returns>
-        public static IInputFilter CreateFilter(FilterType type, float param1 = 1.0f, float param2 = 0.007f)
+        /// <returns>New filter instance with default parameters</returns>
+        public static IInputFilter CreateFilter(FilterType type)
         {
             switch (type)
             {
@@ -76,19 +74,19 @@ namespace Inventonater.BleHid.UI.Filters
                     return new NoFilter();
 
                 case FilterType.OneEuro:
-                    return new OneEuroFilter(param1, param2);
+                    return new OneEuroFilter();
 
                 case FilterType.ExponentialMA:
-                    return new ExponentialMovingAverageFilter(param1, param2);
+                    return new ExponentialMovingAverageFilter();
 
                 case FilterType.Kalman:
-                    return new KalmanFilter(param1, param2);
+                    return new KalmanFilter();
 
                 case FilterType.DoubleExponential:
-                    return new DoubleExponentialFilter(param1, param2);
+                    return new DoubleExponentialFilter();
 
                 case FilterType.Predictive:
-                    return new PredictiveFilter(param1, param2);
+                    return new PredictiveFilter();
 
                 default:
                     Debug.LogWarning($"Unknown filter type: {type}, defaulting to OneEuro");
