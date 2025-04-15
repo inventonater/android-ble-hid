@@ -1,6 +1,7 @@
+using Inventonater.BleHid;
 using UnityEngine;
 
-namespace Inventonater.BleHid.UI.Filters
+namespace Inventonater.BleHid
 {
     /// <summary>
     /// Simple Exponential Moving Average (EMA) filter for mouse input

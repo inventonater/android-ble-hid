@@ -1,6 +1,7 @@
+using Inventonater.BleHid;
 using UnityEngine;
 
-namespace Inventonater.BleHid.UI.Filters
+namespace Inventonater.BleHid
 {
     /// <summary>
     /// Implementation of the 1€ Filter for mouse pointer smoothing

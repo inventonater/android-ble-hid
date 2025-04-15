@@ -1,7 +1,7 @@
 using UnityEngine;
 using System.Collections.Generic;
 
-namespace Inventonater.BleHid.UI.Filters
+namespace Inventonater.BleHid
 {
     /// <summary>
     /// Factory for creating and managing input filter instances

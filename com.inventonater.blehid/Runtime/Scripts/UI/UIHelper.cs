@@ -1,7 +1,7 @@
 using System;
 using UnityEngine;
 
-namespace Inventonater.BleHid.UI
+namespace Inventonater.BleHid
 {
     /// <summary>
     /// Helper class for common UI operations to reduce code duplication
@@ -23,14 +23,14 @@ namespace Inventonater.BleHid.UI
         /// <summary>
         /// Create a standard button that handles both editor mode and runtime functionality
         /// </summary>
-        public static bool Button(string label, Action runtimeAction, Action editorAction, bool isEditorMode, 
+        public static bool Button(string label, Action runtimeAction, Action editorAction,
             LoggingManager logger, GUILayoutOption[] options = null)
         {
             bool buttonPressed = options != null ? GUILayout.Button(label, options) : GUILayout.Button(label);
             
             if (buttonPressed)
             {
-                ExecuteWithEditorFallback(runtimeAction, editorAction, isEditorMode);
+                ExecuteWithEditorFallback(runtimeAction, editorAction);
             }
             
             return buttonPressed;
@@ -39,18 +39,20 @@ namespace Inventonater.BleHid.UI
         /// <summary>
         /// Create a standard button that logs a message in editor mode and performs an action in runtime
         /// </summary>
-        public static bool LoggingButton(string label, Action runtimeAction, string editorLogMessage, 
-            bool isEditorMode, LoggingManager logger, GUILayoutOption[] options = null)
+        public static bool LoggingButton(string label, Action runtimeAction, string editorLogMessage,
+            LoggingManager logger, GUILayoutOption[] options = null)
         {
-            return Button(label, runtimeAction, () => logger.AddLogEntry(editorLogMessage), isEditorMode, logger, options);
+            return Button(label, runtimeAction, () => logger.AddLogEntry(editorLogMessage), logger, options);
         }
-        
+
+        private static bool IsEditorMode => Application.isEditor;
+
         /// <summary>
         /// Execute the appropriate action based on editor mode
         /// </summary>
-        public static void ExecuteWithEditorFallback(Action runtimeAction, Action editorAction, bool isEditorMode)
+        public static void ExecuteWithEditorFallback(Action runtimeAction, Action editorAction)
         {
-            if (isEditorMode)
+            if (IsEditorMode)
             {
                 editorAction?.Invoke();
             }
@@ -84,7 +86,15 @@ namespace Inventonater.BleHid.UI
             texture.Apply();
             return texture;
         }
-        
+
+        /// <summary>
+        /// Helper method to create an action or log in editor mode
+        /// </summary>
+        public static bool ActionButton(string label, Action action, string editorMessage, LoggingManager logger, GUILayoutOption[] options = null)
+        {
+            return LoggingButton(label, action, editorMessage, logger, options);
+        }
+
         /// <summary>
         /// Create a standard button row with evenly spaced buttons
         /// </summary>
@@ -110,7 +120,7 @@ namespace Inventonater.BleHid.UI
         /// <summary>
         /// Create a row of action buttons with consistent styling
         /// </summary>
-        public static void ActionButtonRow(string[] buttonLabels, Action[] actions, bool isEditorMode, 
+        public static void ActionButtonRow(string[] buttonLabels, Action[] actions,
             LoggingManager logger, string[] editorMessages, GUILayoutOption[] options = null)
         {
             if (options == null)
@@ -127,8 +137,7 @@ namespace Inventonater.BleHid.UI
                 LoggingButton(
                     buttonLabels[i], 
                     actions[i], 
-                    message, 
-                    isEditorMode, 
+                    message,
                     logger, 
                     options);
             }
@@ -258,6 +267,208 @@ namespace Inventonater.BleHid.UI
                 }
                 GUILayout.EndHorizontal();
             }
+        }
+        
+        /// <summary>
+        /// Draw a dropdown control with proper styling and consistent behavior
+        /// </summary>
+        /// <param name="label">Label to display beside the dropdown</param>
+        /// <param name="currentValue">The currently selected value</param>
+        /// <param name="options">Array of all available options</param>
+        /// <param name="isExpanded">Reference to a bool tracking the expanded state</param>
+        /// <param name="onSelectionChanged">Action to call when selection changes (receives index)</param>
+        /// <returns>True if a new option was selected</returns>
+        public static bool DrawDropdownControl(string label, string currentValue, string[] options, 
+            ref bool isExpanded, Action<int> onSelectionChanged)
+        {
+            bool selectionChanged = false;
+            GUILayoutOption dropDownLabel = GUILayout.Width(120);
+            
+            // Label and current selection display
+            GUILayout.BeginHorizontal();
+            GUILayout.Label(label, dropDownLabel);
+            
+            // Create a custom dropdown style
+            GUIStyle dropdownStyle = new GUIStyle(GUI.skin.button);
+            dropdownStyle.alignment = TextAnchor.MiddleLeft;
+            dropdownStyle.padding = new RectOffset(10, 10, 5, 5);
+            
+            // Make dropdown button that toggles the expanded state
+            if (GUILayout.Button(currentValue, dropdownStyle, GUILayout.MinWidth(180)))
+            {
+                isExpanded = !isExpanded;
+            }
+            
+            // Dropdown arrow indicator
+            GUILayout.Label(isExpanded ? "▲" : "▼", GUILayout.Width(20));
+            GUILayout.EndHorizontal();
+            
+            // Show dropdown options if expanded
+            if (isExpanded)
+            {
+                GUILayout.BeginVertical(GUI.skin.box);
+                for (int i = 0; i < options.Length; i++)
+                {
+                    // Determine if this is the currently selected option
+                    bool isSelected = (options[i] == currentValue);
+                    
+                    // Style to highlight selected option
+                    GUIStyle optionStyle = new GUIStyle(GUI.skin.button);
+                    if (isSelected)
+                    {
+                        optionStyle.normal.textColor = Color.green;
+                        optionStyle.fontStyle = FontStyle.Bold;
+                    }
+                    
+                    // Option button
+                    if (GUILayout.Button(options[i], optionStyle))
+                    {
+                        onSelectionChanged?.Invoke(i);
+                        isExpanded = false;
+                        selectionChanged = true;
+                    }
+                }
+                GUILayout.EndVertical();
+            }
+            
+            return selectionChanged;
+        }
+        
+        /// <summary>
+        /// Create a toggle button that switches between two states
+        /// </summary>
+        /// <param name="label">Label to display</param>
+        /// <param name="isActive">Current state</param>
+        /// <param name="activeText">Text to show when active</param>
+        /// <param name="inactiveText">Text to show when inactive</param>
+        /// <returns>The new state after the function completes</returns>
+        public static bool ToggleButton(string label, bool isActive, string activeText, string inactiveText, 
+            GUILayoutOption[] options = null)
+        {
+            GUILayout.BeginHorizontal();
+            
+            if (!string.IsNullOrEmpty(label))
+            {
+                GUILayout.Label(label, GUILayout.Width(120));
+            }
+            
+            // Create button style based on current state
+            GUIStyle toggleStyle = new GUIStyle(GUI.skin.button);
+            if (isActive)
+            {
+                toggleStyle.normal.textColor = Color.green;
+                toggleStyle.fontStyle = FontStyle.Bold;
+            }
+            
+            // Use provided options or standard button options
+            options = options ?? StandardButtonOptions;
+            
+            // Button text changes based on state
+            string buttonText = isActive ? activeText : inactiveText;
+            
+            // Toggle button
+            if (GUILayout.Button(buttonText, toggleStyle, options))
+            {
+                isActive = !isActive;
+            }
+            
+            GUILayout.EndHorizontal();
+            
+            return isActive;
+        }
+        
+        /// <summary>
+        /// Format a value with the appropriate unit and precision
+        /// </summary>
+        public static string FormatValue(float value, string unit, int precision = 1)
+        {
+            string format = "{0:F" + precision + "} " + unit;
+            return string.Format(format, value);
+        }
+        
+        /// <summary>
+        /// Create a simple info dialog with title, message and close button
+        /// </summary>
+        public static void DrawInfoDialog(string title, string message, Action onClose)
+        {
+            // Semi-transparent background overlay
+            GUIStyle overlayStyle = new GUIStyle();
+            overlayStyle.normal.background = MakeColorTexture(new Color(0, 0, 0, 0.7f));
+            
+            // Dialog style
+            GUIStyle dialogStyle = new GUIStyle(GUI.skin.box);
+            dialogStyle.padding = new RectOffset(20, 20, 20, 20);
+            
+            // Title style
+            GUIStyle titleStyle = new GUIStyle(GUI.skin.label);
+            titleStyle.fontSize = GUI.skin.label.fontSize + 4;
+            titleStyle.fontStyle = FontStyle.Bold;
+            titleStyle.alignment = TextAnchor.MiddleCenter;
+            
+            // Draw overlay across entire screen
+            GUI.Box(new Rect(0, 0, Screen.width, Screen.height), "", overlayStyle);
+            
+            // Dialog dimensions
+            float dialogWidth = Mathf.Min(Screen.width * 0.8f, 500);
+            float dialogHeight = 300;
+            float dialogX = (Screen.width - dialogWidth) / 2;
+            float dialogY = (Screen.height - dialogHeight) / 2;
+            
+            // Draw dialog box
+            GUILayout.BeginArea(new Rect(dialogX, dialogY, dialogWidth, dialogHeight), dialogStyle);
+            
+            // Dialog content
+            GUILayout.Label(title, titleStyle);
+            GUILayout.Space(10);
+            
+            // Message with word wrap
+            GUIStyle messageStyle = new GUIStyle(GUI.skin.label);
+            messageStyle.wordWrap = true;
+            GUILayout.Label(message, messageStyle);
+            
+            GUILayout.FlexibleSpace();
+            
+            // Close button
+            if (GUILayout.Button("Close", StandardButtonOptions))
+            {
+                onClose?.Invoke();
+            }
+            
+            GUILayout.EndArea();
+        }
+        
+        /// <summary>
+        /// Handle a slider being dragged with proper tracking
+        /// </summary>
+        /// <param name="value">The current slider value</param>
+        /// <param name="previousValue">The previous slider value for comparison</param>
+        /// <param name="isBeingDragged">Reference to a bool tracking dragging state</param>
+        /// <param name="onValueChanged">Action to call when value changes and drag ends</param>
+        /// <returns>True if value was applied</returns>
+        public static bool HandleSliderDragging(float value, float previousValue, ref bool isBeingDragged, Action onValueChanged)
+        {
+            bool valueApplied = false;
+            
+            // Track whether mouse button is pressed to detect drag state
+            if (Event.current.type == EventType.MouseDown && Event.current.button == 0)
+            {
+                isBeingDragged = true;
+            }
+            else if (Event.current.type == EventType.MouseUp && Event.current.button == 0)
+            {
+                if (isBeingDragged)
+                {
+                    isBeingDragged = false;
+                    // Apply on mouse up if value changed
+                    if (!Mathf.Approximately(value, previousValue))
+                    {
+                        onValueChanged?.Invoke();
+                        valueApplied = true;
+                    }
+                }
+            }
+            
+            return valueApplied;
         }
     }
 }

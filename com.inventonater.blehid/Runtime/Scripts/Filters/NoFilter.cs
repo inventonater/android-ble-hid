@@ -1,6 +1,7 @@
+using Inventonater.BleHid;
 using UnityEngine;
 
-namespace Inventonater.BleHid.UI.Filters
+namespace Inventonater.BleHid
 {
     /// <summary>
     /// Passthrough filter that applies no smoothing or processing to input

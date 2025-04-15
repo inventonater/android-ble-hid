@@ -1,6 +1,7 @@
+using Inventonater.BleHid;
 using UnityEngine;
 
-namespace Inventonater.BleHid.UI.Filters
+namespace Inventonater.BleHid
 {
     /// <summary>
     /// Double Exponential Smoothing filter (Holt Filter) that models both

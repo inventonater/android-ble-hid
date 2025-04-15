@@ -1,46 +1,38 @@
 using UnityEngine;
 using System;
 
-namespace Inventonater.BleHid.UI
+namespace Inventonater.BleHid
 {
     /// <summary>
     /// UI component for displaying BLE HID status and advertising controls
     /// </summary>
     public class StatusComponent : UIComponent
     {
-        #region Properties
-        
         private bool isInitialized = false;
-        
-        #endregion
-        
-        #region Public Methods
-        
+
+
         public void SetInitialized(bool initialized)
         {
             isInitialized = initialized;
         }
-        
-        public override void DrawUI()
+
+        public virtual void DrawUI()
         {
             UIHelper.BeginSection("Connection Status");
-            
+
             // Status display
             DrawStatusInfo();
-            
+
             // Connection info
             DrawConnectionInfo();
-            
+
             // Advertising button
             DrawAdvertisingButton();
-            
+
             UIHelper.EndSection();
         }
-        
-        #endregion
-        
-        #region UI Drawing Methods
-        
+
+
         /// <summary>
         /// Display the current status (initialized or initializing)
         /// </summary>
@@ -48,7 +40,7 @@ namespace Inventonater.BleHid.UI
         {
             GUILayout.Label("Status: " + (isInitialized ? "Ready" : "Initializing..."));
         }
-        
+
         /// <summary>
         /// Display connection information if connected, or "Not Connected" message
         /// </summary>
@@ -58,21 +50,21 @@ namespace Inventonater.BleHid.UI
             {
                 // Connected - show device details
                 GUILayout.Label("Connected to: " + BleHidManager.ConnectedDeviceName);
-                GUILayout.Label("Device: " + BleHidManager.ConnectedDeviceName + 
+                GUILayout.Label("Device: " + BleHidManager.ConnectedDeviceName +
                                 " (" + BleHidManager.ConnectedDeviceAddress + ")");
             }
             else
             {
                 // Not connected - show appropriate message
                 GUILayout.Label("Not connected");
-                
-                if (IsEditorMode)
+
+                if (isEditorMode)
                 {
                     GUILayout.Label("EDITOR MODE: UI visible but BLE functions disabled");
                 }
             }
         }
-        
+
         /// <summary>
         /// Draw the advertising control button
         /// </summary>
@@ -83,11 +75,10 @@ namespace Inventonater.BleHid.UI
                 string[] labels = { BleHidManager.IsAdvertising ? "Stop Advertising" : "Start Advertising" };
                 Action[] actions = { ToggleAdvertising };
                 string[] messages = { "Advertising toggle (not functional in editor)" };
-                
+
                 UIHelper.ActionButtonRow(
                     labels,
                     actions,
-                    IsEditorMode,
                     Logger,
                     messages,
                     UIHelper.StandardButtonOptions);
@@ -99,11 +90,8 @@ namespace Inventonater.BleHid.UI
                 GUI.enabled = true;
             }
         }
-        
-        #endregion
-        
-        #region Helper Methods
-        
+
+
         /// <summary>
         /// Check if BLE is connected
         /// </summary>
@@ -111,15 +99,15 @@ namespace Inventonater.BleHid.UI
         {
             return BleHidManager != null && BleHidManager.IsConnected;
         }
-        
+
         /// <summary>
         /// Check if advertising can be controlled
         /// </summary>
         private bool CanControlAdvertising()
         {
-            return BleHidManager != null && (isInitialized || IsEditorMode);
+            return BleHidManager != null && (isInitialized || isEditorMode);
         }
-        
+
         /// <summary>
         /// Toggle the advertising state
         /// </summary>
@@ -130,7 +118,5 @@ namespace Inventonater.BleHid.UI
             else
                 BleHidManager.StartAdvertising();
         }
-        
-        #endregion
     }
 }

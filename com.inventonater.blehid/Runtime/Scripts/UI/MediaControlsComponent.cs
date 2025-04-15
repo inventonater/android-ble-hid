@@ -1,14 +1,14 @@
 using UnityEngine;
 using System;
 
-namespace Inventonater.BleHid.UI
+namespace Inventonater.BleHid
 {
     /// <summary>
     /// UI component for media controls (play/pause, volume, etc.)
     /// </summary>
     public class MediaControlsComponent : UIComponent
     {
-        public override void DrawUI()
+        public virtual void DrawUI()
         {
             UIHelper.BeginSection("Media Controls");
             
@@ -28,7 +28,6 @@ namespace Inventonater.BleHid.UI
             UIHelper.ActionButtonRow(
                 playbackLabels,
                 playbackActions,
-                IsEditorMode,
                 Logger,
                 playbackMessages,
                 UIHelper.LargeButtonOptions);
@@ -49,7 +48,6 @@ namespace Inventonater.BleHid.UI
             UIHelper.ActionButtonRow(
                 volumeLabels,
                 volumeActions,
-                IsEditorMode,
                 Logger,
                 volumeMessages,
                 UIHelper.LargeButtonOptions);

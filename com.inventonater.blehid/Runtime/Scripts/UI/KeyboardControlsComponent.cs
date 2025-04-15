@@ -2,15 +2,13 @@ using UnityEngine;
 using System;
 using System.Collections.Generic;
 
-namespace Inventonater.BleHid.UI
+namespace Inventonater.BleHid
 {
     /// <summary>
     /// UI component for keyboard controls
     /// </summary>
     public class KeyboardControlsComponent : UIComponent
     {
-        #region Properties
-        
         // Key mapping for characters to key codes
         private static readonly Dictionary<string, byte> keyMapping = new Dictionary<string, byte>()
         {
@@ -41,55 +39,52 @@ namespace Inventonater.BleHid.UI
             { "Y", BleHidConstants.KEY_Y },
             { "Z", BleHidConstants.KEY_Z }
         };
-        
+
         // Text input field
         private string textToSend = "";
-        
+
         // QWERTY Keyboard layout
         private readonly string[] row1 = { "Q", "W", "E", "R", "T", "Y", "U", "I", "O", "P" };
         private readonly string[] row2 = { "A", "S", "D", "F", "G", "H", "J", "K", "L" };
         private readonly string[] row3 = { "Z", "X", "C", "V", "B", "N", "M" };
-        
-        #endregion
-        
-        #region DrawUI Methods
-        
-        public override void DrawUI()
+
+
+        public virtual void DrawUI()
         {
             DrawTextInputSection();
             DrawKeyboardSection();
             DrawNavigationKeysSection();
         }
-        
+
         /// <summary>
         /// Draw the text input section with a text field and send button
         /// </summary>
         private void DrawTextInputSection()
         {
             UIHelper.BeginSection("Text Input");
-            
+
             GUILayout.Label("Text to type:");
             textToSend = GUILayout.TextField(textToSend, UIHelper.StandardButtonOptions);
 
             // Send button using ActionButton to maintain consistency
-            if (ActionButton("Send Text", 
+            if (UIHelper.ActionButton("Send Text",
                     () => SendTextMessage(),
-                    GetTextActionMessage(),
+                    GetTextActionMessage(), Logger,
                     UIHelper.StandardButtonOptions))
             {
                 // ActionButton handles the action
             }
-            
+
             UIHelper.EndSection();
         }
-        
+
         /// <summary>
         /// Draw the QWERTY keyboard layout
         /// </summary>
         private void DrawKeyboardSection()
         {
             UIHelper.BeginSection("Keyboard");
-            
+
             // Row 1: Q-P
             UIHelper.ButtonGrid(row1, index => SendKey(row1[index]), row1.Length, UIHelper.StandardButtonHeight);
 
@@ -101,72 +96,71 @@ namespace Inventonater.BleHid.UI
 
             // Row 4: Special keys
             DrawSpecialKeysRow();
-            
+
             UIHelper.EndSection();
         }
-        
+
         /// <summary>
         /// Draw the special keys row (Enter, Space, Backspace)
         /// </summary>
         private void DrawSpecialKeysRow()
         {
             string[] specialKeys = { "Enter", "Space", "Backspace" };
-            Action[] specialActions = {
+            Action[] specialActions =
+            {
                 () => SendSpecialKey(BleHidConstants.KEY_RETURN, "Enter"),
                 () => SendSpecialKey(BleHidConstants.KEY_SPACE, "Space"),
                 () => SendSpecialKey(BleHidConstants.KEY_BACKSPACE, "Backspace")
             };
-            string[] specialMessages = {
+            string[] specialMessages =
+            {
                 "Enter key pressed",
                 "Space key pressed",
                 "Backspace key pressed"
             };
-            
+
             UIHelper.ActionButtonRow(
                 specialKeys,
                 specialActions,
-                IsEditorMode,
                 Logger,
                 specialMessages,
                 UIHelper.StandardButtonOptions);
         }
-        
+
         /// <summary>
         /// Draw the navigation keys section (arrow keys)
         /// </summary>
         private void DrawNavigationKeysSection()
         {
             UIHelper.BeginSection("Navigation Keys");
-            
+
             string[] navKeys = { "Up", "Down", "Left", "Right" };
-            Action[] navActions = {
+            Action[] navActions =
+            {
                 () => SendSpecialKey(BleHidConstants.KEY_UP, "Up"),
                 () => SendSpecialKey(BleHidConstants.KEY_DOWN, "Down"),
                 () => SendSpecialKey(BleHidConstants.KEY_LEFT, "Left"),
                 () => SendSpecialKey(BleHidConstants.KEY_RIGHT, "Right")
             };
-            string[] navMessages = {
+            string[] navMessages =
+            {
                 "Up key pressed",
                 "Down key pressed",
                 "Left key pressed",
                 "Right key pressed"
             };
-            
+
             UIHelper.ActionButtonRow(
                 navKeys,
                 navActions,
-                IsEditorMode,
                 Logger,
                 navMessages,
                 UIHelper.StandardButtonOptions);
-                
+
             UIHelper.EndSection();
         }
-        
-        #endregion
-        
-        #region Helper Methods
-        
+
+
         /// <summary>
         /// Send the text from the text input field
         /// </summary>
@@ -174,11 +168,11 @@ namespace Inventonater.BleHid.UI
         {
             if (!string.IsNullOrEmpty(textToSend))
             {
-                if (!IsEditorMode)
+                if (!isEditorMode)
                 {
                     BleHidManager.TypeText(textToSend);
                 }
-                
+
                 Logger.AddLogEntry("Text sent: " + textToSend);
                 textToSend = "";
             }
@@ -187,17 +181,17 @@ namespace Inventonater.BleHid.UI
                 Logger.AddLogEntry("Cannot send empty text");
             }
         }
-        
+
         /// <summary>
         /// Get an appropriate message for the text action button
         /// </summary>
         private string GetTextActionMessage()
         {
-            return !string.IsNullOrEmpty(textToSend) 
-                ? "Text sent: " + textToSend 
+            return !string.IsNullOrEmpty(textToSend)
+                ? "Text sent: " + textToSend
                 : "Cannot send empty text";
         }
-        
+
         /// <summary>
         /// Send a character key
         /// </summary>
@@ -206,7 +200,7 @@ namespace Inventonater.BleHid.UI
             byte keyCode = GetKeyCode(key);
             if (keyCode > 0)
             {
-                if (IsEditorMode)
+                if (isEditorMode)
                 {
                     Logger.AddLogEntry("Key pressed: " + key);
                 }
@@ -216,13 +210,13 @@ namespace Inventonater.BleHid.UI
                 }
             }
         }
-        
+
         /// <summary>
         /// Send a special key with a specific keycode
         /// </summary>
         private void SendSpecialKey(byte keyCode, string keyName)
         {
-            if (IsEditorMode)
+            if (isEditorMode)
             {
                 Logger.AddLogEntry($"{keyName} key pressed");
             }
@@ -231,7 +225,7 @@ namespace Inventonater.BleHid.UI
                 BleHidManager.SendKey(keyCode);
             }
         }
-        
+
         /// <summary>
         /// Get the keycode for a character key using the dictionary lookup
         /// </summary>
@@ -241,9 +235,8 @@ namespace Inventonater.BleHid.UI
             {
                 return keyCode;
             }
+
             return 0;
         }
-        
-        #endregion
     }
 }

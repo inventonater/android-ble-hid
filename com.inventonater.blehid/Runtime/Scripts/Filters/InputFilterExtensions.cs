@@ -1,6 +1,6 @@
 using UnityEngine;
 
-namespace Inventonater.BleHid.UI.Filters
+namespace Inventonater.BleHid
 {
     /// <summary>
     /// Extension methods for input filters

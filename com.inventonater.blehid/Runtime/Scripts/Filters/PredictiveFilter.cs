@@ -1,6 +1,7 @@
+using Inventonater.BleHid;
 using UnityEngine;
 
-namespace Inventonater.BleHid.UI.Filters
+namespace Inventonater.BleHid
 {
     /// <summary>
     /// Predictive filter that attempts to compensate for latency by

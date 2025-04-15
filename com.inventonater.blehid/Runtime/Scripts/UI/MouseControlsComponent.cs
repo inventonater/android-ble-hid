@@ -1,9 +1,7 @@
 using UnityEngine;
 using System;
-using System.Collections.Generic;
-using Inventonater.BleHid.UI.Filters;
 
-namespace Inventonater.BleHid.UI
+namespace Inventonater.BleHid
 {
     /// <summary>
     /// Different input states for any pointer device
@@ -21,22 +19,25 @@ namespace Inventonater.BleHid.UI
     /// </summary>
     public class MouseControlsComponent : UIComponent
     {
-        // Mouse message metrics
-        private int _mouseMessageCount = 0;
-        private float _lastMouseMessageCountUpdateTime;
-        private float _currentMouseMessagesPerSecond = 0;
-        private Queue<float> _messageTimestamps = new Queue<float>();
+        // Performance tracking
+        private PerformanceTracker _performanceTracker;
+        
+        // Input processing
+        private PointerInputProcessor _inputProcessor;
         
         private Rect touchpadRect;
-        private Vector2 lastTouchPosition;
-        private bool isMouseDragging = false;
         
         // Global scale applies to all mouse movement
         private float _globalScale = 1.0f;
         public float GlobalScale
         {
             get => _globalScale;
-            set => _globalScale = value;
+            set {
+                _globalScale = value;
+                if (_inputProcessor != null) {
+                    _inputProcessor.SetSensitivity(_globalScale, _horizontalSensitivity, _verticalSensitivity);
+                }
+            }
         }
         
         // Mouse motion parameters with properties for automatic filter updates
@@ -44,14 +45,24 @@ namespace Inventonater.BleHid.UI
         public float HorizontalSensitivity 
         {
             get => _horizontalSensitivity;
-            set => _horizontalSensitivity = value;
+            set {
+                _horizontalSensitivity = value;
+                if (_inputProcessor != null) {
+                    _inputProcessor.SetSensitivity(_globalScale, _horizontalSensitivity, _verticalSensitivity);
+                }
+            }
         }
         
         private float _verticalSensitivity = 3.0f;
         public float VerticalSensitivity 
         {
             get => _verticalSensitivity;
-            set => _verticalSensitivity = value;
+            set {
+                _verticalSensitivity = value;
+                if (_inputProcessor != null) {
+                    _inputProcessor.SetSensitivity(_globalScale, _horizontalSensitivity, _verticalSensitivity);
+                }
+            }
         }
         
         // Unified input filter for mouse movement
@@ -81,14 +92,20 @@ namespace Inventonater.BleHid.UI
                     // Reset the filter to clear any state
                     inputFilter.Reset();
                     
+                    // Update the input processor with the new filter
+                    if (_inputProcessor != null)
+                    {
+                        _inputProcessor.SetInputFilter(inputFilter);
+                    }
+                    
                     Logger.AddLogEntry($"Changed input filter to: {inputFilter.Name}");
                 }
             }
         }
         
-        public override void Initialize(BleHidManager bleHidManager, LoggingManager logger, bool isEditorMode)
+        public override void Initialize(BleHidManager bleHidManager, LoggingManager logger)
         {
-            base.Initialize(bleHidManager, logger, isEditorMode);
+            base.Initialize(bleHidManager, logger);
             
             // Initialize filters with the default type
             _currentFilterType = InputFilterFactory.FilterType.OneEuro;
@@ -99,23 +116,30 @@ namespace Inventonater.BleHid.UI
             // Initialize touchpad area (will be in the center of the mouse tab)
             touchpadRect = new Rect(Screen.width / 2 - 150, Screen.height / 2 - 100, 300, 200);
             
-            // Initialize mouse message metrics
-            _lastMouseMessageCountUpdateTime = Time.time;
-            _currentMouseMessagesPerSecond = 0;
+            // Initialize performance tracker
+            _performanceTracker = new PerformanceTracker();
+            
+            // Initialize input processor
+            _inputProcessor = new PointerInputProcessor(bleHidManager, logger, isEditorMode);
+            _inputProcessor.SetInputFilter(inputFilter);
+            _inputProcessor.SetSensitivity(_globalScale, _horizontalSensitivity, _verticalSensitivity);
+            
+            // Set initial touchpad rect
+            UpdateTouchpadRect();
         }
         
-        public override void Update()
+        private void UpdateTouchpadRect()
         {
-            float currentTime = Time.time;
-                
-            // Calculate messages per second
-            // Remove timestamps older than 1 second
-            while (_messageTimestamps.Count > 0 && _messageTimestamps.Peek() < currentTime - 1.0f)
+            if (_inputProcessor != null)
             {
-                _messageTimestamps.Dequeue();
+                _inputProcessor.SetTouchpadRect(GetScreenTouchpadRect());
             }
-            
-            _currentMouseMessagesPerSecond = _messageTimestamps.Count;
+        }
+        
+        public virtual void Update()
+        {
+            // Update performance metrics
+            _performanceTracker.Update();
             
             // Only process touchpad input when active
             if (!IsActive())
@@ -130,19 +154,19 @@ namespace Inventonater.BleHid.UI
             }
             // Process mouse input (editor/desktop)
             #if UNITY_EDITOR
-            else if (IsEditorMode)
+            else if (isEditorMode)
             {
                 HandleMouseInput();
             }
             #endif
         }
         
-        public override void DrawUI()
+        public virtual void DrawUI()
         {
             UIHelper.BeginSection("Mouse Touchpad");
             
             // Display mouse message metrics
-            GUILayout.Label($"Mouse Messages: {_currentMouseMessagesPerSecond:F0}/sec", 
+            GUILayout.Label($"Mouse Messages: {_performanceTracker.MessagesPerSecond:F0}/sec", 
                            new GUIStyle(GUI.skin.label) { fontStyle = FontStyle.Bold });
             
             // Show touchpad instruction
@@ -156,7 +180,7 @@ namespace Inventonater.BleHid.UI
             // Add current drag status if in editor mode
             string touchpadLabel = "Click and drag (can drag outside)";
             #if UNITY_EDITOR
-            if (IsEditorMode && isMouseDragging)
+            if (isEditorMode && _inputProcessor.IsDragging())
             {
                 touchpadLabel = "DRAGGING - Move mouse to control";
             }
@@ -170,6 +194,7 @@ namespace Inventonater.BleHid.UI
             {
                 Rect lastRect = GUILayoutUtility.GetLastRect();
                 touchpadRect = new Rect(lastRect.x, lastRect.y, lastRect.width, lastRect.height);
+                UpdateTouchpadRect();
             }
             
             UIHelper.EndSection();
@@ -273,7 +298,6 @@ namespace Inventonater.BleHid.UI
             UIHelper.ActionButtonRow(
                 buttonLabels, 
                 buttonActions, 
-                IsEditorMode, 
                 Logger, 
                 buttonMessages,
                 UIHelper.LargeButtonOptions);
@@ -289,47 +313,10 @@ namespace Inventonater.BleHid.UI
         /// <param name="inputSource">Source name for logging</param>
         public void HandlePointerInput(Vector2 position, PointerInputState state, string inputSource = "External")
         {
-            // Skip if component is not active
-            if (!IsActive())
-                return;
-                
-            // Get touchpad area in screen coordinates
-            Rect screenTouchpadRect = GetScreenTouchpadRect();
-            
-            // Log touchpad boundaries for debugging when input begins
-            if (state == PointerInputState.Begin)
+            if (_inputProcessor.HandlePointerInput(position, state, inputSource))
             {
-                Logger.AddLogEntry($"Touchpad screen rect: ({screenTouchpadRect.x}, {screenTouchpadRect.y}, w:{screenTouchpadRect.width}, h:{screenTouchpadRect.height})");
-                Logger.AddLogEntry($"{inputSource} input began at: ({position.x}, {position.y})");
-            }
-
-            switch (state)
-            {
-                case PointerInputState.Begin:
-                    // Start dragging if input begins inside touchpad
-                    if (screenTouchpadRect.Contains(position))
-                    {
-                        lastTouchPosition = position;
-                        isMouseDragging = true;
-                        Logger.AddLogEntry($"{inputSource} drag started inside touchpad");
-                    }
-                    break;
-
-                case PointerInputState.Move:
-                    // Process movement if we're dragging
-                    if (isMouseDragging)
-                    {
-                        ProcessPointerMovement(position);
-                    }
-                    break;
-
-                case PointerInputState.End:
-                    if (isMouseDragging)
-                    {
-                        isMouseDragging = false;
-                        Logger.AddLogEntry($"{inputSource} drag ended");
-                    }
-                    break;
+                // Message was sent, track for performance metrics
+                _performanceTracker.TrackMessage();
             }
         }
         
@@ -397,131 +384,13 @@ namespace Inventonater.BleHid.UI
         /// <returns>True if the motion was processed and sent</returns>
         public bool SendDirectMotion(Vector2 motionDelta, string source = "External")
         {
-            if (!IsActive() || inputFilter == null)
-                return false;
-                
-            // Apply unified vector filter
-            float timestamp = Time.time;
-            Vector2 filteredDelta = inputFilter.Filter(motionDelta, timestamp);
-            
-            // Don't process extremely small movements
-            if (filteredDelta.sqrMagnitude < 0.0001f)
-                return false;
-            
-            // Get the direction and magnitude separately
-            float magnitude = filteredDelta.magnitude;
-            Vector2 direction = filteredDelta / magnitude;
-            
-            // Apply different sensitivities to each axis but keep as float
-            direction.x *= _horizontalSensitivity;
-            direction.y *= _verticalSensitivity;
-            
-            // Re-normalize after applying different axis sensitivities
-            if (direction.sqrMagnitude > 0)
+            bool result = _inputProcessor.SendDirectMotion(motionDelta, source);
+            if (result)
             {
-                direction = direction.normalized;
+                // Message was sent, track for performance metrics
+                _performanceTracker.TrackMessage();
             }
-            
-            // Apply global scale to the magnitude
-            float scaledMagnitude = magnitude * _globalScale;
-            
-            // Reconstruct the vector with proper direction and scaled magnitude
-            Vector2 scaledDelta = direction * scaledMagnitude;
-            
-            // Only convert to int at the final step
-            int finalDeltaX = Mathf.RoundToInt(scaledDelta.x);
-            int finalDeltaY = Mathf.RoundToInt(scaledDelta.y);
-            
-            // Only process if movement is significant
-            if (finalDeltaX != 0 || finalDeltaY != 0)
-            {
-                // Invert Y direction for mouse movement (screen Y goes down, mouse Y goes up)
-                finalDeltaY = -finalDeltaY;
-
-                // Send movement or log in editor mode
-                if (!IsEditorMode)
-                {
-                    BleHidManager.MoveMouse(finalDeltaX, finalDeltaY);
-                    Logger.AddLogEntry($"{source} direct motion: ({finalDeltaX}, {finalDeltaY})");
-                }
-                else
-                {
-                    Logger.AddLogEntry($"{source} direct motion: ({finalDeltaX}, {finalDeltaY})");
-                }
-                
-                // Track this mouse message
-                _messageTimestamps.Enqueue(Time.time);
-                
-                return true;
-            }
-            
-            return false;
-        }
-
-        /// <summary>
-        /// Processes pointer movement for both touch and mouse input
-        /// </summary>
-        private void ProcessPointerMovement(Vector2 currentPosition)
-        {
-            // Calculate raw delta since last position
-            Vector2 rawDelta = currentPosition - lastTouchPosition;
-            
-            // Apply unified vector filter
-            float timestamp = Time.time;
-            Vector2 filteredDelta = inputFilter.Filter(rawDelta, timestamp);
-            
-            // Don't process extremely small movements
-            if (filteredDelta.sqrMagnitude < 0.0001f)
-            {
-                return;
-            }
-            
-            // Get the direction and magnitude separately
-            float magnitude = filteredDelta.magnitude;
-            Vector2 direction = filteredDelta / magnitude;
-            
-            // Apply different sensitivities to each axis but keep as float
-            direction.x *= _horizontalSensitivity;
-            direction.y *= _verticalSensitivity;
-            
-            // Re-normalize after applying different axis sensitivities
-            if (direction.sqrMagnitude > 0)
-            {
-                direction = direction.normalized;
-            }
-            
-            // Apply global scale to the magnitude
-            float scaledMagnitude = magnitude * _globalScale;
-            
-            // Reconstruct the vector with proper direction and scaled magnitude
-            Vector2 scaledDelta = direction * scaledMagnitude;
-            
-            // Only convert to int at the final step
-            int finalDeltaX = Mathf.RoundToInt(scaledDelta.x);
-            int finalDeltaY = Mathf.RoundToInt(scaledDelta.y);
-            
-            // Only process if movement is significant
-            if (finalDeltaX != 0 || finalDeltaY != 0)
-            {
-                // Invert Y direction for mouse movement (screen Y goes down, mouse Y goes up)
-                finalDeltaY = -finalDeltaY;
-
-                // Send movement or log in editor mode
-                if (!IsEditorMode)
-                {
-                    BleHidManager.MoveMouse(finalDeltaX, finalDeltaY);
-                }
-                else
-                {
-                    Logger.AddLogEntry($"Mouse delta: ({finalDeltaX}, {finalDeltaY})");
-                }
-
-                // Track this mouse message
-                _messageTimestamps.Enqueue(Time.time);
-                
-                // Update last position for next calculation
-                lastTouchPosition = currentPosition;
-            }
+            return result;
         }
         
         /// <summary>
@@ -529,7 +398,7 @@ namespace Inventonater.BleHid.UI
         /// </summary>
         private bool IsActive()
         {
-            return BleHidManager != null && (BleHidManager.IsConnected || IsEditorMode);
+            return BleHidManager != null && (BleHidManager.IsConnected || isEditorMode);
         }
 
         /// <summary>
