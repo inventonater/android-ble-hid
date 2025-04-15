@@ -9,6 +9,9 @@ namespace Inventonater.BleHid
     /// </summary>
     public class LocalControlComponent : UIComponent
     {
+        public const string Name = "Local";
+        public override string TabName => Name;
+
         private bool localControlInitialized = false;
         private bool hasCameraPermission = false;
         private MonoBehaviour owner;
@@ -19,12 +22,8 @@ namespace Inventonater.BleHid
         // Button height constant
         private const float BUTTON_HEIGHT = 60f;
 
-        public void SetMonoBehaviourOwner(MonoBehaviour owner)
-        {
-            this.owner = owner;
-        }
+        public LocalControlComponent(MonoBehaviour owner) => this.owner = owner;
 
-        public override void Initialize(){}
         public override void Update(){}
 
         /// <summary>
@@ -76,7 +75,7 @@ namespace Inventonater.BleHid
             #endif
         }
 
-        public virtual void DrawUI()
+        public override void DrawUI()
         {
             // Initialize if not already done
             if (!localControlInitialized && owner != null)

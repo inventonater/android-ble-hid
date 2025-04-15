@@ -4,26 +4,19 @@ using System;
 namespace Inventonater.BleHid
 {
     /// <summary>
-    /// Different input states for any pointer device
-    /// </summary>
-    public enum PointerInputState
-    {
-        Begin,   // Input started (mouse down, touch began)
-        Move,    // Input moved (mouse moved, touch moved)
-        End      // Input ended (mouse up, touch ended/canceled)
-    }
-    
-    /// <summary>
     /// UI component for mouse controls including touchpad functionality
     /// with support for external input sources
     /// </summary>
     public class MouseControlsComponent : UIComponent
     {
+        public const string Name = "Mouse";
+        public override string TabName => Name;
+
         // Performance tracking
-        private PerformanceTracker _performanceTracker;
+        private readonly PerformanceTracker _performanceTracker;
         
         // Input processing
-        private PointerInputProcessor _inputProcessor;
+        private readonly PointerInputProcessor _inputProcessor;
         
         private Rect touchpadRect;
         
@@ -32,11 +25,11 @@ namespace Inventonater.BleHid
         public float GlobalScale
         {
             get => _globalScale;
-            set {
+            set
+            {
+                if (Mathf.Approximately(value, _globalScale)) return;
                 _globalScale = value;
-                if (_inputProcessor != null) {
-                    _inputProcessor.SetSensitivity(_globalScale, _horizontalSensitivity, _verticalSensitivity);
-                }
+                _inputProcessor?.SetSensitivity(_globalScale, _horizontalSensitivity, _verticalSensitivity);
             }
         }
         
@@ -93,17 +86,14 @@ namespace Inventonater.BleHid
                     inputFilter.Reset();
                     
                     // Update the input processor with the new filter
-                    if (_inputProcessor != null)
-                    {
-                        _inputProcessor.SetInputFilter(inputFilter);
-                    }
-                    
+                    if (_inputProcessor != null) _inputProcessor.SetInputFilter(inputFilter);
+
                     Logger.AddLogEntry($"Changed input filter to: {inputFilter.Name}");
                 }
             }
         }
         
-        public override void Initialize()
+        public MouseControlsComponent()
         {
             // Initialize filters with the default type
             _currentFilterType = InputFilterFactory.FilterType.OneEuro;
@@ -128,10 +118,7 @@ namespace Inventonater.BleHid
         
         private void UpdateTouchpadRect()
         {
-            if (_inputProcessor != null)
-            {
-                _inputProcessor.SetTouchpadRect(GetScreenTouchpadRect());
-            }
+            if (_inputProcessor != null) _inputProcessor.SetTouchpadRect(GetScreenTouchpadRect());
         }
         
         public override void Update()
@@ -140,10 +127,7 @@ namespace Inventonater.BleHid
             _performanceTracker.Update();
             
             // Only process touchpad input when active
-            if (!IsActive())
-            {
-                return;
-            }
+            if (!IsActive()) return;
 
             // Process direct touch input (mobile)
             if (Input.touchCount > 0)
@@ -151,15 +135,13 @@ namespace Inventonater.BleHid
                 HandleTouchInput(Input.GetTouch(0));
             }
             // Process mouse input (editor/desktop)
-            #if UNITY_EDITOR
             else if (IsEditorMode)
             {
                 HandleMouseInput();
             }
-            #endif
         }
         
-        public virtual void DrawUI()
+        public override void DrawUI()
         {
             UIHelper.BeginSection("Mouse Touchpad");
             
@@ -208,11 +190,8 @@ namespace Inventonater.BleHid
                 "Slow", _globalScale, 0.25f, 10.0f, "Fast", 
                 "Global Speed: {0:F2}×", UIHelper.StandardSliderOptions);
                 
-            if (newGlobalScale != _globalScale)
-            {
-                GlobalScale = newGlobalScale;
-            }
-            
+            GlobalScale = newGlobalScale;
+
             // Horizontal sensitivity slider
             GUILayout.Label("Horizontal Speed: Adjusts left-right sensitivity");
             float newHorizontalSensitivity = UIHelper.SliderWithLabels(
@@ -346,17 +325,13 @@ namespace Inventonater.BleHid
             HandlePointerInput(touch.position, state, "Touch");
         }
 
-        #if UNITY_EDITOR
         /// <summary>
         /// Handles mouse input for the touchpad area (editor only)
         /// </summary>
         private void HandleMouseInput()
         {
             // Convert mouse position to screen coordinates
-            Vector2 mouseScreenPos = new Vector2(
-                Input.mousePosition.x,
-                Input.mousePosition.y
-            );
+            Vector2 mouseScreenPos = new Vector2(Input.mousePosition.x, Input.mousePosition.y);
 
             // Map mouse button states to our pointer states
             if (Input.GetMouseButtonDown(0))
@@ -372,25 +347,7 @@ namespace Inventonater.BleHid
                 HandlePointerInput(mouseScreenPos, PointerInputState.End, "Mouse");
             }
         }
-        #endif
-        
-        /// <summary>
-        /// Directly sends motion deltas to the connected device, bypassing touchpad constraints
-        /// </summary>
-        /// <param name="motionDelta">Raw motion vector to apply</param>
-        /// <param name="source">Source name for logging</param>
-        /// <returns>True if the motion was processed and sent</returns>
-        public bool SendDirectMotion(Vector2 motionDelta, string source = "External")
-        {
-            bool result = _inputProcessor.SendDirectMotion(motionDelta, source);
-            if (result)
-            {
-                // Message was sent, track for performance metrics
-                _performanceTracker.TrackMessage();
-            }
-            return result;
-        }
-        
+
         /// <summary>
         /// Checks if the component is ready to receive input
         /// </summary>

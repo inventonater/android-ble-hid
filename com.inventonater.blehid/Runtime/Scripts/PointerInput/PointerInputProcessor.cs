@@ -115,62 +115,7 @@ namespace Inventonater.BleHid
             
             return didSendMove;
         }
-        
-        /// <summary>
-        /// Directly sends motion deltas to the connected device, bypassing touchpad constraints
-        /// </summary>
-        /// <param name="motionDelta">Raw motion vector to apply</param>
-        /// <param name="source">Source name for logging</param>
-        /// <returns>True if the motion was processed and sent</returns>
-        public bool SendDirectMotion(Vector2 motionDelta, string source = "External")
-        {
-            // Skip if component is not active
-            if (bleHidManager == null || inputFilter == null)
-                return false;
-                
-            // Determine if we should process input (connected or in editor mode)
-            bool shouldProcess = bleHidManager.IsConnected || isEditorMode;
-            if (!shouldProcess)
-                return false;
-                
-            // Apply unified vector filter
-            float timestamp = Time.time;
-            Vector2 filteredDelta = inputFilter.Filter(motionDelta, timestamp);
-            
-            // Don't process extremely small movements
-            if (filteredDelta.sqrMagnitude < 0.0001f)
-                return false;
-            
-            // Process the movement
-            Vector2 processedDelta = ProcessMotionVector(filteredDelta);
-            
-            // Only convert to int at the final step
-            int finalDeltaX = Mathf.RoundToInt(processedDelta.x);
-            int finalDeltaY = Mathf.RoundToInt(processedDelta.y);
-            
-            // Only process if movement is significant
-            if (finalDeltaX != 0 || finalDeltaY != 0)
-            {
-                // Invert Y direction for mouse movement (screen Y goes down, mouse Y goes up)
-                finalDeltaY = -finalDeltaY;
 
-                // Send movement or log in editor mode
-                if (!isEditorMode)
-                {
-                    bleHidManager.MoveMouse(finalDeltaX, finalDeltaY);
-                    logger?.AddLogEntry($"{source} direct motion: ({finalDeltaX}, {finalDeltaY})");
-                }
-                else
-                {
-                    logger?.AddLogEntry($"{source} direct motion: ({finalDeltaX}, {finalDeltaY})");
-                }
-                
-                return true;
-            }
-            
-            return false;
-        }
-        
         /// <summary>
         /// Processes pointer movement for both touch and mouse input
         /// </summary>

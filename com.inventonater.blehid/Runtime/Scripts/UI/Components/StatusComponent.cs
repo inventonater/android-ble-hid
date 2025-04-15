@@ -6,19 +6,19 @@ namespace Inventonater.BleHid
     /// <summary>
     /// UI component for displaying BLE HID status and advertising controls
     /// </summary>
-    public class StatusComponent : UIComponent
+    public class StatusComponent
     {
         private bool isInitialized = false;
-
-        public override void Initialize(){}
-        public override void Update(){}
+        private BleHidManager BleHidManager => BleHidManager.Instance;
+        private LoggingManager Logger => LoggingManager.Instance;
+        private bool IsEditorMode => Application.isEditor;
 
         public void SetInitialized(bool initialized)
         {
             isInitialized = initialized;
         }
 
-        public virtual void DrawUI()
+        public void DrawUI()
         {
             UIHelper.BeginSection("Connection Status");
 

@@ -8,6 +8,9 @@ namespace Inventonater.BleHid
     /// </summary>
     public class ConnectionParametersComponent : UIComponent
     {
+        public const string Name = "Connection";
+        public override string TabName => Name;
+
         // Performance metrics
         private float _fpsUpdateInterval = 0.5f; // How often to update FPS (in seconds)
         private float _lastFpsUpdateTime;
@@ -52,7 +55,7 @@ namespace Inventonater.BleHid
         private Color intervalColor = Color.white;
         private Color mtuColor = Color.white;
 
-        public override void Initialize()
+        public ConnectionParametersComponent()
         {
             // Initialize performance metrics
             _lastFpsUpdateTime = Time.time;
@@ -90,7 +93,7 @@ namespace Inventonater.BleHid
             }
         }
 
-        public virtual void DrawUI()
+        public override void DrawUI()
         {
             bool connected = BleHidManager != null && BleHidManager.IsConnected;
             bool initialized = BleHidManager != null && BleHidManager.IsInitialized;

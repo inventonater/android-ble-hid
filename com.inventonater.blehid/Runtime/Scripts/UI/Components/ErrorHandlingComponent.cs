@@ -9,8 +9,12 @@ namespace Inventonater.BleHid
     /// <summary>
     /// Handles error UI for permissions and accessibility
     /// </summary>
-    public class ErrorHandlingComponent : UIComponent
+    public class ErrorHandlingComponent
     {
+        private BleHidManager BleHidManager => BleHidManager.Instance;
+        private LoggingManager Logger => LoggingManager.Instance;
+        private bool IsEditorMode => Application.isEditor;
+
         // Permission state
         private bool hasPermissionError = false;
         private string permissionErrorMessage = "";
@@ -34,29 +38,15 @@ namespace Inventonater.BleHid
         public bool HasPermissionError => hasPermissionError;
         public bool HasAccessibilityError => hasAccessibilityError;
 
-        public override void Initialize()
-        {
-            // In editor mode, initially set accessibility error to true
-            // so we can show the accessibility UI for testing
-            if (IsEditorMode)
-            {
-                hasAccessibilityError = true;
-                Logger.AddLogEntry("Editor mode: Simulating accessibility service not enabled for testing");
-            }
-        }
-
-        public override void Update() {}
-
-        public void SetMonoBehaviourOwner(MonoBehaviour owner)
+        public ErrorHandlingComponent(MonoBehaviour owner)
         {
             this.owner = owner;
-        }
 
-
-        public virtual void DrawUI()
-        {
-            // This component uses specialized drawing methods that are called directly
-            // from the main UI class based on error conditions
+            // In editor mode, initially set accessibility error to true
+            // so we can show the accessibility UI for testing
+            if (!IsEditorMode) return;
+            hasAccessibilityError = true;
+            Logger.AddLogEntry("Editor mode: Simulating accessibility service not enabled for testing");
         }
 
         /// <summary>
@@ -68,7 +58,6 @@ namespace Inventonater.BleHid
             permissionErrorMessage = errorMessage;
             Logger.AddLogEntry("Permission error: " + errorMessage);
 
-            // Check permissions
             CheckMissingPermissions();
         }
 
@@ -88,8 +77,6 @@ namespace Inventonater.BleHid
         /// </summary>
         public void CheckAccessibilityServiceStatus()
         {
-            if (owner == null) return;
-
             checkingAccessibilityService = true;
             owner.StartCoroutine(CheckAccessibilityServiceCoroutine());
         }
@@ -99,8 +86,6 @@ namespace Inventonater.BleHid
         /// </summary>
         public void CheckMissingPermissions()
         {
-            if (owner == null) return;
-
             checkingPermissions = true;
             owner.StartCoroutine(CheckMissingPermissionsCoroutine());
         }

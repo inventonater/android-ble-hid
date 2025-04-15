@@ -9,6 +9,9 @@ namespace Inventonater.BleHid
     /// </summary>
     public class KeyboardControlsComponent : UIComponent
     {
+        public const string Name = "Keyboard";
+        public override string TabName => Name;
+
         // Key mapping for characters to key codes
         private static readonly Dictionary<string, byte> keyMapping = new Dictionary<string, byte>()
         {
@@ -48,10 +51,9 @@ namespace Inventonater.BleHid
         private readonly string[] row2 = { "A", "S", "D", "F", "G", "H", "J", "K", "L" };
         private readonly string[] row3 = { "Z", "X", "C", "V", "B", "N", "M" };
 
-        public override void Initialize(){}
         public override void Update(){}
 
-        public virtual void DrawUI()
+        public override void DrawUI()
         {
             DrawTextInputSection();
             DrawKeyboardSection();
@@ -168,20 +170,15 @@ namespace Inventonater.BleHid
         /// </summary>
         private void SendTextMessage()
         {
-            if (!string.IsNullOrEmpty(textToSend))
-            {
-                if (!IsEditorMode)
-                {
-                    BleHidManager.TypeText(textToSend);
-                }
-
-                Logger.AddLogEntry("Text sent: " + textToSend);
-                textToSend = "";
-            }
-            else
+            if (string.IsNullOrEmpty(textToSend))
             {
                 Logger.AddLogEntry("Cannot send empty text");
+                return;
             }
+
+            if (!IsEditorMode) BleHidManager.TypeText(textToSend);
+            Logger.AddLogEntry("Text sent: " + textToSend);
+            textToSend = "";
         }
 
         /// <summary>
@@ -189,9 +186,7 @@ namespace Inventonater.BleHid
         /// </summary>
         private string GetTextActionMessage()
         {
-            return !string.IsNullOrEmpty(textToSend)
-                ? "Text sent: " + textToSend
-                : "Cannot send empty text";
+            return !string.IsNullOrEmpty(textToSend) ? "Text sent: " + textToSend : "Cannot send empty text";
         }
 
         /// <summary>
@@ -200,17 +195,12 @@ namespace Inventonater.BleHid
         private void SendKey(string key)
         {
             byte keyCode = GetKeyCode(key);
-            if (keyCode > 0)
-            {
-                if (IsEditorMode)
-                {
-                    Logger.AddLogEntry("Key pressed: " + key);
-                }
-                else
-                {
-                    BleHidManager.SendKey(keyCode);
-                }
-            }
+            if (keyCode <= 0) return;
+
+            if (IsEditorMode)
+                Logger.AddLogEntry("Key pressed: " + key);
+            else
+                BleHidManager.SendKey(keyCode);
         }
 
         /// <summary>
@@ -219,13 +209,9 @@ namespace Inventonater.BleHid
         private void SendSpecialKey(byte keyCode, string keyName)
         {
             if (IsEditorMode)
-            {
                 Logger.AddLogEntry($"{keyName} key pressed");
-            }
             else
-            {
                 BleHidManager.SendKey(keyCode);
-            }
         }
 
         /// <summary>
@@ -233,12 +219,7 @@ namespace Inventonater.BleHid
         /// </summary>
         private byte GetKeyCode(string key)
         {
-            if (keyMapping.TryGetValue(key, out byte keyCode))
-            {
-                return keyCode;
-            }
-
-            return 0;
+            return keyMapping.GetValueOrDefault(key, (byte)0);
         }
     }
 }

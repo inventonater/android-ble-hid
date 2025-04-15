@@ -13,23 +13,10 @@ namespace Inventonater.BleHid
         protected BleHidManager BleHidManager => BleHidManager.Instance;
         protected LoggingManager Logger => LoggingManager.Instance;
         protected bool IsEditorMode => Application.isEditor;
-        
-        /// <summary>
-        /// The name of the tab this component is associated with
-        /// </summary>
-        public string TabName { get; set; }
-
-        public abstract void Initialize();
+        public abstract string TabName { get; }
         public abstract void Update();
-
-        /// <summary>
-        /// Called when the component's tab becomes active
-        /// </summary>
+        public abstract void DrawUI();
         public virtual void OnActivate() { }
-
-        /// <summary>
-        /// Called when the component's tab becomes inactive
-        /// </summary>
         public virtual void OnDeactivate() { }
 
     }

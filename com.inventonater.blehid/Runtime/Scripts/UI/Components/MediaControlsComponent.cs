@@ -8,10 +8,11 @@ namespace Inventonater.BleHid
     /// </summary>
     public class MediaControlsComponent : UIComponent
     {
-        public override void Initialize(){}
+        public const string Name = "Media";
+        public override string TabName => Name;
         public override void Update(){}
 
-        public virtual void DrawUI()
+        public override void DrawUI()
         {
             UIHelper.BeginSection("Media Controls");
             

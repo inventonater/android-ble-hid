@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 
 namespace Inventonater.BleHid
@@ -14,15 +15,17 @@ namespace Inventonater.BleHid
     public class BleHidControlPanel : MonoBehaviour
     {
         private BleHidManager bleHidManager;
-        private int currentTab = 0;
-        private string[] tabNames = new string[] { "Media", "Mouse", "Keyboard", "Local", "Connection" };
+
+        // Dictionary to map tab names to their corresponding components
+        private readonly List<UIComponent> tabComponents = new();
+        void AddTab(UIComponent component) => tabComponents.Add(component);
+        private int currentTabIndex = 0;
+        private UIComponent currentTabComponent => tabComponents[currentTabIndex];
+        private IEnumerable<string> tabNames => tabComponents.Select(t => t.TabName);
         private bool isInitialized = false;
 
-        // Flag to enable UI in editor even without full BLE functionality
-        private bool isEditorMode = false;
-
-        // UI Components
-        private LoggingManager logger;
+        private static bool IsEditorMode => Application.isEditor;
+        private static LoggingManager Logger => LoggingManager.Instance;
         private StatusComponent statusComponent;
         private MediaControlsComponent mediaComponent;
         private MouseControlsComponent mouseComponent;
@@ -31,157 +34,51 @@ namespace Inventonater.BleHid
         private ErrorHandlingComponent errorComponent;
         private ConnectionParametersComponent connectionParametersComponent;
 
-        // Dictionary to map tab names to their corresponding components
-        private Dictionary<string, UIComponent> tabComponents;
-        private string previousTabName = null;
-
-        // Scroll position for Local tab
         private Vector2 localTabScrollPosition = Vector2.zero;
-
-        // Permission checking
         private float nextPermissionCheckTime = 0f;
-        private const float PERMISSION_CHECK_INTERVAL = 3.0f; // Check every 3 seconds
-
-        // Application focus tracking
         private bool wasInBackground = false;
-
-        // Track if we've attempted to initialize local control
         private bool localControlInitialized = false;
 
         private void Start()
         {
-            InitializeEditorMode();
-            InitializeManagers();
-            InitializeUIComponents();
-            RegisterEvents();
-
-            // Initialize BLE HID
-            StartCoroutine(bleHidManager.Initialize());
-
-            InitializeLocalControl();
-
-            // Add log message
-            logger.AddLogEntry("Starting BLE HID initialization...");
-
-            // Check permissions and accessibility service on startup (Android only)
-            CheckPlatformRequirements();
-        }
-
-        private void InitializeEditorMode()
-        {
             // Check if running in the Unity Editor
-#if UNITY_EDITOR
-            isEditorMode = true;
-            isInitialized = true; // Auto-initialize in editor
-#endif
-        }
+            if (IsEditorMode) isInitialized = true; // Auto-initialize in editor
 
-        private void InitializeManagers()
-        {
-            // Create logging manager
-            logger = LoggingManager.Instance;
-
-            // Create BleHidManager
             GameObject managerObj = new GameObject("BleHidManager");
             bleHidManager = managerObj.AddComponent<BleHidManager>();
+            bleHidManager.OnInitializeComplete += OnInitializeComplete;
+            bleHidManager.OnAdvertisingStateChanged += OnAdvertisingStateChanged;
+            bleHidManager.OnConnectionStateChanged += OnConnectionStateChanged;
+            bleHidManager.OnPairingStateChanged += OnPairingStateChanged;
+            bleHidManager.OnError += OnError;
+            bleHidManager.OnDebugLog += OnDebugLog;
 
-            if (isEditorMode)
-            {
-                logger.AddLogEntry("Running in Editor mode - BLE functionality limited");
-            }
-        }
-
-        private void InitializeUIComponents()
-        {
-            // Create components
             statusComponent = new StatusComponent();
+            statusComponent.SetInitialized(isInitialized);
+            errorComponent = new ErrorHandlingComponent(this);
+
             mediaComponent = new MediaControlsComponent();
             mouseComponent = new MouseControlsComponent();
             keyboardComponent = new KeyboardControlsComponent();
-            localComponent = new LocalControlComponent();
-            errorComponent = new ErrorHandlingComponent();
+            localComponent = new LocalControlComponent(this);
             connectionParametersComponent = new ConnectionParametersComponent();
 
-            // Initialize components
-            statusComponent.Initialize();
-            mediaComponent.Initialize();
-            mouseComponent.Initialize();
-            keyboardComponent.Initialize();
-            localComponent.Initialize();
-            errorComponent.Initialize();
-            connectionParametersComponent.Initialize();
+            AddTab(mediaComponent);
+            AddTab(mouseComponent);
+            AddTab(keyboardComponent);
+            AddTab(localComponent);
+            AddTab(connectionParametersComponent);
 
-            // Set up the tab mapping dictionary
-            tabComponents = new Dictionary<string, UIComponent>
-            {
-                { "Media", mediaComponent },
-                { "Mouse", mouseComponent },
-                { "Keyboard", keyboardComponent },
-                { "Local", localComponent },
-                { "Connection", connectionParametersComponent }
-            };
-
-            // Store the tab name in each component
-            foreach (var kvp in tabComponents)
-            {
-                kvp.Value.TabName = kvp.Key;
-            }
-
-            // Additional setup for components that need MonoBehaviour reference
-            errorComponent.SetMonoBehaviourOwner(this);
-            localComponent.SetMonoBehaviourOwner(this);
-
-            // Set initial state
-            statusComponent.SetInitialized(isInitialized);
-        }
-
-        private void InitializeLocalControl()
-        {
-            // Initialize BleHidLocalControl for Android
-#if UNITY_ANDROID && !UNITY_EDITOR
-            if (localComponent != null)
-            {
-                localComponent.SetMonoBehaviourOwner(this);
-            }
-#endif
-        }
-
-        private void CheckPlatformRequirements()
-        {
-#if UNITY_ANDROID && !UNITY_EDITOR
+            StartCoroutine(bleHidManager.Initialize());
+            Logger.AddLogEntry("Starting BLE HID initialization...");
             errorComponent.CheckMissingPermissions();
             errorComponent.CheckAccessibilityServiceStatus();
-#endif
-        }
-
-        private void RegisterEvents()
-        {
-            if (bleHidManager != null)
-            {
-                bleHidManager.OnInitializeComplete += OnInitializeComplete;
-                bleHidManager.OnAdvertisingStateChanged += OnAdvertisingStateChanged;
-                bleHidManager.OnConnectionStateChanged += OnConnectionStateChanged;
-                bleHidManager.OnPairingStateChanged += OnPairingStateChanged;
-                bleHidManager.OnError += OnError;
-                bleHidManager.OnDebugLog += OnDebugLog;
-            }
         }
 
         private void Update()
         {
-            // Handle update logic in the active component
-            UpdateActiveComponent();
-
-            // Periodic permission checking if needed
+            currentTabComponent.Update();
             PerformPeriodicPermissionChecks();
-        }
-
-        private void UpdateActiveComponent()
-        {
-            if (currentTab == 1) // Mouse tab
-            {
-                mouseComponent.Update();
-            }
         }
 
         private void PerformPeriodicPermissionChecks()
@@ -262,10 +159,26 @@ namespace Inventonater.BleHid
                 return;
             }
 
-            DrawTabSelection();
-            DrawTabContent();
-            DrawLogArea();
+            var newTabIndex = GUILayout.Toolbar(currentTabIndex, tabNames.ToArray(), GUILayout.Height(60));
+            if (newTabIndex != currentTabIndex)
+            {
+                currentTabComponent.OnDeactivate();
+                Logger.AddLogEntry($"Tab '{currentTabComponent.TabName}' deactivated");
 
+                currentTabIndex = newTabIndex;
+
+                currentTabComponent.OnActivate();
+                Logger.AddLogEntry($"Tab '{currentTabComponent.TabName}' activated");
+            }
+
+            if (currentTabComponent.TabName == LocalControlComponent.Name) GUILayout.BeginVertical(GUI.skin.box); // No fixed height for Local tab
+            else GUILayout.BeginVertical(GUI.skin.box, GUILayout.Height(Screen.height * 0.45f));
+
+            if (bleHidManager != null && (isInitialized || IsEditorMode)) DrawSelectedTab();
+
+            GUILayout.EndVertical();
+
+            Logger.DrawLogUI();
             GUILayout.EndArea();
         }
 
@@ -298,64 +211,9 @@ namespace Inventonater.BleHid
             return errorComponent.HasPermissionError || errorComponent.HasAccessibilityError;
         }
 
-        private void DrawTabSelection()
-        {
-            // Tab selection
-            currentTab = GUILayout.Toolbar(currentTab, tabNames, GUILayout.Height(60));
-        }
-
-        private void DrawTabContent()
-        {
-            // Get the current tab name
-            string currentTabName = tabNames[currentTab];
-
-            // Notify components about tab activation/deactivation if changed
-            if (previousTabName != currentTabName)
-            {
-                // Deactivate previous tab component
-                if (previousTabName != null && tabComponents.ContainsKey(previousTabName))
-                {
-                    tabComponents[previousTabName].OnDeactivate();
-                    logger.AddLogEntry($"Tab '{previousTabName}' deactivated");
-                }
-
-                // Activate current tab component
-                if (tabComponents.ContainsKey(currentTabName))
-                {
-                    tabComponents[currentTabName].OnActivate();
-                    logger.AddLogEntry($"Tab '{currentTabName}' activated");
-                }
-
-                // Update previous tab
-                previousTabName = currentTabName;
-            }
-
-            // Tab content - use flexible height for Local tab
-            if (currentTabName == "Local")
-            {
-                GUILayout.BeginVertical(GUI.skin.box); // No fixed height for Local tab
-            }
-            else
-            {
-                GUILayout.BeginVertical(GUI.skin.box, GUILayout.Height(Screen.height * 0.45f));
-            }
-
-            // Check if BLE HID is initialized and a device is connected (or in editor mode)
-            if (bleHidManager != null && (isInitialized || isEditorMode))
-            {
-                DrawSelectedTab();
-            }
-            else
-            {
-                GUILayout.Label("Initializing BLE HID...");
-            }
-
-            GUILayout.EndVertical();
-        }
-
         private void DrawSelectedTab()
         {
-            switch (currentTab)
+            switch (currentTabIndex)
             {
                 case 0: // Media tab
                     DrawMediaTab();
@@ -375,10 +233,17 @@ namespace Inventonater.BleHid
             }
         }
 
+        private void DrawTab(UIComponent tab)
+        {
+            GUI.enabled = bleHidManager.IsConnected || IsEditorMode;
+            tab.DrawUI();
+            GUI.enabled = true;
+        }
+
         private void DrawMediaTab()
         {
             // Remote BLE controls need a connected device
-            GUI.enabled = bleHidManager.IsConnected || isEditorMode;
+            GUI.enabled = bleHidManager.IsConnected || IsEditorMode;
             mediaComponent.DrawUI();
             GUI.enabled = true;
         }
@@ -386,7 +251,7 @@ namespace Inventonater.BleHid
         private void DrawMouseTab()
         {
             // Remote BLE controls need a connected device
-            GUI.enabled = bleHidManager.IsConnected || isEditorMode;
+            GUI.enabled = bleHidManager.IsConnected || IsEditorMode;
             mouseComponent.DrawUI();
             GUI.enabled = true;
         }
@@ -394,7 +259,7 @@ namespace Inventonater.BleHid
         private void DrawKeyboardTab()
         {
             // Remote BLE controls need a connected device
-            GUI.enabled = bleHidManager.IsConnected || isEditorMode;
+            GUI.enabled = bleHidManager.IsConnected || IsEditorMode;
             keyboardComponent.DrawUI();
             GUI.enabled = true;
         }
@@ -423,15 +288,9 @@ namespace Inventonater.BleHid
         private void DrawConnectionParametersTab()
         {
             // Connection parameters need a connected device
-            GUI.enabled = bleHidManager.IsConnected || isEditorMode;
+            GUI.enabled = bleHidManager.IsConnected || IsEditorMode;
             connectionParametersComponent.DrawUI();
             GUI.enabled = true;
-        }
-
-        private void DrawLogArea()
-        {
-            // Log area
-            logger.DrawLogUI();
         }
 
         private void OnInitializeComplete(bool success, string message)
@@ -439,125 +298,99 @@ namespace Inventonater.BleHid
             isInitialized = success;
             statusComponent.SetInitialized(success);
 
-            if (success)
-            {
-                logger.AddLogEntry("BLE HID initialized successfully: " + message);
-            }
+            if (success) { Logger.AddLogEntry("BLE HID initialized successfully: " + message); }
             else
             {
-                logger.AddLogEntry("BLE HID initialization failed: " + message);
+                Logger.AddLogEntry("BLE HID initialization failed: " + message);
 
                 // Check if this is a permission error
-                if (message.Contains("permission"))
-                {
-                    errorComponent.SetPermissionError(message);
-                }
+                if (message.Contains("permission")) { errorComponent.SetPermissionError(message); }
             }
         }
 
         private void OnAdvertisingStateChanged(bool advertising, string message)
         {
-            if (advertising)
-            {
-                logger.AddLogEntry("BLE advertising started: " + message);
-            }
-            else
-            {
-                logger.AddLogEntry("BLE advertising stopped: " + message);
-            }
+            if (advertising) Logger.AddLogEntry("BLE advertising started: " + message);
+            else Logger.AddLogEntry("BLE advertising stopped: " + message);
         }
 
         private void OnConnectionStateChanged(bool connected, string deviceName, string deviceAddress)
         {
-            if (connected)
-            {
-                logger.AddLogEntry("Device connected: " + deviceName + " (" + deviceAddress + ")");
-            }
-            else
-            {
-                logger.AddLogEntry("Device disconnected");
-            }
+            if (connected) Logger.AddLogEntry("Device connected: " + deviceName + " (" + deviceAddress + ")");
+            else Logger.AddLogEntry("Device disconnected");
         }
 
         private void OnPairingStateChanged(string status, string deviceAddress)
         {
-            logger.AddLogEntry("Pairing state changed: " + status + (deviceAddress != null ? " (" + deviceAddress + ")" : ""));
+            Logger.AddLogEntry("Pairing state changed: " + status + (deviceAddress != null ? " (" + deviceAddress + ")" : ""));
         }
 
         private void OnError(int errorCode, string errorMessage)
         {
-            // Check for permission error
-            if (errorCode == BleHidConstants.ERROR_PERMISSIONS_NOT_GRANTED)
+            switch (errorCode)
             {
-                errorComponent.SetPermissionError(errorMessage);
-            }
-            else if (errorCode == BleHidConstants.ERROR_ACCESSIBILITY_NOT_ENABLED)
-            {
-                errorComponent.SetAccessibilityError(true);
-                logger.AddLogEntry("Accessibility error: " + errorMessage);
-
-                // Check accessibility service status
-                errorComponent.CheckAccessibilityServiceStatus();
-            }
-            else
-            {
-                logger.AddLogEntry("Error " + errorCode + ": " + errorMessage);
+                case BleHidConstants.ERROR_PERMISSIONS_NOT_GRANTED:
+                    errorComponent.SetPermissionError(errorMessage);
+                    break;
+                case BleHidConstants.ERROR_ACCESSIBILITY_NOT_ENABLED:
+                    errorComponent.SetAccessibilityError(true);
+                    Logger.AddLogEntry("Accessibility error: " + errorMessage);
+                    errorComponent.CheckAccessibilityServiceStatus();
+                    break;
+                default:
+                    Logger.AddLogEntry("Error " + errorCode + ": " + errorMessage);
+                    break;
             }
         }
 
-        private void OnDebugLog(string message)
-        {
-            logger.AddLogEntry("Debug: " + message);
-        }
+        private void OnDebugLog(string message) => Logger.AddLogEntry("Debug: " + message);
 
         // Handle application focus and pause to detect when user returns from Android settings
         private void OnApplicationFocus(bool hasFocus)
         {
-            if (hasFocus && wasInBackground)
-            {
-                // App has regained focus after being in background
-                logger.AddLogEntry("Application regained focus");
-                wasInBackground = false;
+            if (!hasFocus || !wasInBackground) return;
 
-#if UNITY_ANDROID && !UNITY_EDITOR
-                // Check if we need to reinitialize the local control
-                StartCoroutine(HandleApplicationFocusGained());
-#endif
-            }
+            // App has regained focus after being in background
+            Logger.AddLogEntry("Application regained focus");
+            wasInBackground = false;
+
+            // Check if we need to reinitialize the local control
+            StartCoroutine(HandleApplicationFocusGained());
         }
 
         private void OnApplicationPause(bool isPaused)
         {
             // App was paused (e.g., user went to settings)
-            if (isPaused)
-            {
-                logger.AddLogEntry("Application paused");
-                wasInBackground = true;
-            }
+            if (!isPaused) return;
+
+            Logger.AddLogEntry("CRITICAL - Application paused!!");
+            wasInBackground = true;
         }
 
         // Handle app returning from background (e.g., returning from accessibility settings)
         private IEnumerator HandleApplicationFocusGained()
         {
+            if (IsEditorMode) yield break;
+
             // Wait a short delay for Android to settle
             yield return new WaitForSeconds(0.5f);
 
-            logger.AddLogEntry("Checking accessibility status after focus gained");
+            Logger.AddLogEntry("Checking accessibility status after focus gained");
 
             // Use the direct check method to see if accessibility service was enabled
             bool isAccessibilityEnabled = BleHidLocalControl.CheckAccessibilityServiceEnabledDirect();
-            logger.AddLogEntry($"Direct accessibility check: {(isAccessibilityEnabled ? "ENABLED" : "NOT ENABLED")}");
+            Logger.AddLogEntry($"Direct accessibility check: {(isAccessibilityEnabled ? "ENABLED" : "NOT ENABLED")}");
 
             // Update UI if accessibility status has changed
             if (isAccessibilityEnabled && errorComponent.HasAccessibilityError)
             {
-                logger.AddLogEntry("Accessibility service was enabled in settings, updating UI");
+                Logger.AddLogEntry("Accessibility service was enabled in settings, updating UI");
                 errorComponent.SetAccessibilityError(false);
             }
             else if (!isAccessibilityEnabled && errorComponent.HasAccessibilityError)
             {
                 // Still not enabled, reinitialize local control and recheck
-                logger.AddLogEntry("Reinitializing local control after returning from settings");
+                Logger.AddLogEntry("Reinitializing local control after returning from settings");
                 StartCoroutine(BleHidLocalControl.ReinitializeAfterFocusGained(this));
 
                 // Extra delay and then check accessibility status again
@@ -568,7 +401,7 @@ namespace Inventonater.BleHid
             // Re-check permissions too
             if (errorComponent.HasPermissionError)
             {
-                logger.AddLogEntry("Checking permissions after focus gained");
+                Logger.AddLogEntry("Checking permissions after focus gained");
                 errorComponent.CheckMissingPermissions();
             }
         }
