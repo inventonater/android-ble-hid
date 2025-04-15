@@ -48,10 +48,6 @@ namespace Inventonater.BleHid.UI
             set => _verticalSensitivity = value;
         }
         
-        // Preset configuration index
-        private int currentPresetIndex = 1; // Default to "Standard"
-        private readonly string[] presetNames = { "Precision", "Standard", "Fast" };
-        
         // Unified input filter for mouse movement
         private IInputFilter inputFilter;
         
@@ -82,36 +78,6 @@ namespace Inventonater.BleHid.UI
                     Logger.AddLogEntry($"Changed input filter to: {inputFilter.Name}");
                 }
             }
-        }
-        
-        
-        // Apply a preset configuration - now just handles global settings
-        private void ApplyPreset(int presetIndex)
-        {
-            currentPresetIndex = presetIndex;
-            
-            switch(presetIndex)
-            {
-                case 0: // Precision
-                    HorizontalSensitivity = 2.0f;
-                    VerticalSensitivity = 2.0f;
-                    GlobalScale = 0.5f;
-                    break;
-                    
-                case 1: // Standard
-                    HorizontalSensitivity = 3.0f;
-                    VerticalSensitivity = 3.0f;
-                    GlobalScale = 1.0f;
-                    break;
-                    
-                case 2: // Fast
-                    HorizontalSensitivity = 5.0f;
-                    VerticalSensitivity = 5.0f; 
-                    GlobalScale = 2.0f;
-                    break;
-            }
-            
-            Logger.AddLogEntry($"Applied mouse preset: {presetNames[presetIndex]}");
         }
         
         public override void Initialize(BleHidManager bleHidManager, LoggingManager logger, bool isEditorMode)
@@ -186,6 +152,8 @@ namespace Inventonater.BleHid.UI
             // Mouse motion tuning controls
             UIHelper.BeginSection("Mouse Tuning");
             
+            // --- GLOBAL SETTINGS SECTION ---
+            
             // Global scale slider
             GUILayout.Label("Global Speed: Adjusts overall mouse movement speed");
             float newGlobalScale = UIHelper.SliderWithLabels(
@@ -197,7 +165,31 @@ namespace Inventonater.BleHid.UI
                 GlobalScale = newGlobalScale;
             }
             
+            // Horizontal sensitivity slider
+            GUILayout.Label("Horizontal Speed: Adjusts left-right sensitivity");
+            float newHorizontalSensitivity = UIHelper.SliderWithLabels(
+                "Low", _horizontalSensitivity, 1.0f, 10.0f, "High", 
+                "Horizontal Speed: {0:F1}", UIHelper.StandardSliderOptions);
+                
+            if (newHorizontalSensitivity != _horizontalSensitivity)
+            {
+                HorizontalSensitivity = newHorizontalSensitivity;
+            }
+            
+            // Vertical sensitivity slider
+            GUILayout.Label("Vertical Speed: Adjusts up-down sensitivity");
+            float newVerticalSensitivity = UIHelper.SliderWithLabels(
+                "Low", _verticalSensitivity, 1.0f, 10.0f, "High", 
+                "Vertical Speed: {0:F1}", UIHelper.StandardSliderOptions);
+                
+            if (newVerticalSensitivity != _verticalSensitivity)
+            {
+                VerticalSensitivity = newVerticalSensitivity;
+            }
+            
             GUILayout.Space(10);
+            
+            // --- FILTER SELECTION SECTION ---
             
             // Filter type selection
             GUILayout.Label("Input Filter: Determines how mouse movement is processed");
@@ -226,48 +218,11 @@ namespace Inventonater.BleHid.UI
             
             GUILayout.Space(10);
             
-            // Preset selector
-            GUILayout.BeginHorizontal();
-            GUILayout.Label("Presets:", GUILayout.Width(80));
-            for (int i = 0; i < presetNames.Length; i++)
-            {
-                GUI.enabled = currentPresetIndex != i;
-                if (GUILayout.Button(presetNames[i], GUILayout.Height(40)))
-                {
-                    ApplyPreset(i);
-                }
-                GUI.enabled = true;
-            }
-            GUILayout.EndHorizontal();
-            
-            GUILayout.Space(10);
-            
-            // Horizontal sensitivity slider
-            GUILayout.Label("Horizontal Speed: Adjusts left-right sensitivity");
-            float newHorizontalSensitivity = UIHelper.SliderWithLabels(
-                "Low", _horizontalSensitivity, 1.0f, 10.0f, "High", 
-                "Horizontal Speed: {0:F1}", UIHelper.StandardSliderOptions);
-                
-            if (newHorizontalSensitivity != _horizontalSensitivity)
-            {
-                HorizontalSensitivity = newHorizontalSensitivity;
-            }
-            
-            // Vertical sensitivity slider
-            GUILayout.Label("Vertical Speed: Adjusts up-down sensitivity");
-            float newVerticalSensitivity = UIHelper.SliderWithLabels(
-                "Low", _verticalSensitivity, 1.0f, 10.0f, "High", 
-                "Vertical Speed: {0:F1}", UIHelper.StandardSliderOptions);
-                
-            if (newVerticalSensitivity != _verticalSensitivity)
-            {
-                VerticalSensitivity = newVerticalSensitivity;
-            }
+            // --- FILTER-SPECIFIC PARAMETERS SECTION ---
             
             // Let the filter draw its own parameter controls
             if (inputFilter != null)
             {
-                GUILayout.Space(10);
                 inputFilter.DrawParameterControls(Logger);
             }
             
