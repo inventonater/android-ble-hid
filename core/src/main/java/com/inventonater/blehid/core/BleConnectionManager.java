@@ -159,18 +159,49 @@ public class BleConnectionManager {
             return false;
         }
         
+        // Validate and map priority value
+        if (priority < CONNECTION_PRIORITY_HIGH || priority > CONNECTION_PRIORITY_LOW_POWER) {
+            Log.e(TAG, "Invalid connection priority: " + priority);
+            return false;
+        }
+        
         // Store requested value
         requestedConnectionPriority = priority;
+        
+        // Log the priority level
+        String priorityName;
+        String expectedInterval;
+        switch (priority) {
+            case 0: // CONNECTION_PRIORITY_HIGH
+                priorityName = "HIGH - Low Latency";
+                expectedInterval = "7.5-15ms";
+                break;
+            case 1: // CONNECTION_PRIORITY_BALANCED
+                priorityName = "BALANCED";
+                expectedInterval = "30-50ms";
+                break;
+            case 2: // CONNECTION_PRIORITY_LOW_POWER
+                priorityName = "LOW_POWER - Battery Efficient";
+                expectedInterval = "100-500ms";
+                break;
+            default:
+                priorityName = "UNKNOWN";
+                expectedInterval = "unknown";
+                break;
+        }
+        
+        Log.i(TAG, "Requesting connection priority: " + priorityName + 
+              " (" + priority + "), expected interval: " + expectedInterval);
         
         boolean result = gatt.requestConnectionPriority(priority);
         
         if (result) {
-            Log.d(TAG, "Connection priority request sent: " + priority);
+            Log.d(TAG, "Connection priority request sent successfully: " + priorityName);
             
             // Actual values will be reported in the connection parameter update callback
             return true;
         } else {
-            Log.e(TAG, "Failed to request connection priority");
+            Log.e(TAG, "Failed to request connection priority: " + priorityName);
             
             if (listener != null) {
                 listener.onRequestComplete("connectionPriority", false, "Request failed");

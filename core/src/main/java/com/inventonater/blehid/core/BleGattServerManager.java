@@ -267,9 +267,13 @@ public class BleGattServerManager {
                 if (newState == BluetoothProfile.STATE_CONNECTED) {
                     Log.i(TAG, "Client GATT connected to " + address);
                     
-                    // Discover services after connecting - use HIGH priority for lowest latency
-                    gatt.requestConnectionPriority(BluetoothGatt.CONNECTION_PRIORITY_HIGH);
-                    gatt.discoverServices();
+                    // First request HIGH priority for lowest latency (7.5-15ms intervals)
+                    boolean priorityResult = gatt.requestConnectionPriority(BluetoothGatt.CONNECTION_PRIORITY_HIGH);
+                    Log.i(TAG, "Requested HIGH connection priority for lowest latency: " + (priorityResult ? "success" : "failed"));
+                    
+                    // Then discover services
+                    boolean discoverResult = gatt.discoverServices();
+                    Log.i(TAG, "Service discovery initiated: " + (discoverResult ? "success" : "failed"));
                     
                 } else if (newState == BluetoothProfile.STATE_DISCONNECTED) {
                     Log.i(TAG, "Client GATT disconnected from " + address);

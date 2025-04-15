@@ -568,12 +568,7 @@ namespace Inventonater.BleHid
 
         private bool CheckInitialized()
         {
-            if (!initialized || bridgeInstance == null)
-            {
-                Debug.LogError("BleHidLocalControl: Not initialized");
-                return false;
-            }
-            return true;
+            return initialized && bridgeInstance != null;
         }
 
         private bool CheckAccessibilityService()

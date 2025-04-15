@@ -11,10 +11,14 @@ namespace Inventonater.BleHid.UI
         // Standard UI sizes
         public static readonly float StandardButtonHeight = 60f;
         public static readonly float LargeButtonHeight = 80f;
+        public static readonly float StandardSliderHeight = 40f; // Taller slider for better touch interaction
+        public static readonly float LargeSliderHeight = 60f;
         
         // Predefined layout options
         public static readonly GUILayoutOption[] StandardButtonOptions = new GUILayoutOption[] { GUILayout.Height(StandardButtonHeight) };
         public static readonly GUILayoutOption[] LargeButtonOptions = new GUILayoutOption[] { GUILayout.Height(LargeButtonHeight) };
+        public static readonly GUILayoutOption[] StandardSliderOptions = new GUILayoutOption[] { GUILayout.Height(StandardSliderHeight) };
+        public static readonly GUILayoutOption[] LargeSliderOptions = new GUILayoutOption[] { GUILayout.Height(LargeSliderHeight) };
         
         /// <summary>
         /// Create a standard button that handles both editor mode and runtime functionality
@@ -149,6 +153,72 @@ namespace Inventonater.BleHid.UI
         public static void EndSection()
         {
             GUILayout.EndVertical();
+        }
+        
+        /// <summary>
+        /// Enhanced slider with touch-friendly height and better visual appearance
+        /// </summary>
+        /// <param name="currentValue">Current int value of the slider</param>
+        /// <param name="minValue">Minimum value</param>
+        /// <param name="maxValue">Maximum value</param>
+        /// <param name="labelFormat">Optional format string for value label, e.g. "{0} ms"</param>
+        /// <param name="options">Optional additional layout options</param>
+        /// <returns>The new slider value</returns>
+        public static int EnhancedSlider(int currentValue, int minValue, int maxValue, 
+            string labelFormat = "{0}", GUILayoutOption[] options = null)
+        {
+            // Use standard slider options if none provided
+            if (options == null)
+                options = StandardSliderOptions;
+            
+            // Create a custom slider style with larger thumb
+            GUIStyle sliderStyle = new GUIStyle(GUI.skin.horizontalSlider);
+            sliderStyle.fixedHeight = 0; // Allow height to be controlled by layout options
+            
+            GUIStyle thumbStyle = new GUIStyle(GUI.skin.horizontalSliderThumb);
+            thumbStyle.fixedHeight = 0; // Allow thumb height to adapt
+            thumbStyle.fixedWidth = 30; // Wider thumb for easier touch
+            
+            // Create the slider
+            float floatValue = GUILayout.HorizontalSlider(currentValue, minValue, maxValue, sliderStyle, thumbStyle, options);
+            int newValue = Mathf.RoundToInt(floatValue);
+            
+            return newValue;
+        }
+        
+        /// <summary>
+        /// Slider with min/max labels and current value display
+        /// </summary>
+        /// <param name="leftLabel">Label displayed on the left (typically min value)</param>
+        /// <param name="currentValue">Current slider value</param>
+        /// <param name="minValue">Minimum value</param>
+        /// <param name="maxValue">Maximum value</param>
+        /// <param name="rightLabel">Label displayed on the right (typically max value)</param>
+        /// <param name="valueFormat">Optional format string for value display</param>
+        /// <param name="options">Optional additional layout options</param>
+        /// <returns>The new slider value</returns>
+        public static int SliderWithLabels(string leftLabel, int currentValue, int minValue, int maxValue, 
+            string rightLabel, string valueFormat = "{0}", GUILayoutOption[] options = null)
+        {
+            GUILayout.BeginVertical();
+            
+            // Top row with current value display
+            GUILayout.BeginHorizontal();
+            GUILayout.FlexibleSpace();
+            GUILayout.Label(string.Format(valueFormat, currentValue), GUILayout.MinWidth(80));
+            GUILayout.FlexibleSpace();
+            GUILayout.EndHorizontal();
+            
+            // Slider row with min/max labels
+            GUILayout.BeginHorizontal();
+            GUILayout.Label(leftLabel, GUILayout.Width(60));
+            int newValue = EnhancedSlider(currentValue, minValue, maxValue, valueFormat, options);
+            GUILayout.Label(rightLabel, GUILayout.Width(60));
+            GUILayout.EndHorizontal();
+            
+            GUILayout.EndVertical();
+            
+            return newValue;
         }
         
         /// <summary>

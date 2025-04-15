@@ -8,17 +8,31 @@ namespace Inventonater.BleHid.UI
     /// </summary>
     public class ConnectionParametersComponent : UIComponent
     {
-        private int requestedMtu = 23;
+        // Requested values
+        private int requestedMtu = 512; // Default to maximum for best performance
+        private int requestedConnectionPriority = 0; // Default to HIGH (0) for best performance
+        private int requestedTxPowerLevel = 2; // Default to HIGH (2) for best signal strength
+        
+        // Dropdown state tracking
+        private bool connectionPriorityDropdownExpanded = false;
+        private bool txPowerDropdownExpanded = false;
+        
+        // UI state
         private string statusMessage = "";
         private Color statusColor = Color.white;
+        private string[] connectionPriorityNames = new string[] { "HIGH (Low Latency)", "BALANCED", "LOW POWER" };
+        private string[] expectedIntervals = new string[] { "7.5-15ms", "30-50ms", "100-500ms" };
+        private string[] txPowerLevelNames = new string[] { "LOW", "MEDIUM", "HIGH" };
         
-        // Connection parameter info
+        // Connection parameter info - actual values
         private string connectionInterval = "--";
         private string slaveLatency = "--";
         private string supervisionTimeout = "--";
         private string mtuSize = "--";
         private string rssi = "--";
         private Color rssiColor = Color.white;
+        private Color intervalColor = Color.white;
+        private Color mtuColor = Color.white;
         
         public override void Initialize(BleHidManager bleManager, LoggingManager logger, bool isEditorMode)
         {
@@ -53,68 +67,145 @@ namespace Inventonater.BleHid.UI
             GUIStyle boldStyle = new GUIStyle(GUI.skin.label);
             boldStyle.fontStyle = FontStyle.Bold;
             GUILayout.Label("Connection Info:", boldStyle);
-            GUILayout.Label("Connection Interval: " + connectionInterval + " ms");
+            
+            // Connection interval with expected range
+            GUIStyle intervalStyle = new GUIStyle(GUI.skin.label);
+            intervalStyle.normal.textColor = intervalColor;
+            string expectedRange = "";
+            if (requestedConnectionPriority >= 0 && requestedConnectionPriority < expectedIntervals.Length)
+                expectedRange = " (Expected: " + expectedIntervals[requestedConnectionPriority] + ")";
+            GUILayout.Label("Connection Interval: " + connectionInterval + " ms" + expectedRange, intervalStyle);
+            
             GUILayout.Label("Slave Latency: " + slaveLatency);
             GUILayout.Label("Supervision Timeout: " + supervisionTimeout + " ms");
             
-            // RSSI with color
+            // RSSI with color and signal strength indicator
             GUIStyle rssiStyle = new GUIStyle(GUI.skin.label);
             rssiStyle.normal.textColor = rssiColor;
-            GUILayout.Label("RSSI: " + rssi + " dBm", rssiStyle);
+            string signalStrength = "";
+            if (rssi != "--")
+            {
+                int rssiValue = int.Parse(rssi);
+                if (rssiValue > -60)
+                    signalStrength = " (Excellent)";
+                else if (rssiValue > -70)
+                    signalStrength = " (Good)";
+                else if (rssiValue > -80)
+                    signalStrength = " (Fair)";
+                else
+                    signalStrength = " (Poor)";
+            }
+            GUILayout.Label("RSSI: " + rssi + " dBm" + signalStrength, rssiStyle);
             
-            GUILayout.Label("MTU Size: " + mtuSize + " bytes");
+            // MTU Size with requested value
+            GUIStyle mtuStyle = new GUIStyle(GUI.skin.label);
+            mtuStyle.normal.textColor = mtuColor;
+            GUILayout.Label("MTU Size: " + mtuSize + " bytes (Requested: " + requestedMtu + ")", mtuStyle);
+            
             GUILayout.EndVertical();
             
             GUILayout.Space(10);
             
-            // Connection Priority section
+            // Connection Priority section with dropdown
             GUILayout.BeginVertical(GUI.skin.box);
             GUILayout.Label("Connection Priority:", boldStyle);
             
             GUI.enabled = connected || IsEditorMode;
             
-            if (ActionButton("High Priority (Low Latency)", 
-                    () => RequestConnectionPriority(0),
-                    "Request high priority connection", 
-                    UIHelper.StandardButtonOptions))
+            GUILayout.BeginHorizontal();
+            GUILayout.Label("Priority:", GUILayout.Width(60));
+            
+            // Create a custom dropdown style
+            GUIStyle dropdownStyle = new GUIStyle(GUI.skin.button);
+            dropdownStyle.alignment = TextAnchor.MiddleLeft;
+            dropdownStyle.padding = new RectOffset(10, 10, 5, 5);
+            
+            // Display current connection priority
+            string currentPriority = "Unknown";
+            if (requestedConnectionPriority >= 0 && requestedConnectionPriority < connectionPriorityNames.Length)
+                currentPriority = connectionPriorityNames[requestedConnectionPriority];
+            
+            // Make dropdown button that toggles the expanded state
+            if (GUILayout.Button(currentPriority, dropdownStyle, GUILayout.MinWidth(180)))
             {
-                SetStatus("Requesting HIGH priority...", Color.yellow);
+                connectionPriorityDropdownExpanded = !connectionPriorityDropdownExpanded;
+                // Close the other dropdown if it's open
+                if (connectionPriorityDropdownExpanded)
+                    txPowerDropdownExpanded = false;
             }
             
-            if (ActionButton("Balanced", 
-                    () => RequestConnectionPriority(1),
-                    "Request balanced connection priority", 
-                    UIHelper.StandardButtonOptions))
+            // Dropdown arrow indicator
+            GUILayout.Label(connectionPriorityDropdownExpanded ? "▲" : "▼", GUILayout.Width(20));
+            GUILayout.EndHorizontal();
+            
+            // Show dropdown options if expanded
+            if (connectionPriorityDropdownExpanded)
             {
-                SetStatus("Requesting BALANCED priority...", Color.yellow);
+                GUILayout.BeginVertical(GUI.skin.box);
+                for (int i = 0; i < connectionPriorityNames.Length; i++)
+                {
+                    bool isSelected = (requestedConnectionPriority == i);
+                    GUIStyle optionStyle = new GUIStyle(GUI.skin.button);
+                    if (isSelected)
+                    {
+                        optionStyle.normal.textColor = Color.green;
+                        optionStyle.fontStyle = FontStyle.Bold;
+                    }
+                    
+                    if (GUILayout.Button(connectionPriorityNames[i], optionStyle))
+                    {
+                        requestedConnectionPriority = i;
+                        RequestConnectionPriority(i);
+                        connectionPriorityDropdownExpanded = false;
+                    }
+                }
+                GUILayout.EndVertical();
             }
             
-            if (ActionButton("Low Power", 
-                    () => RequestConnectionPriority(2),
-                    "Request low power connection priority", 
-                    UIHelper.StandardButtonOptions))
+            // Description of selected priority with expected interval
+            string priorityDescription = "";
+            switch(requestedConnectionPriority)
             {
-                SetStatus("Requesting LOW POWER priority...", Color.yellow);
+                case 0: // HIGH
+                    priorityDescription = "Minimum latency (7.5-15ms), maximum responsiveness, highest power usage";
+                    break;
+                case 1: // BALANCED
+                    priorityDescription = "Medium latency (30-50ms), balanced power usage";
+                    break;
+                case 2: // LOW POWER
+                    priorityDescription = "Higher latency (100-500ms), lowest power consumption";
+                    break;
             }
+            GUILayout.Label(priorityDescription, GUILayout.MinHeight(40));
             
             GUI.enabled = true;
             GUILayout.EndVertical();
             
             GUILayout.Space(10);
             
-            // MTU Size section
+            // MTU Size section with enhanced slider
             GUILayout.BeginVertical(GUI.skin.box);
             GUILayout.Label("MTU Size:", boldStyle);
             
             GUI.enabled = connected || IsEditorMode;
             
-            GUILayout.BeginHorizontal();
-            GUILayout.Label("23", GUILayout.Width(30));
-            requestedMtu = Mathf.RoundToInt(GUILayout.HorizontalSlider(requestedMtu, 23, 517));
-            GUILayout.Label("517", GUILayout.Width(30));
-            GUILayout.EndHorizontal();
+            // Use the enhanced slider with labels
+            requestedMtu = UIHelper.SliderWithLabels(
+                "23", 
+                requestedMtu, 
+                23, 
+                517, 
+                "517", 
+                "{0} bytes", 
+                UIHelper.StandardSliderOptions
+            );
             
-            GUILayout.Label("Requested MTU: " + requestedMtu + " bytes");
+            // Add a descriptive note about MTU
+            GUIStyle noteStyle = new GUIStyle(GUI.skin.label);
+            noteStyle.fontSize = GUI.skin.label.fontSize - 2;
+            noteStyle.wordWrap = true;
+            GUILayout.Label("Higher MTU allows more data per packet. Max value may not be supported by all devices.", 
+                noteStyle, GUILayout.Height(40));
             
             if (ActionButton("Request MTU Size", 
                     () => RequestMtu(),
@@ -129,34 +220,85 @@ namespace Inventonater.BleHid.UI
             
             GUILayout.Space(10);
             
-            // Transmit Power section
+            // Transmit Power section with dropdown
             GUILayout.BeginVertical(GUI.skin.box);
             GUILayout.Label("Transmit Power:", boldStyle);
             
             GUI.enabled = initialized || IsEditorMode;
             
-            if (ActionButton("Low Power", 
-                    () => SetTransmitPowerLevel(0),
-                    "Set low transmit power", 
-                    UIHelper.StandardButtonOptions))
+            GUILayout.BeginHorizontal();
+            GUILayout.Label("Level:", GUILayout.Width(60));
+            
+            // Create a custom dropdown style
+            GUIStyle txPowerDropdownStyle = new GUIStyle(GUI.skin.button);
+            txPowerDropdownStyle.alignment = TextAnchor.MiddleLeft;
+            txPowerDropdownStyle.padding = new RectOffset(10, 10, 5, 5);
+            
+            // Display current TX power level
+            string currentLevel = "Unknown";
+            if (requestedTxPowerLevel >= 0 && requestedTxPowerLevel < txPowerLevelNames.Length)
+                currentLevel = txPowerLevelNames[requestedTxPowerLevel];
+            
+            // Make dropdown button that toggles the expanded state
+            if (GUILayout.Button(currentLevel, txPowerDropdownStyle, GUILayout.MinWidth(120)))
             {
-                SetStatus("Setting TX power to LOW...", Color.yellow);
+                txPowerDropdownExpanded = !txPowerDropdownExpanded;
+                // Close the other dropdown if it's open
+                if (txPowerDropdownExpanded)
+                    connectionPriorityDropdownExpanded = false;
             }
             
-            if (ActionButton("Medium Power", 
-                    () => SetTransmitPowerLevel(1),
-                    "Set medium transmit power", 
-                    UIHelper.StandardButtonOptions))
+            // Dropdown arrow indicator
+            GUILayout.Label(txPowerDropdownExpanded ? "▲" : "▼", GUILayout.Width(20));
+            GUILayout.EndHorizontal();
+            
+            // Show dropdown options if expanded
+            if (txPowerDropdownExpanded)
             {
-                SetStatus("Setting TX power to MEDIUM...", Color.yellow);
+                GUILayout.BeginVertical(GUI.skin.box);
+                for (int i = 0; i < txPowerLevelNames.Length; i++)
+                {
+                    bool isSelected = (requestedTxPowerLevel == i);
+                    GUIStyle optionStyle = new GUIStyle(GUI.skin.button);
+                    if (isSelected)
+                    {
+                        optionStyle.normal.textColor = Color.green;
+                        optionStyle.fontStyle = FontStyle.Bold;
+                    }
+                    
+                    if (GUILayout.Button(txPowerLevelNames[i], optionStyle))
+                    {
+                        requestedTxPowerLevel = i;
+                        SetTransmitPowerLevel(i);
+                        txPowerDropdownExpanded = false;
+                    }
+                }
+                GUILayout.EndVertical();
             }
             
-            if (ActionButton("High Power", 
-                    () => SetTransmitPowerLevel(2),
-                    "Set high transmit power", 
+            // Description of selected power level
+            string powerDescription = "";
+            switch(requestedTxPowerLevel)
+            {
+                case 0: // LOW
+                    powerDescription = "Low power consumption, shorter range";
+                    break;
+                case 1: // MEDIUM
+                    powerDescription = "Balanced power and range";
+                    break;
+                case 2: // HIGH
+                    powerDescription = "Maximum range, higher power consumption";
+                    break;
+            }
+            GUILayout.Label(powerDescription, GUILayout.MinHeight(40));
+            
+            // Apply button for the selected power level
+            if (ActionButton("Apply TX Power Level", 
+                    () => SetTransmitPowerLevel(requestedTxPowerLevel),
+                    "Apply the selected TX power level", 
                     UIHelper.StandardButtonOptions))
             {
-                SetStatus("Setting TX power to HIGH...", Color.yellow);
+                SetStatus($"Setting TX power to {txPowerLevelNames[requestedTxPowerLevel]}...", Color.yellow);
             }
             
             GUI.enabled = true;
@@ -335,6 +477,41 @@ namespace Inventonater.BleHid.UI
             supervisionTimeout = timeout.ToString();
             mtuSize = mtu.ToString();
             
+            // Color coding for connection interval based on requested priority
+            if (requestedConnectionPriority == 0) // HIGH priority requested
+            {
+                if (interval <= 15) 
+                    intervalColor = Color.green; // Good - within expected range for HIGH
+                else if (interval <= 30)
+                    intervalColor = Color.yellow; // OK - faster than BALANCED but not as fast as HIGH
+                else
+                    intervalColor = Color.red; // Bad - not getting low latency despite HIGH priority
+            }
+            else if (requestedConnectionPriority == 1) // BALANCED priority requested
+            {
+                if (interval >= 30 && interval <= 50)
+                    intervalColor = Color.green; // Good - within expected range for BALANCED
+                else if (interval < 30)
+                    intervalColor = Color.green; // Good - actually got better than expected
+                else
+                    intervalColor = Color.yellow; // OK - higher than expected, but may be OK
+            }
+            else if (requestedConnectionPriority == 2) // LOW POWER priority requested
+            {
+                if (interval >= 100)
+                    intervalColor = Color.green; // Good for power saving
+                else
+                    intervalColor = Color.yellow; // Not as power efficient as requested
+            }
+            
+            // Color coding for MTU size
+            if (mtu >= requestedMtu)
+                mtuColor = Color.green; // Got requested MTU or better
+            else if (mtu >= requestedMtu * 0.8f)
+                mtuColor = Color.yellow; // Got close to requested MTU (80% or more)
+            else
+                mtuColor = Color.red; // Got significantly less than requested MTU
+            
             SetStatus("Parameters updated", Color.green);
         }
         
@@ -349,8 +526,6 @@ namespace Inventonater.BleHid.UI
                 rssiColor = Color.yellow;
             else
                 rssiColor = Color.red;
-            
-            SetStatus("RSSI read successfully", Color.green);
         }
         
         private void HandleConnectionParameterRequestComplete(string parameterName, bool success, string actualValue)
