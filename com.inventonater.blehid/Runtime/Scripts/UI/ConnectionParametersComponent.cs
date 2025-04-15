@@ -13,6 +13,13 @@ namespace Inventonater.BleHid.UI
         private int requestedConnectionPriority = 0; // Default to HIGH (0) for best performance
         private int requestedTxPowerLevel = 2; // Default to HIGH (2) for best signal strength
         
+        // Track last applied values to avoid redundant requests
+        private int lastAppliedMtu = 512;
+        private int lastAppliedTxPowerLevel = 2;
+        
+        // Slider interaction tracking
+        private bool isSliderBeingDragged = false;
+        
         // Dropdown state tracking
         private bool connectionPriorityDropdownExpanded = false;
         private bool txPowerDropdownExpanded = false;
@@ -113,7 +120,8 @@ namespace Inventonater.BleHid.UI
             GUI.enabled = connected || IsEditorMode;
             
             GUILayout.BeginHorizontal();
-            GUILayout.Label("Priority:", GUILayout.Width(60));
+            var dropDownLabel = GUILayout.Width(120);
+            GUILayout.Label("Priority:", dropDownLabel);
             
             // Create a custom dropdown style
             GUIStyle dropdownStyle = new GUIStyle(GUI.skin.button);
@@ -161,23 +169,7 @@ namespace Inventonater.BleHid.UI
                 }
                 GUILayout.EndVertical();
             }
-            
-            // Description of selected priority with expected interval
-            string priorityDescription = "";
-            switch(requestedConnectionPriority)
-            {
-                case 0: // HIGH
-                    priorityDescription = "Minimum latency (7.5-15ms), maximum responsiveness, highest power usage";
-                    break;
-                case 1: // BALANCED
-                    priorityDescription = "Medium latency (30-50ms), balanced power usage";
-                    break;
-                case 2: // LOW POWER
-                    priorityDescription = "Higher latency (100-500ms), lowest power consumption";
-                    break;
-            }
-            GUILayout.Label(priorityDescription, GUILayout.MinHeight(40));
-            
+
             GUI.enabled = true;
             GUILayout.EndVertical();
             
@@ -188,6 +180,9 @@ namespace Inventonater.BleHid.UI
             GUILayout.Label("MTU Size:", boldStyle);
             
             GUI.enabled = connected || IsEditorMode;
+            
+            // Track previous value to detect changes
+            int previousMtu = requestedMtu;
             
             // Use the enhanced slider with labels
             requestedMtu = UIHelper.SliderWithLabels(
@@ -200,20 +195,44 @@ namespace Inventonater.BleHid.UI
                 UIHelper.StandardSliderOptions
             );
             
+            // Auto-apply when slider value changes
+            if (previousMtu != requestedMtu && !isSliderBeingDragged)
+            {
+                // Only apply if value is different from last applied value
+                if (requestedMtu != lastAppliedMtu)
+                {
+                    RequestMtu();
+                    lastAppliedMtu = requestedMtu;
+                    SetStatus($"Requesting MTU {requestedMtu}...", Color.yellow);
+                }
+            }
+            
+            // Track whether mouse button is pressed to detect end of slider drag
+            if (Event.current.type == EventType.MouseDown && Event.current.button == 0)
+            {
+                isSliderBeingDragged = true;
+            }
+            else if (Event.current.type == EventType.MouseUp && Event.current.button == 0)
+            {
+                if (isSliderBeingDragged)
+                {
+                    isSliderBeingDragged = false;
+                    // Apply on mouse up - this ensures we only send the request when user is done dragging
+                    if (requestedMtu != lastAppliedMtu)
+                    {
+                        RequestMtu();
+                        lastAppliedMtu = requestedMtu;
+                        SetStatus($"Requesting MTU {requestedMtu}...", Color.yellow);
+                    }
+                }
+            }
+            
             // Add a descriptive note about MTU
             GUIStyle noteStyle = new GUIStyle(GUI.skin.label);
             noteStyle.fontSize = GUI.skin.label.fontSize - 2;
             noteStyle.wordWrap = true;
-            GUILayout.Label("Higher MTU allows more data per packet. Max value may not be supported by all devices.", 
+            GUILayout.Label("Higher MTU allows more data per packet. Changes are applied automatically when slider is released.", 
                 noteStyle, GUILayout.Height(40));
-            
-            if (ActionButton("Request MTU Size", 
-                    () => RequestMtu(),
-                    "Request new MTU size", 
-                    UIHelper.StandardButtonOptions))
-            {
-                SetStatus($"Requesting MTU {requestedMtu}...", Color.yellow);
-            }
             
             GUI.enabled = true;
             GUILayout.EndVertical();
@@ -227,7 +246,7 @@ namespace Inventonater.BleHid.UI
             GUI.enabled = initialized || IsEditorMode;
             
             GUILayout.BeginHorizontal();
-            GUILayout.Label("Level:", GUILayout.Width(60));
+            GUILayout.Label("Level:", dropDownLabel);
             
             // Create a custom dropdown style
             GUIStyle txPowerDropdownStyle = new GUIStyle(GUI.skin.button);
@@ -275,32 +294,7 @@ namespace Inventonater.BleHid.UI
                 }
                 GUILayout.EndVertical();
             }
-            
-            // Description of selected power level
-            string powerDescription = "";
-            switch(requestedTxPowerLevel)
-            {
-                case 0: // LOW
-                    powerDescription = "Low power consumption, shorter range";
-                    break;
-                case 1: // MEDIUM
-                    powerDescription = "Balanced power and range";
-                    break;
-                case 2: // HIGH
-                    powerDescription = "Maximum range, higher power consumption";
-                    break;
-            }
-            GUILayout.Label(powerDescription, GUILayout.MinHeight(40));
-            
-            // Apply button for the selected power level
-            if (ActionButton("Apply TX Power Level", 
-                    () => SetTransmitPowerLevel(requestedTxPowerLevel),
-                    "Apply the selected TX power level", 
-                    UIHelper.StandardButtonOptions))
-            {
-                SetStatus($"Setting TX power to {txPowerLevelNames[requestedTxPowerLevel]}...", Color.yellow);
-            }
-            
+
             GUI.enabled = true;
             GUILayout.EndVertical();
             
