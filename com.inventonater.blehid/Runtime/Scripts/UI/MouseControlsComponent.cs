@@ -5,7 +5,18 @@ using Inventonater.BleHid.UI.Filters;
 namespace Inventonater.BleHid.UI
 {
     /// <summary>
+    /// Different input states for any pointer device
+    /// </summary>
+    public enum PointerInputState
+    {
+        Begin,   // Input started (mouse down, touch began)
+        Move,    // Input moved (mouse moved, touch moved)
+        End      // Input ended (mouse up, touch ended/canceled)
+    }
+    
+    /// <summary>
     /// UI component for mouse controls including touchpad functionality
+    /// with support for external input sources
     /// </summary>
     public class MouseControlsComponent : UIComponent
     {
@@ -55,21 +66,21 @@ namespace Inventonater.BleHid.UI
             get => _currentFilterType;
             set
             {
-            if (_currentFilterType != value)
-            {
-                // Store old filter to check if we're changing types
-                var oldFilter = inputFilter;
-                
-                _currentFilterType = value;
-                
-                // Create a new filter or reuse existing one
-                inputFilter = InputFilterFactory.CreateFilter(_currentFilterType);
-                
-                // Reset the filter to clear any state
-                inputFilter.Reset();
-                
-                Logger.AddLogEntry($"Changed input filter to: {inputFilter.Name}");
-            }
+                if (_currentFilterType != value)
+                {
+                    // Store old filter to check if we're changing types
+                    var oldFilter = inputFilter;
+                    
+                    _currentFilterType = value;
+                    
+                    // Create a new filter or reuse existing one
+                    inputFilter = InputFilterFactory.CreateFilter(_currentFilterType);
+                    
+                    // Reset the filter to clear any state
+                    inputFilter.Reset();
+                    
+                    Logger.AddLogEntry($"Changed input filter to: {inputFilter.Name}");
+                }
             }
         }
         
@@ -119,10 +130,8 @@ namespace Inventonater.BleHid.UI
         
         public override void Update()
         {
-            // Only process touchpad input when:
-            // 1. BLE is initialized or in editor mode
-            // 2. Connected to a device or in editor mode
-            if (BleHidManager == null || (!BleHidManager.IsConnected && !IsEditorMode))
+            // Only process touchpad input when active
+            if (!IsActive())
             {
                 return;
             }
@@ -293,50 +302,83 @@ namespace Inventonater.BleHid.UI
         }
         
         /// <summary>
+        /// Handle pointer input from any source (touch, mouse, external devices)
+        /// </summary>
+        /// <param name="position">Screen position of the input</param>
+        /// <param name="state">Current state of the input (begin, move, end)</param>
+        /// <param name="inputSource">Source name for logging</param>
+        public void HandlePointerInput(Vector2 position, PointerInputState state, string inputSource = "External")
+        {
+            // Skip if component is not active
+            if (!IsActive())
+                return;
+                
+            // Get touchpad area in screen coordinates
+            Rect screenTouchpadRect = GetScreenTouchpadRect();
+            
+            // Log touchpad boundaries for debugging when input begins
+            if (state == PointerInputState.Begin)
+            {
+                Logger.AddLogEntry($"Touchpad screen rect: ({screenTouchpadRect.x}, {screenTouchpadRect.y}, w:{screenTouchpadRect.width}, h:{screenTouchpadRect.height})");
+                Logger.AddLogEntry($"{inputSource} input began at: ({position.x}, {position.y})");
+            }
+
+            switch (state)
+            {
+                case PointerInputState.Begin:
+                    // Start dragging if input begins inside touchpad
+                    if (screenTouchpadRect.Contains(position))
+                    {
+                        lastTouchPosition = position;
+                        isMouseDragging = true;
+                        Logger.AddLogEntry($"{inputSource} drag started inside touchpad");
+                    }
+                    break;
+
+                case PointerInputState.Move:
+                    // Process movement if we're dragging
+                    if (isMouseDragging)
+                    {
+                        ProcessPointerMovement(position);
+                    }
+                    break;
+
+                case PointerInputState.End:
+                    if (isMouseDragging)
+                    {
+                        isMouseDragging = false;
+                        Logger.AddLogEntry($"{inputSource} drag ended");
+                    }
+                    break;
+            }
+        }
+        
+        /// <summary>
         /// Handles touch input for the touchpad area
         /// </summary>
         private void HandleTouchInput(Touch touch)
         {
-            // Always work in screen coordinates for input
-            Vector2 touchScreenPos = touch.position;
-            Rect screenTouchpadRect = GetScreenTouchpadRect();
-
-            // Log touchpad boundaries and touch positions for debugging
-            if (touch.phase == TouchPhase.Began)
-            {
-                Logger.AddLogEntry($"Touchpad screen rect: ({screenTouchpadRect.x}, {screenTouchpadRect.y}, w:{screenTouchpadRect.width}, h:{screenTouchpadRect.height})");
-                Logger.AddLogEntry($"Touch began at: ({touchScreenPos.x}, {touchScreenPos.y})");
-            }
-
+            // Convert Touch input state to our generic PointerInputState
+            PointerInputState state;
+            
             switch (touch.phase)
             {
                 case TouchPhase.Began:
-                    // Start dragging if touch begins inside touchpad
-                    if (screenTouchpadRect.Contains(touchScreenPos))
-                    {
-                        lastTouchPosition = touchScreenPos;
-                        isMouseDragging = true;
-                        Logger.AddLogEntry("Touch drag started inside touchpad");
-                    }
+                    state = PointerInputState.Begin;
                     break;
-
                 case TouchPhase.Moved:
-                    // Process movement if we're dragging
-                    if (isMouseDragging)
-                    {
-                        ProcessPointerMovement(touchScreenPos);
-                    }
+                    state = PointerInputState.Move;
                     break;
-
                 case TouchPhase.Ended:
                 case TouchPhase.Canceled:
-                    if (isMouseDragging)
-                    {
-                        isMouseDragging = false;
-                        Logger.AddLogEntry("Touch drag ended");
-                    }
+                    state = PointerInputState.End;
                     break;
+                default:
+                    return; // Ignore other phases
             }
+            
+            // Use the common input handler
+            HandlePointerInput(touch.position, state, "Touch");
         }
 
         #if UNITY_EDITOR
@@ -345,37 +387,93 @@ namespace Inventonater.BleHid.UI
         /// </summary>
         private void HandleMouseInput()
         {
-            // Convert mouse position to screen coordinates (Unity mouse Y is inverted)
+            // Convert mouse position to screen coordinates
             Vector2 mouseScreenPos = new Vector2(
                 Input.mousePosition.x,
                 Input.mousePosition.y
             );
 
-            Rect screenTouchpadRect = GetScreenTouchpadRect();
-
-            // Start drag on mouse down inside touchpad
+            // Map mouse button states to our pointer states
             if (Input.GetMouseButtonDown(0))
             {
-                if (screenTouchpadRect.Contains(mouseScreenPos))
-                {
-                    lastTouchPosition = mouseScreenPos;
-                    isMouseDragging = true;
-                    Logger.AddLogEntry($"Mouse drag started at ({mouseScreenPos.x}, {mouseScreenPos.y})");
-                }
+                HandlePointerInput(mouseScreenPos, PointerInputState.Begin, "Mouse");
             }
-            // Continue drag during movement
-            else if (Input.GetMouseButton(0) && isMouseDragging)
+            else if (Input.GetMouseButton(0))
             {
-                ProcessPointerMovement(mouseScreenPos);
+                HandlePointerInput(mouseScreenPos, PointerInputState.Move, "Mouse");
             }
-            // End drag on mouse up
-            else if (Input.GetMouseButtonUp(0) && isMouseDragging)
+            else if (Input.GetMouseButtonUp(0))
             {
-                isMouseDragging = false;
-                Logger.AddLogEntry("Mouse drag ended");
+                HandlePointerInput(mouseScreenPos, PointerInputState.End, "Mouse");
             }
         }
         #endif
+        
+        /// <summary>
+        /// Directly sends motion deltas to the connected device, bypassing touchpad constraints
+        /// </summary>
+        /// <param name="motionDelta">Raw motion vector to apply</param>
+        /// <param name="source">Source name for logging</param>
+        /// <returns>True if the motion was processed and sent</returns>
+        public bool SendDirectMotion(Vector2 motionDelta, string source = "External")
+        {
+            if (!IsActive() || inputFilter == null)
+                return false;
+                
+            // Apply unified vector filter
+            float timestamp = Time.time;
+            Vector2 filteredDelta = inputFilter.Filter(motionDelta, timestamp);
+            
+            // Don't process extremely small movements
+            if (filteredDelta.sqrMagnitude < 0.0001f)
+                return false;
+            
+            // Get the direction and magnitude separately
+            float magnitude = filteredDelta.magnitude;
+            Vector2 direction = filteredDelta / magnitude;
+            
+            // Apply different sensitivities to each axis but keep as float
+            direction.x *= _horizontalSensitivity;
+            direction.y *= _verticalSensitivity;
+            
+            // Re-normalize after applying different axis sensitivities
+            if (direction.sqrMagnitude > 0)
+            {
+                direction = direction.normalized;
+            }
+            
+            // Apply global scale to the magnitude
+            float scaledMagnitude = magnitude * _globalScale;
+            
+            // Reconstruct the vector with proper direction and scaled magnitude
+            Vector2 scaledDelta = direction * scaledMagnitude;
+            
+            // Only convert to int at the final step
+            int finalDeltaX = Mathf.RoundToInt(scaledDelta.x);
+            int finalDeltaY = Mathf.RoundToInt(scaledDelta.y);
+            
+            // Only process if movement is significant
+            if (finalDeltaX != 0 || finalDeltaY != 0)
+            {
+                // Invert Y direction for mouse movement (screen Y goes down, mouse Y goes up)
+                finalDeltaY = -finalDeltaY;
+
+                // Send movement or log in editor mode
+                if (!IsEditorMode)
+                {
+                    BleHidManager.MoveMouse(finalDeltaX, finalDeltaY);
+                    Logger.AddLogEntry($"{source} direct motion: ({finalDeltaX}, {finalDeltaY})");
+                }
+                else
+                {
+                    Logger.AddLogEntry($"{source} direct motion: ({finalDeltaX}, {finalDeltaY})");
+                }
+                
+                return true;
+            }
+            
+            return false;
+        }
 
         /// <summary>
         /// Processes pointer movement for both touch and mouse input
@@ -438,6 +536,14 @@ namespace Inventonater.BleHid.UI
                 // Update last position for next calculation
                 lastTouchPosition = currentPosition;
             }
+        }
+        
+        /// <summary>
+        /// Checks if the component is ready to receive input
+        /// </summary>
+        private bool IsActive()
+        {
+            return BleHidManager != null && (BleHidManager.IsConnected || IsEditorMode);
         }
 
         /// <summary>
