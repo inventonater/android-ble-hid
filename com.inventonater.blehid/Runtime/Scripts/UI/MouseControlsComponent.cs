@@ -1,5 +1,6 @@
 using UnityEngine;
 using System;
+using System.Collections.Generic;
 using Inventonater.BleHid.UI.Filters;
 
 namespace Inventonater.BleHid.UI
@@ -20,6 +21,22 @@ namespace Inventonater.BleHid.UI
     /// </summary>
     public class MouseControlsComponent : UIComponent
     {
+        // Performance metrics
+        private float _fpsUpdateInterval = 0.5f; // How often to update FPS (in seconds)
+        private float _lastFpsUpdateTime;
+        private int _frameCount = 0;
+        private float _currentFps = 0;
+        
+        // Target framerate control
+        private int _targetFrameRate = 60; // Default to 60 FPS
+        private const int MIN_FRAMERATE = 30;
+        private const int MAX_FRAMERATE = 90;
+        
+        // Mouse message metrics
+        private int _mouseMessageCount = 0;
+        private float _lastMouseMessageCountUpdateTime;
+        private float _currentMouseMessagesPerSecond = 0;
+        private Queue<float> _messageTimestamps = new Queue<float>();
         
         private Rect touchpadRect;
         private Vector2 lastTouchPosition;
@@ -92,10 +109,42 @@ namespace Inventonater.BleHid.UI
             
             // Initialize touchpad area (will be in the center of the mouse tab)
             touchpadRect = new Rect(Screen.width / 2 - 150, Screen.height / 2 - 100, 300, 200);
+            
+            // Initialize performance metrics
+            _lastFpsUpdateTime = Time.time;
+            _lastMouseMessageCountUpdateTime = Time.time;
+            _currentFps = 0;
+            _currentMouseMessagesPerSecond = 0;
+            
+            // Set the default target framerate
+            _targetFrameRate = 60;
+            Application.targetFrameRate = _targetFrameRate;
+            Logger.AddLogEntry($"Initial target framerate set to: {_targetFrameRate}");
         }
         
         public override void Update()
         {
+            // Update FPS counter
+            _frameCount++;
+            float currentTime = Time.time;
+            
+            // Calculate FPS and reset counter if update interval has elapsed
+            if (currentTime - _lastFpsUpdateTime > _fpsUpdateInterval)
+            {
+                _currentFps = _frameCount / (currentTime - _lastFpsUpdateTime);
+                _frameCount = 0;
+                _lastFpsUpdateTime = currentTime;
+                
+                // Calculate messages per second
+                // Remove timestamps older than 1 second
+                while (_messageTimestamps.Count > 0 && _messageTimestamps.Peek() < currentTime - 1.0f)
+                {
+                    _messageTimestamps.Dequeue();
+                }
+                
+                _currentMouseMessagesPerSecond = _messageTimestamps.Count;
+            }
+            
             // Only process touchpad input when active
             if (!IsActive())
             {
@@ -119,6 +168,26 @@ namespace Inventonater.BleHid.UI
         public override void DrawUI()
         {
             UIHelper.BeginSection("Mouse Touchpad");
+            
+            // Display performance metrics
+            GUILayout.Label($"FPS: {_currentFps:F1} | Mouse Messages: {_currentMouseMessagesPerSecond:F0}/sec", 
+                           new GUIStyle(GUI.skin.label) { fontStyle = FontStyle.Bold });
+            
+            // Target framerate slider
+            GUILayout.Label("Target FPS: Limits maximum frame rate");
+            float newFrameRate = UIHelper.SliderWithLabels(
+                "Low", (float)_targetFrameRate, MIN_FRAMERATE, MAX_FRAMERATE, "High", 
+                "Target FPS: {0:F0}", UIHelper.StandardSliderOptions);
+                
+            int roundedFrameRate = Mathf.RoundToInt(newFrameRate);
+            if (roundedFrameRate != _targetFrameRate)
+            {
+                _targetFrameRate = roundedFrameRate;
+                Application.targetFrameRate = _targetFrameRate;
+                Logger.AddLogEntry($"Target framerate set to: {_targetFrameRate}");
+            }
+            
+            GUILayout.Space(5);
             
             // Show touchpad instruction
             GUILayout.Label("Touchpad Area: Touch and drag to control mouse pointer");
@@ -424,6 +493,9 @@ namespace Inventonater.BleHid.UI
                     Logger.AddLogEntry($"{source} direct motion: ({finalDeltaX}, {finalDeltaY})");
                 }
                 
+                // Track this mouse message
+                _messageTimestamps.Enqueue(Time.time);
+                
                 return true;
             }
             
@@ -488,6 +560,9 @@ namespace Inventonater.BleHid.UI
                     Logger.AddLogEntry($"Mouse delta: ({finalDeltaX}, {finalDeltaY})");
                 }
 
+                // Track this mouse message
+                _messageTimestamps.Enqueue(Time.time);
+                
                 // Update last position for next calculation
                 lastTouchPosition = currentPosition;
             }

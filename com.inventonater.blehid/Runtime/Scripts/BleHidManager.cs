@@ -477,6 +477,15 @@ namespace Inventonater.BleHid
             
             try
             {
+                if (deltaX < -127 || deltaX > 127 || deltaY < -127 || deltaY > 127)
+                {
+                    string message = $"Mouse movement values out of range: {deltaX}, {deltaY}";
+                    Debug.LogError(message);
+                    LastErrorMessage = message;
+                    LastErrorCode = BleHidConstants.ERROR_MOUSE_MOVEMENT_OUT_OF_RANGE;
+                    OnError?.Invoke(BleHidConstants.ERROR_MOUSE_MOVEMENT_OUT_OF_RANGE, message);
+                }
+
                 return bridgeInstance.Call<bool>("moveMouse", deltaX, deltaY);
             }
             catch (Exception e)
