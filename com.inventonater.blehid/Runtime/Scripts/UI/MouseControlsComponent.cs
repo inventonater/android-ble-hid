@@ -108,7 +108,10 @@ namespace Inventonater.BleHid.UI
             base.Initialize(bleHidManager, logger, isEditorMode);
             
             // Initialize filters with the default type
-            CurrentFilterType = InputFilterFactory.FilterType.OneEuro;
+            _currentFilterType = InputFilterFactory.FilterType.OneEuro;
+            
+            // Make sure we have a valid filter right away
+            inputFilter = InputFilterFactory.CreateFilter(_currentFilterType);
             
             // Initialize touchpad area (will be in the center of the mouse tab)
             touchpadRect = new Rect(Screen.width / 2 - 150, Screen.height / 2 - 100, 300, 200);
@@ -426,7 +429,6 @@ namespace Inventonater.BleHid.UI
                 if (!IsEditorMode)
                 {
                     BleHidManager.MoveMouse(finalDeltaX, finalDeltaY);
-                    Logger.AddLogEntry($"Sending mouse delta: ({finalDeltaX}, {finalDeltaY})");
                 }
                 else
                 {
