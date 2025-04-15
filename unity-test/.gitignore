@@ -94,6 +94,6 @@ ENV/
 # Generated assets
 screenshots/*
 /csharp/.idea
-
-Packages/com.unity.searcher@4.9.3
 .utmp/*
+
+Assets/TextMesh Pro/*
