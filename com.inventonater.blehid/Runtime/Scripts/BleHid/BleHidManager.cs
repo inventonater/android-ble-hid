@@ -177,7 +177,9 @@ namespace Inventonater.BleHid
             
             isInitializing = true;
             Debug.Log("BleHidManager: Initializing...");
-            
+
+            Application.runInBackground = true;
+
             // Only run on Android
             if (Application.platform != RuntimePlatform.Android)
             {
