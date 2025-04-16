@@ -4,6 +4,7 @@ import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothManager;
 import android.content.Context;
+import android.content.Intent;
 import android.os.Build;
 import android.util.Log;
 
@@ -455,7 +456,8 @@ public class BleHidManager {
      */
     void onDeviceConnected(BluetoothDevice device) {
         connectedDevice = device;
-        Log.i(TAG, "Device connected: " + device.getAddress());
+        String deviceName = device.getName() != null ? device.getName() : device.getAddress();
+        Log.i(TAG, "Device connected: " + deviceName + " (" + device.getAddress() + ")");
         
         // Stop advertising once connected
         stopAdvertising();
@@ -467,6 +469,9 @@ public class BleHidManager {
         
         // Notify connection manager
         connectionManager.onDeviceConnected(device);
+        
+        // Update the foreground service notification
+        updateForegroundServiceNotification();
     }
 
     /**
@@ -475,15 +480,47 @@ public class BleHidManager {
      * @param device The disconnected device
      */
     void onDeviceDisconnected(BluetoothDevice device) {
-        Log.i(TAG, "Device disconnected: " + device.getAddress());
+        String deviceName = device.getName() != null ? device.getName() : device.getAddress();
+        Log.i(TAG, "Device disconnected: " + deviceName + " (" + device.getAddress() + ")");
         
         // Notify connection manager
         connectionManager.onDeviceDisconnected();
         
         connectedDevice = null;
         
+        // Update the foreground service notification to show disconnected state
+        updateForegroundServiceNotification();
+        
         // Restart advertising after disconnect
         startAdvertising();
+    }
+    
+    /**
+     * Updates the foreground service notification when connection state changes
+     */
+    private void updateForegroundServiceNotification() {
+        // Trigger notification update in the BleHidForegroundService
+        Context context = getContext();
+        if (context != null) {
+            try {
+                // Use intent-based approach to refresh the notification
+                Intent refreshIntent = new Intent(context, BleHidForegroundService.class);
+                refreshIntent.setAction(BleHidForegroundService.ACTION_REFRESH_NOTIFICATION);
+                
+                // Try to start the service (will refresh if already running)
+                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+                    // Use startForegroundService for Android 8.0+
+                    context.startForegroundService(refreshIntent);
+                } else {
+                    // Use regular startService for earlier versions
+                    context.startService(refreshIntent);
+                }
+                
+                Log.d(TAG, "Sent notification refresh intent to foreground service");
+            } catch (Exception e) {
+                Log.e(TAG, "Failed to refresh notification: " + e.getMessage());
+            }
+        }
     }
 
     /**
