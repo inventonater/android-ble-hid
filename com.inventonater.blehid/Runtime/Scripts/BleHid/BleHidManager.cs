@@ -29,7 +29,7 @@ namespace Inventonater.BleHid
         public BleEventSystem BleEventSystem { get; private set; }
         public BleAdvertiser BleAdvertiser { get; private set; }
         public ConnectionManager ConnectionManager { get; private set; }
-        public ServiceManager ServiceManager { get; private set; }
+        public ForegroundServiceManager ForegroundServiceManager { get; private set; }
         public static BleHidManager Instance { get; private set; }
         public KeyboardController Keyboard { get; private set; }
         public MouseController Mouse { get; private set; }
@@ -53,7 +53,7 @@ namespace Inventonater.BleHid
             Keyboard = new KeyboardController(this);
             Mouse = new MouseController(this);
             Media = new MediaController(this);
-            ServiceManager = new ServiceManager(this);
+            ForegroundServiceManager = new ForegroundServiceManager();
 
             Debug.Log("BleHidManager initialized");
         }

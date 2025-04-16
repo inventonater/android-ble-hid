@@ -16,52 +16,12 @@ namespace Inventonater.BleHid
         private bool hasCameraPermission = false;
         private MonoBehaviour owner;
         
-        // Track the foreground service status
-        private bool isForegroundServiceRunning = false;
-
         // Button height constant
         private const float BUTTON_HEIGHT = 60f;
 
         public LocalControlComponent(MonoBehaviour owner) => this.owner = owner;
 
         public override void Update(){}
-
-        public override void OnActivate()
-        {
-            // Skip in editor mode
-            if (IsEditorMode) return;
-            
-            try
-            {
-                BleHidManager.ServiceManager.StartForegroundService();
-                Logger.AddLogEntry("Started foreground service for Local tab");
-                isForegroundServiceRunning = true;
-            }
-            catch (Exception e)
-            {
-                Logger.AddLogEntry("Failed to start foreground service: " + e.Message);
-            }
-        }
-
-        public override void OnDeactivate()
-        {
-            // Skip in editor mode
-            if (IsEditorMode) return;
-            
-            try
-            {
-                if (isForegroundServiceRunning)
-                {
-                    BleHidManager.ServiceManager.StopForegroundService();
-                    Logger.AddLogEntry("Stopped foreground service when leaving Local tab");
-                    isForegroundServiceRunning = false;
-                }
-            }
-            catch (Exception e)
-            {
-                Logger.AddLogEntry("Failed to stop foreground service: " + e.Message);
-            }
-        }
 
         public override void DrawUI()
         {
