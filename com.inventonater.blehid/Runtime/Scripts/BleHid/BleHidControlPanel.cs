@@ -1,5 +1,4 @@
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
@@ -36,7 +35,6 @@ namespace Inventonater.BleHid
 
         private Vector2 localTabScrollPosition = Vector2.zero;
         private float nextPermissionCheckTime = 0f;
-        private bool wasInBackground = false;
         private bool localControlInitialized = false;
 
         private void Start()
@@ -343,66 +341,5 @@ namespace Inventonater.BleHid
         }
 
         private void OnDebugLog(string message) => Logger.AddLogEntry("Debug: " + message);
-
-        // Handle application focus and pause to detect when user returns from Android settings
-        private void OnApplicationFocus(bool hasFocus)
-        {
-            if (!hasFocus || !wasInBackground) return;
-
-            // App has regained focus after being in background
-            Logger.AddLogEntry("Application regained focus");
-            wasInBackground = false;
-
-            // Check if we need to reinitialize the local control
-            StartCoroutine(HandleApplicationFocusGained());
-        }
-
-        private void OnApplicationPause(bool isPaused)
-        {
-            // App was paused (e.g., user went to settings)
-            if (!isPaused) return;
-
-            Logger.AddLogEntry("CRITICAL - Application paused!!");
-            wasInBackground = true;
-        }
-
-        // Handle app returning from background (e.g., returning from accessibility settings)
-        private IEnumerator HandleApplicationFocusGained()
-        {
-            if (IsEditorMode) yield break;
-
-            // Wait a short delay for Android to settle
-            yield return new WaitForSeconds(0.5f);
-
-            Logger.AddLogEntry("Checking accessibility status after focus gained");
-
-            // Use the direct check method to see if accessibility service was enabled
-            bool isAccessibilityEnabled = BleHidLocalControl.CheckAccessibilityServiceEnabledDirect();
-            Logger.AddLogEntry($"Direct accessibility check: {(isAccessibilityEnabled ? "ENABLED" : "NOT ENABLED")}");
-
-            // Update UI if accessibility status has changed
-            if (isAccessibilityEnabled && errorComponent.HasAccessibilityError)
-            {
-                Logger.AddLogEntry("Accessibility service was enabled in settings, updating UI");
-                errorComponent.SetAccessibilityError(false);
-            }
-            else if (!isAccessibilityEnabled && errorComponent.HasAccessibilityError)
-            {
-                // Still not enabled, reinitialize local control and recheck
-                Logger.AddLogEntry("Reinitializing local control after returning from settings");
-                StartCoroutine(BleHidLocalControl.ReinitializeAfterFocusGained(this));
-
-                // Extra delay and then check accessibility status again
-                yield return new WaitForSeconds(1.0f);
-                errorComponent.CheckAccessibilityServiceStatus();
-            }
-
-            // Re-check permissions too
-            if (errorComponent.HasPermissionError)
-            {
-                Logger.AddLogEntry("Checking permissions after focus gained");
-                errorComponent.CheckMissingPermissions();
-            }
-        }
     }
 }

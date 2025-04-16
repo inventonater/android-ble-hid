@@ -284,16 +284,12 @@ namespace Inventonater.BleHid
             GUILayout.Label("Camera permission required for camera features");
             GUILayout.Space(5);
 
-            Action action = () =>
+            void Action()
             {
-#if UNITY_ANDROID
-                        if (owner != null)
-                        {
-                            owner.StartCoroutine(BleHidPermissionHandler.RequestCameraPermission());
-                        }
-#endif
-            };
-            if (UIHelper.Button("Request Camera Permission", action, "Requesting camera permission", UIHelper.StandardButtonOptions))
+                owner.StartCoroutine(BleHidPermissionHandler.RequestCameraPermission());
+            }
+
+            if (UIHelper.Button("Request Camera Permission", Action, "Requesting camera permission", UIHelper.StandardButtonOptions))
             {
                 // Button action handled by ActionButton
             }

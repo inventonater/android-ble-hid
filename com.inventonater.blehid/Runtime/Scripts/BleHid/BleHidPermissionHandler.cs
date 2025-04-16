@@ -226,8 +226,7 @@ namespace Inventonater.BleHid
         /// </summary>
         public static IEnumerator RequestAndroidPermission(string permission)
         {
-            if (Application.platform != RuntimePlatform.Android)
-                yield break;
+            if (Application.platform != RuntimePlatform.Android) yield break;
                 
             Debug.Log($"Requesting permission: {permission}");
             
