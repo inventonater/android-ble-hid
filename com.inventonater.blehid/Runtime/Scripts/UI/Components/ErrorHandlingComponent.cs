@@ -29,8 +29,6 @@ namespace Inventonater.BleHid
         // Accessibility state
         private bool hasAccessibilityError = false;
         private string accessibilityErrorMessage = "Accessibility Service is required for local device control";
-        private bool accessibilityServiceEnabled = false;
-        private bool checkingAccessibilityService = false;
 
         // External reference
         private MonoBehaviour owner;
@@ -48,12 +46,12 @@ namespace Inventonater.BleHid
         public ErrorHandlingComponent(MonoBehaviour owner)
         {
             this.owner = owner;
-
-            // In editor mode, initially set accessibility error to true
-            // so we can show the accessibility UI for testing
-            if (!IsEditorMode) return;
+            
+            // Always initialize with accessibility error to ensure the UI appears
             hasAccessibilityError = true;
-            Logger.AddLogEntry("Editor mode: Simulating accessibility service not enabled for testing");
+            Logger.AddLogEntry("Initializing accessibility service status check");
+            
+            CheckAccessibilityServiceStatus();
         }
 
         /// <summary>
@@ -100,7 +98,6 @@ namespace Inventonater.BleHid
         /// </summary>
         public void CheckAccessibilityServiceStatus()
         {
-            checkingAccessibilityService = true;
             owner.StartCoroutine(CheckAccessibilityServiceCoroutine());
         }
 
@@ -202,28 +199,13 @@ namespace Inventonater.BleHid
 
             GUILayout.BeginVertical(errorStyle);
 
-            // Header
             GUILayout.Label("Accessibility Service Required", GUIStyle.none);
             GUILayout.Space(5);
 
-            if (checkingAccessibilityService)
-            {
-                GUILayout.Label("Checking accessibility service status...", GUIStyle.none);
-            }
-            else
-            {
-                // Show error message
-                GUILayout.Label(accessibilityErrorMessage, GUIStyle.none);
+            GUILayout.Label(accessibilityErrorMessage, GUIStyle.none);
 
-                if (fullUI)
-                {
-                    DrawFullAccessibilityUI();
-                }
-                else
-                {
-                    DrawSimpleAccessibilityNotice();
-                }
-            }
+            if (fullUI) DrawFullAccessibilityUI();
+            else DrawSimpleAccessibilityNotice();
 
             GUILayout.EndVertical();
         }
@@ -319,7 +301,8 @@ namespace Inventonater.BleHid
         private void DrawSimpleAccessibilityNotice()
         {
             GUILayout.Space(5);
-            GUILayout.Label("Go to the Local tab to enable this feature", GUIStyle.none);
+            GUILayout.Label("The accessibility service is required for local device control", GUIStyle.none);
+            GUILayout.Label("Look for the 'Open Accessibility Settings' button at the top of the screen", GUIStyle.none);
         }
 
         private void RequestPermission(BleHidPermissionHandler.AndroidPermission permission)
@@ -339,28 +322,12 @@ namespace Inventonater.BleHid
 
             try
             {
-                // Use the improved method with fallback mechanism
-                if (BleHidLocalControl.Instance != null)
-                {
-                    BleHidLocalControl.Instance.OpenAccessibilitySettings();
-                }
-
-                // Schedule a check after a delay to see if the settings change
-                if (owner != null)
-                {
-                    owner.StartCoroutine(DelayedAccessibilityCheck(3.0f));
-                }
+                BleHidLocalControl.Instance.OpenAccessibilitySettings();
             }
             catch (Exception e)
             {
                 Logger.AddLogEntry("Error opening accessibility settings: " + e.Message);
             }
-
-            // In editor mode, simulate enabling the accessibility service
-            Logger.AddLogEntry("Editor mode: Simulating enabling accessibility service");
-            hasAccessibilityError = false;
-            accessibilityServiceEnabled = true;
-            Logger.AddLogEntry("Editor mode: Accessibility service enabled successfully");
         }
 
 
@@ -369,40 +336,10 @@ namespace Inventonater.BleHid
         /// </summary>
         private IEnumerator CheckAccessibilityServiceCoroutine()
         {
-            yield return null; // Wait a frame to let UI update
-
-            bool isEnabled = false;
-
-            if (IsEditorMode)
-            {
-                isEnabled = BleHidLocalControl.CheckAccessibilityServiceEnabledDirect();
-                if (!isEnabled)
-                {
-                    string errorMsg;
-                    isEnabled = BleHidEnvironmentChecker.CheckAccessibilityServiceEnabled(out errorMsg);
-
-                    if (!isEnabled) Logger.AddLogEntry("Accessibility service check failed: " + errorMsg);
-                }
-            }
-            else
-            {
-                isEnabled = !hasAccessibilityError;
-            }
-
-            accessibilityServiceEnabled = isEnabled;
-            hasAccessibilityError = !isEnabled;
-
-            Logger.AddLogEntry(isEnabled ? "Accessibility service is enabled" : "Accessibility service is not enabled");
-
-            checkingAccessibilityService = false;
-
-            // Add exponential backoff for repeated checks when service is not enabled
-            if (!isEnabled && owner != null)
-            {
-                // Schedule a delayed check with exponential backoff up to a maximum
-                // If the UI is already periodically checking, this will just add an extra check
-                owner.StartCoroutine(DelayedAccessibilityCheck(2.0f)); // Add an extra check after 2 seconds
-            }
+            yield return new WaitForEndOfFrame();
+            var accessibilityServiceEnabled = BleHidLocalControl.CheckAccessibilityServiceEnabledDirect();
+            Logger.AddLogEntry("Accessibility service status: " + (accessibilityServiceEnabled ? "ENABLED" : "NOT ENABLED"));
+            hasAccessibilityError = !accessibilityServiceEnabled;
         }
 
         /// <summary>
@@ -412,8 +349,7 @@ namespace Inventonater.BleHid
         {
             yield return null; // Wait a frame to let UI update
 
-            // Get missing permissions
-            if (IsEditorMode)
+            if (!IsEditorMode)
             {
                 missingPermissions = BleHidPermissionHandler.GetMissingPermissions();
 
@@ -432,7 +368,6 @@ namespace Inventonater.BleHid
             }
             else
             {
-                // Editor mode simulation
                 missingPermissions.Clear();
                 hasPermissionError = false;
             }
@@ -468,20 +403,6 @@ namespace Inventonater.BleHid
             }
 
             checkingNotificationPermission = false;
-        }
-
-        /// <summary>
-        /// Check accessibility service status after a delay
-        /// </summary>
-        /// <param name="delaySeconds">How long to wait before checking</param>
-        private IEnumerator DelayedAccessibilityCheck(float delaySeconds)
-        {
-            // Wait for the specified delay
-            yield return new WaitForSeconds(delaySeconds);
-
-            // Check accessibility status
-            Logger.AddLogEntry("Performing delayed accessibility service check");
-            CheckAccessibilityServiceStatus();
         }
 
         /// <summary>

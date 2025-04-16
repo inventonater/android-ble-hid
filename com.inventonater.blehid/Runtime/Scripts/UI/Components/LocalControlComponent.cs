@@ -227,7 +227,6 @@ namespace Inventonater.BleHid
             }
             else
             {
-#if UNITY_ANDROID
                 try
                 {
                     action(BleHidLocalControl.Instance);
@@ -236,7 +235,6 @@ namespace Inventonater.BleHid
                 {
                     Logger.AddLogEntry($"Error executing local control: {ex.Message}");
                 }
-#endif
             }
         }
 

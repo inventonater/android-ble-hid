@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
@@ -52,6 +53,8 @@ namespace Inventonater.BleHid
 
             statusComponent = new StatusComponent();
             statusComponent.SetInitialized(isInitialized);
+            
+            // Initialize error component first to ensure accessibility UI appears from startup
             errorComponent = new ErrorHandlingComponent(this);
 
             mediaComponent = new MediaControlsComponent();
@@ -66,11 +69,27 @@ namespace Inventonater.BleHid
             AddTab(localComponent);
             AddTab(connectionParametersComponent);
 
+            // Start initialization process
             StartCoroutine(bleHidManager.BleInitializer.Initialize());
             Logger.AddLogEntry("Starting BLE HID initialization...");
+            
+            // Check all permissions - accessibility status is already being checked in the constructor
             errorComponent.CheckMissingPermissions();
-            errorComponent.CheckAccessibilityServiceStatus();
             errorComponent.CheckNotificationPermissionStatus();
+            
+            // Perform an extra check to ensure the accessibility service status is detected
+            // This helps on devices where the first check might not be reliable
+            StartCoroutine(DelayedAccessibilityCheck(1.0f));
+        }
+        
+        /// <summary>
+        /// Perform a delayed check of the accessibility service status
+        /// </summary>
+        private IEnumerator DelayedAccessibilityCheck(float delaySeconds)
+        {
+            yield return new WaitForSeconds(delaySeconds);
+            errorComponent.CheckAccessibilityServiceStatus();
+            Logger.AddLogEntry("Performing startup accessibility service check");
         }
 
         private void Update()
@@ -84,8 +103,8 @@ namespace Inventonater.BleHid
         private void PerformPeriodicPermissionChecks()
         {
             // Check if we need to check permissions
-            if (!errorComponent.HasPermissionError && 
-                !errorComponent.HasAccessibilityError && 
+            if (!errorComponent.HasPermissionError &&
+                !errorComponent.HasAccessibilityError &&
                 !errorComponent.HasNotificationPermissionError) return;
                 
             if (Time.time < nextPermissionCheckTime) return;
@@ -202,8 +221,9 @@ namespace Inventonater.BleHid
 
         private bool HasCriticalErrors()
         {
-            // Treat accessibility service as a critical requirement like other permissions
-            return errorComponent.HasPermissionError || errorComponent.HasAccessibilityError;
+            // Only treat regular permissions as blocking errors
+            // Accessibility errors are shown at the top but don't block the UI completely
+            return errorComponent.HasPermissionError;
         }
 
         private void DrawSelectedTab()

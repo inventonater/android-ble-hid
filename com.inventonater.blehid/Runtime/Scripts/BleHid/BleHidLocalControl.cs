@@ -224,30 +224,16 @@ namespace Inventonater.BleHid
 
             try
             {
-                // Create a direct connection to Settings.Secure to check if our service is enabled
                 AndroidJavaClass unityPlayer = new AndroidJavaClass("com.unity3d.player.UnityPlayer");
                 AndroidJavaObject currentActivity = unityPlayer.GetStatic<AndroidJavaObject>("currentActivity");
                 AndroidJavaObject context = currentActivity.Call<AndroidJavaObject>("getApplicationContext");
-
-                // Get a reference to Settings.Secure
                 AndroidJavaClass settingsSecure = new AndroidJavaClass("android.provider.Settings$Secure");
-
-                // Get the content resolver
                 AndroidJavaObject contentResolver = context.Call<AndroidJavaObject>("getContentResolver");
-
-                // Get the enabled accessibility services string
-                string enabledServices = settingsSecure.CallStatic<string>("getString", contentResolver,
-                    "enabled_accessibility_services");
-
-                // Get our package name and service class
+                string enabledServices = settingsSecure.CallStatic<string>("getString", contentResolver, "enabled_accessibility_services");
                 string packageName = context.Call<string>("getPackageName");
                 string serviceName = packageName + "/com.inventonater.blehid.core.LocalAccessibilityService";
-
-                // Check if our service is in the enabled services string
                 bool isEnabled = enabledServices != null && enabledServices.Contains(serviceName);
-
                 Debug.Log($"BleHidLocalControl: Direct accessibility check - Service {(isEnabled ? "IS" : "is NOT")} enabled");
-
                 return isEnabled;
             }
             catch (Exception e)
