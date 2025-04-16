@@ -24,12 +24,11 @@ namespace Inventonater.BleHid
         {
             get
             {
-                if (instance == null)
-                {
-                    GameObject obj = new GameObject("BleHidLocalControl");
-                    instance = obj.AddComponent<BleHidLocalControl>();
-                    DontDestroyOnLoad(obj);
-                }
+                if (instance != null) return instance;
+
+                GameObject obj = new GameObject("BleHidLocalControl");
+                instance = obj.AddComponent<BleHidLocalControl>();
+                DontDestroyOnLoad(obj);
                 return instance;
             }
         }

@@ -182,10 +182,7 @@ namespace Inventonater.BleHid
         /// </summary>
         public static bool CheckCameraPermission()
         {
-            if (Application.platform != RuntimePlatform.Android)
-                return true;
-                
-            return HasUserAuthorizedPermission(CAMERA_PERMISSION);
+            return Application.platform != RuntimePlatform.Android || HasUserAuthorizedPermission(CAMERA_PERMISSION);
         }
         
         /// <summary>

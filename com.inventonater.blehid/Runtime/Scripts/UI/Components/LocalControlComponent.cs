@@ -26,17 +26,12 @@ namespace Inventonater.BleHid
 
         public override void Update(){}
 
-        /// <summary>
-        /// Called when the Local tab becomes active
-        /// </summary>
         public override void OnActivate()
         {
             // Skip in editor mode
-            if (IsEditorMode || BleHidManager == null)
-                return;
+            if (IsEditorMode) return;
             
-            #if UNITY_ANDROID && !UNITY_EDITOR
-            try 
+            try
             {
                 BleHidManager.StartForegroundService();
                 Logger.AddLogEntry("Started foreground service for Local tab");
@@ -46,19 +41,13 @@ namespace Inventonater.BleHid
             {
                 Logger.AddLogEntry("Failed to start foreground service: " + e.Message);
             }
-            #endif
         }
 
-        /// <summary>
-        /// Called when the Local tab becomes inactive
-        /// </summary>
         public override void OnDeactivate()
         {
             // Skip in editor mode
-            if (IsEditorMode || BleHidManager == null)
-                return;
+            if (IsEditorMode) return;
             
-            #if UNITY_ANDROID && !UNITY_EDITOR
             try
             {
                 if (isForegroundServiceRunning)
@@ -72,16 +61,11 @@ namespace Inventonater.BleHid
             {
                 Logger.AddLogEntry("Failed to stop foreground service: " + e.Message);
             }
-            #endif
         }
 
         public override void DrawUI()
         {
-            // Initialize if not already done
-            if (!localControlInitialized && owner != null)
-            {
-                owner.StartCoroutine(InitializeLocalControl());
-            }
+            if (!localControlInitialized) owner.StartCoroutine(InitializeLocalControl());
 
             // Check if we have an initialized instance
             bool canUseLocalControls = CheckCanUseLocalControls();
@@ -258,20 +242,13 @@ namespace Inventonater.BleHid
 
         private void NavigateTo(BleHidLocalControl.NavigationDirection direction)
         {
-            ExecuteLocalControl(
-                l => l.Navigate(direction),
-                $"Local {direction} pressed"
-            );
+            ExecuteLocalControl(l => l.Navigate(direction), $"Local {direction} pressed");
         }
 
         private bool CheckCanUseLocalControls()
         {
-            if (IsEditorMode)
-            {
-                return true;
-            }
+            if (IsEditorMode) return true;
 
-#if UNITY_ANDROID
             try
             {
                 var instance = BleHidLocalControl.Instance;
@@ -291,19 +268,14 @@ namespace Inventonater.BleHid
             {
                 // Fall through to return false
             }
-#endif
 
             return false;
         }
 
         private bool CheckCameraPermission()
         {
-#if UNITY_ANDROID && !UNITY_EDITOR
             hasCameraPermission = BleHidPermissionHandler.CheckCameraPermission();
             return hasCameraPermission;
-#else
-            return true;
-#endif
         }
 
         private void DrawCameraPermissionRequest()
