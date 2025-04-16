@@ -1,6 +1,6 @@
 using System;
 using System.Collections;
-using System.Collections.Generic;
+using JetBrains.Annotations;
 using UnityEngine;
 
 namespace Inventonater.BleHid
@@ -8,44 +8,70 @@ namespace Inventonater.BleHid
     /// <summary>
     /// Main Unity interface for BLE HID functionality.
     /// This class provides methods to control Bluetooth HID emulation for keyboard, mouse, and media control.
-    /// It acts as a facade for the specialized manager components that handle different aspects of the system.
     /// </summary>
     public class BleHidManager : MonoBehaviour
     {
-        // Public properties - these delegate to the appropriate managers
         public bool IsInitialized { get; internal set; }
+        public bool IsAdvertising { get; internal set; }
+        public bool IsConnected { get; internal set; }
+        public string ConnectedDeviceName { get; internal set; }
+        public string ConnectedDeviceAddress { get; internal set; }
         public string LastErrorMessage { get; internal set; }
         public int LastErrorCode { get; internal set; }
+        public int ConnectionInterval { get; internal set; }
+        public int SlaveLatency { get; internal set; }
+        public int SupervisionTimeout { get; internal set; }
+        public int MtuSize { get; internal set; }
+        public int Rssi { get; internal set; }
+        public int TxPowerLevel { get; internal set; }
         internal AndroidJavaObject BridgeInstance => bridgeInstance;
-        
-        // Singleton pattern 
-        public static BleHidManager Instance { get; private set; }
-        
-        // Component managers
-        private BleHidConnectionManager connectionManager;
-        private BleHidAdvertisingManager advertisingManager;
-        private BleHidInputManager inputManager;
-        private BleHidMediaManager mediaManager;
-        private BleHidForegroundServiceManager foregroundServiceManager;
-        
-        // Connection state properties - delegate to connection manager
-        public bool IsConnected => connectionManager?.IsConnected ?? false;
-        public string ConnectedDeviceName => connectionManager?.ConnectedDeviceName;
-        public string ConnectedDeviceAddress => connectionManager?.ConnectedDeviceAddress;
-        public int ConnectionInterval => connectionManager?.ConnectionInterval ?? 0;
-        public int SlaveLatency => connectionManager?.SlaveLatency ?? 0;
-        public int SupervisionTimeout => connectionManager?.SupervisionTimeout ?? 0;
-        public int MtuSize => connectionManager?.MtuSize ?? 0;
-        public int Rssi => connectionManager?.Rssi ?? 0;
-        
-        // Advertising state properties - delegate to advertising manager
-        public bool IsAdvertising => advertisingManager?.IsAdvertising ?? false;
-        public int TxPowerLevel => advertisingManager?.TxPowerLevel ?? 0;
-        
-        // Input properties
-        public MouseInputProcessor MouseInputProcessor => inputManager?.MouseInputProcessor;
+        private MouseInputProcessor _mouseInputProcessor;
+        public MouseInputProcessor MouseInputProcessor => _mouseInputProcessor;
 
-        // Event declarations that will be forwarded to/from the appropriate manager
+        public static BleHidManager Instance { get; private set; }
+
+        private void Awake()
+        {
+            if (Instance != null && Instance != this)
+            {
+                Destroy(gameObject);
+                return;
+            }
+
+            Instance = this;
+            DontDestroyOnLoad(gameObject);
+
+            _mouseInputProcessor = new MouseInputProcessor((x, y) => MoveMouse(x, y));
+            // Create the callback handler
+            callbackHandler = new BleHidCallbackHandler(this);
+
+            // Forward events
+            callbackHandler.OnInitializeComplete += (success, message) => OnInitializeComplete?.Invoke(success, message);
+            callbackHandler.OnAdvertisingStateChanged += (advertising, message) => OnAdvertisingStateChanged?.Invoke(advertising, message);
+            callbackHandler.OnConnectionStateChanged += (connected, deviceName, deviceAddress) => OnConnectionStateChanged?.Invoke(connected, deviceName, deviceAddress);
+            callbackHandler.OnPairingStateChanged += (status, deviceAddress) => OnPairingStateChanged?.Invoke(status, deviceAddress);
+            callbackHandler.OnConnectionParametersChanged += (interval, latency, timeout, mtu) =>
+            {
+                ConnectionInterval = interval;
+                SlaveLatency = latency;
+                SupervisionTimeout = timeout;
+                MtuSize = mtu;
+                OnConnectionParametersChanged?.Invoke(interval, latency, timeout, mtu);
+            };
+            callbackHandler.OnRssiRead += (rssi) =>
+            {
+                Rssi = rssi;
+                OnRssiRead?.Invoke(rssi);
+            };
+            callbackHandler.OnConnectionParameterRequestComplete += (paramName, success, actualValue) =>
+                OnConnectionParameterRequestComplete?.Invoke(paramName, success, actualValue);
+            callbackHandler.OnError += (errorCode, errorMessage) => OnError?.Invoke(errorCode, errorMessage);
+            callbackHandler.OnDebugLog += (message) => OnDebugLog?.Invoke(message);
+
+            Debug.Log("BleHidManager initialized");
+        }
+
+        // Event declarations that will be forwarded from the callback handler
         public event BleHidCallbackHandler.InitializeCompleteHandler OnInitializeComplete;
         public event BleHidCallbackHandler.AdvertisingStateChangedHandler OnAdvertisingStateChanged;
         public event BleHidCallbackHandler.ConnectionStateChangedHandler OnConnectionStateChanged;
@@ -60,82 +86,6 @@ namespace Inventonater.BleHid
         private bool isInitializing = false;
         private AndroidJavaObject bridgeInstance = null;
         private BleHidCallbackHandler callbackHandler;
-
-        private void Awake()
-        {
-            if (Instance != null && Instance != this)
-            {
-                Destroy(gameObject);
-                return;
-            }
-
-            Instance = this;
-            DontDestroyOnLoad(gameObject);
-
-            // Create the callback handler
-            callbackHandler = new BleHidCallbackHandler(this);
-
-            // Forward events from callback handler
-            SetupCallbackHandlers();
-
-            Debug.Log("BleHidManager initialized");
-        }
-
-        private void SetupCallbackHandlers()
-        {
-            // Setup main callback handlers that forward to the specialized components
-            callbackHandler.OnInitializeComplete += (success, message) => OnInitializeComplete?.Invoke(success, message);
-            
-            callbackHandler.OnAdvertisingStateChanged += (advertising, message) => {
-                if (advertisingManager != null) {
-                    advertisingManager.UpdateAdvertisingState(advertising, message);
-                }
-                OnAdvertisingStateChanged?.Invoke(advertising, message);
-            };
-            
-            callbackHandler.OnConnectionStateChanged += (connected, deviceName, deviceAddress) => {
-                if (connectionManager != null) {
-                    connectionManager.UpdateConnectionState(connected, deviceName, deviceAddress);
-                }
-                OnConnectionStateChanged?.Invoke(connected, deviceName, deviceAddress);
-            };
-            
-            callbackHandler.OnPairingStateChanged += (status, deviceAddress) => {
-                if (connectionManager != null) {
-                    connectionManager.UpdatePairingState(status, deviceAddress);
-                }
-                OnPairingStateChanged?.Invoke(status, deviceAddress);
-            };
-            
-            callbackHandler.OnConnectionParametersChanged += (interval, latency, timeout, mtu) => {
-                if (connectionManager != null) {
-                    connectionManager.UpdateConnectionParameters(interval, latency, timeout, mtu);
-                }
-                OnConnectionParametersChanged?.Invoke(interval, latency, timeout, mtu);
-            };
-            
-            callbackHandler.OnRssiRead += (rssi) => {
-                if (connectionManager != null) {
-                    connectionManager.UpdateRssi(rssi);
-                }
-                OnRssiRead?.Invoke(rssi);
-            };
-            
-            callbackHandler.OnConnectionParameterRequestComplete += (paramName, success, actualValue) => {
-                if (connectionManager != null) {
-                    connectionManager.UpdateConnectionParameterRequestComplete(paramName, success, actualValue);
-                }
-                OnConnectionParameterRequestComplete?.Invoke(paramName, success, actualValue);
-            };
-            
-            callbackHandler.OnError += (errorCode, errorMessage) => {
-                LastErrorCode = errorCode;
-                LastErrorMessage = errorMessage;
-                OnError?.Invoke(errorCode, errorMessage);
-            };
-            
-            callbackHandler.OnDebugLog += (message) => OnDebugLog?.Invoke(message);
-        }
 
         private void OnDestroy()
         {
@@ -242,9 +192,6 @@ namespace Inventonater.BleHid
                     isInitializing = false;
                     yield break;
                 }
-                
-                // Initialize the specialized managers
-                InitializeManagers();
             }
             catch (Exception e)
             {
@@ -277,34 +224,6 @@ namespace Inventonater.BleHid
 
             isInitializing = false;
         }
-        
-        /// <summary>
-        /// Initialize the specialized manager components
-        /// </summary>
-        private void InitializeManagers()
-        {
-            if (bridgeInstance == null)
-            {
-                Debug.LogError("Cannot initialize managers: bridge instance is null");
-                return;
-            }
-            
-            // Create the managers
-            connectionManager = new BleHidConnectionManager(bridgeInstance);
-            advertisingManager = new BleHidAdvertisingManager(bridgeInstance);
-            
-            // Connection manager must be created first as other managers depend on it
-            inputManager = new BleHidInputManager(bridgeInstance, connectionManager);
-            mediaManager = new BleHidMediaManager(bridgeInstance, connectionManager);
-            foregroundServiceManager = new BleHidForegroundServiceManager(bridgeInstance, this);
-            
-            // Forward error events from managers to the main error handler
-            connectionManager.OnError += (code, message) => OnError?.Invoke(code, message);
-            advertisingManager.OnError += (code, message) => OnError?.Invoke(code, message);
-            inputManager.OnError += (code, message) => OnError?.Invoke(code, message);
-            mediaManager.OnError += (code, message) => OnError?.Invoke(code, message);
-            foregroundServiceManager.OnError += (code, message) => OnError?.Invoke(code, message);
-        }
 
         /// <summary>
         /// Run diagnostic checks and return a comprehensive report of the system state.
@@ -314,8 +233,6 @@ namespace Inventonater.BleHid
         {
             return BleHidEnvironmentChecker.RunEnvironmentDiagnostics(this);
         }
-        
-        // --- Advertising methods forwarded to AdvertisingManager ---
 
         /// <summary>
         /// Start BLE advertising to make this device discoverable.
@@ -324,7 +241,60 @@ namespace Inventonater.BleHid
         public bool StartAdvertising()
         {
             if (!ConfirmIsInitialized()) return false;
-            return advertisingManager.StartAdvertising();
+
+            try
+            {
+                Debug.Log("BleHidManager: Attempting to start advertising...");
+
+                // Verify Bluetooth is enabled
+                string errorMsg;
+                if (!BleHidEnvironmentChecker.IsBluetoothEnabled(out errorMsg))
+                {
+                    Debug.LogError("BleHidManager: " + errorMsg);
+                    OnError?.Invoke(BleHidConstants.ERROR_BLUETOOTH_DISABLED, errorMsg);
+                    return false;
+                }
+
+                // Verify device supports advertising
+                if (!BleHidEnvironmentChecker.SupportsBleAdvertising(out errorMsg))
+                {
+                    Debug.LogError("BleHidManager: " + errorMsg);
+                    OnError?.Invoke(BleHidConstants.ERROR_PERIPHERAL_NOT_SUPPORTED, errorMsg);
+                    return false;
+                }
+
+                // Add extra debug info
+                try
+                {
+                    // Use a simple toString() to get some information about the bridge instance
+                    string instanceInfo = bridgeInstance.Call<string>("toString");
+                    Debug.Log("BleHidManager: Using bridgeInstance: " + instanceInfo);
+                }
+                catch (Exception debugEx) { Debug.LogWarning("BleHidManager: Could not get bridge instance info: " + debugEx.Message); }
+
+                bool result = bridgeInstance.Call<bool>("startAdvertising");
+                Debug.Log("BleHidManager: StartAdvertising call result: " + result);
+
+                // Verify advertising state
+                try
+                {
+                    bool isAdvertising = bridgeInstance.Call<bool>("isAdvertising");
+                    Debug.Log("BleHidManager: isAdvertising check after call: " + isAdvertising);
+                }
+                catch (Exception verifyEx) { Debug.LogWarning("BleHidManager: Could not verify advertising state: " + verifyEx.Message); }
+
+                return result;
+            }
+            catch (Exception e)
+            {
+                string message = "Exception starting advertising: " + e.Message;
+                Debug.LogError(message);
+                Debug.LogException(e);
+                LastErrorMessage = message;
+                LastErrorCode = BleHidConstants.ERROR_ADVERTISING_FAILED;
+                OnError?.Invoke(BleHidConstants.ERROR_ADVERTISING_FAILED, message);
+                return false;
+            }
         }
 
         /// <summary>
@@ -333,7 +303,14 @@ namespace Inventonater.BleHid
         public void StopAdvertising()
         {
             if (!ConfirmIsInitialized()) return;
-            advertisingManager.StopAdvertising();
+
+            try { bridgeInstance.Call("stopAdvertising"); }
+            catch (Exception e)
+            {
+                string message = "Exception stopping advertising: " + e.Message;
+                Debug.LogException(e);
+                OnError?.Invoke(BleHidConstants.ERROR_ADVERTISING_FAILED, message);
+            }
         }
 
         /// <summary>
@@ -343,22 +320,14 @@ namespace Inventonater.BleHid
         public bool GetAdvertisingState()
         {
             if (!ConfirmIsInitialized()) return false;
-            return advertisingManager.GetAdvertisingState();
+
+            try { return bridgeInstance.Call<bool>("isAdvertising"); }
+            catch (Exception e)
+            {
+                Debug.LogException(e);
+                return false;
+            }
         }
-        
-        /// <summary>
-        /// Sets the transmit power level for advertising.
-        /// Higher power increases range but consumes more battery.
-        /// </summary>
-        /// <param name="level">The power level (0=LOW, 1=MEDIUM, 2=HIGH)</param>
-        /// <returns>True if successful, false otherwise.</returns>
-        public bool SetTransmitPowerLevel(int level)
-        {
-            if (!ConfirmIsInitialized()) return false;
-            return advertisingManager.SetTransmitPowerLevel(level);
-        }
-        
-        // --- Keyboard input methods forwarded to InputManager ---
 
         /// <summary>
         /// Send a keyboard key press and release.
@@ -368,7 +337,13 @@ namespace Inventonater.BleHid
         public bool SendKey(byte keyCode)
         {
             if (!ConfirmIsConnected()) return false;
-            return inputManager.SendKey(keyCode);
+
+            try { return bridgeInstance.Call<bool>("sendKey", (int)keyCode); }
+            catch (Exception e)
+            {
+                Debug.LogException(e);
+                return false;
+            }
         }
 
         /// <summary>
@@ -380,7 +355,13 @@ namespace Inventonater.BleHid
         public bool SendKeyWithModifiers(byte keyCode, byte modifiers)
         {
             if (!ConfirmIsConnected()) return false;
-            return inputManager.SendKeyWithModifiers(keyCode, modifiers);
+
+            try { return bridgeInstance.Call<bool>("sendKeyWithModifiers", (int)keyCode, (int)modifiers); }
+            catch (Exception e)
+            {
+                Debug.LogException(e);
+                return false;
+            }
         }
 
         /// <summary>
@@ -391,9 +372,48 @@ namespace Inventonater.BleHid
         public bool TypeText(string text)
         {
             if (!ConfirmIsConnected()) return false;
-            return inputManager.TypeText(text);
+
+            try { return bridgeInstance.Call<bool>("typeText", text); }
+            catch (Exception e)
+            {
+                Debug.LogException(e);
+                return false;
+            }
         }
-        
+
+        /// <summary>
+        /// Send a mouse movement.
+        /// </summary>
+        /// <param name="deltaX">X-axis movement (-127 to 127)</param>
+        /// <param name="deltaY">Y-axis movement (-127 to 127)</param>
+        /// <returns>True if successful, false otherwise.</returns>
+        private bool MoveMouse(int deltaX, int deltaY)
+        {
+            if (deltaX == 0 && deltaY == 0) return false;
+
+            if (deltaX < -127 || deltaX > 127 || deltaY < -127 || deltaY > 127)
+            {
+                string message = $"Mouse movement values out of range: {deltaX}, {deltaY}";
+                Debug.LogError(message);
+                LastErrorMessage = message;
+                LastErrorCode = BleHidConstants.ERROR_MOUSE_MOVEMENT_OUT_OF_RANGE;
+                OnError?.Invoke(BleHidConstants.ERROR_MOUSE_MOVEMENT_OUT_OF_RANGE, message);
+            }
+
+            if (!IsConnected)
+            {
+                LoggingManager.Instance.AddLogEntry($"[not connected] pointer position: ({deltaX}, {deltaY})");
+                return false;
+            }
+
+            try { return bridgeInstance.Call<bool>("moveMouse", deltaX, deltaY); }
+            catch (Exception e)
+            {
+                Debug.LogException(e);
+                return false;
+            }
+        }
+
         /// <summary>
         /// Click a mouse button.
         /// </summary>
@@ -402,10 +422,14 @@ namespace Inventonater.BleHid
         public bool ClickMouseButton(int button)
         {
             if (!ConfirmIsConnected()) return false;
-            return inputManager.ClickMouseButton(button);
+
+            try { return bridgeInstance.Call<bool>("clickMouseButton", button); }
+            catch (Exception e)
+            {
+                Debug.LogException(e);
+                return false;
+            }
         }
-        
-        // --- Media control methods forwarded to MediaManager ---
 
         /// <summary>
         /// Send media play/pause command.
@@ -414,7 +438,13 @@ namespace Inventonater.BleHid
         public bool PlayPause()
         {
             if (!ConfirmIsConnected()) return false;
-            return mediaManager.PlayPause();
+
+            try { return bridgeInstance.Call<bool>("playPause"); }
+            catch (Exception e)
+            {
+                Debug.LogException(e);
+                return false;
+            }
         }
 
         /// <summary>
@@ -424,7 +454,13 @@ namespace Inventonater.BleHid
         public bool NextTrack()
         {
             if (!ConfirmIsConnected()) return false;
-            return mediaManager.NextTrack();
+
+            try { return bridgeInstance.Call<bool>("nextTrack"); }
+            catch (Exception e)
+            {
+                Debug.LogException(e);
+                return false;
+            }
         }
 
         /// <summary>
@@ -434,7 +470,13 @@ namespace Inventonater.BleHid
         public bool PreviousTrack()
         {
             if (!ConfirmIsConnected()) return false;
-            return mediaManager.PreviousTrack();
+
+            try { return bridgeInstance.Call<bool>("previousTrack"); }
+            catch (Exception e)
+            {
+                Debug.LogException(e);
+                return false;
+            }
         }
 
         /// <summary>
@@ -444,7 +486,13 @@ namespace Inventonater.BleHid
         public bool VolumeUp()
         {
             if (!ConfirmIsConnected()) return false;
-            return mediaManager.VolumeUp();
+
+            try { return bridgeInstance.Call<bool>("volumeUp"); }
+            catch (Exception e)
+            {
+                Debug.LogException(e);
+                return false;
+            }
         }
 
         /// <summary>
@@ -454,7 +502,13 @@ namespace Inventonater.BleHid
         public bool VolumeDown()
         {
             if (!ConfirmIsConnected()) return false;
-            return mediaManager.VolumeDown();
+
+            try { return bridgeInstance.Call<bool>("volumeDown"); }
+            catch (Exception e)
+            {
+                Debug.LogException(e);
+                return false;
+            }
         }
 
         /// <summary>
@@ -464,10 +518,14 @@ namespace Inventonater.BleHid
         public bool Mute()
         {
             if (!ConfirmIsConnected()) return false;
-            return mediaManager.Mute();
+
+            try { return bridgeInstance.Call<bool>("mute"); }
+            catch (Exception e)
+            {
+                Debug.LogException(e);
+                return false;
+            }
         }
-        
-        // --- Connection methods forwarded to ConnectionManager ---
 
         /// <summary>
         /// Request a change in connection priority.
@@ -478,7 +536,16 @@ namespace Inventonater.BleHid
         public bool RequestConnectionPriority(int priority)
         {
             if (!ConfirmIsConnected()) return false;
-            return connectionManager.RequestConnectionPriority(priority);
+
+            try { return bridgeInstance.Call<bool>("requestConnectionPriority", priority); }
+            catch (Exception e)
+            {
+                string message = "Exception requesting connection priority: " + e.Message;
+                Debug.LogException(e);
+                LastErrorMessage = message;
+                OnError?.Invoke(BleHidConstants.ERROR_NOT_CONNECTED, message);
+                return false;
+            }
         }
 
         /// <summary>
@@ -490,7 +557,55 @@ namespace Inventonater.BleHid
         public bool RequestMtu(int mtu)
         {
             if (!ConfirmIsConnected()) return false;
-            return connectionManager.RequestMtu(mtu);
+
+            if (mtu < 23 || mtu > 517)
+            {
+                string message = "Invalid MTU size: " + mtu + ". Must be between 23 and 517.";
+                Debug.LogError(message);
+                LastErrorMessage = message;
+                OnError?.Invoke(BleHidConstants.ERROR_INVALID_PARAMETER, message);
+                return false;
+            }
+
+            try { return bridgeInstance.Call<bool>("requestMtu", mtu); }
+            catch (Exception e)
+            {
+                string message = "Exception requesting MTU: " + e.Message;
+                Debug.LogException(e);
+                LastErrorMessage = message;
+                OnError?.Invoke(BleHidConstants.ERROR_NOT_CONNECTED, message);
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// Sets the transmit power level for advertising.
+        /// Higher power increases range but consumes more battery.
+        /// </summary>
+        /// <param name="level">The power level (0=LOW, 1=MEDIUM, 2=HIGH)</param>
+        /// <returns>True if successful, false otherwise.</returns>
+        public bool SetTransmitPowerLevel(int level)
+        {
+            if (!ConfirmIsInitialized()) return false;
+
+            if (level < 0 || level > 2)
+            {
+                string message = "Invalid TX power level: " + level + ". Must be between 0 and 2.";
+                Debug.LogError(message);
+                LastErrorMessage = message;
+                OnError?.Invoke(BleHidConstants.ERROR_INVALID_PARAMETER, message);
+                return false;
+            }
+
+            try { return bridgeInstance.Call<bool>("setTransmitPowerLevel", level); }
+            catch (Exception e)
+            {
+                string message = "Exception setting TX power level: " + e.Message;
+                Debug.LogException(e);
+                LastErrorMessage = message;
+                OnError?.Invoke(BleHidConstants.ERROR_INVALID_PARAMETER, message);
+                return false;
+            }
         }
 
         /// <summary>
@@ -500,38 +615,59 @@ namespace Inventonater.BleHid
         public bool ReadRssi()
         {
             if (!ConfirmIsConnected()) return false;
-            return connectionManager.ReadRssi();
+
+            try { return bridgeInstance.Call<bool>("readRssi"); }
+            catch (Exception e)
+            {
+                string message = "Exception reading RSSI: " + e.Message;
+                Debug.LogException(e);
+                LastErrorMessage = message;
+                OnError?.Invoke(BleHidConstants.ERROR_NOT_CONNECTED, message);
+                return false;
+            }
         }
 
         /// <summary>
         /// Gets all connection parameters as a dictionary.
         /// </summary>
         /// <returns>Dictionary of parameter names to values, or null if not connected.</returns>
-        public Dictionary<string, string> GetConnectionParameters()
+        public System.Collections.Generic.Dictionary<string, string> GetConnectionParameters()
         {
             if (!ConfirmIsConnected()) return null;
-            return connectionManager.GetConnectionParameters();
-        }
-        
-        // --- Foreground service methods forwarded to ForegroundServiceManager ---
 
-        /// <summary>
-        /// Start the foreground service to keep accessibility service alive.
-        /// </summary>
-        /// <returns>True if the service start request was sent successfully.</returns>
-        public bool StartForegroundService()
-        {
-            return foregroundServiceManager.StartForegroundService();
+            try
+            {
+                AndroidJavaObject parametersMap = bridgeInstance.Call<AndroidJavaObject>("getConnectionParameters");
+                if (parametersMap == null) { return null; }
+
+                System.Collections.Generic.Dictionary<string, string> result = new System.Collections.Generic.Dictionary<string, string>();
+
+                // Convert Java Map to C# Dictionary
+                using (AndroidJavaObject entrySet = parametersMap.Call<AndroidJavaObject>("entrySet"))
+                using (AndroidJavaObject iterator = entrySet.Call<AndroidJavaObject>("iterator"))
+                {
+                    while (iterator.Call<bool>("hasNext"))
+                    {
+                        using (AndroidJavaObject entry = iterator.Call<AndroidJavaObject>("next"))
+                        {
+                            string key = entry.Call<AndroidJavaObject>("getKey").Call<string>("toString");
+                            string value = entry.Call<AndroidJavaObject>("getValue").Call<string>("toString");
+                            result[key] = value;
+                        }
+                    }
+                }
+
+                return result;
+            }
+            catch (Exception e)
+            {
+                string message = "Exception getting connection parameters: " + e.Message;
+                Debug.LogException(e);
+                LastErrorMessage = message;
+                return null;
+            }
         }
 
-        /// <summary>
-        /// Stop the foreground service when it's no longer needed.
-        /// </summary>
-        /// <returns>True if the service stop request was sent successfully.</returns>
-        public bool StopForegroundService()
-        {
-            return foregroundServiceManager.StopForegroundService();
-        }
 
         /// <summary>
         /// Get diagnostic information from the plugin.
@@ -564,11 +700,81 @@ namespace Inventonater.BleHid
             }
 
             IsInitialized = false;
+            IsAdvertising = false;
+            IsConnected = false;
+            ConnectedDeviceName = null;
+            ConnectedDeviceAddress = null;
 
             Debug.Log("BleHidManager closed");
         }
 
-        // --- Callback handling methods ---
+        /// <summary>
+        /// Start the foreground service to keep accessibility service alive.
+        /// This should be called when your app needs to ensure the service
+        /// continues to run in the background.
+        /// </summary>
+        /// <returns>True if the service start request was sent successfully.</returns>
+        public bool StartForegroundService()
+        {
+            if (Application.platform != RuntimePlatform.Android)
+            {
+                Debug.LogWarning("Foreground service is only available on Android.");
+                return false;
+            }
+
+            try
+            {
+                using (AndroidJavaClass pluginClass = new AndroidJavaClass("com.inventonater.blehid.unity.BleHidUnityPlugin"))
+                {
+                    bool result = pluginClass.CallStatic<bool>("startForegroundService");
+                    if (result) { Debug.Log("Foreground service start requested successfully"); }
+                    else { Debug.LogError("Failed to start foreground service"); }
+
+                    return result;
+                }
+            }
+            catch (Exception e)
+            {
+                string message = "Exception starting foreground service: " + e.Message;
+                Debug.LogError(message);
+                Debug.LogException(e);
+                OnError?.Invoke(BleHidConstants.ERROR_GENERAL_ERROR, message);
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// Stop the foreground service when it's no longer needed.
+        /// </summary>
+        /// <returns>True if the service stop request was sent successfully.</returns>
+        public bool StopForegroundService()
+        {
+            if (Application.platform != RuntimePlatform.Android)
+            {
+                Debug.LogWarning("Foreground service is only available on Android.");
+                return false;
+            }
+
+            try
+            {
+                using (AndroidJavaClass pluginClass = new AndroidJavaClass("com.inventonater.blehid.unity.BleHidUnityPlugin"))
+                {
+                    bool result = pluginClass.CallStatic<bool>("stopForegroundService");
+                    if (result) { Debug.Log("Foreground service stop requested successfully"); }
+                    else { Debug.LogError("Failed to stop foreground service"); }
+
+                    return result;
+                }
+            }
+            catch (Exception e)
+            {
+                string message = "Exception stopping foreground service: " + e.Message;
+                Debug.LogError(message);
+                Debug.LogException(e);
+                OnError?.Invoke(BleHidConstants.ERROR_GENERAL_ERROR, message);
+                return false;
+            }
+        }
 
         /// <summary>
         /// Called when initialization is complete.
@@ -641,13 +847,8 @@ namespace Inventonater.BleHid
         {
             callbackHandler.HandleConnectionParameterRequestComplete(message);
         }
-        
-        // --- Validation helper methods ---
 
-        /// <summary>
-        /// Confirm that the plugin is initialized before attempting operations
-        /// </summary>
-        private bool ConfirmIsInitialized()
+        public bool ConfirmIsInitialized()
         {
             if (IsInitialized && bridgeInstance != null) return true;
 
@@ -657,13 +858,10 @@ namespace Inventonater.BleHid
             return false;
         }
 
-        /// <summary>
-        /// Confirm that a device is connected before attempting operations that require a connection
-        /// </summary>
-        private bool ConfirmIsConnected()
+        public bool ConfirmIsConnected()
         {
             if (!ConfirmIsInitialized()) return false;
-            if (connectionManager.IsConnected) return true;
+            if (IsConnected) return true;
 
             string message = "No BLE device connected";
             Debug.LogError(message);

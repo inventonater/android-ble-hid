@@ -874,61 +874,68 @@ public class BleHidUnityPlugin {
      * @return true if the service start request was sent
      */
     public static boolean startForegroundService() {
-        Log.e(TAG, "========== FOREGROUND SERVICE START ATTEMPT ==========");
-        Log.e(TAG, "Thread: " + Thread.currentThread().getName());
-        Log.e(TAG, "Android version: " + android.os.Build.VERSION.SDK_INT);
+        Log.e(TAG, "startForegroundService called from Unity - CRITICAL SERVICE STARTUP LOG");
         
         try {
-            // Get context with detailed logging
+            // Get the current context - directly attempt to use the known activity class
             Context context = getCurrentContext();
             if (context == null) {
-                Log.e(TAG, "FATAL: Unable to get any context to start service");
+                Log.e(TAG, "Unable to start foreground service: context is null");
                 return false;
             }
             
-            Log.e(TAG, "Using context: " + context.getClass().getName());
-            Log.e(TAG, "Package: " + context.getPackageName());
+            Log.e(TAG, "Application context package: " + context.getPackageName());
+            Log.e(TAG, "Current context class: " + context.getClass().getName());
             
-            // Create explicit intent with clear service target
+            // Create intent with explicit component name to avoid package confusion
             Intent serviceIntent = new Intent();
-            String targetClass = "com.inventonater.blehid.core.BleHidForegroundService";
             
-            serviceIntent.setClassName(context.getPackageName(), targetClass);
+            // Set component with explicit package
+            serviceIntent.setClassName(
+                context.getPackageName(), 
+                "com.inventonater.blehid.core.BleHidForegroundService"
+            );
             serviceIntent.setAction("START_FOREGROUND");
             
-            Log.e(TAG, "Service intent created: " + serviceIntent);
+            // For debugging
+            Log.e(TAG, "Starting service with: " + serviceIntent.toString());
             Log.e(TAG, "Component: " + serviceIntent.getComponent());
             
-            // Start service with direct approach, no Handler (which causes thread exceptions)
-            try {
-                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
-                    Log.e(TAG, "Using startForegroundService for Android 8+");
+            // Try to start the service with the most direct method using explicit intent
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+                Log.e(TAG, "Using startForegroundService (Android 8+)");
+                try {
                     context.startForegroundService(serviceIntent);
-                    Log.e(TAG, "startForegroundService call completed");
-                } else {
-                    Log.e(TAG, "Using startService for pre-Android 8");
+                    Log.e(TAG, "startForegroundService called successfully");
+                } catch (Exception e) {
+                    Log.e(TAG, "startForegroundService failed: " + e.getMessage(), e);
+                    // Last resort - try direct startService
+                    Log.e(TAG, "Trying regular startService as fallback");
                     context.startService(serviceIntent);
-                    Log.e(TAG, "startService call completed");
+                    Log.e(TAG, "Fallback startService called successfully");
                 }
-                
-                // Instead of Handler-based verification which causes thread exceptions,
-                // just log that the service was requested
-                Log.e(TAG, "Service start requested successfully - not using Handler for verification");
-                Log.e(TAG, "NOTE: This fixes the 'Can't create handler inside thread' exception");
-                return true;
-            } catch (Exception e) {
-                Log.e(TAG, "CRITICAL ERROR starting service", e);
-                Log.e(TAG, "Exception type: " + e.getClass().getName());
-                Log.e(TAG, "Exception cause: " + (e.getCause() != null ? e.getCause().toString() : "null"));
-                Log.e(TAG, "Exception stack trace: ", e);
-                return false;
+            } else {
+                Log.e(TAG, "Using startService (pre-Android 8)");
+                context.startService(serviceIntent);
+                Log.e(TAG, "startService called successfully");
             }
+            
+            // Verify service running
+            boolean isServiceRunning = false;
+            try {
+                Class<?> serviceClass = Class.forName("com.inventonater.blehid.core.BleHidForegroundService");
+                java.lang.reflect.Method isRunningMethod = serviceClass.getMethod("isRunning");
+                isServiceRunning = (boolean) isRunningMethod.invoke(null);
+                Log.e(TAG, "Service running check: " + isServiceRunning);
+            } catch (Exception e) {
+                Log.e(TAG, "Failed to check if service is running", e);
+            }
+            
+            Log.e(TAG, "Foreground service start request process completed");
+            return true;
         } catch (Exception e) {
-            Log.e(TAG, "FATAL ERROR in startForegroundService", e);
-            Log.e(TAG, "Exception stack trace: ", e);
+            Log.e(TAG, "Critical error starting foreground service", e);
             return false;
-        } finally {
-            Log.e(TAG, "========== FOREGROUND SERVICE START ATTEMPT COMPLETE ==========");
         }
     }
     

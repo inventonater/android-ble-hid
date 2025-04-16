@@ -85,12 +85,9 @@ namespace Inventonater.BleHid
 
         private void PerformPeriodicPermissionChecks()
         {
-            // Check if we need to check permissions (including notification permission for Android 13+)
-            bool hasAnyError = errorComponent.HasPermissionError || 
-                             errorComponent.HasAccessibilityError ||
-                             errorComponent.HasNotificationPermissionError;
-            
-            if (!hasAnyError || Time.time < nextPermissionCheckTime) return;
+            // Check if we need to check permissions
+            if (!errorComponent.HasPermissionError && !errorComponent.HasAccessibilityError) return;
+            if (Time.time < nextPermissionCheckTime) return;
 
             // Schedule next check
             nextPermissionCheckTime = Time.time + PERMISSION_CHECK_INTERVAL;
@@ -107,14 +104,6 @@ namespace Inventonater.BleHid
             {
                 errorComponent.CheckAccessibilityServiceStatus();
                 LoggingManager.Instance.AddLogEntry("Periodic accessibility check");
-            }
-            
-            // Check notification permission (Android 13+)
-            if (errorComponent.HasNotificationPermissionError && 
-                BleHidPermissionHandler.GetAndroidSDKVersion() >= 33)
-            {
-                errorComponent.CheckNotificationPermission();
-                LoggingManager.Instance.AddLogEntry("Periodic notification permission check");
             }
         }
 
@@ -206,18 +195,6 @@ namespace Inventonater.BleHid
             {
                 errorComponent.DrawAccessibilityErrorUI(true); // Show full UI with button
                 GUILayout.Space(20);
-            }
-            
-            // Notification permission (Android 13+) - only check on Android
-            if (Application.platform == RuntimePlatform.Android && 
-                BleHidPermissionHandler.GetAndroidSDKVersion() >= 33)
-            {
-                // Draw notification permission UI if needed
-                errorComponent.DrawNotificationPermissionUI();
-                if (errorComponent.HasNotificationPermissionError)
-                {
-                    GUILayout.Space(20);
-                }
             }
         }
 
@@ -425,28 +402,6 @@ namespace Inventonater.BleHid
             {
                 Logger.AddLogEntry("Checking permissions after focus gained");
                 errorComponent.CheckMissingPermissions();
-            }
-            
-            // Check notification permission for Android 13+
-            if (BleHidPermissionHandler.GetAndroidSDKVersion() >= 33)
-            {
-                Logger.AddLogEntry("Checking notification permission after focus gained");
-                
-                // User might have granted notification permission in settings
-                bool hasNotificationPermission = BleHidPermissionHandler.CheckNotificationPermission();
-                
-                if (hasNotificationPermission && errorComponent.HasNotificationPermissionError)
-                {
-                    Logger.AddLogEntry("Notification permission was granted in settings");
-                    errorComponent.CheckNotificationPermission();
-                    
-                    // If permission was granted, try starting the foreground service again
-                    if (BleHidPermissionHandler.CheckNotificationPermission() && bleHidManager != null)
-                    {
-                        Logger.AddLogEntry("Starting foreground service after notification permission granted");
-                        bleHidManager.StartForegroundService();
-                    }
-                }
             }
         }
     }

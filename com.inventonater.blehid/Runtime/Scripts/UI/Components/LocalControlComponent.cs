@@ -26,43 +26,42 @@ namespace Inventonater.BleHid
 
         public override void Update(){}
 
-    public override void OnActivate()
-    {
-        // Skip in editor mode
-        if (IsEditorMode) return;
-        
-        try
+        public override void OnActivate()
         {
-            // Only start if not already running
-            if (!isForegroundServiceRunning)
+            // Skip in editor mode
+            if (IsEditorMode) return;
+            
+            try
             {
-                Logger.AddLogEntry("Starting foreground service...");
                 BleHidManager.StartForegroundService();
-                Logger.AddLogEntry("Foreground service start requested");
+                Logger.AddLogEntry("Started foreground service for Local tab");
                 isForegroundServiceRunning = true;
             }
-            else
+            catch (Exception e)
             {
-                Logger.AddLogEntry("Foreground service already running, not starting again");
+                Logger.AddLogEntry("Failed to start foreground service: " + e.Message);
             }
         }
-        catch (Exception e)
-        {
-            Logger.AddLogEntry("ERROR starting foreground service: " + e.Message);
-        }
-    }
 
-    public override void OnDeactivate()
-    {
-        // Skip in editor mode
-        if (IsEditorMode) return;
-        
-        // Log tab deactivation but DON'T stop the service
-        Logger.AddLogEntry("Tab deactivated, keeping foreground service running");
-        
-        // NOTE: We deliberately do NOT stop the foreground service here to allow
-        // the app to continue functioning in the background when switching apps
-    }
+        public override void OnDeactivate()
+        {
+            // Skip in editor mode
+            if (IsEditorMode) return;
+            
+            try
+            {
+                if (isForegroundServiceRunning)
+                {
+                    BleHidManager.StopForegroundService();
+                    Logger.AddLogEntry("Stopped foreground service when leaving Local tab");
+                    isForegroundServiceRunning = false;
+                }
+            }
+            catch (Exception e)
+            {
+                Logger.AddLogEntry("Failed to stop foreground service: " + e.Message);
+            }
+        }
 
         public override void DrawUI()
         {
