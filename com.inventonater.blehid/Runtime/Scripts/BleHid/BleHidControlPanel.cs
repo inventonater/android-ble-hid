@@ -81,31 +81,30 @@ namespace Inventonater.BleHid
             PerformPeriodicPermissionChecks();
         }
 
+        private const float PERMISSION_CHECK_INTERVAL = 3.0f; // Check every 3 seconds
+
         private void PerformPeriodicPermissionChecks()
         {
-#if UNITY_ANDROID && !UNITY_EDITOR
             // Check if we need to check permissions
-            if ((errorComponent.HasPermissionError || errorComponent.HasAccessibilityError) &&
-                Time.time >= nextPermissionCheckTime)
+            if (!errorComponent.HasPermissionError && !errorComponent.HasAccessibilityError) return;
+            if (Time.time < nextPermissionCheckTime) return;
+
+            // Schedule next check
+            nextPermissionCheckTime = Time.time + PERMISSION_CHECK_INTERVAL;
+
+            // Check permissions
+            if (errorComponent.HasPermissionError)
             {
-                // Schedule next check
-                nextPermissionCheckTime = Time.time + PERMISSION_CHECK_INTERVAL;
-
-                // Check permissions
-                if (errorComponent.HasPermissionError)
-                {
-                    errorComponent.CheckMissingPermissions();
-                    logger.AddLogEntry("Periodic permission check");
-                }
-
-                // Check accessibility service
-                if (errorComponent.HasAccessibilityError)
-                {
-                    errorComponent.CheckAccessibilityServiceStatus();
-                    logger.AddLogEntry("Periodic accessibility check");
-                }
+                errorComponent.CheckMissingPermissions();
+                LoggingManager.Instance.AddLogEntry("Periodic permission check");
             }
-#endif
+
+            // Check accessibility service
+            if (errorComponent.HasAccessibilityError)
+            {
+                errorComponent.CheckAccessibilityServiceStatus();
+                LoggingManager.Instance.AddLogEntry("Periodic accessibility check");
+            }
         }
 
         private void OnDestroy()
