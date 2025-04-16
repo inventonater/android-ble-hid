@@ -21,7 +21,7 @@ namespace Inventonater.BleHid
         /// <returns>True if advertising was started successfully, false otherwise.</returns>
         public bool StartAdvertising()
         {
-            if (!manager.BleUtils.ConfirmIsInitialized()) return false;
+            if (!manager.ConfirmIsInitialized()) return false;
 
             try
             {
@@ -83,7 +83,7 @@ namespace Inventonater.BleHid
         /// </summary>
         public void StopAdvertising()
         {
-            if (!manager.BleUtils.ConfirmIsInitialized()) return;
+            if (!manager.ConfirmIsInitialized()) return;
 
             try { manager.BleInitializer.BridgeInstance.Call("stopAdvertising"); }
             catch (Exception e)
@@ -100,7 +100,7 @@ namespace Inventonater.BleHid
         /// <returns>True if advertising is active, false otherwise.</returns>
         public bool GetAdvertisingState()
         {
-            if (!manager.BleUtils.ConfirmIsInitialized()) return false;
+            if (!manager.ConfirmIsInitialized()) return false;
 
             try { return manager.BleInitializer.BridgeInstance.Call<bool>("isAdvertising"); }
             catch (Exception e)
@@ -118,7 +118,7 @@ namespace Inventonater.BleHid
         /// <returns>True if successful, false otherwise.</returns>
         public bool SetTransmitPowerLevel(int level)
         {
-            if (!manager.BleUtils.ConfirmIsInitialized()) return false;
+            if (!manager.ConfirmIsInitialized()) return false;
 
             if (level < 0 || level > 2)
             {

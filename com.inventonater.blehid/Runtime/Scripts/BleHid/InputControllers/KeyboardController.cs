@@ -22,7 +22,7 @@ namespace Inventonater.BleHid.InputControllers
         /// <returns>True if successful, false otherwise.</returns>
         public bool SendKey(byte keyCode)
         {
-            if (!manager.BleUtils.ConfirmIsConnected()) return false;
+            if (!manager.ConfirmIsConnected()) return false;
 
             try { return manager.BleInitializer.BridgeInstance.Call<bool>("sendKey", (int)keyCode); }
             catch (Exception e)
@@ -40,7 +40,7 @@ namespace Inventonater.BleHid.InputControllers
         /// <returns>True if successful, false otherwise.</returns>
         public bool SendKeyWithModifiers(byte keyCode, byte modifiers)
         {
-            if (!manager.BleUtils.ConfirmIsConnected()) return false;
+            if (!manager.ConfirmIsConnected()) return false;
 
             try { return manager.BleInitializer.BridgeInstance.Call<bool>("sendKeyWithModifiers", (int)keyCode, (int)modifiers); }
             catch (Exception e)
@@ -57,7 +57,7 @@ namespace Inventonater.BleHid.InputControllers
         /// <returns>True if successful, false otherwise.</returns>
         public bool TypeText(string text)
         {
-            if (!manager.BleUtils.ConfirmIsConnected()) return false;
+            if (!manager.ConfirmIsConnected()) return false;
 
             try { return manager.BleInitializer.BridgeInstance.Call<bool>("typeText", text); }
             catch (Exception e)

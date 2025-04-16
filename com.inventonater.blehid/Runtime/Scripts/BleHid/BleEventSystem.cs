@@ -52,73 +52,46 @@ namespace Inventonater.BleHid
             callbackHandler.OnDebugLog += (message) => OnDebugLog?.Invoke(message);
         }
 
-        /// <summary>
-        /// Called when initialization is complete.
-        /// </summary>
         public void HandleInitializeComplete(string message)
         {
             callbackHandler.HandleInitializeComplete(message);
         }
 
-        /// <summary>
-        /// Called when the advertising state changes.
-        /// </summary>
         public void HandleAdvertisingStateChanged(string message)
         {
             callbackHandler.HandleAdvertisingStateChanged(message);
         }
 
-        /// <summary>
-        /// Called when the connection state changes.
-        /// </summary>
         public void HandleConnectionStateChanged(string message)
         {
             callbackHandler.HandleConnectionStateChanged(message);
         }
 
-        /// <summary>
-        /// Called when the pairing state changes.
-        /// </summary>
         public void HandlePairingStateChanged(string message)
         {
             callbackHandler.HandlePairingStateChanged(message);
         }
 
-        /// <summary>
-        /// Called when an error occurs.
-        /// </summary>
         public void HandleError(string message)
         {
             callbackHandler.HandleError(message);
         }
 
-        /// <summary>
-        /// Called for debug log messages.
-        /// </summary>
         public void HandleDebugLog(string message)
         {
             callbackHandler.HandleDebugLog(message);
         }
 
-        /// <summary>
-        /// Called when connection parameters are updated.
-        /// </summary>
         public void HandleConnectionParametersChanged(string message)
         {
             callbackHandler.HandleConnectionParametersChanged(message);
         }
 
-        /// <summary>
-        /// Called when RSSI is read.
-        /// </summary>
         public void HandleRssiRead(string message)
         {
             callbackHandler.HandleRssiRead(message);
         }
 
-        /// <summary>
-        /// Called when a connection parameter change request is completed.
-        /// </summary>
         public void HandleConnectionParameterRequestComplete(string message)
         {
             callbackHandler.HandleConnectionParameterRequestComplete(message);

@@ -19,7 +19,7 @@ namespace Inventonater.BleHid
             _currentFilterType = InputFilterFactory.FilterType.OneEuro;
             inputFilter = InputFilterFactory.CreateFilter(_currentFilterType);
             touchpadRect = new Rect(Screen.width / 2 - 150, Screen.height / 2 - 100, 300, 200);
-            _inputProcessor = BleHidManager.Instance.InputController.Mouse.MouseInputProcessor;
+            _inputProcessor = BleHidManager.Instance.Mouse.MouseInputProcessor;
             _inputProcessor.SetInputFilter(inputFilter);
         }
 
@@ -123,9 +123,9 @@ namespace Inventonater.BleHid
             string[] buttonLabels = { "Left Click", "Middle Click", "Right Click" };
             Action[] buttonActions =
             {
-                () => BleHidManager.InputController.Mouse.ClickMouseButton(BleHidConstants.BUTTON_LEFT),
-                () => BleHidManager.InputController.Mouse.ClickMouseButton(BleHidConstants.BUTTON_MIDDLE),
-                () => BleHidManager.InputController.Mouse.ClickMouseButton(BleHidConstants.BUTTON_RIGHT)
+                () => BleHidManager.Mouse.ClickMouseButton(BleHidConstants.BUTTON_LEFT),
+                () => BleHidManager.Mouse.ClickMouseButton(BleHidConstants.BUTTON_MIDDLE),
+                () => BleHidManager.Mouse.ClickMouseButton(BleHidConstants.BUTTON_RIGHT)
             };
             string[] buttonMessages =
             {

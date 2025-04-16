@@ -24,7 +24,7 @@ namespace Inventonater.BleHid
         /// <returns>True if the request was sent, false otherwise.</returns>
         public bool RequestConnectionPriority(int priority)
         {
-            if (!manager.BleUtils.ConfirmIsConnected()) return false;
+            if (!manager.ConfirmIsConnected()) return false;
 
             try { return manager.BleInitializer.BridgeInstance.Call<bool>("requestConnectionPriority", priority); }
             catch (Exception e)
@@ -45,7 +45,7 @@ namespace Inventonater.BleHid
         /// <returns>True if the request was sent, false otherwise.</returns>
         public bool RequestMtu(int mtu)
         {
-            if (!manager.BleUtils.ConfirmIsConnected()) return false;
+            if (!manager.ConfirmIsConnected()) return false;
 
             if (mtu < 23 || mtu > 517)
             {
@@ -73,7 +73,7 @@ namespace Inventonater.BleHid
         /// <returns>True if the read request was sent, false otherwise.</returns>
         public bool ReadRssi()
         {
-            if (!manager.BleUtils.ConfirmIsConnected()) return false;
+            if (!manager.ConfirmIsConnected()) return false;
 
             try { return manager.BleInitializer.BridgeInstance.Call<bool>("readRssi"); }
             catch (Exception e)
@@ -92,7 +92,7 @@ namespace Inventonater.BleHid
         /// <returns>Dictionary of parameter names to values, or null if not connected.</returns>
         public Dictionary<string, string> GetConnectionParameters()
         {
-            if (!manager.BleUtils.ConfirmIsConnected()) return null;
+            if (!manager.ConfirmIsConnected()) return null;
 
             try
             {

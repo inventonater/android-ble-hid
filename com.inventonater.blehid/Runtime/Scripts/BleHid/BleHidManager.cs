@@ -25,23 +25,15 @@ namespace Inventonater.BleHid
         public int TxPowerLevel { get; internal set; }
 
         // Component references
-        private BleInitializer _bleInitializer;
-        private BleEventSystem _bleEventSystem;
-        private BleAdvertiser _bleAdvertiser;
-        private ConnectionManager _connectionManager;
-        private InputController _inputController;
-        private ServiceManager _serviceManager;
-        private BleUtils _bleUtils;
-
-        // Public accessors for components
-        public BleInitializer BleInitializer => _bleInitializer;
-        public BleEventSystem BleEventSystem => _bleEventSystem;
-        public BleAdvertiser BleAdvertiser => _bleAdvertiser;
-        public ConnectionManager ConnectionManager => _connectionManager;
-        public InputController InputController => _inputController;
-        public ServiceManager ServiceManager => _serviceManager;
-        public BleUtils BleUtils => _bleUtils;
+        public BleInitializer BleInitializer { get; private set; }
+        public BleEventSystem BleEventSystem { get; private set; }
+        public BleAdvertiser BleAdvertiser { get; private set; }
+        public ConnectionManager ConnectionManager { get; private set; }
+        public ServiceManager ServiceManager { get; private set; }
         public static BleHidManager Instance { get; private set; }
+        public KeyboardController Keyboard { get; private set; }
+        public MouseController Mouse { get; private set; }
+        public MediaController Media { get; private set; }
 
         private void Awake()
         {
@@ -54,21 +46,42 @@ namespace Inventonater.BleHid
             Instance = this;
             DontDestroyOnLoad(gameObject);
 
-            // Initialize all components
-            _bleUtils = new BleUtils(this);
-            _bleEventSystem = gameObject.AddComponent<BleEventSystem>();
-            _bleInitializer = new BleInitializer(this);
-            _bleAdvertiser = new BleAdvertiser(this);
-            _connectionManager = new ConnectionManager(this);
-            _inputController = new InputController(this);
-            _serviceManager = new ServiceManager(this);
+            BleEventSystem = gameObject.AddComponent<BleEventSystem>();
+            BleInitializer = new BleInitializer(this);
+            BleAdvertiser = new BleAdvertiser(this);
+            ConnectionManager = new ConnectionManager(this);
+            Keyboard = new KeyboardController(this);
+            Mouse = new MouseController(this);
+            Media = new MediaController(this);
+            ServiceManager = new ServiceManager(this);
 
             Debug.Log("BleHidManager initialized");
         }
 
         private void OnDestroy()
         {
-            _bleInitializer.Close();
+            BleInitializer.Close();
+        }
+
+        public bool ConfirmIsInitialized()
+        {
+            if (IsInitialized && BleInitializer.BridgeInstance != null) return true;
+
+            string message = "BLE HID plugin not initialized";
+            Debug.LogError(message);
+            BleEventSystem.OnError?.Invoke(BleHidConstants.ERROR_NOT_INITIALIZED, message);
+            return false;
+        }
+
+        public bool ConfirmIsConnected()
+        {
+            if (!ConfirmIsInitialized()) return false;
+            if (IsConnected) return true;
+
+            string message = "No BLE device connected";
+            Debug.LogError(message);
+            BleEventSystem.OnError?.Invoke(BleHidConstants.ERROR_NOT_CONNECTED, message);
+            return false;
         }
     }
 }

@@ -382,12 +382,7 @@ namespace Inventonater.BleHid
         {
             yield return null; // Wait a frame to let UI update
 
-            // Get notification permission status
-            int sdkInt = BleHidPermissionHandler.GetAndroidSDKVersion();
-            bool permissionNeeded = sdkInt >= 33; // Android 13+
-            
-            // If Android 13+ and we need to check permission
-            if (permissionNeeded && !IsEditorMode)
+            if (!IsEditorMode)
             {
                 bool isGranted = BleHidPermissionHandler.CheckNotificationPermission();
                 

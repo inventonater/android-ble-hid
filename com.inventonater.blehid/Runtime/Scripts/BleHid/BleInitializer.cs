@@ -69,7 +69,7 @@ namespace Inventonater.BleHid
                 Debug.Log("Checking Android version for permissions...");
 
                 // Get Android version
-                int sdkInt = BleHidPermissionHandler.GetAndroidSDKVersion();
+                int sdkInt = GetAndroidSDKVersion();
                 Debug.Log($"Android SDK version: {sdkInt}");
 
                 // For Android 12+ (API 31+), request Bluetooth permissions
@@ -172,6 +172,26 @@ namespace Inventonater.BleHid
         }
 
         /// <summary>
+        /// Get the Android SDK version
+        /// </summary>
+        /// <returns>SDK version number, or -1 if not on Android</returns>
+        public static int GetAndroidSDKVersion()
+        {
+            if (Application.platform != RuntimePlatform.Android) return -1;
+
+            try
+            {
+                AndroidJavaClass versionClass = new AndroidJavaClass("android.os.Build$VERSION");
+                return versionClass.GetStatic<int>("SDK_INT");
+            }
+            catch (Exception e)
+            {
+                Debug.LogError("Failed to get Android SDK version: " + e.Message);
+                return -1;
+            }
+        }
+
+        /// <summary>
         /// Run diagnostic checks and return a comprehensive report of the system state.
         /// </summary>
         /// <returns>A string containing the diagnostic information.</returns>
@@ -186,7 +206,7 @@ namespace Inventonater.BleHid
         /// <returns>A string with diagnostic information.</returns>
         public string GetDiagnosticInfo()
         {
-            if (!manager.BleUtils.ConfirmIsInitialized()) return "Not initialized";
+            if (!manager.ConfirmIsInitialized()) return "Not initialized";
 
             try { return bridgeInstance.Call<string>("getDiagnosticInfo"); }
             catch (Exception e)

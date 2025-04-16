@@ -105,23 +105,16 @@ namespace Inventonater.BleHid
         {
             List<AndroidPermission> missingPermissions = new List<AndroidPermission>();
             
-            // Skip permission check if not on Android
-            if (Application.platform != RuntimePlatform.Android)
-                return missingPermissions;
+            if (Application.platform != RuntimePlatform.Android) return missingPermissions;
             
-            // Check Bluetooth permissions (only for Android 12+)
-            int sdkInt = GetAndroidSDKVersion();
-            if (sdkInt >= 31)
+            // Check each required Bluetooth permission
+            foreach (var permission in BluetoothPermissions)
             {
-                // Check each required Bluetooth permission
-                foreach (var permission in BluetoothPermissions)
+                permission.IsGranted = HasUserAuthorizedPermission(permission.PermissionString);
+
+                if (!permission.IsGranted)
                 {
-                    permission.IsGranted = HasUserAuthorizedPermission(permission.PermissionString);
-                    
-                    if (!permission.IsGranted)
-                    {
-                        missingPermissions.Add(permission);
-                    }
+                    missingPermissions.Add(permission);
                 }
             }
             
@@ -143,100 +136,49 @@ namespace Inventonater.BleHid
             
             return missingPermissions;
         }
-        
-        /// <summary>
-        /// Get a list of all missing Bluetooth permissions
-        /// </summary>
-        /// <returns>List of permissions that are not currently granted</returns>
+
         public static List<AndroidPermission> GetMissingBluetoothPermissions()
         {
             List<AndroidPermission> missingPermissions = new List<AndroidPermission>();
             
-            // Skip permission check if not on Android
-            if (Application.platform != RuntimePlatform.Android)
-                return missingPermissions;
-                
-            // Skip if Android version is below 12 (API 31)
-            int sdkInt = GetAndroidSDKVersion();
-            if (sdkInt < 31)
-                return missingPermissions;
-            
+            if (Application.platform != RuntimePlatform.Android) return missingPermissions;
+
             // Check each required permission
             foreach (var permission in BluetoothPermissions)
             {
                 permission.IsGranted = HasUserAuthorizedPermission(permission.PermissionString);
-                
-                if (!permission.IsGranted)
-                {
-                    missingPermissions.Add(permission);
-                }
+                if (!permission.IsGranted) missingPermissions.Add(permission);
             }
             
             return missingPermissions;
         }
         
-        /// <summary>
-        /// Request camera permission
-        /// </summary>
         public static IEnumerator RequestCameraPermission()
         {
             Debug.Log("Requesting Camera permission");
-            
             yield return RequestAndroidPermission(CAMERA_PERMISSION);
-            
-            // Give a small delay to allow the permission request to complete
             yield return new WaitForSeconds(0.5f);
         }
         
-        /// <summary>
-        /// Check if camera permission is granted
-        /// </summary>
         public static bool CheckCameraPermission()
         {
             return Application.platform != RuntimePlatform.Android || HasUserAuthorizedPermission(CAMERA_PERMISSION);
         }
         
-        /// <summary>
-        /// Request notification permission (Android 13+)
-        /// </summary>
         public static IEnumerator RequestNotificationPermission()
         {
             Debug.Log("Requesting Notification permission");
-            
-            // Only request notification permission on Android 13+ (API 33+)
-            int sdkInt = GetAndroidSDKVersion();
-            if (sdkInt >= 33)
-            {
-                yield return RequestAndroidPermission(NOTIFICATION_PERMISSION);
-                
-                // Give a small delay to allow the permission request to complete
-                yield return new WaitForSeconds(0.5f);
-            }
-            else
-            {
-                Debug.Log("Notification permission not required for Android version below 13 (API 33)");
-            }
+            yield return RequestAndroidPermission(NOTIFICATION_PERMISSION);
+            yield return new WaitForSeconds(0.5f);
         }
         
-        /// <summary>
-        /// Check if notification permission is granted
-        /// </summary>
         public static bool CheckNotificationPermission()
         {
             // On devices below Android 13 (API 33), notification permission is granted by default
-            if (Application.platform != RuntimePlatform.Android)
-                return true;
-                
-            int sdkInt = GetAndroidSDKVersion();
-            if (sdkInt < 33)
-                return true;
-                
+            if (Application.platform != RuntimePlatform.Android) return true;
             return HasUserAuthorizedPermission(NOTIFICATION_PERMISSION);
         }
         
-        /// <summary>
-        /// Open the Android app settings page for this application
-        /// </summary>
         public static void OpenAppSettings()
         {
             if (Application.platform != RuntimePlatform.Android)
@@ -270,9 +212,6 @@ namespace Inventonater.BleHid
             }
         }
         
-        /// <summary>
-        /// Request a specific Android permission using Unity's Permission API
-        /// </summary>
         public static IEnumerator RequestAndroidPermission(string permission)
         {
             if (Application.platform != RuntimePlatform.Android) yield break;
@@ -294,9 +233,6 @@ namespace Inventonater.BleHid
             }
         }
         
-        /// <summary>
-        /// Check if the user has authorized the specified permission
-        /// </summary>
         public static bool HasUserAuthorizedPermission(string permission)
         {
             if (Application.platform != RuntimePlatform.Android)
@@ -312,9 +248,6 @@ namespace Inventonater.BleHid
             return result == granted;
         }
         
-        /// <summary>
-        /// Request the specified permission from the user
-        /// </summary>
         public static void RequestUserPermission(string permission)
         {
             if (Application.platform != RuntimePlatform.Android)
@@ -335,9 +268,6 @@ namespace Inventonater.BleHid
             }
         }
         
-        /// <summary>
-        /// Check if all required Bluetooth permissions are granted
-        /// </summary>
         public static bool CheckBluetoothPermissions()
         {
             if (Application.platform != RuntimePlatform.Android)
@@ -352,29 +282,7 @@ namespace Inventonater.BleHid
                 return GetMissingBluetoothPermissions().Count == 0;
             }
             
-            // For older Android versions we check the legacy permissions
             return true; // These should be granted at install time pre-Android 12
-        }
-        
-        /// <summary>
-        /// Get the Android SDK version
-        /// </summary>
-        /// <returns>SDK version number, or -1 if not on Android</returns>
-        public static int GetAndroidSDKVersion()
-        {
-            if (Application.platform != RuntimePlatform.Android)
-                return -1;
-                
-            try
-            {
-                AndroidJavaClass versionClass = new AndroidJavaClass("android.os.Build$VERSION");
-                return versionClass.GetStatic<int>("SDK_INT");
-            }
-            catch (Exception e)
-            {
-                Debug.LogError("Failed to get Android SDK version: " + e.Message);
-                return -1;
-            }
         }
     }
 }

@@ -57,7 +57,7 @@ namespace Inventonater.BleHid.InputControllers
         /// <returns>True if successful, false otherwise.</returns>
         public bool ClickMouseButton(int button)
         {
-            if (!manager.BleUtils.ConfirmIsConnected()) return false;
+            if (!manager.ConfirmIsConnected()) return false;
 
             try { return manager.BleInitializer.BridgeInstance.Call<bool>("clickMouseButton", button); }
             catch (Exception e)
