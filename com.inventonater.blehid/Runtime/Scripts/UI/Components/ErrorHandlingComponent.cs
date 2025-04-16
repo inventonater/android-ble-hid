@@ -21,6 +21,10 @@ namespace Inventonater.BleHid
         private List<BleHidPermissionHandler.AndroidPermission> missingPermissions = new List<BleHidPermissionHandler.AndroidPermission>();
         private bool checkingPermissions = false;
 
+        // Notification permission state (Android 13+)
+        private bool hasNotificationPermissionError = false;
+        private bool checkingNotificationPermission = false;
+
         // Accessibility state
         private bool hasAccessibilityError = false;
         private string accessibilityErrorMessage = "Accessibility Service is required for local device control";
@@ -33,10 +37,12 @@ namespace Inventonater.BleHid
         // Error styling
         private readonly Color permissionErrorColor = new Color(0.8f, 0.2f, 0.2f, 1.0f);
         private readonly Color accessibilityErrorColor = new Color(0.8f, 0.4f, 0.0f, 1.0f);
+        private readonly Color notificationErrorColor = new Color(0.2f, 0.6f, 0.8f, 1.0f);
 
         // Public properties
         public bool HasPermissionError => hasPermissionError;
         public bool HasAccessibilityError => hasAccessibilityError;
+        public bool HasNotificationPermissionError => hasNotificationPermissionError;
 
         public ErrorHandlingComponent(MonoBehaviour owner)
         {
@@ -88,6 +94,22 @@ namespace Inventonater.BleHid
         {
             checkingPermissions = true;
             owner.StartCoroutine(CheckMissingPermissionsCoroutine());
+        }
+        
+        /// <summary>
+        /// Check notification permission status (Android 13+ only)
+        /// </summary>
+        public void CheckNotificationPermission()
+        {
+            // Only needed on Android 13+
+            if (BleHidPermissionHandler.GetAndroidSDKVersion() < 33)
+            {
+                hasNotificationPermissionError = false;
+                return;
+            }
+            
+            checkingNotificationPermission = true;
+            owner.StartCoroutine(CheckNotificationPermissionCoroutine());
         }
 
 
@@ -154,6 +176,64 @@ namespace Inventonater.BleHid
                 }
             }
 
+            GUILayout.EndVertical();
+        }
+        
+        /// <summary>
+        /// Draw notification permission UI for Android 13+
+        /// </summary>
+        public void DrawNotificationPermissionUI()
+        {
+            // Only show for Android 13+
+            if (BleHidPermissionHandler.GetAndroidSDKVersion() < 33)
+                return;
+                
+            // Check if we need to show the notification permission UI
+            if (!hasNotificationPermissionError && !checkingNotificationPermission)
+            {
+                // Check the permission status if we haven't already
+                if (!BleHidPermissionHandler.CheckNotificationPermission())
+                {
+                    hasNotificationPermissionError = true;
+                }
+                else
+                {
+                    // Permission is granted, no need to show UI
+                    return;
+                }
+            }
+                
+            GUIStyle notificationStyle = UIHelper.CreateErrorStyle(notificationErrorColor);
+            
+            GUILayout.BeginVertical(notificationStyle);
+            
+            // Header
+            GUILayout.Label("Notification Permission Required", GUIStyle.none);
+            GUILayout.Space(5);
+            
+            if (checkingNotificationPermission)
+            {
+                GUILayout.Label("Checking notification permission status...", GUIStyle.none);
+            }
+            else
+            {
+                // Show message
+                GUILayout.Label("Notification permission is required for background operation", GUIStyle.none);
+                GUILayout.Label("This allows the app to display service notifications when in the background", GUIStyle.none);
+                GUILayout.Space(10);
+                
+                if (GUILayout.Button("Enable Notifications", GUILayout.Height(UIHelper.StandardButtonHeight)))
+                {
+                    RequestNotificationPermission();
+                }
+                
+                GUILayout.Space(5);
+                if (GUILayout.Button("Open App Settings", GUILayout.Height(UIHelper.StandardButtonHeight - 10)))
+                {
+                    OpenAppSettings();
+                }
+            }
+            
             GUILayout.EndVertical();
         }
 
@@ -271,6 +351,59 @@ namespace Inventonater.BleHid
 #endif
         }
 
+        /// <summary>
+        /// Request notification permission for Android 13+
+        /// </summary>
+        private void RequestNotificationPermission()
+        {
+            // Skip for non-Android platforms or versions below 13
+            if (BleHidPermissionHandler.GetAndroidSDKVersion() < 33)
+                return;
+                
+            Logger.AddLogEntry("Requesting notification permission for Android 13+");
+            
+            // Start the coroutine to request notification permission
+            checkingNotificationPermission = true;
+            if (owner != null)
+            {
+                owner.StartCoroutine(RequestNotificationPermissionCoroutine());
+            }
+        }
+        
+        /// <summary>
+        /// Coroutine to request notification permission
+        /// </summary>
+        private IEnumerator RequestNotificationPermissionCoroutine()
+        {
+            Logger.AddLogEntry("Starting notification permission request process");
+            
+#if UNITY_ANDROID && !UNITY_EDITOR
+            // Request the notification permission
+            yield return owner.StartCoroutine(BleHidPermissionHandler.RequestNotificationPermission());
+            
+            // Check if permission was granted after the request
+            hasNotificationPermissionError = !BleHidPermissionHandler.CheckNotificationPermission();
+            
+            Logger.AddLogEntry(hasNotificationPermissionError
+                ? "Notification permission request was denied"
+                : "Notification permission granted successfully");
+
+            // If granted, try starting the foreground service again
+            if (!hasNotificationPermissionError && BleHidManager != null)
+            {
+                Logger.AddLogEntry("Starting foreground service after notification permission granted");
+                BleHidManager.StartForegroundService();
+            }
+#else
+            // Simulate in editor mode
+            yield return new WaitForSeconds(1.0f);
+            hasNotificationPermissionError = false;
+            Logger.AddLogEntry("Editor mode: Notification permission granted");
+#endif
+
+            checkingNotificationPermission = false;
+        }
+
         private void OpenAccessibilitySettings()
         {
             Logger.AddLogEntry("Opening accessibility settings");
@@ -353,6 +486,38 @@ namespace Inventonater.BleHid
         }
 
         /// <summary>
+        /// Coroutine to check notification permission status
+        /// </summary>
+        private IEnumerator CheckNotificationPermissionCoroutine()
+        {
+            yield return null; // Wait a frame to let UI update
+            
+            // Only check for Android 13+
+            if (BleHidPermissionHandler.GetAndroidSDKVersion() < 33)
+            {
+                hasNotificationPermissionError = false;
+                checkingNotificationPermission = false;
+                yield break;
+            }
+            
+#if UNITY_ANDROID && !UNITY_EDITOR
+            // Check if notification permission is granted
+            bool hasPermission = BleHidPermissionHandler.CheckNotificationPermission();
+            hasNotificationPermissionError = !hasPermission;
+            
+            Logger.AddLogEntry(hasPermission
+                ? "Notification permission is granted"
+                : "Notification permission is NOT granted (required for Android 13+)");
+#else
+            // Editor mode simulation
+            hasNotificationPermissionError = false;
+            Logger.AddLogEntry("Editor mode: Simulating notification permission check");
+#endif
+            
+            checkingNotificationPermission = false;
+        }
+
+        /// <summary>
         /// Coroutine to check missing permissions
         /// </summary>
         private IEnumerator CheckMissingPermissionsCoroutine()
@@ -374,6 +539,12 @@ namespace Inventonater.BleHid
             {
                 Logger.AddLogEntry("All required permissions are granted");
                 hasPermissionError = false;
+            }
+            
+            // Also check notification permission for Android 13+
+            if (BleHidPermissionHandler.GetAndroidSDKVersion() >= 33)
+            {
+                CheckNotificationPermission();
             }
 #else
             // Editor mode simulation

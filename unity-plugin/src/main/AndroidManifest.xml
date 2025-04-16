@@ -11,9 +11,11 @@
     <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
     <uses-permission android:name="android.permission.CAMERA" />
     
-    <!-- Foreground service permissions -->
+    <!-- Foreground service permissions - Enhanced for Android 13+ -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_CONNECTED_DEVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
     <!-- Bluetooth features -->
     <uses-feature android:name="android.hardware.bluetooth" android:required="true" />
@@ -42,10 +44,12 @@
             android:exported="false">
         </service>
         
-        <!-- Foreground service for keeping accessibility service alive -->
+        <!-- Foreground service for keeping accessibility service alive - Enhanced with multiple types -->
         <service
             android:name="com.inventonater.blehid.core.BleHidForegroundService"
             android:exported="false"
-            android:foregroundServiceType="connectedDevice" />
+            android:enabled="true"
+            android:stopWithTask="false"
+            android:foregroundServiceType="connectedDevice|dataSync" />
     </application>
 </manifest>
