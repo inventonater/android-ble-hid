@@ -469,9 +469,6 @@ public class BleHidManager {
         
         // Notify connection manager
         connectionManager.onDeviceConnected(device);
-        
-        // Update the foreground service notification
-        updateForegroundServiceNotification();
     }
 
     /**
@@ -488,39 +485,8 @@ public class BleHidManager {
         
         connectedDevice = null;
         
-        // Update the foreground service notification to show disconnected state
-        updateForegroundServiceNotification();
-        
         // Restart advertising after disconnect
         startAdvertising();
-    }
-    
-    /**
-     * Updates the foreground service notification when connection state changes
-     */
-    private void updateForegroundServiceNotification() {
-        // Trigger notification update in the BleHidForegroundService
-        Context context = getContext();
-        if (context != null) {
-            try {
-                // Use intent-based approach to refresh the notification
-                Intent refreshIntent = new Intent(context, BleHidForegroundService.class);
-                refreshIntent.setAction(BleHidForegroundService.ACTION_REFRESH_NOTIFICATION);
-                
-                // Try to start the service (will refresh if already running)
-                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
-                    // Use startForegroundService for Android 8.0+
-                    context.startForegroundService(refreshIntent);
-                } else {
-                    // Use regular startService for earlier versions
-                    context.startService(refreshIntent);
-                }
-                
-                Log.d(TAG, "Sent notification refresh intent to foreground service");
-            } catch (Exception e) {
-                Log.e(TAG, "Failed to refresh notification: " + e.getMessage());
-            }
-        }
     }
 
     /**

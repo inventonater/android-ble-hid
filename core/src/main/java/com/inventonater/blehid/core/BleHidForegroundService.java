@@ -5,59 +5,32 @@ import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.app.Service;
-import android.bluetooth.BluetoothDevice;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.ServiceInfo;
-import android.graphics.Color;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.Looper;
 import android.provider.Settings;
-import android.text.Html;
-import android.text.Spanned;
 import android.util.Log;
 
 import androidx.core.app.NotificationCompat;
-import androidx.core.app.ServiceCompat;
 
 /**
  * Foreground service that ensures the LocalAccessibilityService remains running.
  * 
- * This service displays a persistent notification as required by Android
+ * This service displays a simple persistent notification as required by Android
  * to keep the app running in the background. This ensures our accessibility
  * service doesn't get killed when the app is not in focus.
  */
-public class BleHidForegroundService extends Service implements BleConnectionManager.ConnectionParameterListener {
+public class BleHidForegroundService extends Service {
     private static final String CHANNEL_ID = "BleHidForegroundServiceChannel";
     private static final int NOTIFICATION_ID = 1001;
     private static final String TAG = "BleHidForegroundSvc";
-    private static final boolean VERBOSE_LOGGING = false; // Reduce logging noise
-    
-    // RSSI signal strength thresholds
-    private static final int RSSI_THRESHOLD_GOOD = -60;    // -60 dBm or higher is good
-    private static final int RSSI_THRESHOLD_MODERATE = -75; // -75 to -61 dBm is moderate
-    // Anything below -75 dBm is considered poor
-    
-    // Signal strength display names
-    private static final String SIGNAL_GOOD = "Good";
-    private static final String SIGNAL_MODERATE = "Moderate";
-    private static final String SIGNAL_POOR = "Poor";
-    
-    // Signal strength colors
-    private static final int COLOR_SIGNAL_GOOD = Color.parseColor("#4CAF50");     // Green
-    private static final int COLOR_SIGNAL_MODERATE = Color.parseColor("#FFC107"); // Amber
-    private static final int COLOR_SIGNAL_POOR = Color.parseColor("#F44336");     // Red
     
     // Service state
     private boolean isRunning = false;
     private Handler handler;
-    
-    // BLE connection management
-    private BleHidManager bleHidManager;
-    private int currentRssi = 0;
-    private String currentSignalLevel = "";
-    private int currentSignalColor = COLOR_SIGNAL_MODERATE;
     private NotificationManager notificationManager;
     
     /**
@@ -84,16 +57,6 @@ public class BleHidForegroundService extends Service implements BleConnectionMan
         return instance;
     }
     
-    /**
-     * Get singleton instance of BleHidManager
-     */
-    private BleHidManager getBleHidManager() {
-        if (bleHidManager == null) {
-            bleHidManager = new BleHidManager(getApplicationContext());
-        }
-        return bleHidManager;
-    }
-    
     @Override
     public void onCreate() {
         super.onCreate();
@@ -109,21 +72,11 @@ public class BleHidForegroundService extends Service implements BleConnectionMan
         // Set static running flag and instance
         isServiceRunning = true;
         instance = this;
-        
-        // Initialize BLE management and register for RSSI updates
-        BleHidManager manager = getBleHidManager();
-        if (manager != null) {
-            BleConnectionManager connectionManager = manager.getConnectionManager();
-            if (connectionManager != null) {
-                connectionManager.setConnectionParameterListener(this);
-            }
-        }
     }
     
     // Service action constants
     public static final String ACTION_START_FOREGROUND = "START_FOREGROUND";
     public static final String ACTION_STOP_FOREGROUND = "STOP_FOREGROUND";
-    public static final String ACTION_REFRESH_NOTIFICATION = "REFRESH_NOTIFICATION";
     
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
@@ -147,9 +100,6 @@ public class BleHidForegroundService extends Service implements BleConnectionMan
                 isRunning = false;
                 isServiceRunning = false;
                 Log.d(TAG, "Foreground service stopped");
-            } else if (ACTION_REFRESH_NOTIFICATION.equals(action)) {
-                Log.d(TAG, "Refreshing notification as requested");
-                refreshNotification();
             } else {
                 Log.w(TAG, "Unknown action received: " + action);
             }
@@ -180,16 +130,6 @@ public class BleHidForegroundService extends Service implements BleConnectionMan
     }
     
     /**
-     * Public method to refresh the notification from outside
-     * Called when connection state changes or RSSI changes significantly
-     */
-    public void refreshNotification() {
-        if (isRunning) {
-            updateNotification();
-        }
-    }
-    
-    /**
      * Creates the notification channel required for Android 8.0+
      */
     private void createNotificationChannel() {
@@ -199,10 +139,6 @@ public class BleHidForegroundService extends Service implements BleConnectionMan
             "BleHID Service",
             NotificationManager.IMPORTANCE_LOW
         );
-        
-        if (VERBOSE_LOGGING) {
-            Log.d(TAG, "Creating notification channel: " + CHANNEL_ID);
-        }
         
         channel.setDescription("Keeps BleHID service running in the background");
         channel.enableLights(false);
@@ -216,17 +152,9 @@ public class BleHidForegroundService extends Service implements BleConnectionMan
      * Starts the foreground service with a persistent notification
      */
     private void startForegroundService() {
-        if (VERBOSE_LOGGING) {
-            Log.d(TAG, "Starting foreground service...");
-        }
-        
         try {
             // Create notification
             Notification notification = buildNotification();
-            
-            if (VERBOSE_LOGGING) {
-                Log.d(TAG, "Notification built successfully, calling startForeground...");
-            }
             
             try {
                 // Handle different Android versions for starting foreground service
@@ -288,124 +216,20 @@ public class BleHidForegroundService extends Service implements BleConnectionMan
         PendingIntent pendingIntent = PendingIntent.getActivity(this, 0, 
                 notificationIntent, PendingIntent.FLAG_IMMUTABLE);
         
-        // Check if we have a connected device
-        String deviceName = "Not Connected";
-        boolean isConnected = false;
-        
-        BleHidManager manager = getBleHidManager();
-        if (manager != null && manager.isConnected() && manager.getConnectedDevice() != null) {
-            BluetoothDevice device = manager.getConnectedDevice();
-            String name = device.getName();
-            // Fall back to address if name is null
-            deviceName = name != null && !name.isEmpty() ? name : device.getAddress();
-            isConnected = true;
-        }
-        
-        // Determine title and content based on connection state
-        String title = isConnected ? "BleHID Connected" : "BleHID Ready";
-        
-        // Create content text with signal strength if connected
-        String contentText;
-        if (isConnected) {
-            // Format as "Device: My Pixel Phone • Signal: Good (-58 dBm)"
-            contentText = "Device: " + deviceName + " • Signal: " + 
-                          currentSignalLevel + " (" + currentRssi + " dBm)";
-        } else {
-            contentText = "Waiting for connection...";
-        }
-        
-        // Use a more subtle icon
-        int iconResource = android.R.drawable.stat_sys_data_bluetooth;
-        
-        // Build a more subtle notification
+        // Simple static notification
         NotificationCompat.Builder builder = new NotificationCompat.Builder(this, CHANNEL_ID)
-            .setContentTitle(title)
-            .setContentText(contentText)
-            .setSmallIcon(iconResource)
+            .setContentTitle("BleHID Running")
+            .setContentText("Bluetooth HID service is active")
+            .setSmallIcon(android.R.drawable.stat_sys_data_bluetooth)
             .setContentIntent(pendingIntent)
             .setForegroundServiceBehavior(NotificationCompat.FOREGROUND_SERVICE_IMMEDIATE)
-            .setPriority(NotificationCompat.PRIORITY_DEFAULT) // Default priority instead of MAX
+            .setPriority(NotificationCompat.PRIORITY_DEFAULT)
             .setCategory(NotificationCompat.CATEGORY_SERVICE)
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
             .setOngoing(true)
-            .setAutoCancel(false)
-            .setWhen(System.currentTimeMillis());
+            .setAutoCancel(false);
             
-        // Set color based on signal strength (only when connected)
-        if (isConnected) {
-            builder.setColor(currentSignalColor);
-            
-            // Use BigTextStyle to provide more info
-            NotificationCompat.BigTextStyle bigTextStyle = new NotificationCompat.BigTextStyle()
-                .bigText(contentText)
-                .setBigContentTitle(title);
-                
-            builder.setStyle(bigTextStyle);
-        }
-        
         return builder.build();
-    }
-    
-    /**
-     * Updates the notification with current connection and RSSI information
-     */
-    private void updateNotification() {
-        if (!isRunning) {
-            return;
-        }
-        
-        try {
-            Notification notification = buildNotification();
-            notificationManager.notify(NOTIFICATION_ID, notification);
-        } catch (Exception e) {
-            Log.e(TAG, "Error updating notification", e);
-        }
-    }
-    /**
-     * Updates the signal level info based on RSSI
-     * Returns true if the signal level changed
-     */
-    private boolean updateSignalLevel(int rssi) {
-        String oldSignalLevel = currentSignalLevel;
-        int oldSignalColor = currentSignalColor;
-        
-        // Update the current RSSI value
-        currentRssi = rssi;
-        
-        // Determine signal level based on RSSI thresholds
-        if (rssi >= RSSI_THRESHOLD_GOOD) {
-            currentSignalLevel = SIGNAL_GOOD;
-            currentSignalColor = COLOR_SIGNAL_GOOD;
-        } else if (rssi >= RSSI_THRESHOLD_MODERATE) {
-            currentSignalLevel = SIGNAL_MODERATE;
-            currentSignalColor = COLOR_SIGNAL_MODERATE;
-        } else {
-            currentSignalLevel = SIGNAL_POOR;
-            currentSignalColor = COLOR_SIGNAL_POOR;
-        }
-        
-        // Return true if level or color changed
-        return !currentSignalLevel.equals(oldSignalLevel) || currentSignalColor != oldSignalColor;
-    }
-    
-    // ----- Connection Parameter Listener Implementation -----
-    
-    @Override
-    public void onConnectionParametersChanged(int interval, int latency, int timeout, int mtu) {
-        // We don't need to update the notification for these changes
-    }
-    
-    @Override
-    public void onRssiRead(int rssi) {
-        // Update notification only when signal level changes
-        if (updateSignalLevel(rssi)) {
-            updateNotification();
-        }
-    }
-    
-    @Override
-    public void onRequestComplete(String parameterName, boolean success, String actualValue) {
-        // We don't need to update the notification for these events
     }
     
     /**

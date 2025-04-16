@@ -40,6 +40,15 @@ public class BleHidUnityBridge {
     public boolean initialize(final String gameObjectName) {
         Log.d(TAG, "Initializing BLE HID with callback to Unity GameObject: " + gameObjectName);
         this.unityGameObjectName = gameObjectName;
+        
+        // Start the foreground service immediately on initialization
+        Log.d(TAG, "Starting foreground service on initialization");
+        boolean serviceStarted = BleHidUnityPlugin.startForegroundService();
+        if (serviceStarted) {
+            Log.d(TAG, "Foreground service start requested successfully");
+        } else {
+            Log.e(TAG, "Failed to start foreground service");
+        }
 
         // Create a callback interface for the plugin to communicate back to Unity
         BleHidUnityCallback callback = new BleHidUnityCallback() {
@@ -180,7 +189,37 @@ public class BleHidUnityBridge {
     }
 
     public void close() {
+        // Stop the foreground service when closing the plugin
+        Log.d(TAG, "Stopping foreground service on plugin close");
+        boolean serviceStopped = BleHidUnityPlugin.stopForegroundService();
+        if (serviceStopped) {
+            Log.d(TAG, "Foreground service stop requested successfully");
+        } else {
+            Log.e(TAG, "Failed to stop foreground service");
+        }
+        
+        // Close the plugin
         plugin.close();
+    }
+    
+    /**
+     * Explicitly start the foreground service.
+     * This can be called from Unity if needed.
+     * 
+     * @return true if the service start request was sent
+     */
+    public boolean startForegroundService() {
+        return BleHidUnityPlugin.startForegroundService();
+    }
+    
+    /**
+     * Explicitly stop the foreground service.
+     * This can be called from Unity if needed.
+     * 
+     * @return true if the service stop request was sent
+     */
+    public boolean stopForegroundService() {
+        return BleHidUnityPlugin.stopForegroundService();
     }
     
     // Local Control methods
