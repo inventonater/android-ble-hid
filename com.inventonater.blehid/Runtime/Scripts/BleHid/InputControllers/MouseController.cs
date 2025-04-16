@@ -9,18 +9,13 @@ namespace Inventonater.BleHid.InputControllers
     public class MouseController
     {
         private BleHidManager manager;
-        private MouseInputProcessor mouseInputProcessor;
+        public MouseInputProcessor MouseInputProcessor { get; }
 
         public MouseController(BleHidManager manager)
         {
             this.manager = manager;
-            mouseInputProcessor = new MouseInputProcessor((x, y) => MoveMouse(x, y));
+            MouseInputProcessor = new MouseInputProcessor((x, y) => MoveMouse(x, y));
         }
-
-        /// <summary>
-        /// Access the MouseInputProcessor which handles input filtering and processing.
-        /// </summary>
-        public MouseInputProcessor MouseInputProcessor => mouseInputProcessor;
 
         /// <summary>
         /// Send a mouse movement.

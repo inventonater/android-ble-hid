@@ -1,6 +1,3 @@
-using System;
-using System.Collections;
-using JetBrains.Annotations;
 using UnityEngine;
 using Inventonater.BleHid.InputControllers;
 
@@ -44,8 +41,6 @@ namespace Inventonater.BleHid
         public InputController InputController => _inputController;
         public ServiceManager ServiceManager => _serviceManager;
         public BleUtils BleUtils => _bleUtils;
-
-        // Singleton instance
         public static BleHidManager Instance { get; private set; }
 
         private void Awake()
@@ -73,21 +68,7 @@ namespace Inventonater.BleHid
 
         private void OnDestroy()
         {
-            Close();
-        }
-
-        /// <summary>
-        /// Get the mouse input processor for movement filtering and processing.
-        /// </summary>
-        public MouseInputProcessor MouseInputProcessor => _inputController.MouseInputProcessor;
-
-
-        /// <summary>
-        /// Close the plugin and release all resources.
-        /// </summary>
-        public void Close()
-        {
-            _bleInitializer?.Close();
+            _bleInitializer.Close();
         }
     }
 }

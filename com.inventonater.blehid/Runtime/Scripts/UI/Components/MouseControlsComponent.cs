@@ -19,7 +19,7 @@ namespace Inventonater.BleHid
             _currentFilterType = InputFilterFactory.FilterType.OneEuro;
             inputFilter = InputFilterFactory.CreateFilter(_currentFilterType);
             touchpadRect = new Rect(Screen.width / 2 - 150, Screen.height / 2 - 100, 300, 200);
-            _inputProcessor = BleHidManager.Instance.MouseInputProcessor;
+            _inputProcessor = BleHidManager.Instance.InputController.Mouse.MouseInputProcessor;
             _inputProcessor.SetInputFilter(inputFilter);
         }
 
