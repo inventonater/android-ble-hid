@@ -63,7 +63,7 @@ namespace Inventonater.BleHid
                 yield break;
             }
 
-            // Request runtime permissions for Android 12+ (API level 31+)
+            // Request runtime permissions for Android
             if (Application.platform == RuntimePlatform.Android)
             {
                 Debug.Log("Checking Android version for permissions...");
@@ -72,7 +72,7 @@ namespace Inventonater.BleHid
                 int sdkInt = BleHidPermissionHandler.GetAndroidSDKVersion();
                 Debug.Log($"Android SDK version: {sdkInt}");
 
-                // For Android 12+ (API 31+)
+                // For Android 12+ (API 31+), request Bluetooth permissions
                 if (sdkInt >= 31)
                 {
                     yield return manager.StartCoroutine(BleHidPermissionHandler.RequestBluetoothPermissions());
@@ -89,6 +89,26 @@ namespace Inventonater.BleHid
                     }
 
                     Debug.Log("Bluetooth permissions granted");
+                }
+                
+                // For Android 13+ (API 33+), request notification permissions
+                if (sdkInt >= 33)
+                {
+                    yield return manager.StartCoroutine(BleHidPermissionHandler.RequestNotificationPermission());
+                    
+                    // Check if notification permission was granted
+                    if (!BleHidPermissionHandler.CheckNotificationPermission())
+                    {
+                        // Just log a warning but don't fail initialization - notifications aren't critical
+                        string message = "Notification permission not granted";
+                        Debug.LogWarning(message);
+                        manager.BleEventSystem.OnDebugLog?.Invoke(message);
+                        // We don't break here since notification permissions aren't critical for functionality
+                    }
+                    else
+                    {
+                        Debug.Log("Notification permission granted");
+                    }
                 }
             }
 

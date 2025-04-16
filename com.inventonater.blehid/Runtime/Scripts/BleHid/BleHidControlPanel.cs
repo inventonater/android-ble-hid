@@ -35,7 +35,6 @@ namespace Inventonater.BleHid
 
         private Vector2 localTabScrollPosition = Vector2.zero;
         private float nextPermissionCheckTime = 0f;
-        private bool localControlInitialized = false;
 
         private void Start()
         {
@@ -71,6 +70,7 @@ namespace Inventonater.BleHid
             Logger.AddLogEntry("Starting BLE HID initialization...");
             errorComponent.CheckMissingPermissions();
             errorComponent.CheckAccessibilityServiceStatus();
+            errorComponent.CheckNotificationPermissionStatus();
         }
 
         private void Update()
@@ -84,7 +84,10 @@ namespace Inventonater.BleHid
         private void PerformPeriodicPermissionChecks()
         {
             // Check if we need to check permissions
-            if (!errorComponent.HasPermissionError && !errorComponent.HasAccessibilityError) return;
+            if (!errorComponent.HasPermissionError && 
+                !errorComponent.HasAccessibilityError && 
+                !errorComponent.HasNotificationPermissionError) return;
+                
             if (Time.time < nextPermissionCheckTime) return;
 
             // Schedule next check
@@ -102,6 +105,13 @@ namespace Inventonater.BleHid
             {
                 errorComponent.CheckAccessibilityServiceStatus();
                 LoggingManager.Instance.AddLogEntry("Periodic accessibility check");
+            }
+            
+            // Check notification permission
+            if (errorComponent.HasNotificationPermissionError)
+            {
+                errorComponent.CheckNotificationPermissionStatus();
+                LoggingManager.Instance.AddLogEntry("Periodic notification permission check");
             }
         }
 
@@ -173,6 +183,13 @@ namespace Inventonater.BleHid
             if (errorComponent.HasAccessibilityError)
             {
                 errorComponent.DrawAccessibilityErrorUI(true); // Show full UI with button
+                GUILayout.Space(20);
+            }
+            
+            // Notification permission error - show at the top but don't block functionality
+            if (errorComponent.HasNotificationPermissionError)
+            {
+                errorComponent.DrawNotificationPermissionErrorUI();
                 GUILayout.Space(20);
             }
         }
@@ -314,6 +331,11 @@ namespace Inventonater.BleHid
                     errorComponent.SetAccessibilityError(true);
                     Logger.AddLogEntry("Accessibility error: " + errorMessage);
                     errorComponent.CheckAccessibilityServiceStatus();
+                    break;
+                case BleHidConstants.ERROR_NOTIFICATION_PERMISSION_NOT_GRANTED:
+                    errorComponent.SetNotificationPermissionError(true, errorMessage);
+                    Logger.AddLogEntry("Notification permission error: " + errorMessage);
+                    errorComponent.CheckNotificationPermissionStatus();
                     break;
                 default:
                     Logger.AddLogEntry("Error " + errorCode + ": " + errorMessage);

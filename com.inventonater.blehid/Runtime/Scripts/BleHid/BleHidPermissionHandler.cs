@@ -30,6 +30,11 @@ namespace Inventonater.BleHid
     public const string CAMERA_PERMISSION = "android.permission.CAMERA";
     
     /// <summary>
+    /// Constant for Notification permission (Android 13+)
+    /// </summary>
+    public const string NOTIFICATION_PERMISSION = "android.permission.POST_NOTIFICATIONS";
+    
+    /// <summary>
     /// List of Bluetooth permissions required for Android 12+
     /// </summary>
     public static readonly AndroidPermission[] BluetoothPermissions = new AndroidPermission[]
@@ -64,6 +69,12 @@ namespace Inventonater.BleHid
             Name = "Camera",
             PermissionString = CAMERA_PERMISSION,
             Description = "Required for using the camera features"
+        },
+        new AndroidPermission
+        {
+            Name = "Notifications",
+            PermissionString = NOTIFICATION_PERMISSION,
+            Description = "Required for sending notifications"
         }
     };
         /// <summary>
@@ -183,6 +194,44 @@ namespace Inventonater.BleHid
         public static bool CheckCameraPermission()
         {
             return Application.platform != RuntimePlatform.Android || HasUserAuthorizedPermission(CAMERA_PERMISSION);
+        }
+        
+        /// <summary>
+        /// Request notification permission (Android 13+)
+        /// </summary>
+        public static IEnumerator RequestNotificationPermission()
+        {
+            Debug.Log("Requesting Notification permission");
+            
+            // Only request notification permission on Android 13+ (API 33+)
+            int sdkInt = GetAndroidSDKVersion();
+            if (sdkInt >= 33)
+            {
+                yield return RequestAndroidPermission(NOTIFICATION_PERMISSION);
+                
+                // Give a small delay to allow the permission request to complete
+                yield return new WaitForSeconds(0.5f);
+            }
+            else
+            {
+                Debug.Log("Notification permission not required for Android version below 13 (API 33)");
+            }
+        }
+        
+        /// <summary>
+        /// Check if notification permission is granted
+        /// </summary>
+        public static bool CheckNotificationPermission()
+        {
+            // On devices below Android 13 (API 33), notification permission is granted by default
+            if (Application.platform != RuntimePlatform.Android)
+                return true;
+                
+            int sdkInt = GetAndroidSDKVersion();
+            if (sdkInt < 33)
+                return true;
+                
+            return HasUserAuthorizedPermission(NOTIFICATION_PERMISSION);
         }
         
         /// <summary>

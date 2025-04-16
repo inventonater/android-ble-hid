@@ -30,7 +30,6 @@ namespace Inventonater.BleHid
 
         // Track last applied values to avoid redundant requests
         private int lastAppliedMtu = 512;
-        private int lastAppliedTxPowerLevel = 2;
 
         // Slider interaction tracking
         private bool isSliderBeingDragged = false;

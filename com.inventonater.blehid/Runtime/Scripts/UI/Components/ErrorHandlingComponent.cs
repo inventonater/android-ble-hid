@@ -20,6 +20,11 @@ namespace Inventonater.BleHid
         private string permissionErrorMessage = "";
         private List<BleHidPermissionHandler.AndroidPermission> missingPermissions = new List<BleHidPermissionHandler.AndroidPermission>();
         private bool checkingPermissions = false;
+        
+        // Notification permission state
+        private bool hasNotificationPermissionError = false;
+        private string notificationErrorMessage = "Notification permission is needed for app notifications";
+        private bool checkingNotificationPermission = false;
 
         // Accessibility state
         private bool hasAccessibilityError = false;
@@ -33,10 +38,12 @@ namespace Inventonater.BleHid
         // Error styling
         private readonly Color permissionErrorColor = new Color(0.8f, 0.2f, 0.2f, 1.0f);
         private readonly Color accessibilityErrorColor = new Color(0.8f, 0.4f, 0.0f, 1.0f);
+        private readonly Color notificationErrorColor = new Color(0.3f, 0.3f, 0.8f, 1.0f);
 
         // Public properties
         public bool HasPermissionError => hasPermissionError;
         public bool HasAccessibilityError => hasAccessibilityError;
+        public bool HasNotificationPermissionError => hasNotificationPermissionError;
 
         public ErrorHandlingComponent(MonoBehaviour owner)
         {
@@ -59,6 +66,22 @@ namespace Inventonater.BleHid
             Logger.AddLogEntry("Permission error: " + errorMessage);
 
             CheckMissingPermissions();
+        }
+        
+        /// <summary>
+        /// Set notification permission error state
+        /// </summary>
+        public void SetNotificationPermissionError(bool hasError, string errorMessage = null)
+        {
+            hasNotificationPermissionError = hasError;
+            if (errorMessage != null)
+            {
+                notificationErrorMessage = errorMessage;
+            }
+            
+            Logger.AddLogEntry(hasError
+                ? "Notification permission not granted: " + notificationErrorMessage
+                : "Notification permission granted");
         }
 
         /// <summary>
@@ -89,8 +112,56 @@ namespace Inventonater.BleHid
             checkingPermissions = true;
             owner.StartCoroutine(CheckMissingPermissionsCoroutine());
         }
+        
+        /// <summary>
+        /// Check notification permission status
+        /// </summary>
+        public void CheckNotificationPermissionStatus()
+        {
+            checkingNotificationPermission = true;
+            owner.StartCoroutine(CheckNotificationPermissionCoroutine());
+        }
 
 
+        /// <summary>
+        /// Draw the notification permission error UI with instructions
+        /// </summary>
+        public void DrawNotificationPermissionErrorUI()
+        {
+            GUIStyle errorStyle = UIHelper.CreateErrorStyle(notificationErrorColor);
+
+            GUILayout.BeginVertical(errorStyle);
+
+            // Header
+            GUILayout.Label("Notification Permission", GUIStyle.none);
+            GUILayout.Space(5);
+
+            if (checkingNotificationPermission)
+            {
+                GUILayout.Label("Checking notification permission status...", GUIStyle.none);
+            }
+            else
+            {
+                // Show error message
+                GUILayout.Label(notificationErrorMessage, GUIStyle.none);
+                GUILayout.Space(10);
+                
+                if (GUILayout.Button("Request Notification Permission", GUILayout.Height(50)))
+                {
+                    RequestNotificationPermission();
+                }
+                
+                GUILayout.Space(5);
+                
+                if (GUILayout.Button("Open App Settings", GUILayout.Height(40)))
+                {
+                    OpenAppSettings();
+                }
+            }
+
+            GUILayout.EndVertical();
+        }
+        
         /// <summary>
         /// Draw the permission error UI with instructions
         /// </summary>
@@ -368,6 +439,36 @@ namespace Inventonater.BleHid
 
             checkingPermissions = false;
         }
+        
+        /// <summary>
+        /// Coroutine to check notification permission status
+        /// </summary>
+        private IEnumerator CheckNotificationPermissionCoroutine()
+        {
+            yield return null; // Wait a frame to let UI update
+
+            // Get notification permission status
+            int sdkInt = BleHidPermissionHandler.GetAndroidSDKVersion();
+            bool permissionNeeded = sdkInt >= 33; // Android 13+
+            
+            // If Android 13+ and we need to check permission
+            if (permissionNeeded && !IsEditorMode)
+            {
+                bool isGranted = BleHidPermissionHandler.CheckNotificationPermission();
+                
+                hasNotificationPermissionError = !isGranted;
+                Logger.AddLogEntry(isGranted 
+                    ? "Notification permission is granted" 
+                    : "Notification permission is not granted");
+            }
+            else
+            {
+                // In editor mode or below Android 13, we don't need this permission
+                hasNotificationPermissionError = false;
+            }
+
+            checkingNotificationPermission = false;
+        }
 
         /// <summary>
         /// Check accessibility service status after a delay
@@ -381,6 +482,27 @@ namespace Inventonater.BleHid
             // Check accessibility status
             Logger.AddLogEntry("Performing delayed accessibility service check");
             CheckAccessibilityServiceStatus();
+        }
+
+        /// <summary>
+        /// Request notification permission
+        /// </summary>
+        private void RequestNotificationPermission()
+        {
+            Logger.AddLogEntry("Requesting notification permission");
+            owner.StartCoroutine(RequestNotificationPermissionCoroutine());
+        }
+        
+        /// <summary>
+        /// Coroutine to request notification permission
+        /// </summary>
+        private IEnumerator RequestNotificationPermissionCoroutine()
+        {
+            yield return owner.StartCoroutine(BleHidPermissionHandler.RequestNotificationPermission());
+            
+            // Re-check permission after request
+            yield return new WaitForSeconds(0.5f);
+            CheckNotificationPermissionStatus();
         }
 
         /// <summary>
