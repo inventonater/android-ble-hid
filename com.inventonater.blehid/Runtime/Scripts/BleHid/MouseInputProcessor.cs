@@ -30,8 +30,9 @@ namespace Inventonater.BleHid
         /// </summary>
         /// <param name="position">Screen position of the input</param>
         /// <param name="timestamp"></param>
-        public void UpdatePosition(Vector2 position, float timestamp = 0)
+        public void UpdatePosition(Vector2 position, float timestamp = 0, bool flipY = true)
         {
+            if(flipY) position.y = -position.y;
             if (timestamp == 0) timestamp = Time.time;
             if (!_lastFilteredPosition.HasValue) _lastFilteredPosition = position;
 
