@@ -7,24 +7,21 @@ namespace Inventonater.BleHid
     {
         public const string Name = "Mouse";
         public override string TabName => Name;
-        private readonly PointerInputProcessor _inputProcessor;
+
         private Rect touchpadRect;
 
         private IInputFilter inputFilter;
         private InputFilterFactory.FilterType _currentFilterType;
+        private readonly MouseInputProcessor _inputProcessor;
 
         public MouseControlsComponent()
         {
             _currentFilterType = InputFilterFactory.FilterType.OneEuro;
             inputFilter = InputFilterFactory.CreateFilter(_currentFilterType);
             touchpadRect = new Rect(Screen.width / 2 - 150, Screen.height / 2 - 100, 300, 200);
-            _inputProcessor = new PointerInputProcessor();
+            _inputProcessor = BleHidManager.Instance.MouseInputProcessor;
             _inputProcessor.SetInputFilter(inputFilter);
-            UpdateTouchpadRect();
         }
-
-        public void HandlePointerInput(Vector2 position, PointerInputState state, string inputSource = "External") =>
-            _inputProcessor.HandlePointerInput(position, state, inputSource);
 
         public void SetCurrentFilterType(InputFilterFactory.FilterType value)
         {
@@ -36,37 +33,25 @@ namespace Inventonater.BleHid
             Logger.AddLogEntry($"Changed input filter to: {inputFilter.Name}");
         }
 
-
-        private void UpdateTouchpadRect()
+        private Rect GetTouchpadRect()
         {
-            _inputProcessor.SetTouchpadRect(new Rect(
-                touchpadRect.x, // X stays the same
-                Screen.height - touchpadRect.y - touchpadRect.height, // Convert GUI Y to screen Y
-                touchpadRect.width, // Width stays the same
-                touchpadRect.height // Height stays the same
-            ));
+            var touchpadRectHeight = Screen.height - touchpadRect.y - touchpadRect.height;
+            return new Rect(touchpadRect.x, touchpadRectHeight, touchpadRect.width, touchpadRect.height);
         }
 
         public override void Update()
         {
             if (IsEditorMode)
             {
-                Vector2 mouseScreenPos = new Vector2(Input.mousePosition.x, Input.mousePosition.y);
-                if (Input.GetMouseButtonDown(0)) HandlePointerInput(mouseScreenPos, PointerInputState.Begin, "Mouse");
-                else if (Input.GetMouseButton(0)) HandlePointerInput(mouseScreenPos, PointerInputState.Move, "Mouse");
-                else if (Input.GetMouseButtonUp(0)) HandlePointerInput(mouseScreenPos, PointerInputState.End, "Mouse");
+                _inputProcessor.UpdatePosition(Input.mousePosition, Time.time);
+                return;
             }
 
             if (Input.touchCount > 0)
             {
-                Touch touch = Input.GetTouch(0);
-                PointerInputState state;
-                if (touch.phase == TouchPhase.Began) state = PointerInputState.Begin;
-                else if (touch.phase == TouchPhase.Moved) state = PointerInputState.Move;
-                else if (touch.phase is TouchPhase.Ended or TouchPhase.Canceled) state = PointerInputState.End;
-                else return;
-
-                HandlePointerInput(touch.position, state, "Touch");
+                var touch = Input.GetTouch(0);
+                if (touch.phase == TouchPhase.Began) _inputProcessor.Reset();
+                _inputProcessor.UpdatePosition(touch.position, Time.time);
             }
         }
 
@@ -84,7 +69,6 @@ namespace Inventonater.BleHid
             {
                 Rect lastRect = GUILayoutUtility.GetLastRect();
                 touchpadRect = new Rect(lastRect.x, lastRect.y, lastRect.width, lastRect.height);
-                UpdateTouchpadRect();
             }
 
             UIHelper.EndSection();
