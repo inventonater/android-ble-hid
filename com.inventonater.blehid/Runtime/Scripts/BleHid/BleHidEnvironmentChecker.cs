@@ -301,11 +301,11 @@ namespace Inventonater.BleHid
             }
             
             // Bridge instance check
-            if (manager.BridgeInstance != null)
+            if (manager.BleInitializer.BridgeInstance != null)
             {
                 report.AppendLine("Bridge Instance: PRESENT");
                 
-                bool bridgeValid = VerifyBridgeInterface(manager.BridgeInstance, out errorMsg);
+                bool bridgeValid = VerifyBridgeInterface(manager.BleInitializer.BridgeInstance, out errorMsg);
                 report.AppendLine("Bridge Interface Valid: " + (bridgeValid ? "YES" : "NO"));
                 if (!bridgeValid)
                 {

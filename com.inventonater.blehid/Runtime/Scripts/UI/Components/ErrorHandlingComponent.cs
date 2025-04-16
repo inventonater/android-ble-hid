@@ -251,31 +251,21 @@ namespace Inventonater.BleHid
             GUILayout.Label("Go to the Local tab to enable this feature", GUIStyle.none);
         }
 
-
         private void RequestPermission(BleHidPermissionHandler.AndroidPermission permission)
         {
             Logger.AddLogEntry($"Requesting permission: {permission.Name}");
-
-            if (owner != null)
-            {
-                owner.StartCoroutine(RequestSinglePermission(permission));
-            }
+            owner.StartCoroutine(RequestSinglePermission(permission));
         }
 
         private void OpenAppSettings()
         {
-#if UNITY_ANDROID && !UNITY_EDITOR
             BleHidPermissionHandler.OpenAppSettings();
-#else
-            Logger.AddLogEntry("Editor mode: Open app settings (not available in editor)");
-#endif
         }
 
         private void OpenAccessibilitySettings()
         {
             Logger.AddLogEntry("Opening accessibility settings");
 
-#if UNITY_ANDROID && !UNITY_EDITOR
             try
             {
                 // Use the improved method with fallback mechanism
@@ -294,13 +284,12 @@ namespace Inventonater.BleHid
             {
                 Logger.AddLogEntry("Error opening accessibility settings: " + e.Message);
             }
-#else
+
             // In editor mode, simulate enabling the accessibility service
             Logger.AddLogEntry("Editor mode: Simulating enabling accessibility service");
             hasAccessibilityError = false;
             accessibilityServiceEnabled = true;
             Logger.AddLogEntry("Editor mode: Accessibility service enabled successfully");
-#endif
         }
 
 
@@ -313,33 +302,26 @@ namespace Inventonater.BleHid
 
             bool isEnabled = false;
 
-#if UNITY_ANDROID && !UNITY_EDITOR
-            // First try using the direct method that doesn't require initialization
-            isEnabled = BleHidLocalControl.CheckAccessibilityServiceEnabledDirect();
-
-            // If that fails, fall back to the environment checker
-            if (!isEnabled)
+            if (IsEditorMode)
             {
-                string errorMsg;
-                isEnabled = BleHidEnvironmentChecker.CheckAccessibilityServiceEnabled(out errorMsg);
-
+                isEnabled = BleHidLocalControl.CheckAccessibilityServiceEnabledDirect();
                 if (!isEnabled)
                 {
-                    Logger.AddLogEntry("Accessibility service check failed: " + errorMsg);
+                    string errorMsg;
+                    isEnabled = BleHidEnvironmentChecker.CheckAccessibilityServiceEnabled(out errorMsg);
+
+                    if (!isEnabled) Logger.AddLogEntry("Accessibility service check failed: " + errorMsg);
                 }
             }
-#else
-            // Editor mode - use simulated state
-            isEnabled = !hasAccessibilityError;
-#endif
+            else
+            {
+                isEnabled = !hasAccessibilityError;
+            }
 
-            // Update accessibility status
             accessibilityServiceEnabled = isEnabled;
             hasAccessibilityError = !isEnabled;
 
-            Logger.AddLogEntry(isEnabled
-                ? "Accessibility service is enabled"
-                : "Accessibility service is not enabled");
+            Logger.AddLogEntry(isEnabled ? "Accessibility service is enabled" : "Accessibility service is not enabled");
 
             checkingAccessibilityService = false;
 
@@ -360,26 +342,29 @@ namespace Inventonater.BleHid
             yield return null; // Wait a frame to let UI update
 
             // Get missing permissions
-#if UNITY_ANDROID && !UNITY_EDITOR
-            missingPermissions = BleHidPermissionHandler.GetMissingPermissions();
-
-            // Log the results
-            if (missingPermissions.Count > 0)
+            if (IsEditorMode)
             {
-                string missingList = string.Join(", ", missingPermissions.Select(p => p.Name).ToArray());
-                Logger.AddLogEntry($"Missing permissions: {missingList}");
-                hasPermissionError = true;
+                missingPermissions = BleHidPermissionHandler.GetMissingPermissions();
+
+                // Log the results
+                if (missingPermissions.Count > 0)
+                {
+                    string missingList = string.Join(", ", missingPermissions.Select(p => p.Name).ToArray());
+                    Logger.AddLogEntry($"Missing permissions: {missingList}");
+                    hasPermissionError = true;
+                }
+                else
+                {
+                    Logger.AddLogEntry("All required permissions are granted");
+                    hasPermissionError = false;
+                }
             }
             else
             {
-                Logger.AddLogEntry("All required permissions are granted");
+                // Editor mode simulation
+                missingPermissions.Clear();
                 hasPermissionError = false;
             }
-#else
-            // Editor mode simulation
-            missingPermissions.Clear();
-            hasPermissionError = false;
-#endif
 
             checkingPermissions = false;
         }
@@ -403,7 +388,6 @@ namespace Inventonater.BleHid
         /// </summary>
         private IEnumerator RequestSinglePermission(BleHidPermissionHandler.AndroidPermission permission)
         {
-#if UNITY_ANDROID && !UNITY_EDITOR
             yield return owner.StartCoroutine(BleHidPermissionHandler.RequestAndroidPermission(permission.PermissionString));
 
             // Re-check permissions after the request
@@ -418,14 +402,9 @@ namespace Inventonater.BleHid
                 Logger.AddLogEntry("All permissions granted. Initializing...");
                 if (BleHidManager != null)
                 {
-                    yield return owner.StartCoroutine(BleHidManager.Initialize());
+                    yield return owner.StartCoroutine(BleHidManager.BleInitializer.Initialize());
                 }
             }
-#else
-            // Editor mode simulation
-            yield return new WaitForSeconds(0.5f);
-            Logger.AddLogEntry($"Editor mode: Granted permission {permission.Name}");
-#endif
         }
     }
 }

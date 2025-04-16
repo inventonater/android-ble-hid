@@ -66,14 +66,10 @@ namespace Inventonater.BleHid
             _targetFrameRate = 60;
             Application.targetFrameRate = _targetFrameRate;
 
-            // Register to events
-            if (BleHidManager != null)
-            {
-                BleHidManager.OnConnectionParametersChanged += HandleConnectionParametersChanged;
-                BleHidManager.OnRssiRead += HandleRssiRead;
-                BleHidManager.OnConnectionParameterRequestComplete += HandleConnectionParameterRequestComplete;
-                BleHidManager.OnConnectionStateChanged += HandleConnectionStateChanged;
-            }
+            BleHidManager.BleEventSystem.OnConnectionParametersChanged += HandleConnectionParametersChanged;
+            BleHidManager.BleEventSystem.OnRssiRead += HandleRssiRead;
+            BleHidManager.BleEventSystem.OnConnectionParameterRequestComplete += HandleConnectionParameterRequestComplete;
+            BleHidManager.BleEventSystem.OnConnectionStateChanged += HandleConnectionStateChanged;
 
             // Initialize with current values if connected
             UpdateValuesFromManager();
@@ -350,29 +346,29 @@ namespace Inventonater.BleHid
 
         private void RequestConnectionPriority(int priority)
         {
-            if (BleHidManager.IsConnected) BleHidManager.RequestConnectionPriority(priority);
+            if (BleHidManager.IsConnected) BleHidManager.ConnectionManager.RequestConnectionPriority(priority);
         }
 
         private void RequestMtu()
         {
-            if (BleHidManager.IsConnected) BleHidManager.RequestMtu(requestedMtu);
+            if (BleHidManager.IsConnected) BleHidManager.ConnectionManager.RequestMtu(requestedMtu);
         }
 
         private void SetTransmitPowerLevel(int level)
         {
-            if (BleHidManager.IsInitialized) BleHidManager.SetTransmitPowerLevel(level);
+            if (BleHidManager.IsInitialized) BleHidManager.BleAdvertiser.SetTransmitPowerLevel(level);
         }
 
         private void ReadRssi()
         {
-            if (BleHidManager.IsConnected) BleHidManager.ReadRssi();
+            if (BleHidManager.IsConnected) BleHidManager.ConnectionManager.ReadRssi();
         }
 
         private void RefreshParameters()
         {
             if (!BleHidManager.IsConnected) return;
 
-            Dictionary<string, string> parameters = BleHidManager.GetConnectionParameters();
+            Dictionary<string, string> parameters = BleHidManager.ConnectionManager.GetConnectionParameters();
             if (parameters != null)
             {
                 SetStatus("Parameters refreshed", Color.green);

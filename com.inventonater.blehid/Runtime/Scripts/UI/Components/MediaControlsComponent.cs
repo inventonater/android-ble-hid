@@ -1,5 +1,6 @@
 using UnityEngine;
 using System;
+using Inventonater.BleHid.InputControllers;
 
 namespace Inventonater.BleHid
 {
@@ -10,6 +11,8 @@ namespace Inventonater.BleHid
     {
         public const string Name = "Media";
         public override string TabName => Name;
+        private MediaController Media => BleHidManager.InputController.Media;
+
         public override void Update(){}
 
         public override void DrawUI()
@@ -19,9 +22,9 @@ namespace Inventonater.BleHid
             // Media control buttons row 1 - using the new ActionButtonRow helper
             string[] playbackLabels = { "Previous", "Play/Pause", "Next" };
             Action[] playbackActions = {
-                () => BleHidManager.PreviousTrack(),
-                () => BleHidManager.PlayPause(),
-                () => BleHidManager.NextTrack()
+                () => Media.PreviousTrack(),
+                () => Media.PlayPause(),
+                () => Media.NextTrack()
             };
             string[] playbackMessages = {
                 "Previous track pressed",
@@ -38,9 +41,9 @@ namespace Inventonater.BleHid
             // Media control buttons row 2 - using the new ActionButtonRow helper
             string[] volumeLabels = { "Volume Down", "Mute", "Volume Up" };
             Action[] volumeActions = {
-                () => BleHidManager.VolumeDown(),
-                () => BleHidManager.Mute(),
-                () => BleHidManager.VolumeUp()
+                () => Media.VolumeDown(),
+                () => Media.Mute(),
+                () => Media.VolumeUp()
             };
             string[] volumeMessages = {
                 "Volume down pressed",

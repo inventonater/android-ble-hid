@@ -1,6 +1,7 @@
 using UnityEngine;
 using System;
 using System.Collections.Generic;
+using Inventonater.BleHid.InputControllers;
 
 namespace Inventonater.BleHid
 {
@@ -11,6 +12,7 @@ namespace Inventonater.BleHid
     {
         public const string Name = "Keyboard";
         public override string TabName => Name;
+        private KeyboardController Keyboard => BleHidManager.InputController.Keyboard;
 
         // Key mapping for characters to key codes
         private static readonly Dictionary<string, byte> keyMapping = new Dictionary<string, byte>()
@@ -51,7 +53,9 @@ namespace Inventonater.BleHid
         private readonly string[] row2 = { "A", "S", "D", "F", "G", "H", "J", "K", "L" };
         private readonly string[] row3 = { "Z", "X", "C", "V", "B", "N", "M" };
 
-        public override void Update(){}
+        public override void Update()
+        {
+        }
 
         public override void DrawUI()
         {
@@ -60,9 +64,6 @@ namespace Inventonater.BleHid
             DrawNavigationKeysSection();
         }
 
-        /// <summary>
-        /// Draw the text input section with a text field and send button
-        /// </summary>
         private void DrawTextInputSection()
         {
             UIHelper.BeginSection("Text Input");
@@ -81,9 +82,6 @@ namespace Inventonater.BleHid
             UIHelper.EndSection();
         }
 
-        /// <summary>
-        /// Draw the QWERTY keyboard layout
-        /// </summary>
         private void DrawKeyboardSection()
         {
             UIHelper.BeginSection("Keyboard");
@@ -103,9 +101,6 @@ namespace Inventonater.BleHid
             UIHelper.EndSection();
         }
 
-        /// <summary>
-        /// Draw the special keys row (Enter, Space, Backspace)
-        /// </summary>
         private void DrawSpecialKeysRow()
         {
             string[] specialKeys = { "Enter", "Space", "Backspace" };
@@ -129,9 +124,6 @@ namespace Inventonater.BleHid
                 UIHelper.StandardButtonOptions);
         }
 
-        /// <summary>
-        /// Draw the navigation keys section (arrow keys)
-        /// </summary>
         private void DrawNavigationKeysSection()
         {
             UIHelper.BeginSection("Navigation Keys");
@@ -161,10 +153,6 @@ namespace Inventonater.BleHid
             UIHelper.EndSection();
         }
 
-
-        /// <summary>
-        /// Send the text from the text input field
-        /// </summary>
         private void SendTextMessage()
         {
             if (string.IsNullOrEmpty(textToSend))
@@ -173,47 +161,31 @@ namespace Inventonater.BleHid
                 return;
             }
 
-            if (!IsEditorMode) BleHidManager.TypeText(textToSend);
+            if (!IsEditorMode) Keyboard.TypeText(textToSend);
             Logger.AddLogEntry("Text sent: " + textToSend);
             textToSend = "";
         }
 
-        /// <summary>
-        /// Get an appropriate message for the text action button
-        /// </summary>
         private string GetTextActionMessage()
         {
             return !string.IsNullOrEmpty(textToSend) ? "Text sent: " + textToSend : "Cannot send empty text";
         }
 
-        /// <summary>
-        /// Send a character key
-        /// </summary>
         private void SendKey(string key)
         {
             byte keyCode = GetKeyCode(key);
             if (keyCode <= 0) return;
 
-            if (IsEditorMode)
-                Logger.AddLogEntry("Key pressed: " + key);
-            else
-                BleHidManager.SendKey(keyCode);
+            if (IsEditorMode) Logger.AddLogEntry("Key pressed: " + key);
+            else Keyboard.SendKey(keyCode);
         }
 
-        /// <summary>
-        /// Send a special key with a specific keycode
-        /// </summary>
         private void SendSpecialKey(byte keyCode, string keyName)
         {
-            if (IsEditorMode)
-                Logger.AddLogEntry($"{keyName} key pressed");
-            else
-                BleHidManager.SendKey(keyCode);
+            if (IsEditorMode) Logger.AddLogEntry($"{keyName} key pressed");
+            else Keyboard.SendKey(keyCode);
         }
 
-        /// <summary>
-        /// Get the keycode for a character key using the dictionary lookup
-        /// </summary>
         private byte GetKeyCode(string key)
         {
             return keyMapping.GetValueOrDefault(key, (byte)0);

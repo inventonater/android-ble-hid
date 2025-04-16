@@ -123,9 +123,9 @@ namespace Inventonater.BleHid
             string[] buttonLabels = { "Left Click", "Middle Click", "Right Click" };
             Action[] buttonActions =
             {
-                () => BleHidManager.ClickMouseButton(BleHidConstants.BUTTON_LEFT),
-                () => BleHidManager.ClickMouseButton(BleHidConstants.BUTTON_MIDDLE),
-                () => BleHidManager.ClickMouseButton(BleHidConstants.BUTTON_RIGHT)
+                () => BleHidManager.InputController.Mouse.ClickMouseButton(BleHidConstants.BUTTON_LEFT),
+                () => BleHidManager.InputController.Mouse.ClickMouseButton(BleHidConstants.BUTTON_MIDDLE),
+                () => BleHidManager.InputController.Mouse.ClickMouseButton(BleHidConstants.BUTTON_RIGHT)
             };
             string[] buttonMessages =
             {

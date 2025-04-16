@@ -10,45 +10,27 @@ namespace Inventonater.BleHid
     {
         private bool isInitialized = false;
         private BleHidManager BleHidManager => BleHidManager.Instance;
-        private LoggingManager Logger => LoggingManager.Instance;
         private bool IsEditorMode => Application.isEditor;
 
-        public void SetInitialized(bool initialized)
-        {
-            isInitialized = initialized;
-        }
+        public void SetInitialized(bool initialized) => isInitialized = initialized;
 
         public void DrawUI()
         {
             UIHelper.BeginSection("Connection Status");
-
-            // Status display
             DrawStatusInfo();
-
-            // Connection info
             DrawConnectionInfo();
-
-            // Advertising button
             DrawAdvertisingButton();
-
             UIHelper.EndSection();
         }
 
-
-        /// <summary>
-        /// Display the current status (initialized or initializing)
-        /// </summary>
         private void DrawStatusInfo()
         {
             GUILayout.Label("Status: " + (isInitialized ? "Ready" : "Initializing..."));
         }
 
-        /// <summary>
-        /// Display connection information if connected, or "Not Connected" message
-        /// </summary>
         private void DrawConnectionInfo()
         {
-            if (IsConnected())
+            if (BleHidManager.IsConnected)
             {
                 // Connected - show device details
                 GUILayout.Label("Connected to: " + BleHidManager.ConnectedDeviceName);
@@ -59,20 +41,13 @@ namespace Inventonater.BleHid
             {
                 // Not connected - show appropriate message
                 GUILayout.Label("Not connected");
-
-                if (IsEditorMode)
-                {
-                    GUILayout.Label("EDITOR MODE: UI visible but BLE functions disabled");
-                }
+                if (IsEditorMode) GUILayout.Label("EDITOR MODE: UI visible but BLE functions disabled");
             }
         }
 
-        /// <summary>
-        /// Draw the advertising control button
-        /// </summary>
         private void DrawAdvertisingButton()
         {
-            if (CanControlAdvertising())
+            if (isInitialized || IsEditorMode)
             {
                 string[] labels = { BleHidManager.IsAdvertising ? "Stop Advertising" : "Start Advertising" };
                 Action[] actions = { ToggleAdvertising };
@@ -92,32 +67,10 @@ namespace Inventonater.BleHid
             }
         }
 
-
-        /// <summary>
-        /// Check if BLE is connected
-        /// </summary>
-        private bool IsConnected()
-        {
-            return BleHidManager != null && BleHidManager.IsConnected;
-        }
-
-        /// <summary>
-        /// Check if advertising can be controlled
-        /// </summary>
-        private bool CanControlAdvertising()
-        {
-            return BleHidManager != null && (isInitialized || IsEditorMode);
-        }
-
-        /// <summary>
-        /// Toggle the advertising state
-        /// </summary>
         private void ToggleAdvertising()
         {
-            if (BleHidManager.IsAdvertising)
-                BleHidManager.StopAdvertising();
-            else
-                BleHidManager.StartAdvertising();
+            if (BleHidManager.IsAdvertising) BleHidManager.BleAdvertiser.StopAdvertising();
+            else BleHidManager.BleAdvertiser.StartAdvertising();
         }
     }
 }

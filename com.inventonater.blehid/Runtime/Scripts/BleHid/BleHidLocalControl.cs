@@ -272,5 +272,181 @@ namespace Inventonater.BleHid
 
             return true;
         }
+
+        public IEnumerator TakePicture()
+        {
+            return TakePicture(null);
+        }
+
+        /// <summary>
+        /// Take a picture with the camera using specified options.
+        /// </summary>
+        /// <param name="options">Options to configure the camera capture (null for defaults)</param>
+        /// <returns>Coroutine that completes when the picture is taken</returns>
+        public IEnumerator TakePicture(CameraOptions options)
+        {
+            if (!CheckInitialized()) yield break;
+
+            // Use default options if null
+            options = options ?? new CameraOptions();
+
+            bool result;
+            float waitTime = 3.0f; // Default wait time
+
+            // Call the Java bridge with options
+            if (bridgeInstance.Call<bool>("takePicture", options.ToAndroidObject()))
+            {
+                result = true;
+
+                // Calculate appropriate wait time based on options
+                if (options.TapDelay > 0)
+                {
+                    waitTime = options.TapDelay / 1000f + 2f;
+                }
+
+                if (options.ReturnDelay > 0)
+                {
+                    waitTime += options.ReturnDelay / 1000f;
+                }
+            }
+            else
+            {
+                result = false;
+            }
+
+            Debug.Log($"Taking picture: {(result ? "Success" : "Failed")}");
+
+            // Wait for background service to finish its work
+            yield return new WaitForSeconds(waitTime);
+        }
+
+        /// <summary>
+        /// Record a video with default settings (5 seconds).
+        /// </summary>
+        /// <returns>Coroutine that completes when the recording is finished</returns>
+        public IEnumerator RecordVideo()
+        {
+            return RecordVideo(new VideoOptions());
+        }
+
+        /// <summary>
+        /// Record a video with fully customizable options.
+        /// </summary>
+        /// <param name="options">Video options to configure the recording (null for defaults)</param>
+        /// <returns>Coroutine that completes when the recording is finished</returns>
+        public IEnumerator RecordVideo(VideoOptions options)
+        {
+            if (!CheckInitialized()) yield break;
+
+            // Use default options if null
+            options = options ?? new VideoOptions();
+
+            bool result;
+            float waitTime = options.Duration + 2.0f; // Base wait time on video duration
+
+            // Call the Java bridge with options
+            if (bridgeInstance.Call<bool>("recordVideo", options.ToAndroidObject()))
+            {
+                result = true;
+
+                // Calculate appropriate wait time based on options
+                if (options.TapDelay > 0)
+                {
+                    waitTime = options.TapDelay / 1000f + options.Duration + 2f;
+                }
+
+                if (options.ReturnDelay > 0)
+                {
+                    waitTime += options.ReturnDelay / 1000f;
+                }
+            }
+            else
+            {
+                result = false;
+            }
+
+            Debug.Log($"Recording video for {options.Duration} seconds: {(result ? "Success" : "Failed")}");
+
+            // Wait for the recording to complete
+            yield return new WaitForSeconds(waitTime);
+        }
+
+        /// <summary>
+        /// Opens accessibility settings to enable the service.
+        /// Uses a robust approach with fallback mechanism.
+        /// </summary>
+        public void OpenAccessibilitySettings()
+        {
+            bool success = false;
+            string errorMessage = "";
+
+            // First try using the bridge if available
+            if (initialized && bridgeInstance != null)
+            {
+                try
+                {
+                    Debug.Log("BleHidLocalControl: Opening accessibility settings via bridge");
+                    bridgeInstance.Call("openAccessibilitySettings");
+                    success = true;
+                }
+                catch (Exception e)
+                {
+                    errorMessage = e.Message;
+                    Debug.LogWarning("BleHidLocalControl: Bridge call failed: " + errorMessage);
+                    // Will fall back to direct intent approach
+                }
+            }
+            else
+            {
+                Debug.LogWarning("BleHidLocalControl: Not initialized, falling back to direct intent");
+            }
+
+            // If bridge approach failed, try the direct intent approach
+            if (!success)
+            {
+                try
+                {
+                    Debug.Log("BleHidLocalControl: Opening accessibility settings via direct intent");
+                    OpenAccessibilitySettingsDirect();
+                    success = true;
+                }
+                catch (Exception e)
+                {
+                    Debug.LogError("BleHidLocalControl: Failed to open accessibility settings: " + e.Message);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Opens accessibility settings using a direct intent approach.
+        /// This serves as a fallback if the bridge method fails.
+        /// </summary>
+        private void OpenAccessibilitySettingsDirect()
+        {
+            if (Application.platform != RuntimePlatform.Android)
+                return;
+
+            try
+            {
+                AndroidJavaClass unityPlayer = new AndroidJavaClass("com.unity3d.player.UnityPlayer");
+                AndroidJavaObject currentActivity = unityPlayer.GetStatic<AndroidJavaObject>("currentActivity");
+
+                AndroidJavaClass intentClass = new AndroidJavaClass("android.content.Intent");
+                AndroidJavaObject intent = new AndroidJavaObject(
+                    "android.content.Intent",
+                    "android.settings.ACCESSIBILITY_SETTINGS");
+
+                intent.Call<AndroidJavaObject>("addFlags", intentClass.GetStatic<int>("FLAG_ACTIVITY_NEW_TASK"));
+
+                currentActivity.Call("startActivity", intent);
+                Debug.Log("BleHidLocalControl: Opened accessibility settings via direct intent");
+            }
+            catch (Exception e)
+            {
+                Debug.LogError("BleHidLocalControl: Failed to open accessibility settings: " + e.Message);
+                throw; // Rethrow to allow the caller to handle it
+            }
+        }
+
     }
 }

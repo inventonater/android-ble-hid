@@ -33,7 +33,7 @@ namespace Inventonater.BleHid
             
             try
             {
-                BleHidManager.StartForegroundService();
+                BleHidManager.ServiceManager.StartForegroundService();
                 Logger.AddLogEntry("Started foreground service for Local tab");
                 isForegroundServiceRunning = true;
             }
@@ -52,7 +52,7 @@ namespace Inventonater.BleHid
             {
                 if (isForegroundServiceRunning)
                 {
-                    BleHidManager.StopForegroundService();
+                    BleHidManager.ServiceManager.StopForegroundService();
                     Logger.AddLogEntry("Stopped foreground service when leaving Local tab");
                     isForegroundServiceRunning = false;
                 }

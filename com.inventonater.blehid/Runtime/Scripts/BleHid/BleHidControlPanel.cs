@@ -44,12 +44,12 @@ namespace Inventonater.BleHid
 
             GameObject managerObj = new GameObject("BleHidManager");
             bleHidManager = managerObj.AddComponent<BleHidManager>();
-            bleHidManager.OnInitializeComplete += OnInitializeComplete;
-            bleHidManager.OnAdvertisingStateChanged += OnAdvertisingStateChanged;
-            bleHidManager.OnConnectionStateChanged += OnConnectionStateChanged;
-            bleHidManager.OnPairingStateChanged += OnPairingStateChanged;
-            bleHidManager.OnError += OnError;
-            bleHidManager.OnDebugLog += OnDebugLog;
+            bleHidManager.BleEventSystem.OnInitializeComplete += OnInitializeComplete;
+            bleHidManager.BleEventSystem.OnAdvertisingStateChanged += OnAdvertisingStateChanged;
+            bleHidManager.BleEventSystem.OnConnectionStateChanged += OnConnectionStateChanged;
+            bleHidManager.BleEventSystem.OnPairingStateChanged += OnPairingStateChanged;
+            bleHidManager.BleEventSystem.OnError += OnError;
+            bleHidManager.BleEventSystem.OnDebugLog += OnDebugLog;
 
             statusComponent = new StatusComponent();
             statusComponent.SetInitialized(isInitialized);
@@ -67,7 +67,7 @@ namespace Inventonater.BleHid
             AddTab(localComponent);
             AddTab(connectionParametersComponent);
 
-            StartCoroutine(bleHidManager.Initialize());
+            StartCoroutine(bleHidManager.BleInitializer.Initialize());
             Logger.AddLogEntry("Starting BLE HID initialization...");
             errorComponent.CheckMissingPermissions();
             errorComponent.CheckAccessibilityServiceStatus();
@@ -102,25 +102,6 @@ namespace Inventonater.BleHid
             {
                 errorComponent.CheckAccessibilityServiceStatus();
                 LoggingManager.Instance.AddLogEntry("Periodic accessibility check");
-            }
-        }
-
-        private void OnDestroy()
-        {
-            UnregisterEvents();
-        }
-
-        private void UnregisterEvents()
-        {
-            // Unregister events to prevent memory leaks
-            if (bleHidManager != null)
-            {
-                bleHidManager.OnInitializeComplete -= OnInitializeComplete;
-                bleHidManager.OnAdvertisingStateChanged -= OnAdvertisingStateChanged;
-                bleHidManager.OnConnectionStateChanged -= OnConnectionStateChanged;
-                bleHidManager.OnPairingStateChanged -= OnPairingStateChanged;
-                bleHidManager.OnError -= OnError;
-                bleHidManager.OnDebugLog -= OnDebugLog;
             }
         }
 
