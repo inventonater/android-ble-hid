@@ -36,11 +36,7 @@ namespace Inventonater.BleHid.InputControllers
                 manager.BleEventSystem.OnError?.Invoke(BleHidConstants.ERROR_MOUSE_MOVEMENT_OUT_OF_RANGE, message);
             }
 
-            if (!manager.IsConnected)
-            {
-                LoggingManager.Instance.AddLogEntry($"[not connected] pointer position: ({deltaX}, {deltaY})");
-                return false;
-            }
+            if (!manager.IsConnected) return false;
 
             try { return manager.BleInitializer.BridgeInstance.Call<bool>("moveMouse", deltaX, deltaY); }
             catch (Exception e)
