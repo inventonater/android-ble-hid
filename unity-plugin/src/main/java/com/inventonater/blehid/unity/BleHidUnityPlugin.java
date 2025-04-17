@@ -733,7 +733,7 @@ public class BleHidUnityPlugin {
         if (!checkInitialized()) return "Not initialized";
         
         StringBuilder info = new StringBuilder();
-        info.append("Initialized: ").append(isInitialized()).append("\n");
+        info.append("Initialized: ").append(isInitialized).append("\n");
         info.append("Advertising: ").append(bleHidManager.isAdvertising()).append("\n");
         info.append("Connected: ").append(bleHidManager.isConnected()).append("\n");
         
