@@ -261,6 +261,22 @@ public class HidMediaService {
     }
     
     /**
+     * Releases a specific mouse button.
+     * 
+     * @param button The button to release (BUTTON_LEFT, BUTTON_RIGHT, BUTTON_MIDDLE)
+     * @return true if the command was sent successfully, false otherwise
+     */
+    public boolean releaseButton(int button) {
+        connectedDevice = bleHidManager.getConnectedDevice();
+        if (connectedDevice == null) {
+            Log.e(TAG, "No connected device");
+            return false;
+        }
+        
+        return reportHandler.releaseMouseButton(connectedDevice, button);
+    }
+    
+    /**
      * Performs a click with the specified button.
      */
     public boolean click(int button) {

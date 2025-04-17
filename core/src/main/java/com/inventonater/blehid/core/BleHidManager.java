@@ -320,6 +320,21 @@ public class BleHidManager {
     }
     
     /**
+     * Releases a specific mouse button.
+     *
+     * @param button The button to release (BUTTON_LEFT, BUTTON_RIGHT, BUTTON_MIDDLE)
+     * @return true if the command was sent successfully, false otherwise
+     */
+    public boolean releaseMouseButton(int button) {
+        if (!isInitialized || connectedDevice == null) {
+            Log.e(TAG, "Not connected or initialized");
+            return false;
+        }
+        
+        return hidMediaService.releaseButton(button);
+    }
+    
+    /**
      * Performs a click with the specified button.
      *
      * @param button The button to click (BUTTON_LEFT, BUTTON_RIGHT, BUTTON_MIDDLE)

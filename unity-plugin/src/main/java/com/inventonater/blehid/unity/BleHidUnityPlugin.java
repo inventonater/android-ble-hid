@@ -174,10 +174,49 @@ public class BleHidUnityPlugin {
     }
     
     /**
-     * Check if the plugin has been initialized successfully.
+     * Press a mouse button without releasing it.
+     * 
+     * @param button The button to press (0=left, 1=right, 2=middle)
+     * @return true if the press was sent successfully, false otherwise
      */
-    public boolean isInitialized() {
-        return isInitialized && bleHidManager != null;
+    public boolean pressMouseButton(int button) {
+        if (!checkConnected()) return false;
+        
+        // Convert button index to button flag
+        int buttonFlag = 0;
+        switch (button) {
+            case 0: buttonFlag = HidConstants.Mouse.BUTTON_LEFT; break;
+            case 1: buttonFlag = HidConstants.Mouse.BUTTON_RIGHT; break;
+            case 2: buttonFlag = HidConstants.Mouse.BUTTON_MIDDLE; break;
+            default:
+                Log.e(TAG, "Invalid button index: " + button);
+                return false;
+        }
+        
+        return bleHidManager.pressMouseButton(buttonFlag);
+    }
+    
+    /**
+     * Release a specific mouse button.
+     * 
+     * @param button The button to release (0=left, 1=right, 2=middle)
+     * @return true if the release was sent successfully, false otherwise
+     */
+    public boolean releaseMouseButton(int button) {
+        if (!checkConnected()) return false;
+        
+        // Convert button index to button flag
+        int buttonFlag = 0;
+        switch (button) {
+            case 0: buttonFlag = HidConstants.Mouse.BUTTON_LEFT; break;
+            case 1: buttonFlag = HidConstants.Mouse.BUTTON_RIGHT; break;
+            case 2: buttonFlag = HidConstants.Mouse.BUTTON_MIDDLE; break;
+            default:
+                Log.e(TAG, "Invalid button index: " + button);
+                return false;
+        }
+        
+        return bleHidManager.releaseMouseButton(buttonFlag);
     }
     
     /**
@@ -326,7 +365,18 @@ public class BleHidUnityPlugin {
     public boolean clickMouseButton(int button) {
         if (!checkConnected()) return false;
         
-        return bleHidManager.clickMouseButton(button);
+        // Convert button index to button flag
+        int buttonFlag = 0;
+        switch (button) {
+            case 0: buttonFlag = HidConstants.Mouse.BUTTON_LEFT; break;
+            case 1: buttonFlag = HidConstants.Mouse.BUTTON_RIGHT; break;
+            case 2: buttonFlag = HidConstants.Mouse.BUTTON_MIDDLE; break;
+            default:
+                Log.e(TAG, "Invalid button index: " + button);
+                return false;
+        }
+        
+        return bleHidManager.clickMouseButton(buttonFlag);
     }
     
     /**

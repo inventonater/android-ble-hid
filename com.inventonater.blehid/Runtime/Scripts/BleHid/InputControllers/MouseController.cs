@@ -51,6 +51,40 @@ namespace Inventonater.BleHid.InputControllers
         }
 
         /// <summary>
+        /// Press a mouse button without releasing it.
+        /// </summary>
+        /// <param name="button">Button to press (0=left, 1=right, 2=middle)</param>
+        /// <returns>True if successful, false otherwise.</returns>
+        public bool PressMouseButton(int button)
+        {
+            if (!manager.ConfirmIsConnected()) return false;
+
+            try { return manager.BleInitializer.BridgeInstance.Call<bool>("pressMouseButton", button); }
+            catch (Exception e)
+            {
+                Debug.LogException(e);
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// Release a specific mouse button.
+        /// </summary>
+        /// <param name="button">Button to release (0=left, 1=right, 2=middle)</param>
+        /// <returns>True if successful, false otherwise.</returns>
+        public bool ReleaseMouseButton(int button)
+        {
+            if (!manager.ConfirmIsConnected()) return false;
+
+            try { return manager.BleInitializer.BridgeInstance.Call<bool>("releaseMouseButton", button); }
+            catch (Exception e)
+            {
+                Debug.LogException(e);
+                return false;
+            }
+        }
+
+        /// <summary>
         /// Click a mouse button.
         /// </summary>
         /// <param name="button">Button to click (0=left, 1=right, 2=middle)</param>

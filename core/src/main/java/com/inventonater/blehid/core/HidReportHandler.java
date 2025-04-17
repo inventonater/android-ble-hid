@@ -171,6 +171,24 @@ public class HidReportHandler {
     }
     
     /**
+     * Releases a specific mouse button while preserving the state of other buttons.
+     * 
+     * @param device The connected Bluetooth device
+     * @param button The button to release (BUTTON_LEFT, BUTTON_RIGHT, BUTTON_MIDDLE)
+     * @return true if the report was sent successfully, false otherwise
+     */
+    public boolean releaseMouseButton(BluetoothDevice device, int button) {
+        // Get current button state
+        int currentButtons = combinedReport[1] & 0xFF;
+        
+        // Clear the specific button bit using bitwise operations
+        int newButtons = currentButtons & ~button;
+        
+        // Send the updated button state
+        return sendMouseButtons(device, newButtons);
+    }
+    
+    /**
      * Sends a boot protocol mouse report.
      * Only used in boot protocol mode when bootMouseInputReportCharacteristic is available.
      * 

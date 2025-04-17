@@ -156,6 +156,14 @@ public class BleHidUnityBridge {
         return plugin.moveMouse(deltaX, deltaY);
     }
 
+    public boolean pressMouseButton(int button) {
+        return plugin.pressMouseButton(button);
+    }
+
+    public boolean releaseMouseButton(int button) {
+        return plugin.releaseMouseButton(button);
+    }
+
     public boolean clickMouseButton(int button) {
         return plugin.clickMouseButton(button);
     }
