@@ -97,6 +97,11 @@ public class BleHidUnityBridge {
             public void onDebugLog(String message) {
                 sendMessageToUnity("HandleDebugLog", message);
             }
+            
+            @Override
+            public void onPipModeChanged(boolean isInPipMode) {
+                sendMessageToUnity("HandlePipModeChanged", String.valueOf(isInPipMode));
+            }
         };
 
         // Get the Unity activity and initialize the plugin

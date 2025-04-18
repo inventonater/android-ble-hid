@@ -19,6 +19,7 @@ namespace Inventonater.BleHid
         public delegate void ConnectionParameterRequestCompleteHandler(string parameterName, bool success, string actualValue);
         public delegate void ErrorHandler(int errorCode, string errorMessage);
         public delegate void DebugLogHandler(string message);
+        public delegate void PipModeChangedHandler(bool isInPipMode);
         
         public event InitializeCompleteHandler OnInitializeComplete;
         public event AdvertisingStateChangedHandler OnAdvertisingStateChanged;
@@ -29,6 +30,7 @@ namespace Inventonater.BleHid
         public event ConnectionParameterRequestCompleteHandler OnConnectionParameterRequestComplete;
         public event ErrorHandler OnError;
         public event DebugLogHandler OnDebugLog;
+        public event PipModeChangedHandler OnPipModeChanged;
         
         // Reference to the main manager to update its state
         private BleHidManager manager;
@@ -147,6 +149,18 @@ namespace Inventonater.BleHid
         {
             Debug.Log("BLE HID [Debug]: " + message);
             OnDebugLog?.Invoke(message);
+        }
+        
+        /// <summary>
+        /// Handles PiP (Picture-in-Picture) mode change notifications from Android.
+        /// </summary>
+        /// <param name="message">Message containing "true" or "false" indicating PiP mode state</param>
+        public void HandlePipModeChanged(string message)
+        {
+            bool isInPipMode = bool.Parse(message);
+            Debug.Log("BLE HID PiP mode changed: " + (isInPipMode ? "Enter PiP" : "Exit PiP"));
+            manager.IsInPipMode = isInPipMode;
+            OnPipModeChanged?.Invoke(isInPipMode);
         }
     }
 }

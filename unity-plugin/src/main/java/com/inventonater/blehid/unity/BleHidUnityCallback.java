@@ -70,4 +70,13 @@ public interface BleHidUnityCallback {
      * @param message Debug message to log
      */
     void onDebugLog(String message);
+    
+    /**
+     * Called when Picture-in-Picture mode changes.
+     * @param isInPipMode True if entering PiP mode, false if exiting
+     */
+    default void onPipModeChanged(boolean isInPipMode) {
+        // Default implementation does nothing
+        onDebugLog("PiP mode changed: " + (isInPipMode ? "entering" : "exiting") + " PiP");
+    }
 }
