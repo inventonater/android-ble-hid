@@ -132,6 +132,9 @@ namespace Inventonater.BleHid
 
                 // Initialize the bridge with this GameObject's name for callbacks
                 initResult = bridgeInstance.Call<bool>("initialize", manager.gameObject.name);
+                
+                // Initialize the foreground service manager
+                // manager.ForegroundServiceManager.Initialize(bridgeInstance);
 
                 if (!initResult)
                 {

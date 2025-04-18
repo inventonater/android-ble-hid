@@ -20,6 +20,7 @@ namespace Inventonater.BleHid
         public BleHidCallbackHandler.ConnectionParameterRequestCompleteHandler OnConnectionParameterRequestComplete;
         public BleHidCallbackHandler.ErrorHandler OnError;
         public BleHidCallbackHandler.DebugLogHandler OnDebugLog;
+        public BleHidCallbackHandler.PipModeChangedHandler OnPipModeChanged;
 
         public void Awake()
         {
@@ -50,6 +51,7 @@ namespace Inventonater.BleHid
                 OnConnectionParameterRequestComplete?.Invoke(paramName, success, actualValue);
             callbackHandler.OnError += (errorCode, errorMessage) => OnError?.Invoke(errorCode, errorMessage);
             callbackHandler.OnDebugLog += (message) => OnDebugLog?.Invoke(message);
+            callbackHandler.OnPipModeChanged += (isInPipMode) => OnPipModeChanged?.Invoke(isInPipMode);
         }
 
         public void HandleInitializeComplete(string message)
@@ -95,6 +97,11 @@ namespace Inventonater.BleHid
         public void HandleConnectionParameterRequestComplete(string message)
         {
             callbackHandler.HandleConnectionParameterRequestComplete(message);
+        }
+        
+        public void HandlePipModeChanged(string message)
+        {
+            callbackHandler.HandlePipModeChanged(message);
         }
     }
 }

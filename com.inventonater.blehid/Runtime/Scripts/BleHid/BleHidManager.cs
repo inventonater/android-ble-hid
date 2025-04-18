@@ -1,3 +1,4 @@
+using System;
 using UnityEngine;
 using Inventonater.BleHid.InputControllers;
 using Inventonater.BleHid;
@@ -27,13 +28,22 @@ namespace Inventonater.BleHid
         public int MtuSize { get; internal set; }
         public int Rssi { get; internal set; }
         public int TxPowerLevel { get; internal set; }
+        
+        /// <summary>
+        /// Indicates if the app is currently running in Picture-in-Picture mode
+        /// </summary>
+        public bool IsInPipMode { get; internal set; }
+        
+        /// <summary>
+        /// Background worker for PiP mode to ensure processing continues
+        /// </summary>
+        public PipBackgroundWorker PipWorker { get; private set; }
 
         // Component references
         public BleInitializer BleInitializer { get; private set; }
         public BleEventSystem BleEventSystem { get; private set; }
         public BleAdvertiser BleAdvertiser { get; private set; }
         public ConnectionManager ConnectionManager { get; private set; }
-        public ForegroundServiceManager ForegroundServiceManager { get; private set; }
         public static BleHidManager Instance { get; private set; }
         public InputBridge InputBridge { get; private set; }
 
@@ -53,16 +63,89 @@ namespace Inventonater.BleHid
             BleInitializer = new BleInitializer(this);
             BleAdvertiser = new BleAdvertiser(this);
             ConnectionManager = new ConnectionManager(this);
-
             ForegroundServiceManager = new ForegroundServiceManager();
-            
+            PipWorker = new PipBackgroundWorker();
 
+            // Setup event handlers
+            SetupEventHandlers();
+            PipWorker.Start();
             Debug.Log("BleHidManager initialized");
         }
 
+        /// <summary>
+        /// Set up the event handlers for various callbacks
+        /// </summary>
+        private void SetupEventHandlers()
+        {
+            // Handle PiP mode changes
+            BleEventSystem.OnPipModeChanged += HandlePipModeChanged;
+        }
+
+        /// <summary>
+        /// Handles PiP mode change events
+        /// </summary>
+        /// <param name="isInPipMode">True if entering PiP mode, false if exiting</param>
+        public void HandlePipModeChanged(bool isInPipMode)
+        {
+            // Update the PiP mode state
+            IsInPipMode = isInPipMode;
+
+            if (isInPipMode)
+            {
+                // Entering PiP mode - make sure our foreground service is running to keep the app alive
+                Debug.Log("Entering PiP mode - ensuring foreground service is running");
+                // ForegroundServiceManager.EnsureServiceRunning(true);
+                
+                // Ensure Unity continues running in the background
+                Application.runInBackground = true;
+                
+                // Start the background worker thread to continue processing in PiP mode
+                Debug.Log("Starting background worker for PiP mode");
+                PipWorker.Start();
+                
+                // Log the event to assist with debugging
+                LoggingManager.Instance.AddLogEntry($"PiP mode entered - background worker started at {DateTime.Now}");
+            }
+            else
+            {
+                // Exiting PiP mode - we can continue with normal operation
+                Debug.Log("Exiting PiP mode");
+                
+                // Get the background worker status before stopping (for diagnostics)
+                // string workerStatus = PipWorker.GetStatus();
+                // Debug.Log($"Background worker status before exiting PiP mode: {workerStatus}");
+                
+                // We can stop the background worker since we're back to normal mode
+                // Uncomment the line below if you want to stop the worker on exit
+                // (for testing, we may want to keep it running to see if it continued during PiP)
+                // PipWorker.Stop();
+                
+                // Keep the service running to maintain functionality
+                // The service can be stopped manually if needed
+                
+                // Log the event to assist with debugging
+                LoggingManager.Instance.AddLogEntry($"PiP mode exited at {DateTime.Now}");
+            }
+        }
+
+        float nextUpdateTime = 0f;
+        private void Update()
+        {
+            // Periodically log the time in Update (less frequently than every frame)
+            if (nextUpdateTime > Time.time) return;
+            
+            nextUpdateTime = Time.time + 1f;
+            LoggingManager.Instance.AddLogEntry($"Update {Time.time}");
+        }
 
         private void OnDestroy()
         {
+            // Stop the background worker if it's running
+            if (PipWorker != null)
+            {
+                PipWorker.Stop();
+            }
+            
             BleInitializer.Close();
         }
 
