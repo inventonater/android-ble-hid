@@ -1,3 +1,4 @@
+using System;
 using UnityEngine;
 using Inventonater.BleHid.InputControllers;
 
@@ -56,6 +57,15 @@ namespace Inventonater.BleHid
             ForegroundServiceManager = new ForegroundServiceManager();
 
             Debug.Log("BleHidManager initialized");
+        }
+
+        float nextUpdateTime = 0f;
+        private void Update()
+        {
+            if (nextUpdateTime > Time.time) return;
+
+            nextUpdateTime = Time.time + 1f;
+            LoggingManager.Instance.AddLogEntry($"Update {Time.time}");
         }
 
         private void OnDestroy()

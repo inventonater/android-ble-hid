@@ -57,5 +57,7 @@ public class OverrideExample extends UnityPlayerGameActivity {
                         .build();
 
         enterPictureInPictureMode(pipParams);
+
+        mUnityPlayer.resume();
     }
 }
