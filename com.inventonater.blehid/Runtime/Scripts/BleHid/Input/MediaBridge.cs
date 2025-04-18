@@ -6,11 +6,11 @@ namespace Inventonater.BleHid.InputControllers
     /// <summary>
     /// Handles media control functionality for BLE HID.
     /// </summary>
-    public class MediaController
+    public class MediaBridge
     {
         private BleHidManager manager;
 
-        public MediaController(BleHidManager manager)
+        public MediaBridge(BleHidManager manager)
         {
             this.manager = manager;
         }
@@ -23,7 +23,7 @@ namespace Inventonater.BleHid.InputControllers
         {
             if (!manager.ConfirmIsConnected()) return false;
 
-            try { return manager.BleInitializer.BridgeInstance.Call<bool>("playPause"); }
+            try { return manager.BleInitializer.Call<bool>("playPause"); }
             catch (Exception e)
             {
                 Debug.LogException(e);
@@ -39,7 +39,7 @@ namespace Inventonater.BleHid.InputControllers
         {
             if (!manager.ConfirmIsConnected()) return false;
 
-            try { return manager.BleInitializer.BridgeInstance.Call<bool>("nextTrack"); }
+            try { return manager.BleInitializer.Call<bool>("nextTrack"); }
             catch (Exception e)
             {
                 Debug.LogException(e);
@@ -55,7 +55,7 @@ namespace Inventonater.BleHid.InputControllers
         {
             if (!manager.ConfirmIsConnected()) return false;
 
-            try { return manager.BleInitializer.BridgeInstance.Call<bool>("previousTrack"); }
+            try { return manager.BleInitializer.Call<bool>("previousTrack"); }
             catch (Exception e)
             {
                 Debug.LogException(e);
@@ -71,7 +71,7 @@ namespace Inventonater.BleHid.InputControllers
         {
             if (!manager.ConfirmIsConnected()) return false;
 
-            try { return manager.BleInitializer.BridgeInstance.Call<bool>("volumeUp"); }
+            try { return manager.BleInitializer.Call<bool>("volumeUp"); }
             catch (Exception e)
             {
                 Debug.LogException(e);
@@ -87,7 +87,7 @@ namespace Inventonater.BleHid.InputControllers
         {
             if (!manager.ConfirmIsConnected()) return false;
 
-            try { return manager.BleInitializer.BridgeInstance.Call<bool>("volumeDown"); }
+            try { return manager.BleInitializer.Call<bool>("volumeDown"); }
             catch (Exception e)
             {
                 Debug.LogException(e);
@@ -103,7 +103,7 @@ namespace Inventonater.BleHid.InputControllers
         {
             if (!manager.ConfirmIsConnected()) return false;
 
-            try { return manager.BleInitializer.BridgeInstance.Call<bool>("mute"); }
+            try { return manager.BleInitializer.Call<bool>("mute"); }
             catch (Exception e)
             {
                 Debug.LogException(e);

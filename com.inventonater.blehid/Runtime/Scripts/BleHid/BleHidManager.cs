@@ -1,5 +1,9 @@
 using UnityEngine;
 using Inventonater.BleHid.InputControllers;
+using Inventonater.BleHid;
+using System;
+using System.Collections.Generic;
+using UnityEngine.PlayerLoop;
 
 namespace Inventonater.BleHid
 {
@@ -31,9 +35,7 @@ namespace Inventonater.BleHid
         public ConnectionManager ConnectionManager { get; private set; }
         public ForegroundServiceManager ForegroundServiceManager { get; private set; }
         public static BleHidManager Instance { get; private set; }
-        public KeyboardController Keyboard { get; private set; }
-        public MouseController Mouse { get; private set; }
-        public MediaController Media { get; private set; }
+        public InputBridge InputBridge { get; private set; }
 
         private void Awake()
         {
@@ -47,16 +49,17 @@ namespace Inventonater.BleHid
             DontDestroyOnLoad(gameObject);
 
             BleEventSystem = gameObject.AddComponent<BleEventSystem>();
+            InputBridge = new InputBridge(this);
             BleInitializer = new BleInitializer(this);
             BleAdvertiser = new BleAdvertiser(this);
             ConnectionManager = new ConnectionManager(this);
-            Keyboard = new KeyboardController(this);
-            Mouse = new MouseController(this);
-            Media = new MediaController(this);
+
             ForegroundServiceManager = new ForegroundServiceManager();
+            
 
             Debug.Log("BleHidManager initialized");
         }
+
 
         private void OnDestroy()
         {

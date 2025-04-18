@@ -26,7 +26,7 @@ namespace Inventonater.BleHid
         {
             if (!manager.ConfirmIsConnected()) return false;
 
-            try { return manager.BleInitializer.BridgeInstance.Call<bool>("requestConnectionPriority", priority); }
+            try { return manager.BleInitializer.Call<bool>("requestConnectionPriority", priority); }
             catch (Exception e)
             {
                 string message = "Exception requesting connection priority: " + e.Message;
@@ -56,7 +56,7 @@ namespace Inventonater.BleHid
                 return false;
             }
 
-            try { return manager.BleInitializer.BridgeInstance.Call<bool>("requestMtu", mtu); }
+            try { return manager.BleInitializer.Call<bool>("requestMtu", mtu); }
             catch (Exception e)
             {
                 string message = "Exception requesting MTU: " + e.Message;
@@ -75,7 +75,7 @@ namespace Inventonater.BleHid
         {
             if (!manager.ConfirmIsConnected()) return false;
 
-            try { return manager.BleInitializer.BridgeInstance.Call<bool>("readRssi"); }
+            try { return manager.BleInitializer.Call<bool>("readRssi"); }
             catch (Exception e)
             {
                 string message = "Exception reading RSSI: " + e.Message;
@@ -96,7 +96,7 @@ namespace Inventonater.BleHid
 
             try
             {
-                AndroidJavaObject parametersMap = manager.BleInitializer.BridgeInstance.Call<AndroidJavaObject>("getConnectionParameters");
+                AndroidJavaObject parametersMap = manager.BleInitializer.Call<AndroidJavaObject>("getConnectionParameters");
                 if (parametersMap == null) { return null; }
 
                 Dictionary<string, string> result = new Dictionary<string, string>();

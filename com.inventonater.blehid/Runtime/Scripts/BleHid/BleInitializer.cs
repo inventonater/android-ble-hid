@@ -11,6 +11,10 @@ namespace Inventonater.BleHid
     {
         private BleHidManager manager;
         private AndroidJavaObject bridgeInstance;
+        public AndroidJavaObject BridgeInstance => bridgeInstance;
+        public void Call(string methodName, params object[] args) => bridgeInstance.Call(methodName, args);
+        public T Call<T>(string methodName, params object[] args) => bridgeInstance.Call<T>(methodName, args);
+
         private bool isInitializing = false;
 
         public BleInitializer(BleHidManager manager)
@@ -238,10 +242,5 @@ namespace Inventonater.BleHid
 
             Debug.Log("BleHidManager closed");
         }
-
-        /// <summary>
-        /// Gets the bridge instance for other components to use.
-        /// </summary>
-        public AndroidJavaObject BridgeInstance => bridgeInstance;
     }
 }

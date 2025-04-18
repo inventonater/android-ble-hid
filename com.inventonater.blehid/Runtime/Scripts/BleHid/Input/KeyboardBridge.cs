@@ -6,11 +6,11 @@ namespace Inventonater.BleHid.InputControllers
     /// <summary>
     /// Handles keyboard input functionality for BLE HID.
     /// </summary>
-    public class KeyboardController
+    public class KeyboardBridge
     {
         private BleHidManager manager;
 
-        public KeyboardController(BleHidManager manager)
+        public KeyboardBridge(BleHidManager manager)
         {
             this.manager = manager;
         }
@@ -24,7 +24,7 @@ namespace Inventonater.BleHid.InputControllers
         {
             if (!manager.ConfirmIsConnected()) return false;
 
-            try { return manager.BleInitializer.BridgeInstance.Call<bool>("sendKey", (int)keyCode); }
+            try { return manager.BleInitializer.Call<bool>("sendKey", (int)keyCode); }
             catch (Exception e)
             {
                 Debug.LogException(e);
@@ -42,7 +42,7 @@ namespace Inventonater.BleHid.InputControllers
         {
             if (!manager.ConfirmIsConnected()) return false;
 
-            try { return manager.BleInitializer.BridgeInstance.Call<bool>("sendKeyWithModifiers", (int)keyCode, (int)modifiers); }
+            try { return manager.BleInitializer.Call<bool>("sendKeyWithModifiers", (int)keyCode, (int)modifiers); }
             catch (Exception e)
             {
                 Debug.LogException(e);
@@ -59,7 +59,7 @@ namespace Inventonater.BleHid.InputControllers
         {
             if (!manager.ConfirmIsConnected()) return false;
 
-            try { return manager.BleInitializer.BridgeInstance.Call<bool>("typeText", text); }
+            try { return manager.BleInitializer.Call<bool>("typeText", text); }
             catch (Exception e)
             {
                 Debug.LogException(e);

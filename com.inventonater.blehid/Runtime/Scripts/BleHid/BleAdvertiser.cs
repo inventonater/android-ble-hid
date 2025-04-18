@@ -48,18 +48,18 @@ namespace Inventonater.BleHid
                 try
                 {
                     // Use a simple toString() to get some information about the bridge instance
-                    string instanceInfo = manager.BleInitializer.BridgeInstance.Call<string>("toString");
+                    string instanceInfo = manager.BleInitializer.Call<string>("toString");
                     Debug.Log("BleHidManager: Using bridgeInstance: " + instanceInfo);
                 }
                 catch (Exception debugEx) { Debug.LogWarning("BleHidManager: Could not get bridge instance info: " + debugEx.Message); }
 
-                bool result = manager.BleInitializer.BridgeInstance.Call<bool>("startAdvertising");
+                bool result = manager.BleInitializer.Call<bool>("startAdvertising");
                 Debug.Log("BleHidManager: StartAdvertising call result: " + result);
 
                 // Verify advertising state
                 try
                 {
-                    bool isAdvertising = manager.BleInitializer.BridgeInstance.Call<bool>("isAdvertising");
+                    bool isAdvertising = manager.BleInitializer.Call<bool>("isAdvertising");
                     Debug.Log("BleHidManager: isAdvertising check after call: " + isAdvertising);
                 }
                 catch (Exception verifyEx) { Debug.LogWarning("BleHidManager: Could not verify advertising state: " + verifyEx.Message); }
@@ -85,7 +85,7 @@ namespace Inventonater.BleHid
         {
             if (!manager.ConfirmIsInitialized()) return;
 
-            try { manager.BleInitializer.BridgeInstance.Call("stopAdvertising"); }
+            try { manager.BleInitializer.Call("stopAdvertising"); }
             catch (Exception e)
             {
                 string message = "Exception stopping advertising: " + e.Message;
@@ -102,7 +102,7 @@ namespace Inventonater.BleHid
         {
             if (!manager.ConfirmIsInitialized()) return false;
 
-            try { return manager.BleInitializer.BridgeInstance.Call<bool>("isAdvertising"); }
+            try { return manager.BleInitializer.Call<bool>("isAdvertising"); }
             catch (Exception e)
             {
                 Debug.LogException(e);
@@ -129,7 +129,7 @@ namespace Inventonater.BleHid
                 return false;
             }
 
-            try { return manager.BleInitializer.BridgeInstance.Call<bool>("setTransmitPowerLevel", level); }
+            try { return manager.BleInitializer.Call<bool>("setTransmitPowerLevel", level); }
             catch (Exception e)
             {
                 string message = "Exception setting TX power level: " + e.Message;

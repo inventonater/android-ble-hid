@@ -12,15 +12,13 @@ namespace Inventonater.BleHid
 
         private IInputFilter inputFilter;
         private InputFilterFactory.FilterType _currentFilterType;
-        private readonly MouseInputProcessor _inputProcessor;
 
         public MouseControlsComponent()
         {
             _currentFilterType = InputFilterFactory.FilterType.OneEuro;
             inputFilter = InputFilterFactory.CreateFilter(_currentFilterType);
             touchpadRect = new Rect(Screen.width / 2 - 150, Screen.height / 2 - 100, 300, 200);
-            _inputProcessor = BleHidManager.Instance.Mouse.MouseInputProcessor;
-            _inputProcessor.SetInputFilter(inputFilter);
+            BleHidManager.Instance.InputBridge.Mouse.SetInputFilter(inputFilter);
         }
 
         public void SetCurrentFilterType(InputFilterFactory.FilterType value)
@@ -29,7 +27,7 @@ namespace Inventonater.BleHid
             _currentFilterType = value;
             inputFilter = InputFilterFactory.CreateFilter(_currentFilterType);
             inputFilter.Reset();
-            _inputProcessor.SetInputFilter(inputFilter);
+            BleHidManager.Instance.InputBridge.Mouse.SetInputFilter(inputFilter);
             Logger.AddLogEntry($"Changed input filter to: {inputFilter.Name}");
         }
 
@@ -43,15 +41,15 @@ namespace Inventonater.BleHid
         {
             if (IsEditorMode)
             {
-                _inputProcessor.UpdatePosition(Input.mousePosition, Time.time);
+                BleHidManager.Instance.InputBridge.Mouse.UpdatePosition(Input.mousePosition, Time.time);
                 return;
             }
 
             if (Input.touchCount > 0)
             {
                 var touch = Input.GetTouch(0);
-                if (touch.phase == TouchPhase.Began) _inputProcessor.Reset();
-                _inputProcessor.UpdatePosition(touch.position, Time.time);
+                if (touch.phase == TouchPhase.Began) BleHidManager.Instance.InputBridge.Mouse.Reset();
+                BleHidManager.Instance.InputBridge.Mouse.UpdatePosition(touch.position, Time.time);
             }
         }
 
@@ -75,15 +73,16 @@ namespace Inventonater.BleHid
 
             UIHelper.BeginSection("Mouse Tuning");
 
+            var positionFilter = BleHidManager.Instance.InputBridge.Mouse.PositionFilter;
             // --- GLOBAL SETTINGS SECTION ---
             GUILayout.Label("Global Speed: Adjusts overall mouse movement speed");
-            _inputProcessor.GlobalScale =
-                UIHelper.SliderWithLabels("Slow", _inputProcessor.GlobalScale, 0.25f, 10.0f, "Fast", "Global Speed: {0:F2}×", UIHelper.StandardSliderOptions);
+            positionFilter.GlobalScale =
+                UIHelper.SliderWithLabels("Slow", positionFilter.GlobalScale, 0.25f, 10.0f, "Fast", "Global Speed: {0:F2}×", UIHelper.StandardSliderOptions);
             GUILayout.Label("Horizontal Speed: Adjusts left-right sensitivity");
-            _inputProcessor.HorizontalSensitivity = UIHelper.SliderWithLabels("Low", _inputProcessor.HorizontalSensitivity, 1.0f, 10.0f, "High", "Horizontal Speed: {0:F1}",
+            positionFilter.HorizontalSensitivity = UIHelper.SliderWithLabels("Low", positionFilter.HorizontalSensitivity, 1.0f, 10.0f, "High", "Horizontal Speed: {0:F1}",
                 UIHelper.StandardSliderOptions);
             GUILayout.Label("Vertical Speed: Adjusts up-down sensitivity");
-            _inputProcessor.VerticalSensitivity = UIHelper.SliderWithLabels("Low", _inputProcessor.VerticalSensitivity, 1.0f, 10.0f, "High", "Vertical Speed: {0:F1}",
+            positionFilter.VerticalSensitivity = UIHelper.SliderWithLabels("Low", positionFilter.VerticalSensitivity, 1.0f, 10.0f, "High", "Vertical Speed: {0:F1}",
                 UIHelper.StandardSliderOptions);
 
             GUILayout.Space(10);
@@ -123,9 +122,9 @@ namespace Inventonater.BleHid
             string[] buttonLabels = { "Left Click", "Middle Click", "Right Click" };
             Action[] buttonActions =
             {
-                () => BleHidManager.Mouse.ClickMouseButton(BleHidConstants.BUTTON_LEFT),
-                () => BleHidManager.Mouse.ClickMouseButton(BleHidConstants.BUTTON_MIDDLE),
-                () => BleHidManager.Mouse.ClickMouseButton(BleHidConstants.BUTTON_RIGHT)
+                () => BleHidManager.InputBridge.Mouse.ClickMouseButton(BleHidConstants.BUTTON_LEFT),
+                () => BleHidManager.InputBridge.Mouse.ClickMouseButton(BleHidConstants.BUTTON_MIDDLE),
+                () => BleHidManager.InputBridge.Mouse.ClickMouseButton(BleHidConstants.BUTTON_RIGHT)
             };
             string[] buttonMessages =
             {
