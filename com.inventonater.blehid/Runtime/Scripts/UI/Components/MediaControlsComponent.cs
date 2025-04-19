@@ -1,6 +1,6 @@
 using UnityEngine;
 using System;
-using Inventonater.BleHid.InputControllers;
+using Inventonater.BleHid;
 
 namespace Inventonater.BleHid
 {
@@ -11,8 +11,10 @@ namespace Inventonater.BleHid
     {
         public const string Name = "Media";
         public override string TabName => Name;
-        private MediaBridge Media => BleHidManager.InputBridge.Media;
+        private MediaBridge Media => BleHidManager.InputRouter.Mapping.Media;
 
+        public override void ComponentShown() { }
+        public override void ComponentHidden() { }
         public override void Update(){}
 
         public override void DrawUI()

@@ -3,32 +3,31 @@ using System;
 
 namespace Inventonater.BleHid
 {
-    public class MouseControlsComponent : UIComponent
+    public class MouseControlsComponent : UIComponent, IInputSourceDevice
     {
-        public const string Name = "Mouse";
+        public string Name { get; } = "Mouse";
+        public event Action<BleHidButtonEvent> WhenButtonEvent = delegate { };
+        public event Action<Vector3> WhenPositionEvent = delegate { };
+        public event Action<BleHidDirection> WhenDirectionEvent = delegate { };
         public override string TabName => Name;
 
-        private Rect touchpadRect;
+        private Rect touchpadRect = new(Screen.width / 2 - 150, Screen.height / 2 - 100, 300, 200);
 
-        private IInputFilter inputFilter;
-        private InputFilterFactory.FilterType _currentFilterType;
-
-        public MouseControlsComponent()
+        public override void ComponentShown()
         {
-            _currentFilterType = InputFilterFactory.FilterType.OneEuro;
-            inputFilter = InputFilterFactory.CreateFilter(_currentFilterType);
-            touchpadRect = new Rect(Screen.width / 2 - 150, Screen.height / 2 - 100, 300, 200);
-            BleHidManager.Instance.InputBridge.Mouse.SetInputFilter(inputFilter);
+            if (!BleHidManager.Instance.InputRouter.HasDevice) BleHidManager.Instance.InputRouter.SetSourceDevice(this);
         }
 
-        public void SetCurrentFilterType(InputFilterFactory.FilterType value)
+        public override void ComponentHidden()
         {
-            if (_currentFilterType == value) return;
-            _currentFilterType = value;
-            inputFilter = InputFilterFactory.CreateFilter(_currentFilterType);
-            inputFilter.Reset();
-            BleHidManager.Instance.InputBridge.Mouse.SetInputFilter(inputFilter);
-            Logger.AddLogEntry($"Changed input filter to: {inputFilter.Name}");
+        }
+
+        public void InputDeviceEnabled()
+        {
+        }
+
+        public void InputDeviceDisabled()
+        {
         }
 
         private Rect GetTouchpadRect()
@@ -41,15 +40,16 @@ namespace Inventonater.BleHid
         {
             if (IsEditorMode)
             {
-                BleHidManager.Instance.InputBridge.Mouse.UpdatePosition(Input.mousePosition, Time.time);
+                if (Input.GetMouseButtonDown(0)) BleHidManager.Instance.InputRouter.Mapping.MousePositionFilter.Reset();
+                WhenPositionEvent(Input.mousePosition);
                 return;
             }
 
             if (Input.touchCount > 0)
             {
                 var touch = Input.GetTouch(0);
-                if (touch.phase == TouchPhase.Began) BleHidManager.Instance.InputBridge.Mouse.Reset();
-                BleHidManager.Instance.InputBridge.Mouse.UpdatePosition(touch.position, Time.time);
+                if (touch.phase == TouchPhase.Began) BleHidManager.Instance.InputRouter.Mapping.MousePositionFilter.Reset();
+                WhenPositionEvent(touch.position);
             }
         }
 
@@ -73,16 +73,19 @@ namespace Inventonater.BleHid
 
             UIHelper.BeginSection("Mouse Tuning");
 
-            var positionFilter = BleHidManager.Instance.InputBridge.Mouse.PositionFilter;
+            var mousePositionFilter = BleHidManager.Instance.InputRouter.Mapping.MousePositionFilter;
+            IInputFilter filter = mousePositionFilter.Filter;
+
+
             // --- GLOBAL SETTINGS SECTION ---
             GUILayout.Label("Global Speed: Adjusts overall mouse movement speed");
-            positionFilter.GlobalScale =
-                UIHelper.SliderWithLabels("Slow", positionFilter.GlobalScale, 0.25f, 10.0f, "Fast", "Global Speed: {0:F2}×", UIHelper.StandardSliderOptions);
+            mousePositionFilter.GlobalScale =
+                UIHelper.SliderWithLabels("Slow", mousePositionFilter.GlobalScale, 0.25f, 10.0f, "Fast", "Global Speed: {0:F2}×", UIHelper.StandardSliderOptions);
             GUILayout.Label("Horizontal Speed: Adjusts left-right sensitivity");
-            positionFilter.HorizontalSensitivity = UIHelper.SliderWithLabels("Low", positionFilter.HorizontalSensitivity, 1.0f, 10.0f, "High", "Horizontal Speed: {0:F1}",
+            mousePositionFilter.HorizontalSensitivity = UIHelper.SliderWithLabels("Low", mousePositionFilter.HorizontalSensitivity, 1.0f, 10.0f, "High", "Horizontal Speed: {0:F1}",
                 UIHelper.StandardSliderOptions);
             GUILayout.Label("Vertical Speed: Adjusts up-down sensitivity");
-            positionFilter.VerticalSensitivity = UIHelper.SliderWithLabels("Low", positionFilter.VerticalSensitivity, 1.0f, 10.0f, "High", "Vertical Speed: {0:F1}",
+            mousePositionFilter.VerticalSensitivity = UIHelper.SliderWithLabels("Low", mousePositionFilter.VerticalSensitivity, 1.0f, 10.0f, "High", "Vertical Speed: {0:F1}",
                 UIHelper.StandardSliderOptions);
 
             GUILayout.Space(10);
@@ -92,25 +95,26 @@ namespace Inventonater.BleHid
             // Filter type selection
             GUILayout.Label("Input Filter: Determines how mouse movement is processed");
             GUILayout.BeginHorizontal();
+
             foreach (var filterType in InputFilterFactory.GetAvailableFilterTypes())
             {
-                bool isSelected = filterType == _currentFilterType;
+                bool isSelected = filterType == mousePositionFilter.CurrentFilterType;
                 GUI.enabled = !isSelected;
                 if (GUILayout.Button(InputFilterFactory.GetFilterName(filterType), isSelected ? GUI.skin.box : GUI.skin.button, GUILayout.Height(30)))
-                    SetCurrentFilterType(filterType);
+                    mousePositionFilter.SetInputFilter(filterType);
                 GUI.enabled = true;
             }
 
             GUILayout.EndHorizontal();
 
-            if (inputFilter != null) GUILayout.Label(inputFilter.Description, GUI.skin.box);
+            if (filter != null) GUILayout.Label(filter.Description, GUI.skin.box);
 
             GUILayout.Space(10);
 
             // --- FILTER-SPECIFIC PARAMETERS SECTION ---
 
             // Let the filter draw its own parameter controls
-            if (inputFilter != null) { inputFilter.DrawParameterControls(); }
+            if (filter != null) { filter.DrawParameterControls(); }
 
             UIHelper.EndSection();
 
@@ -122,9 +126,9 @@ namespace Inventonater.BleHid
             string[] buttonLabels = { "Left Click", "Middle Click", "Right Click" };
             Action[] buttonActions =
             {
-                () => BleHidManager.InputBridge.Mouse.ClickMouseButton(BleHidConstants.BUTTON_LEFT),
-                () => BleHidManager.InputBridge.Mouse.ClickMouseButton(BleHidConstants.BUTTON_MIDDLE),
-                () => BleHidManager.InputBridge.Mouse.ClickMouseButton(BleHidConstants.BUTTON_RIGHT)
+                () => BleHidManager.InputRouter.Mapping.Mouse.ClickMouseButton(BleHidConstants.BUTTON_LEFT),
+                () => BleHidManager.InputRouter.Mapping.Mouse.ClickMouseButton(BleHidConstants.BUTTON_MIDDLE),
+                () => BleHidManager.InputRouter.Mapping.Mouse.ClickMouseButton(BleHidConstants.BUTTON_RIGHT)
             };
             string[] buttonMessages =
             {

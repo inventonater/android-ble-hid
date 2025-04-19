@@ -15,13 +15,14 @@ namespace Inventonater.BleHid
         private bool localControlInitialized = false;
         private bool hasCameraPermission = false;
         private MonoBehaviour owner;
-        
+
         // Button height constant
         private const float BUTTON_HEIGHT = 60f;
 
         public LocalControlComponent(MonoBehaviour owner) => this.owner = owner;
-
-        public override void Update(){}
+        public override void ComponentShown() { }
+        public override void ComponentHidden() { }
+        public override void Update() { }
 
         public override void DrawUI()
         {

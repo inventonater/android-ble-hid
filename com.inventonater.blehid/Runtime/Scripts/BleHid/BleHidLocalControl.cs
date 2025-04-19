@@ -219,8 +219,7 @@ namespace Inventonater.BleHid
         /// <returns>True if accessibility service is enabled, false otherwise</returns>
         public static bool CheckAccessibilityServiceEnabledDirect()
         {
-            if (Application.platform != RuntimePlatform.Android)
-                return false;
+            if (Application.isEditor) return true;
 
             try
             {

@@ -37,7 +37,7 @@ namespace Inventonater.BleHid
         private Vector2 localTabScrollPosition = Vector2.zero;
         private float nextPermissionCheckTime = 0f;
 
-        private void Start()
+        private void Awake()
         {
             // Check if running in the Unity Editor
             if (IsEditorMode) isInitialized = true; // Auto-initialize in editor
@@ -169,12 +169,12 @@ namespace Inventonater.BleHid
             var newTabIndex = GUILayout.Toolbar(currentTabIndex, tabNames.ToArray(), GUILayout.Height(60));
             if (newTabIndex != currentTabIndex)
             {
-                currentTabComponent.OnDeactivate();
+                currentTabComponent.ComponentHidden();
                 Logger.AddLogEntry($"Tab '{currentTabComponent.TabName}' deactivated");
 
                 currentTabIndex = newTabIndex;
 
-                currentTabComponent.OnActivate();
+                currentTabComponent.ComponentShown();
                 Logger.AddLogEntry($"Tab '{currentTabComponent.TabName}' activated");
             }
 

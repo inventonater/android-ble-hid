@@ -1,10 +1,5 @@
 using System;
 using UnityEngine;
-using Inventonater.BleHid.InputControllers;
-using Inventonater.BleHid;
-using System;
-using System.Collections.Generic;
-using UnityEngine.PlayerLoop;
 
 namespace Inventonater.BleHid
 {
@@ -45,7 +40,8 @@ namespace Inventonater.BleHid
         public BleAdvertiser BleAdvertiser { get; private set; }
         public ConnectionManager ConnectionManager { get; private set; }
         public static BleHidManager Instance { get; private set; }
-        public InputBridge InputBridge { get; private set; }
+        public InputRouter InputRouter { get; private set; }
+        public InputDeviceMapping Mapping { get; private set; }
 
         private void Awake()
         {
@@ -58,17 +54,26 @@ namespace Inventonater.BleHid
             Instance = this;
             DontDestroyOnLoad(gameObject);
 
+            if (Application.isEditor)
+            {
+                IsInitialized = true;
+                IsConnected = true;
+            }
+
             BleEventSystem = gameObject.AddComponent<BleEventSystem>();
-            InputBridge = new InputBridge(this);
+
+            Mapping = new InputDeviceMapping(this);
+            InputRouter = new InputRouter();
+
+            InputRouter.SetMapping(Mapping);
+
             BleInitializer = new BleInitializer(this);
             BleAdvertiser = new BleAdvertiser(this);
             ConnectionManager = new ConnectionManager(this);
-            ForegroundServiceManager = new ForegroundServiceManager();
             PipWorker = new PipBackgroundWorker();
 
             // Setup event handlers
             SetupEventHandlers();
-            PipWorker.Start();
             Debug.Log("BleHidManager initialized");
         }
 
@@ -128,30 +133,16 @@ namespace Inventonater.BleHid
             }
         }
 
-        float nextUpdateTime = 0f;
-        private void Update()
-        {
-            // Periodically log the time in Update (less frequently than every frame)
-            if (nextUpdateTime > Time.time) return;
-            
-            nextUpdateTime = Time.time + 1f;
-            LoggingManager.Instance.AddLogEntry($"Update {Time.time}");
-        }
-
         private void OnDestroy()
         {
             // Stop the background worker if it's running
-            if (PipWorker != null)
-            {
-                PipWorker.Stop();
-            }
-            
+            PipWorker.Stop();
             BleInitializer.Close();
         }
 
         public bool ConfirmIsInitialized()
         {
-            if (IsInitialized && BleInitializer.BridgeInstance != null) return true;
+            if (IsInitialized) return true;
 
             string message = "BLE HID plugin not initialized";
             Debug.LogError(message);

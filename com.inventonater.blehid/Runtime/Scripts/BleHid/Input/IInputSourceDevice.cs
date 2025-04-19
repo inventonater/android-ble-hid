@@ -3,6 +3,13 @@ using UnityEngine;
 
 namespace Inventonater.BleHid
 {
+    public enum BleHidAxis
+    {
+        X,
+        Y,
+        Z
+    }
+
     public enum BleHidDirection
     {
         None,
@@ -49,12 +56,14 @@ namespace Inventonater.BleHid
         public static bool operator !=(BleHidButtonEvent left, BleHidButtonEvent right) => !left.Equals(right);
     }
 
-    public interface IBleHidInputBridge
+    public interface IInputSourceDevice
     {
         string Name { get; }
         event Action<BleHidButtonEvent> WhenButtonEvent;
         event Action<Vector3> WhenPositionEvent;
         event Action<BleHidDirection> WhenDirectionEvent;
+        void InputDeviceEnabled();
+        void InputDeviceDisabled();
     }
 
     public static class BleHidButtonExtensions

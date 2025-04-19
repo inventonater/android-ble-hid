@@ -1,5 +1,6 @@
 using System;
 using System.Collections;
+using System.Linq;
 using UnityEngine;
 
 namespace Inventonater.BleHid
@@ -9,18 +10,28 @@ namespace Inventonater.BleHid
     /// </summary>
     public class BleInitializer
     {
-        private BleHidManager manager;
-        private AndroidJavaObject bridgeInstance;
-        public AndroidJavaObject BridgeInstance => bridgeInstance;
-        public void Call(string methodName, params object[] args) => bridgeInstance.Call(methodName, args);
-        public T Call<T>(string methodName, params object[] args) => bridgeInstance.Call<T>(methodName, args);
+        private readonly BleHidManager _manager;
+        public AndroidJavaObject BridgeInstance { get; private set; }
+
+        private bool _verbose = true;
+        public void Call(string methodName, params object[] args)
+        {
+            if(_verbose) LoggingManager.Instance.AddLogEntry($" -- {methodName} {string.Join(", ", args)}");
+            if (Application.isEditor) return;
+
+            BridgeInstance.Call(methodName, args);
+        }
+
+        public T Call<T>(string methodName, params object[] args)
+        {
+            if(_verbose) LoggingManager.Instance.AddLogEntry($" -- {methodName} {string.Join(", ", args)}");
+            if (Application.isEditor) return default;
+
+            return BridgeInstance.Call<T>(methodName, args);
+        }
 
         private bool isInitializing = false;
-
-        public BleInitializer(BleHidManager manager)
-        {
-            this.manager = manager;
-        }
+        public BleInitializer(BleHidManager manager) => _manager = manager;
 
         /// <summary>
         /// Initialize the BLE HID functionality.
@@ -34,7 +45,7 @@ namespace Inventonater.BleHid
                 yield break;
             }
 
-            if (manager.IsInitialized)
+            if (_manager.IsInitialized)
             {
                 Debug.LogWarning("BleHidManager: Already initialized");
                 yield break;
@@ -50,8 +61,8 @@ namespace Inventonater.BleHid
             {
                 string message = "BLE HID is only supported on Android";
                 Debug.LogWarning(message);
-                manager.BleEventSystem.OnError?.Invoke(BleHidConstants.ERROR_PERIPHERAL_NOT_SUPPORTED, message);
-                manager.BleEventSystem.OnInitializeComplete?.Invoke(false, message);
+                _manager.BleEventSystem.OnError?.Invoke(BleHidConstants.ERROR_PERIPHERAL_NOT_SUPPORTED, message);
+                _manager.BleEventSystem.OnInitializeComplete?.Invoke(false, message);
                 isInitializing = false;
                 yield break;
             }
@@ -61,8 +72,8 @@ namespace Inventonater.BleHid
             if (!BleHidEnvironmentChecker.VerifyPluginsLoaded(out errorMsg))
             {
                 Debug.LogError(errorMsg);
-                manager.BleEventSystem.OnError?.Invoke(BleHidConstants.ERROR_INITIALIZATION_FAILED, errorMsg);
-                manager.BleEventSystem.OnInitializeComplete?.Invoke(false, errorMsg);
+                _manager.BleEventSystem.OnError?.Invoke(BleHidConstants.ERROR_INITIALIZATION_FAILED, errorMsg);
+                _manager.BleEventSystem.OnInitializeComplete?.Invoke(false, errorMsg);
                 isInitializing = false;
                 yield break;
             }
@@ -79,15 +90,15 @@ namespace Inventonater.BleHid
                 // For Android 12+ (API 31+), request Bluetooth permissions
                 if (sdkInt >= 31)
                 {
-                    yield return manager.StartCoroutine(BleHidPermissionHandler.RequestBluetoothPermissions());
+                    yield return _manager.StartCoroutine(BleHidPermissionHandler.RequestBluetoothPermissions());
 
                     // Check if required permissions were granted
                     if (!BleHidPermissionHandler.CheckBluetoothPermissions())
                     {
                         string message = "Bluetooth permissions not granted";
                         Debug.LogError(message);
-                        manager.BleEventSystem.OnError?.Invoke(BleHidConstants.ERROR_PERMISSIONS_NOT_GRANTED, message);
-                        manager.BleEventSystem.OnInitializeComplete?.Invoke(false, message);
+                        _manager.BleEventSystem.OnError?.Invoke(BleHidConstants.ERROR_PERMISSIONS_NOT_GRANTED, message);
+                        _manager.BleEventSystem.OnInitializeComplete?.Invoke(false, message);
                         isInitializing = false;
                         yield break;
                     }
@@ -98,7 +109,7 @@ namespace Inventonater.BleHid
                 // For Android 13+ (API 33+), request notification permissions
                 if (sdkInt >= 33)
                 {
-                    yield return manager.StartCoroutine(BleHidPermissionHandler.RequestNotificationPermission());
+                    yield return _manager.StartCoroutine(BleHidPermissionHandler.RequestNotificationPermission());
                     
                     // Check if notification permission was granted
                     if (!BleHidPermissionHandler.CheckNotificationPermission())
@@ -106,7 +117,7 @@ namespace Inventonater.BleHid
                         // Just log a warning but don't fail initialization - notifications aren't critical
                         string message = "Notification permission not granted";
                         Debug.LogWarning(message);
-                        manager.BleEventSystem.OnDebugLog?.Invoke(message);
+                        _manager.BleEventSystem.OnDebugLog?.Invoke(message);
                         // We don't break here since notification permissions aren't critical for functionality
                     }
                     else
@@ -124,14 +135,14 @@ namespace Inventonater.BleHid
                 // Only try the new namespace - no fallback
                 Debug.Log("Connecting to com.inventonater.blehid.unity namespace...");
                 AndroidJavaClass bridgeClass = new AndroidJavaClass("com.inventonater.blehid.unity.BleHidUnityBridge");
-                bridgeInstance = bridgeClass.CallStatic<AndroidJavaObject>("getInstance");
+                BridgeInstance = bridgeClass.CallStatic<AndroidJavaObject>("getInstance");
                 Debug.Log("Successfully connected to com.inventonater.blehid.unity.BleHidUnityBridge");
 
                 // Verify the bridge interface
-                if (!BleHidEnvironmentChecker.VerifyBridgeInterface(bridgeInstance, out errorMsg)) { throw new Exception(errorMsg); }
+                if (!BleHidEnvironmentChecker.VerifyBridgeInterface(BridgeInstance, out errorMsg)) { throw new Exception(errorMsg); }
 
                 // Initialize the bridge with this GameObject's name for callbacks
-                initResult = bridgeInstance.Call<bool>("initialize", manager.gameObject.name);
+                initResult = BridgeInstance.Call<bool>("initialize", _manager.gameObject.name);
                 
                 // Initialize the foreground service manager
                 // manager.ForegroundServiceManager.Initialize(bridgeInstance);
@@ -140,8 +151,8 @@ namespace Inventonater.BleHid
                 {
                     string message = "Failed to initialize BLE HID plugin";
                     Debug.LogError(message);
-                    manager.BleEventSystem.OnError?.Invoke(BleHidConstants.ERROR_INITIALIZATION_FAILED, message);
-                    manager.BleEventSystem.OnInitializeComplete?.Invoke(false, message);
+                    _manager.BleEventSystem.OnError?.Invoke(BleHidConstants.ERROR_INITIALIZATION_FAILED, message);
+                    _manager.BleEventSystem.OnInitializeComplete?.Invoke(false, message);
                     isInitializing = false;
                     yield break;
                 }
@@ -150,8 +161,8 @@ namespace Inventonater.BleHid
             {
                 string message = "Exception during initialization: " + e.Message;
                 Debug.LogException(e);
-                manager.BleEventSystem.OnError?.Invoke(BleHidConstants.ERROR_INITIALIZATION_FAILED, message);
-                manager.BleEventSystem.OnInitializeComplete?.Invoke(false, message);
+                _manager.BleEventSystem.OnError?.Invoke(BleHidConstants.ERROR_INITIALIZATION_FAILED, message);
+                _manager.BleEventSystem.OnInitializeComplete?.Invoke(false, message);
                 isInitializing = false;
                 yield break;
             }
@@ -164,14 +175,14 @@ namespace Inventonater.BleHid
                 float timeout = 5.0f; // 5 seconds timeout
                 float startTime = Time.time;
 
-                while (!manager.IsInitialized && (Time.time - startTime) < timeout) { yield return null; }
+                while (!_manager.IsInitialized && (Time.time - startTime) < timeout) { yield return null; }
 
-                if (!manager.IsInitialized)
+                if (!_manager.IsInitialized)
                 {
                     string message = "BLE HID initialization timed out";
                     Debug.LogError(message);
-                    manager.BleEventSystem.OnError?.Invoke(BleHidConstants.ERROR_INITIALIZATION_FAILED, message);
-                    manager.BleEventSystem.OnInitializeComplete?.Invoke(false, message);
+                    _manager.BleEventSystem.OnError?.Invoke(BleHidConstants.ERROR_INITIALIZATION_FAILED, message);
+                    _manager.BleEventSystem.OnInitializeComplete?.Invoke(false, message);
                 }
             }
 
@@ -204,7 +215,7 @@ namespace Inventonater.BleHid
         /// <returns>A string containing the diagnostic information.</returns>
         public string RunEnvironmentDiagnostics()
         {
-            return BleHidEnvironmentChecker.RunEnvironmentDiagnostics(manager);
+            return BleHidEnvironmentChecker.RunEnvironmentDiagnostics(_manager);
         }
 
         /// <summary>
@@ -213,9 +224,9 @@ namespace Inventonater.BleHid
         /// <returns>A string with diagnostic information.</returns>
         public string GetDiagnosticInfo()
         {
-            if (!manager.ConfirmIsInitialized()) return "Not initialized";
+            if (!_manager.ConfirmIsInitialized()) return "Not initialized";
 
-            try { return bridgeInstance.Call<string>("getDiagnosticInfo"); }
+            try { return BridgeInstance.Call<string>("getDiagnosticInfo"); }
             catch (Exception e)
             {
                 Debug.LogException(e);
@@ -228,20 +239,20 @@ namespace Inventonater.BleHid
         /// </summary>
         public void Close()
         {
-            if (bridgeInstance != null)
+            if (BridgeInstance != null)
             {
-                try { bridgeInstance.Call("close"); }
+                try { BridgeInstance.Call("close"); }
                 catch (Exception e) { Debug.LogException(e); }
 
-                bridgeInstance.Dispose();
-                bridgeInstance = null;
+                BridgeInstance.Dispose();
+                BridgeInstance = null;
             }
 
-            manager.IsInitialized = false;
-            manager.IsAdvertising = false;
-            manager.IsConnected = false;
-            manager.ConnectedDeviceName = null;
-            manager.ConnectedDeviceAddress = null;
+            _manager.IsInitialized = false;
+            _manager.IsAdvertising = false;
+            _manager.IsConnected = false;
+            _manager.ConnectedDeviceName = null;
+            _manager.ConnectedDeviceAddress = null;
 
             Debug.Log("BleHidManager closed");
         }

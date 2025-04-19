@@ -1,7 +1,7 @@
 using UnityEngine;
 using System;
 using System.Collections.Generic;
-using Inventonater.BleHid.InputControllers;
+using Inventonater.BleHid;
 
 namespace Inventonater.BleHid
 {
@@ -12,7 +12,7 @@ namespace Inventonater.BleHid
     {
         public const string Name = "Keyboard";
         public override string TabName => Name;
-        private KeyboardBridge Keyboard => BleHidManager.InputBridge.Keyboard;
+        private KeyboardBridge Keyboard => BleHidManager.InputRouter.Mapping.Keyboard;
 
         // Key mapping for characters to key codes
         private static readonly Dictionary<string, byte> keyMapping = new Dictionary<string, byte>()
@@ -53,9 +53,9 @@ namespace Inventonater.BleHid
         private readonly string[] row2 = { "A", "S", "D", "F", "G", "H", "J", "K", "L" };
         private readonly string[] row3 = { "Z", "X", "C", "V", "B", "N", "M" };
 
-        public override void Update()
-        {
-        }
+        public override void ComponentShown() { }
+        public override void ComponentHidden() { }
+        public override void Update() { }
 
         public override void DrawUI()
         {

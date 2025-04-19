@@ -1,7 +1,7 @@
 using System;
 using UnityEngine;
 
-namespace Inventonater.BleHid.InputControllers
+namespace Inventonater.BleHid
 {
     /// <summary>
     /// Handles media control functionality for BLE HID.

@@ -18,7 +18,8 @@ namespace Inventonater.BleHid
             ExponentialMA, // Exponential Moving Average
             Kalman, // Kalman filter with velocity model
             DoubleExponential, // Double exponential smoothing (Holt)
-            Predictive // Predictive latency compensation
+            Predictive, // Predictive latency compensation
+            Mute
         }
 
         /// <summary>
@@ -40,6 +41,8 @@ namespace Inventonater.BleHid
                     return "Double Exp";
                 case FilterType.Predictive:
                     return "Predictive";
+                case FilterType.Mute:
+                    return "Mute";
                 default:
                     return "Unknown Filter";
             }
@@ -57,7 +60,8 @@ namespace Inventonater.BleHid
                 FilterType.ExponentialMA,
                 FilterType.Kalman,
                 FilterType.DoubleExponential,
-                FilterType.Predictive
+                FilterType.Predictive,
+                FilterType.Mute
             };
         }
 
@@ -71,7 +75,7 @@ namespace Inventonater.BleHid
             switch (type)
             {
                 case FilterType.None:
-                    return new NoFilter();
+                    return new RawPassthrough();
 
                 case FilterType.OneEuro:
                     return new OneEuroFilter();
@@ -87,6 +91,9 @@ namespace Inventonater.BleHid
 
                 case FilterType.Predictive:
                     return new PredictiveFilter();
+
+                case FilterType.Mute:
+                    return new MuteFilter();
 
                 default:
                     Debug.LogWarning($"Unknown filter type: {type}, defaulting to OneEuro");
@@ -177,6 +184,16 @@ namespace Inventonater.BleHid
                     param2Min = 0.1f;
                     param2Max = 0.9f;
                     param2Default = 0.5f;
+                    break;
+                case FilterType.Mute:
+                    param1Name = "Mute Time";
+                    param1Min = 0;
+                    param1Max = 0;
+                    param1Default = 0;
+                    param2Name = "N/A";
+                    param2Min = 0;
+                    param2Max = 0;
+                    param2Default = 0;
                     break;
 
                 default:

@@ -16,8 +16,7 @@ namespace Inventonater.BleHid
         public abstract string TabName { get; }
         public abstract void Update();
         public abstract void DrawUI();
-        public virtual void OnActivate() { }
-        public virtual void OnDeactivate() { }
-
+        public abstract void ComponentShown();
+        public abstract void ComponentHidden();
     }
 }
