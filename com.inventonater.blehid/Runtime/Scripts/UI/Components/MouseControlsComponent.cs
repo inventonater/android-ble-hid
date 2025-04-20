@@ -6,9 +6,11 @@ namespace Inventonater.BleHid
     public class MouseControlsComponent : UIComponent, IInputSourceDevice
     {
         public string Name { get; } = "Mouse";
-        public event Action<BleHidButtonEvent> WhenButtonEvent = delegate { };
-        public event Action<Vector3> WhenPositionEvent = delegate { };
-        public event Action<BleHidDirection> WhenDirectionEvent = delegate { };
+        public event Action<BleHidButtonEvent> NotifyButtonEvent = delegate { };
+        public event Action<Vector3> NotifyPosition = delegate { };
+        public event Action NotifyResetPosition = delegate { };
+
+        public event Action<BleHidDirection> NotifyDirection = delegate { };
         public override string TabName => Name;
 
         private Rect touchpadRect = new(Screen.width / 2 - 150, Screen.height / 2 - 100, 300, 200);
@@ -40,16 +42,16 @@ namespace Inventonater.BleHid
         {
             if (IsEditorMode)
             {
-                if (Input.GetMouseButtonDown(0)) BleHidManager.Instance.InputRouter.Mapping.MousePositionFilter.Reset();
-                WhenPositionEvent(Input.mousePosition);
+                if (Input.GetMouseButtonDown(0)) NotifyResetPosition();
+                NotifyPosition(Input.mousePosition);
                 return;
             }
 
             if (Input.touchCount > 0)
             {
                 var touch = Input.GetTouch(0);
-                if (touch.phase == TouchPhase.Began) BleHidManager.Instance.InputRouter.Mapping.MousePositionFilter.Reset();
-                WhenPositionEvent(touch.position);
+                if (touch.phase == TouchPhase.Began) NotifyResetPosition();
+                NotifyPosition(touch.position);
             }
         }
 

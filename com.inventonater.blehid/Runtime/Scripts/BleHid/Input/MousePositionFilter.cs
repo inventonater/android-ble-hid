@@ -2,7 +2,7 @@ using UnityEngine;
 
 namespace Inventonater.BleHid
 {
-    public class MousePositionFilter
+    public class MousePositionFilter : IAxisMapping
     {
         public IInputFilter Filter { get; private set; }
         public InputFilterFactory.FilterType CurrentFilterType { get; private set; }
@@ -11,15 +11,21 @@ namespace Inventonater.BleHid
         public float GlobalScale = 1.0f;
         public float HorizontalSensitivity = 3.0f;
         public float VerticalSensitivity = 3.0f;
+        private Vector3 _pendingPosition;
+        private Vector3 _lastPosition;
+        private readonly MouseBridge _mouse;
+        private readonly bool _flipY;
 
-        public MousePositionFilter()
+        public MousePositionFilter(MouseBridge mouse, bool flipY = true)
         {
+            _mouse = mouse;
+            _flipY = flipY;
             CurrentFilterType = InputFilterFactory.FilterType.OneEuro;
             Filter = InputFilterFactory.CreateFilter(CurrentFilterType);
             Filter = Filter;
         }
 
-        public void Reset()
+        public void ResetPosition()
         {
             _lastFilteredPosition = null;
             Filter.Reset();
@@ -35,25 +41,22 @@ namespace Inventonater.BleHid
             LoggingManager.Instance.AddLogEntry($"Changed input filter to: {Filter.Name}");
         }
 
-        /// <summary>
-        /// Handle pointer input from any source (touch, mouse, external devices)
-        /// </summary>
-        /// <param name="position">Screen position of the input</param>
-        /// <param name="timestamp"></param>
-        /// <param name="flipY">Inverse the Y value</param>
-        public (float deltaX, float deltaY) CalculateDelta(Vector3 position, float timestamp, bool flipY = true)
-        {
-            if (flipY) position.y = -position.y;
-            if (!_lastFilteredPosition.HasValue) _lastFilteredPosition = position;
+        public void SetValue(Vector3 absolutePosition) => _pendingPosition = absolutePosition;
 
-            Vector2 filteredPosition = Filter.Filter(position, timestamp);
+        public void Update(float time)
+        {
+            if (_flipY) _pendingPosition.y = -_pendingPosition.y;
+
+            Vector2 filteredPosition = Filter.Filter(_pendingPosition, time);
+            _lastFilteredPosition ??= filteredPosition;
+
             var delta = filteredPosition - _lastFilteredPosition.Value;
             _lastFilteredPosition = filteredPosition;
 
             delta.x *= HorizontalSensitivity;
             delta.y *= VerticalSensitivity;
             delta *= GlobalScale;
-            return (delta.x, delta.y);
+            _mouse.MoveMouse(delta.x, delta.y);
         }
     }
 }

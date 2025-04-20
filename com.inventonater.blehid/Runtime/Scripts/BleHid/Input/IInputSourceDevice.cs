@@ -49,6 +49,7 @@ namespace Inventonater.BleHid
             LongPress,
         }
 
+        public static BleHidButtonEvent None { get; } = default;
         public bool Equals(BleHidButtonEvent other) => id == other.id && action == other.action;
         public override bool Equals(object obj) => obj is BleHidButtonEvent other && Equals(other);
         public override int GetHashCode() => HashCode.Combine((int)id, (int)action);
@@ -59,9 +60,10 @@ namespace Inventonater.BleHid
     public interface IInputSourceDevice
     {
         string Name { get; }
-        event Action<BleHidButtonEvent> WhenButtonEvent;
-        event Action<Vector3> WhenPositionEvent;
-        event Action<BleHidDirection> WhenDirectionEvent;
+        event Action<BleHidButtonEvent> NotifyButtonEvent;
+        event Action<BleHidDirection> NotifyDirection;
+        event Action<Vector3> NotifyPosition;
+        event Action NotifyResetPosition;
         void InputDeviceEnabled();
         void InputDeviceDisabled();
     }

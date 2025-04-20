@@ -19,11 +19,14 @@ namespace Inventonater.BleHid
         public MousePositionFilter MousePositionFilter { get; }
         public readonly Dictionary<BleHidButtonEvent, Action> ButtonMapping = new();
         public readonly Dictionary<BleHidDirection, Action> DirectionMapping = new();
-        public readonly Dictionary<BleHidAxis, IContinuousValue> AxisMapping = new();
+        private readonly List<IAxisMapping> _axisMappings = new();
 
         public KeyboardBridge Keyboard { get; }
         public MouseBridge Mouse { get; }
         public MediaBridge Media { get; }
+
+        private BleHidButtonEvent _pendingButtonEvent;
+        private BleHidDirection _pendingDirection;
 
         public InputDeviceMapping(BleHidManager manager)
         {
@@ -31,7 +34,6 @@ namespace Inventonater.BleHid
             Mouse = new MouseBridge(manager);
             Media = new MediaBridge(manager);
 
-            MousePositionFilter = new MousePositionFilter();
             AddPressRelease(BleHidButtonEvent.Id.Primary, 0);
             AddPressRelease(BleHidButtonEvent.Id.Secondary, 1);
             AddDirection(BleHidDirection.Up, BleHidConstants.KEY_UP);
@@ -39,10 +41,10 @@ namespace Inventonater.BleHid
             AddDirection(BleHidDirection.Down, BleHidConstants.KEY_DOWN);
             AddDirection(BleHidDirection.Left, BleHidConstants.KEY_LEFT);
 
-            AddAxis(BleHidAxis.Z, new ContinuousValue(() => Media.VolumeUp(), () => Media.VolumeDown()));
+            _axisMappings.Add(MousePositionFilter = new MousePositionFilter(Mouse));
+            _axisMappings.Add(new AxisMappingIncremental(BleHidAxis.Z, () => Media.VolumeUp(), () => Media.VolumeDown()));
         }
 
-        private void AddAxis(BleHidAxis axis, IContinuousValue continuousValue) => AxisMapping.Add(axis, continuousValue);
         private void AddDirection(BleHidDirection dir, byte hidConstant) => DirectionMapping.Add(dir, () => Keyboard.SendKey(hidConstant));
 
         public void AddPressRelease(BleHidButtonEvent.Id button, int mouseButtonId)
@@ -57,45 +59,32 @@ namespace Inventonater.BleHid
         public void AddDoubleTap(BleHidButtonEvent.Id button, byte hidConstant) =>
             ButtonMapping.Add(new BleHidButtonEvent(button, BleHidButtonEvent.Action.DoubleTap), () => Keyboard.SendKey(hidConstant));
 
-        private class ContinuousValue : IContinuousValue
+        public void SetDirection(BleHidDirection direction) => _pendingDirection = direction;
+        public void SetButtonEvent(BleHidButtonEvent buttonEvent) => _pendingButtonEvent = buttonEvent;
+        public void SetPosition(Vector3 absolutePosition)
         {
-            private readonly Action _increment;
-            private readonly Action _decrement;
-            private bool _initialized;
-            private int _lastIntValue;
-            private int _pendingDelta;
+            foreach (var axisMapping in _axisMappings) axisMapping.SetValue(absolutePosition);
+        }
+        public void ResetPosition()
+        {
+            foreach (var axisMapping in _axisMappings) axisMapping.ResetPosition();
+        }
 
-            public ContinuousValue(Action increment, Action decrement)
+        public void Update(float time)
+        {
+            if (_pendingButtonEvent != BleHidButtonEvent.None && ButtonMapping.TryGetValue(_pendingButtonEvent, out var buttonAction))
             {
-                _increment = increment;
-                _decrement = decrement;
+                buttonAction();
+                _pendingButtonEvent = BleHidButtonEvent.None;
             }
 
-            public void Update(float absoluteValue)
+            if (_pendingDirection != BleHidDirection.None && DirectionMapping.TryGetValue(_pendingDirection, out var directionAction))
             {
-                int intValue = Mathf.RoundToInt(absoluteValue);
-                if (!_initialized)
-                {
-                    _lastIntValue = intValue;
-                    _pendingDelta = 0;
-                    _initialized = true;
-                }
-
-                _pendingDelta += intValue - _lastIntValue;
-                _lastIntValue = intValue;
-
-                if (_pendingDelta > 0)
-                {
-                    _pendingDelta--;
-                    _increment();
-                }
-
-                if (_pendingDelta < 0)
-                {
-                    _pendingDelta++;
-                    _decrement();
-                }
+                directionAction();
+                _pendingDirection = BleHidDirection.None;
             }
+
+            foreach (var axisMapping in _axisMappings) axisMapping.Update(time);
         }
     }
 }

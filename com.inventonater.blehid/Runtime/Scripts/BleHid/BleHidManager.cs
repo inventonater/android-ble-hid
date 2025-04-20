@@ -1,5 +1,6 @@
 using System;
 using UnityEngine;
+using UnityEngine.PlayerLoop;
 
 namespace Inventonater.BleHid
 {
@@ -75,6 +76,11 @@ namespace Inventonater.BleHid
             // Setup event handlers
             SetupEventHandlers();
             Debug.Log("BleHidManager initialized");
+        }
+
+        private void Update()
+        {
+            InputRouter.Update(Time.time);
         }
 
         /// <summary>
