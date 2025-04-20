@@ -4,35 +4,31 @@ using UnityEngine;
 
 namespace Inventonater.BleHid
 {
-    public class InputDeviceMapping
+    public class InputDeviceMapping : MonoBehaviour
     {
-        public enum BleHidAxisInputDestination
-        {
-            None,
-            MouseX,
-            MouseY,
-            Volume,
-            Zoom,
-            Scroll
-        }
+        public MousePositionFilter MousePositionFilter => _mousePositionFilter;
 
-        public MousePositionFilter MousePositionFilter { get; }
         public readonly Dictionary<BleHidButtonEvent, Action> ButtonMapping = new();
         public readonly Dictionary<BleHidDirection, Action> DirectionMapping = new();
         private readonly List<IAxisMapping> _axisMappings = new();
 
-        public KeyboardBridge Keyboard { get; }
-        public MouseBridge Mouse { get; }
-        public MediaBridge Media { get; }
+        public KeyboardBridge Keyboard => _keyboard;
+        public MouseBridge Mouse => _mouse;
+        public MediaBridge Media => _media;
 
-        private BleHidButtonEvent _pendingButtonEvent;
-        private BleHidDirection _pendingDirection;
+        [SerializeField] private BleHidButtonEvent _pendingButtonEvent;
+        [SerializeField] private BleHidDirection _pendingDirection;
+        [SerializeField] private KeyboardBridge _keyboard;
+        [SerializeField] private MouseBridge _mouse;
+        [SerializeField] private MediaBridge _media;
+        [SerializeField] private MousePositionFilter _mousePositionFilter;
 
-        public InputDeviceMapping(BleHidManager manager)
+        private void Awake()
         {
-            Keyboard = new KeyboardBridge(manager);
-            Mouse = new MouseBridge(manager);
-            Media = new MediaBridge(manager);
+            var manager = BleHidManager.Instance;
+            _keyboard = new KeyboardBridge(manager);
+            _mouse = new MouseBridge(manager);
+            _media = new MediaBridge(manager);
 
             AddPressRelease(BleHidButtonEvent.Id.Primary, 0);
             AddPressRelease(BleHidButtonEvent.Id.Secondary, 1);
@@ -41,7 +37,7 @@ namespace Inventonater.BleHid
             AddDirection(BleHidDirection.Down, BleHidConstants.KEY_DOWN);
             AddDirection(BleHidDirection.Left, BleHidConstants.KEY_LEFT);
 
-            _axisMappings.Add(MousePositionFilter = new MousePositionFilter(Mouse));
+            _axisMappings.Add(_mousePositionFilter = new MousePositionFilter(Mouse));
             _axisMappings.Add(new AxisMappingIncremental(BleHidAxis.Z, () => Media.VolumeUp(), () => Media.VolumeDown()));
         }
 
@@ -61,16 +57,18 @@ namespace Inventonater.BleHid
 
         public void SetDirection(BleHidDirection direction) => _pendingDirection = direction;
         public void SetButtonEvent(BleHidButtonEvent buttonEvent) => _pendingButtonEvent = buttonEvent;
+
         public void SetPosition(Vector3 absolutePosition)
         {
             foreach (var axisMapping in _axisMappings) axisMapping.SetValue(absolutePosition);
         }
+
         public void ResetPosition()
         {
             foreach (var axisMapping in _axisMappings) axisMapping.ResetPosition();
         }
 
-        public void Update(float time)
+        private void Update()
         {
             if (_pendingButtonEvent != BleHidButtonEvent.None && ButtonMapping.TryGetValue(_pendingButtonEvent, out var buttonAction))
             {
@@ -84,7 +82,7 @@ namespace Inventonater.BleHid
                 _pendingDirection = BleHidDirection.None;
             }
 
-            foreach (var axisMapping in _axisMappings) axisMapping.Update(time);
+            foreach (var axisMapping in _axisMappings) axisMapping.Update(Time.time);
         }
     }
 }

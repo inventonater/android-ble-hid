@@ -40,21 +40,13 @@ namespace Inventonater.BleHid
         public BleEventSystem BleEventSystem { get; private set; }
         public BleAdvertiser BleAdvertiser { get; private set; }
         public ConnectionManager ConnectionManager { get; private set; }
-        public static BleHidManager Instance { get; private set; }
         public InputRouter InputRouter { get; private set; }
         public InputDeviceMapping Mapping { get; private set; }
+        public static BleHidManager Instance => FindFirstObjectByType<BleHidManager>();
 
         private void Awake()
         {
-            if (Instance != null && Instance != this)
-            {
-                Destroy(gameObject);
-                return;
-            }
-
-            Instance = this;
-            DontDestroyOnLoad(gameObject);
-
+            Debug.Log("BleHidManager starting");
             if (Application.isEditor)
             {
                 IsInitialized = true;
@@ -62,10 +54,8 @@ namespace Inventonater.BleHid
             }
 
             BleEventSystem = gameObject.AddComponent<BleEventSystem>();
-
-            Mapping = new InputDeviceMapping(this);
-            InputRouter = new InputRouter();
-
+            Mapping = gameObject.AddComponent<InputDeviceMapping>();
+            InputRouter = gameObject.AddComponent<InputRouter>();
             InputRouter.SetMapping(Mapping);
 
             BleInitializer = new BleInitializer(this);
@@ -76,11 +66,6 @@ namespace Inventonater.BleHid
             // Setup event handlers
             SetupEventHandlers();
             Debug.Log("BleHidManager initialized");
-        }
-
-        private void Update()
-        {
-            InputRouter.Update(Time.time);
         }
 
         /// <summary>

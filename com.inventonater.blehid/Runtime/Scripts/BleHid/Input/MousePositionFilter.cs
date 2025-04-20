@@ -1,7 +1,9 @@
+using System;
 using UnityEngine;
 
 namespace Inventonater.BleHid
 {
+    [Serializable]
     public class MousePositionFilter : IAxisMapping
     {
         public IInputFilter Filter { get; private set; }
@@ -11,10 +13,10 @@ namespace Inventonater.BleHid
         public float GlobalScale = 1.0f;
         public float HorizontalSensitivity = 3.0f;
         public float VerticalSensitivity = 3.0f;
-        private Vector3 _pendingPosition;
-        private Vector3 _lastPosition;
-        private readonly MouseBridge _mouse;
-        private readonly bool _flipY;
+        [SerializeField] private Vector3 _pendingPosition;
+        [SerializeField] private Vector3 _lastPosition;
+        [SerializeField] private MouseBridge _mouse;
+        [SerializeField] private bool _flipY;
 
         public MousePositionFilter(MouseBridge mouse, bool flipY = true)
         {
@@ -56,6 +58,7 @@ namespace Inventonater.BleHid
             delta.x *= HorizontalSensitivity;
             delta.y *= VerticalSensitivity;
             delta *= GlobalScale;
+
             _mouse.MoveMouse(delta.x, delta.y);
         }
     }

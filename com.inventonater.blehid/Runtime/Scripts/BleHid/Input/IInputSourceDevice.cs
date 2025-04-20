@@ -19,6 +19,7 @@ namespace Inventonater.BleHid
         Left
     }
 
+    [Serializable]
     public readonly struct BleHidButtonEvent : IEquatable<BleHidButtonEvent>
     {
         public readonly Id id;

@@ -37,13 +37,12 @@ namespace Inventonater.BleHid
         private Vector2 localTabScrollPosition = Vector2.zero;
         private float nextPermissionCheckTime = 0f;
 
-        private void Awake()
+        private void Start()
         {
             // Check if running in the Unity Editor
             if (IsEditorMode) isInitialized = true; // Auto-initialize in editor
 
-            GameObject managerObj = new GameObject("BleHidManager");
-            bleHidManager = managerObj.AddComponent<BleHidManager>();
+            bleHidManager = FindFirstObjectByType<BleHidManager>();
             bleHidManager.BleEventSystem.OnInitializeComplete += OnInitializeComplete;
             bleHidManager.BleEventSystem.OnAdvertisingStateChanged += OnAdvertisingStateChanged;
             bleHidManager.BleEventSystem.OnConnectionStateChanged += OnConnectionStateChanged;
