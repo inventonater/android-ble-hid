@@ -4,6 +4,7 @@ using UnityEngine;
 
 namespace Inventonater.BleHid
 {
+    [DefaultExecutionOrder(ExecutionOrder.Process)]
     public class InputDeviceMapping : MonoBehaviour
     {
         public MousePositionFilter MousePositionFilter => _mousePositionFilter;
@@ -68,6 +69,7 @@ namespace Inventonater.BleHid
             foreach (var axisMapping in _axisMappings) axisMapping.ResetPosition();
         }
 
+        // ExecutionOrder Process
         private void Update()
         {
             if (_pendingButtonEvent != BleHidButtonEvent.None && ButtonMapping.TryGetValue(_pendingButtonEvent, out var buttonAction))

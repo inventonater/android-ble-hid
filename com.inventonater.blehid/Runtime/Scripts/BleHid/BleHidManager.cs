@@ -1,13 +1,9 @@
 using System;
 using UnityEngine;
-using UnityEngine.PlayerLoop;
 
 namespace Inventonater.BleHid
 {
-    /// <summary>
-    /// Main Unity interface for BLE HID functionality.
-    /// This class provides methods to control Bluetooth HID emulation for keyboard, mouse, and media control.
-    /// </summary>
+    [DefaultExecutionOrder(ExecutionOrder.Initialize)]
     public class BleHidManager : MonoBehaviour
     {
         // State properties
@@ -44,6 +40,7 @@ namespace Inventonater.BleHid
                 IsInitialized = true;
                 IsConnected = true;
             }
+            Application.runInBackground = true;
 
             BleEventSystem = gameObject.AddComponent<BleEventSystem>();
             Mapping = gameObject.AddComponent<InputDeviceMapping>();
@@ -68,9 +65,6 @@ namespace Inventonater.BleHid
                 // Entering PiP mode - make sure our foreground service is running to keep the app alive
                 Debug.Log("Entering PiP mode - ensuring foreground service is running");
                 // ForegroundServiceManager.EnsureServiceRunning(true);
-                
-                // Ensure Unity continues running in the background
-                Application.runInBackground = true;
                 
                 // Start the background worker thread to continue processing in PiP mode
                 Debug.Log("Starting background worker for PiP mode");

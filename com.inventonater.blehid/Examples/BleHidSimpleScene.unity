@@ -387,9 +387,8 @@ GameObject:
   m_Component:
   - component: {fileID: 1615249327}
   - component: {fileID: 1615249328}
-  - component: {fileID: 1615249329}
   m_Layer: 0
-  m_Name: BleHidSampleUI
+  m_Name: BleHidControlPanel
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -422,22 +421,55 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 6c65e4a40748440f5ad9823b7b585a48, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
---- !u!114 &1615249329
+--- !u!1 &1789663937
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1789663939}
+  - component: {fileID: 1789663938}
+  m_Layer: 0
+  m_Name: BleHidManager
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &1789663938
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1615249325}
+  m_GameObject: {fileID: 1789663937}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 88aa0c58683f4dc5bdda617721c223e8, type: 3}
+  m_Script: {fileID: 11500000, guid: 81c665979d1644c679d38c0a2cb5d856, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+--- !u!4 &1789663939
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1789663937}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 1, z: 0.67594194}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0
   m_Roots:
   - {fileID: 961739753}
   - {fileID: 203844589}
+  - {fileID: 1789663939}
   - {fileID: 1615249327}

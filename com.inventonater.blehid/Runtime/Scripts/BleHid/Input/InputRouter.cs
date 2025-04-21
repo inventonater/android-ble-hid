@@ -2,6 +2,7 @@ using UnityEngine;
 
 namespace Inventonater.BleHid
 {
+    [DefaultExecutionOrder(ExecutionOrder.Preprocess)]
     public class InputRouter : MonoBehaviour
     {
         public delegate void InputDeviceChangedEvent(IInputSourceDevice prev, IInputSourceDevice next);
