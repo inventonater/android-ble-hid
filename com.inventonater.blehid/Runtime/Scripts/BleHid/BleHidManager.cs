@@ -25,17 +25,9 @@ namespace Inventonater.BleHid
         public int Rssi { get; internal set; }
         public int TxPowerLevel { get; internal set; }
         
-        /// <summary>
-        /// Indicates if the app is currently running in Picture-in-Picture mode
-        /// </summary>
         public bool IsInPipMode { get; internal set; }
-        
-        /// <summary>
-        /// Background worker for PiP mode to ensure processing continues
-        /// </summary>
         public PipBackgroundWorker PipWorker { get; private set; }
 
-        // Component references
         public BleInitializer BleInitializer { get; private set; }
         public BleEventSystem BleEventSystem { get; private set; }
         public BleAdvertiser BleAdvertiser { get; private set; }
@@ -63,27 +55,12 @@ namespace Inventonater.BleHid
             ConnectionManager = new ConnectionManager(this);
             PipWorker = new PipBackgroundWorker();
 
-            // Setup event handlers
-            SetupEventHandlers();
+            BleEventSystem.OnPipModeChanged += HandlePipModeChanged;
             Debug.Log("BleHidManager initialized");
         }
 
-        /// <summary>
-        /// Set up the event handlers for various callbacks
-        /// </summary>
-        private void SetupEventHandlers()
-        {
-            // Handle PiP mode changes
-            BleEventSystem.OnPipModeChanged += HandlePipModeChanged;
-        }
-
-        /// <summary>
-        /// Handles PiP mode change events
-        /// </summary>
-        /// <param name="isInPipMode">True if entering PiP mode, false if exiting</param>
         public void HandlePipModeChanged(bool isInPipMode)
         {
-            // Update the PiP mode state
             IsInPipMode = isInPipMode;
 
             if (isInPipMode)

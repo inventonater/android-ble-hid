@@ -1,31 +1,15 @@
 using System;
-using System.Collections.Concurrent;
 using System.Threading;
 using UnityEngine;
 
 namespace Inventonater.BleHid
 {
-    /// <summary>
-    /// Background worker that runs in a separate thread to ensure functionality
-    /// continues even when Unity's main thread may be paused (such as in PiP mode).
-    /// </summary>
     public class PipBackgroundWorker
     {
         private Thread workerThread;
         private volatile bool isRunning;
         private int counter = 0;
-        
-        /// <summary>
-        /// Initialize the background worker
-        /// </summary>
-        public PipBackgroundWorker()
-        {
-            Debug.Log("PipBackgroundWorker initialized");
-        }
 
-        /// <summary>
-        /// Start the background worker thread
-        /// </summary>
         public void Start()
         {
             if (isRunning && workerThread != null)
@@ -45,14 +29,8 @@ namespace Inventonater.BleHid
             Debug.Log($"[{DateTime.Now}] Background worker started");
         }
 
-        /// <summary>
-        /// The main function for the worker thread
-        /// </summary>
         private void WorkerThreadFunction()
         {
-            // We can't call Debug.Log directly from a background thread
-            // so we'll add entries to a queue that will be processed on the main thread
-            
             Debug.Log("Worker thread function running");
             
             try
@@ -86,9 +64,6 @@ namespace Inventonater.BleHid
             }
         }
 
-        /// <summary>
-        /// Stop the background worker thread
-        /// </summary>
         public void Stop()
         {
             isRunning = false;
