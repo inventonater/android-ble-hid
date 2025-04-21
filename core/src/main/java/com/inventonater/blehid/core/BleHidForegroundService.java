@@ -14,7 +14,7 @@ import android.os.Looper;
 import android.provider.Settings;
 import android.util.Log;
 
-import androidx.core.app.NotificationCompat;
+// Removed AndroidX dependency
 
 /**
  * Foreground service that ensures the LocalAccessibilityService remains running.
@@ -216,16 +216,15 @@ public class BleHidForegroundService extends Service {
         PendingIntent pendingIntent = PendingIntent.getActivity(this, 0, 
                 notificationIntent, PendingIntent.FLAG_IMMUTABLE);
         
-        // Simple static notification
-        NotificationCompat.Builder builder = new NotificationCompat.Builder(this, CHANNEL_ID)
+        // Simple static notification using standard Android APIs instead of AndroidX
+        Notification.Builder builder = new Notification.Builder(this, CHANNEL_ID)
             .setContentTitle("BleHID Running")
             .setContentText("Bluetooth HID service is active")
             .setSmallIcon(android.R.drawable.stat_sys_data_bluetooth)
             .setContentIntent(pendingIntent)
-            .setForegroundServiceBehavior(NotificationCompat.FOREGROUND_SERVICE_IMMEDIATE)
-            .setPriority(NotificationCompat.PRIORITY_DEFAULT)
-            .setCategory(NotificationCompat.CATEGORY_SERVICE)
-            .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
+            .setPriority(Notification.PRIORITY_DEFAULT)
+            .setCategory(Notification.CATEGORY_SERVICE)
+            .setVisibility(Notification.VISIBILITY_PUBLIC)
             .setOngoing(true)
             .setAutoCancel(false);
             
@@ -273,13 +272,13 @@ public class BleHidForegroundService extends Service {
         PendingIntent settingsPendingIntent = PendingIntent.getActivity(this, 0,
                 settingsIntent, PendingIntent.FLAG_IMMUTABLE);
         
-        Notification notification = new NotificationCompat.Builder(this, CHANNEL_ID)
+        Notification notification = new Notification.Builder(this, CHANNEL_ID)
             .setContentTitle("Action Required")
             .setContentText("BleHID needs accessibility permission to function properly")
             .setSmallIcon(android.R.drawable.ic_dialog_alert)
             .setContentIntent(settingsPendingIntent)
-            .setPriority(NotificationCompat.PRIORITY_HIGH)
-            .setCategory(NotificationCompat.CATEGORY_RECOMMENDATION)
+            .setPriority(Notification.PRIORITY_HIGH)
+            .setCategory(Notification.CATEGORY_RECOMMENDATION)
             .build();
             
         notificationManager.notify(NOTIFICATION_ID + 1, notification);
