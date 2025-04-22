@@ -11,8 +11,7 @@ namespace Inventonater.BleHid.Editor
     public class BleHidBuildHelper
     {
         private const string AndroidPluginsFolderPath = "Runtime/Plugins/Android";
-        private const string PluginFilename = "BleHidPlugin.aar";
-        private const string CoreFilename = "BleHidCore.aar";
+        private const string PluginFilename = "BleHid.aar";
         private const string ManifestFilename = "AndroidManifest.xml";
         
         [MenuItem("Inventonater/BLE HID/Setup Plugin")]
@@ -30,20 +29,18 @@ namespace Inventonater.BleHid.Editor
                 Directory.CreateDirectory(androidPluginsPath);
             }
             
-            // Check if AAR files exist in the unity-test project
+            // Check if AAR file exists in the unity-test project
             string unityTestPluginPath = Path.Combine(Application.dataPath, "Plugins/Android", PluginFilename);
-            string unityTestCorePath = Path.Combine(Application.dataPath, "Plugins/Android", CoreFilename);
             
             // This will copy from the unity-test project to our package for migration purposes
-            if (File.Exists(unityTestPluginPath) && File.Exists(unityTestCorePath))
+            if (File.Exists(unityTestPluginPath))
             {
                 Debug.Log("Found existing AAR files in Unity project. Copying to package...");
                 
                 try
                 {
                     File.Copy(unityTestPluginPath, Path.Combine(androidPluginsPath, PluginFilename), true);
-                    File.Copy(unityTestCorePath, Path.Combine(androidPluginsPath, CoreFilename), true);
-                    Debug.Log("Plugin files copied successfully!");
+                    Debug.Log("Plugin file copied successfully!");
                     
                     // Check if the project's Plugins/Android folder has an AndroidManifest.xml
                     string unityProjectManifestPath = Path.Combine(Application.dataPath, "Plugins/Android", ManifestFilename);
@@ -60,7 +57,7 @@ namespace Inventonater.BleHid.Editor
             }
             else
             {
-                Debug.LogWarning("Plugin AAR files not found in Unity project. Please build the Android plugin first.");
+                Debug.LogWarning("Plugin AAR file not found in Unity project. Please build the Android plugin first.");
                 if (EditorUtility.DisplayDialog("Build Plugin", 
                     "Would you like to build the Android plugin now?", 
                     "Yes", "No"))

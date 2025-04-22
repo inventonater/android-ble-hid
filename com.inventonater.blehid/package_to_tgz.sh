@@ -18,8 +18,8 @@ echo "Building $PACKAGE_NAME version $VERSION..."
 mkdir -p Runtime/Plugins/Android
 
 # Check if AAR files exist
-if [ ! -f "Runtime/Plugins/Android/BleHidPlugin.aar" ] || [ ! -f "Runtime/Plugins/Android/BleHidCore.aar" ]; then
-    echo "Warning: AAR files not found in Runtime/Plugins/Android/"
+if [ ! -f "Runtime/Plugins/Android/BleHid.aar" ]; then
+    echo "Warning: AAR file not found in Runtime/Plugins/Android/"
     echo "You may need to build the Android plugin first using:"
     echo "  ./gradlew :unity-plugin:copyToUnity"
     

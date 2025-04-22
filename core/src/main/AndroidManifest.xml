@@ -1,5 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
-    <!-- This is a library module, so no permissions are defined here -->
-    <!-- Permissions are defined in the app module's manifest -->
-</manifest>

@@ -43,7 +43,7 @@ android {
     
     // Temporarily disable lint to verify our consolidation changes
     lint {
-        abortOnError = false
+        abortOnError false
     }
     
     buildTypes {
@@ -81,46 +81,36 @@ android {
     }
 }
 
-// Custom task to copy the plugin AAR to Unity package
-tasks.register('copyPluginToPackage', Copy) {
+// Custom task to copy the consolidated AAR to Unity package
+tasks.register('copyConsolidatedAarToPackage', Copy) {
     dependsOn 'assembleRelease'
     from "${buildDir}/outputs/aar/unity-plugin-release.aar"
     into "../com.inventonater.blehid/Runtime/Plugins/Android"
     rename { String fileName ->
-        fileName.replace("unity-plugin-release.aar", "BleHidPlugin.aar")
+        fileName.replace("unity-plugin-release.aar", "BleHid.aar")
+    }
+    doLast {
+        logger.lifecycle("Copied consolidated AAR to Unity package directory")
     }
 }
 
-// Custom task to copy the core AAR to Unity package
-tasks.register('copyCoreToPackage', Copy) {
-    dependsOn ':core:assembleRelease'
-    from "../core/build/outputs/aar/core-release.aar"
-    into "../com.inventonater.blehid/Runtime/Plugins/Android"
-    rename { String fileName ->
-        fileName.replace("core-release.aar", "BleHidCore.aar")
-    }
-}
-
-// Custom task to stamp the AAR files with a timestamp for Git tracking
-tasks.register('stampAarFiles') {
-    description = 'Adds a timestamp to AAR files to ensure Git recognizes changes'
+// Custom task to stamp the consolidated AAR file with a timestamp for Git tracking
+tasks.register('stampAarFile') {
+    description = 'Adds a timestamp to the consolidated AAR file to ensure Git recognizes changes'
     
-    // Make this task depend only on the package copy tasks
-    dependsOn copyPluginToPackage, copyCoreToPackage
+    // Make this task depend on the package copy task
+    dependsOn copyConsolidatedAarToPackage
     
-    // Define the paths to the AAR files
-    def packagePluginAarFile = file("../com.inventonater.blehid/Runtime/Plugins/Android/BleHidPlugin.aar")
-    def packageCoreAarFile = file("../com.inventonater.blehid/Runtime/Plugins/Android/BleHidCore.aar")
+    // Define the path to the AAR file
+    def consolidatedAarFile = file("../com.inventonater.blehid/Runtime/Plugins/Android/BleHid.aar")
     
     doLast {
-        def stampedFiles = 0
-        
         // Function to stamp an AAR file
         def stampAarFile = { aarFile ->
             if (aarFile.exists()) {
                 // Create a temporary file with timestamp
                 def tempFile = File.createTempFile("timestamp", ".txt")
-                tempFile.text = "Build timestamp: ${new Date()}"
+                tempFile.text = "Build timestamp: ${new Date()} - Consolidated AAR containing both core and unity plugin"
                 
                 // Add the timestamp to the AAR (which is just a ZIP file)
                 ant.zip(destfile: aarFile, update: true) {
@@ -130,44 +120,35 @@ tasks.register('stampAarFiles') {
                 // Clean up
                 tempFile.delete()
                 
-                logger.lifecycle("AAR file stamped: ${aarFile.name}")
-                stampedFiles++
+                logger.lifecycle("Consolidated AAR file stamped: ${aarFile.name}")
                 return true
             } else {
-                logger.warn("AAR file not found: ${aarFile.name}")
-                return false
+                logger.error("Consolidated AAR file not found: ${aarFile.name}")
+                throw new GradleException("Consolidated AAR file not found for stamping")
             }
         }
         
-        // Stamp package files only
-        stampAarFile(packagePluginAarFile)
-        stampAarFile(packageCoreAarFile)
-        
-        if (stampedFiles == 0) {
-            logger.error("No AAR files were found to stamp")
-            throw new GradleException("No AAR files found for stamping")
-        } else {
-            logger.lifecycle("Stamped ${stampedFiles} AAR file(s) successfully")
-        }
+        stampAarFile(consolidatedAarFile)
+        logger.lifecycle("Consolidated AAR stamped successfully")
     }
 }
 
-// Task to copy both AARs to Unity package and stamp them
+// Task to copy the consolidated AAR to Unity package and stamp it
 tasks.register('copyToUnity') {
-    dependsOn stampAarFiles
-    description = 'Copies both the plugin and core AARs to the Unity package and stamps them for Git tracking'
+    dependsOn stampAarFile
+    description = 'Copies the consolidated AAR to the Unity package and stamps it for Git tracking'
 }
 
 // More descriptive alias for new projects
 tasks.register('copyToPackage') {
     dependsOn copyToUnity
-    description = 'Alias for copyToUnity - copies AARs to the package structure'
+    description = 'Alias for copyToUnity - copies consolidated AAR to the package structure'
 }
 
 dependencies {
-    // Use api instead of implementation to ensure core classes are included
-    api project(':core')
+    // Core implementation is now directly included in this module
+    implementation rootProject.ext.deps.core
     
-    // engine stubs
+    // Unity engine stubs
     compileOnly files(unityClassesJar)
 }

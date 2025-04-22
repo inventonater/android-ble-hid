@@ -4,8 +4,8 @@ A Bluetooth Low Energy (BLE) Human Interface Device (HID) library for Android th
 
 ## Project Structure
 
-- **core**: Core BLE HID functionality
-- **unity-plugin**: Unity bridge for the core
+- **core**: Core BLE HID functionality implementation
+- **unity-plugin**: Unity bridge that wraps the core module
 - **com.inventonater.blehid**: Unity package (UPM)
 
 ## Building and Installation
@@ -13,13 +13,13 @@ A Bluetooth Low Energy (BLE) Human Interface Device (HID) library for Android th
 ### Building the Android Libraries
 
 ```bash
-# Build the core and unity plugin
+# Build the consolidated Android plugin
 ./build-aar-plugin.sh
 ```
 
 This script:
-1. Builds the core and unity-plugin modules
-2. Copies the AAR files to the Unity package
+1. Builds the core and unity-plugin modules as a single consolidated AAR
+2. Copies the AAR file to the Unity package
 
 ### Creating the Unity Package
 
