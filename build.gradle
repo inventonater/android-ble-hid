@@ -46,12 +46,12 @@ allprojects {
     }
 }
 
-task clean(type: Delete) {
+tasks.register('clean', Delete) {
     delete rootProject.buildDir
 }
 
 // Task to print dependency tree for debugging
-task showDeps {
+tasks.register('showDeps') {
     doLast {
         println "\\nDependency Report for project: $project.name"
         project.configurations.getByName('implementation').resolvedConfiguration.lenientConfiguration.allModuleDependencies.each { dep ->
@@ -62,7 +62,7 @@ task showDeps {
 
 // Apply the task to all projects
 subprojects {
-    task showDependencies {
+    tasks.register('showDependencies') {
         doLast {
             println "\\nDependency Report for project: $project.name"
             configurations.findAll { it.canBeResolved }.each { config ->

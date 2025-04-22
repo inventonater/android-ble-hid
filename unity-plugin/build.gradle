@@ -1,4 +1,6 @@
-apply plugin: 'com.android.library'
+plugins {
+    id 'com.android.library'
+}
 
 // Function to load, increment, and save the build number
 def getAndIncrementBuildNumber() {
@@ -40,8 +42,8 @@ android {
     }
     
     // Temporarily disable lint to verify our consolidation changes
-    lintOptions {
-        abortOnError false
+    lint {
+        abortOnError = false
     }
     
     buildTypes {
@@ -80,7 +82,8 @@ android {
 }
 
 // Custom task to copy the plugin AAR to Unity package
-task copyPluginToPackage(type: Copy, dependsOn: 'assembleRelease') {
+tasks.register('copyPluginToPackage', Copy) {
+    dependsOn 'assembleRelease'
     from "${buildDir}/outputs/aar/unity-plugin-release.aar"
     into "../com.inventonater.blehid/Runtime/Plugins/Android"
     rename { String fileName ->
@@ -89,7 +92,8 @@ task copyPluginToPackage(type: Copy, dependsOn: 'assembleRelease') {
 }
 
 // Custom task to copy the core AAR to Unity package
-task copyCoreToPackage(type: Copy, dependsOn: ':core:assembleRelease') {
+tasks.register('copyCoreToPackage', Copy) {
+    dependsOn ':core:assembleRelease'
     from "../core/build/outputs/aar/core-release.aar"
     into "../com.inventonater.blehid/Runtime/Plugins/Android"
     rename { String fileName ->
@@ -98,7 +102,7 @@ task copyCoreToPackage(type: Copy, dependsOn: ':core:assembleRelease') {
 }
 
 // Custom task to stamp the AAR files with a timestamp for Git tracking
-task stampAarFiles {
+tasks.register('stampAarFiles') {
     description = 'Adds a timestamp to AAR files to ensure Git recognizes changes'
     
     // Make this task depend only on the package copy tasks
@@ -149,12 +153,14 @@ task stampAarFiles {
 }
 
 // Task to copy both AARs to Unity package and stamp them
-task copyToUnity(dependsOn: [stampAarFiles]) {
+tasks.register('copyToUnity') {
+    dependsOn stampAarFiles
     description = 'Copies both the plugin and core AARs to the Unity package and stamps them for Git tracking'
 }
 
 // More descriptive alias for new projects
-task copyToPackage(dependsOn: [copyToUnity]) {
+tasks.register('copyToPackage') {
+    dependsOn copyToUnity
     description = 'Alias for copyToUnity - copies AARs to the package structure'
 }
 
