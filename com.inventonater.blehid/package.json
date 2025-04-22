@@ -9,11 +9,30 @@
     "name": "Inventonater",
     "url": "https://www.inventonater.com"
   },
-  "dependencies": {},
+  "dependencies": {
+    "com.unity.nuget.newtonsoft-json": "3.2.1"
+  },
   "keywords": [
     "bluetooth",
     "ble",
     "hid",
     "android"
+  ],
+  "scopedRegistries": [
+    {
+      "name": "package.openupm.com",
+      "url": "https://package.openupm.com",
+      "scopes": [
+        "com.openupm",
+        "org.nuget",
+        "com.adrenak",
+        "com.cysharp",
+        "com.openai",
+        "com.utilities",
+        "com.dbrizov",
+        "com.neuecc",
+        "com.browar"
+      ]
+    }
   ]
 }
