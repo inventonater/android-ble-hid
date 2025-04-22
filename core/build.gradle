@@ -27,12 +27,4 @@ android {
 
 dependencies {
     implementation rootProject.ext.deps.core
-    testImplementation rootProject.ext.deps.junit
-    androidTestImplementation rootProject.ext.deps.androidxTestJunit
-    
-    // Add explicit Kotlin dependencies with consistent versions
-    implementation 'org.jetbrains.kotlin:kotlin-stdlib:1.8.10'
-    implementation 'org.jetbrains.kotlin:kotlin-stdlib-jdk7:1.8.10'
-    implementation 'org.jetbrains.kotlin:kotlin-stdlib-jdk8:1.8.10'
-    implementation 'org.jetbrains.kotlin:kotlin-stdlib-common:1.8.10'
 }
