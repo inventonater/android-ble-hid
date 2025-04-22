@@ -170,13 +170,7 @@ public class BleAdvertiser {
             return false;
         }
         
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.LOLLIPOP) {
-            lastErrorMessage = ERROR_ANDROID_VERSION;
-            Log.e(TAG, "❌ " + lastErrorMessage);
-            showToast("Android version too old for BLE advertising!");
-            advertisingFailures++;
-            return false;
-        }
+        // API level check removed - minimum SDK is now API 31 (Android 12)
         
         // Check if Bluetooth is enabled
         if (!bluetoothAdapter.isEnabled()) {
@@ -211,9 +205,7 @@ public class BleAdvertiser {
             Log.e(TAG, "❌ Device reports no peripheral mode support. Bluetooth adapter: " + 
                   (bluetoothAdapter != null ? "Available" : "Unavailable") + 
                   ", isMultipleAdvertisementSupported: " + 
-                  (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP && 
-                   bluetoothAdapter != null && 
-                   bluetoothAdapter.isMultipleAdvertisementSupported()));
+                  (bluetoothAdapter != null && bluetoothAdapter.isMultipleAdvertisementSupported()));
             
             showToast("Device reports no BLE peripheral support");
             advertisingFailures++;
@@ -266,18 +258,16 @@ public class BleAdvertiser {
         Log.i(TAG, "=== 📱 DEVICE CAPABILITIES ===");
         Log.i(TAG, "Device name: " + bluetoothAdapter.getName());
         Log.i(TAG, "Device address: " + bluetoothAdapter.getAddress());
-        Log.i(TAG, "Android SDK: " + Build.VERSION.SDK_INT);
         Log.i(TAG, "Bluetooth enabled: " + bluetoothAdapter.isEnabled());
         
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-            Log.i(TAG, "isMultipleAdvertisementSupported: " + bluetoothAdapter.isMultipleAdvertisementSupported());
-            Log.i(TAG, "isOffloadedFilteringSupported: " + bluetoothAdapter.isOffloadedFilteringSupported());
-            Log.i(TAG, "isOffloadedScanBatchingSupported: " + bluetoothAdapter.isOffloadedScanBatchingSupported());
-            Log.i(TAG, "isLe2MPhySupported: " + (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && bluetoothAdapter.isLe2MPhySupported()));
-            Log.i(TAG, "isLeCodedPhySupported: " + (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && bluetoothAdapter.isLeCodedPhySupported()));
-            Log.i(TAG, "isLeExtendedAdvertisingSupported: " + (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && bluetoothAdapter.isLeExtendedAdvertisingSupported()));
-            Log.i(TAG, "BluetoothLeAdvertiser: " + (bluetoothAdapter.getBluetoothLeAdvertiser() != null ? "Available" : "Not available"));
-        }
+        // API level checks removed - minimum SDK is now API 31 (Android 12)
+        Log.i(TAG, "isMultipleAdvertisementSupported: " + bluetoothAdapter.isMultipleAdvertisementSupported());
+        Log.i(TAG, "isOffloadedFilteringSupported: " + bluetoothAdapter.isOffloadedFilteringSupported());
+        Log.i(TAG, "isOffloadedScanBatchingSupported: " + bluetoothAdapter.isOffloadedScanBatchingSupported());
+        Log.i(TAG, "isLe2MPhySupported: " + bluetoothAdapter.isLe2MPhySupported());
+        Log.i(TAG, "isLeCodedPhySupported: " + bluetoothAdapter.isLeCodedPhySupported());
+        Log.i(TAG, "isLeExtendedAdvertisingSupported: " + bluetoothAdapter.isLeExtendedAdvertisingSupported());
+        Log.i(TAG, "BluetoothLeAdvertiser: " + (bluetoothAdapter.getBluetoothLeAdvertiser() != null ? "Available" : "Not available"));
         Log.i(TAG, "================================");
     }
 

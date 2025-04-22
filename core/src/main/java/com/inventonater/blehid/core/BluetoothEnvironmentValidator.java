@@ -3,7 +3,6 @@ package com.inventonater.blehid.core;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothManager;
 import android.content.Context;
-import android.os.Build;
 import android.util.Log;
 
 /**
@@ -70,16 +69,11 @@ public class BluetoothEnvironmentValidator {
             return false;
         }
         
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-            boolean supported = bluetoothAdapter.isMultipleAdvertisementSupported();
-            if (!supported) {
-                Log.e(TAG, "BLE peripheral mode not supported");
-            }
-            return supported;
+        boolean supported = bluetoothAdapter.isMultipleAdvertisementSupported();
+        if (!supported) {
+            Log.e(TAG, "BLE peripheral mode not supported");
         }
-        
-        Log.e(TAG, "BLE peripheral mode requires Android 5.0+");
-        return false;
+        return supported;
     }
     
     /**
