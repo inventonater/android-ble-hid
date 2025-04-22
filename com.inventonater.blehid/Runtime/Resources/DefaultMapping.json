@@ -1,0 +1,84 @@
+{
+  "name": "Default Configuration",
+  "description": "Standard mapping for mouse and keyboard control",
+  "version": "1.0",
+  "buttonMappings": [
+    {
+      "inputEvent": "Primary.Press",
+      "action": "Mouse.LeftButton.Press"
+    },
+    {
+      "inputEvent": "Primary.Release",
+      "action": "Mouse.LeftButton.Release"
+    },
+    {
+      "inputEvent": "Secondary.Press",
+      "action": "Mouse.RightButton.Press"
+    },
+    {
+      "inputEvent": "Secondary.Release",
+      "action": "Mouse.RightButton.Release"
+    },
+    {
+      "inputEvent": "Tertiary.Press",
+      "action": "Mouse.MiddleButton.Press"
+    },
+    {
+      "inputEvent": "Tertiary.Release",
+      "action": "Mouse.MiddleButton.Release"
+    }
+  ],
+  "directionMappings": [
+    {
+      "inputDirection": "Up",
+      "action": "Keyboard.Key",
+      "keyCode": "UpArrow"
+    },
+    {
+      "inputDirection": "Down",
+      "action": "Keyboard.Key",
+      "keyCode": "DownArrow"
+    },
+    {
+      "inputDirection": "Left",
+      "action": "Keyboard.Key",
+      "keyCode": "LeftArrow"
+    },
+    {
+      "inputDirection": "Right",
+      "action": "Keyboard.Key",
+      "keyCode": "RightArrow"
+    }
+  ],
+  "axisMappings": [
+    {
+      "type": "Mouse",
+      "axis": "XY",
+      "settings": {
+        "horizontalSensitivity": 3.0,
+        "verticalSensitivity": 3.0,
+        "flipY": true,
+        "filter": "OneEuro"
+      },
+      "filterSettings": {
+        "beta": 0.007,
+        "minCutoff": 1.0
+      },
+      "serializedFilter": {
+        "$type": "Inventonater.BleHid.OneEuroFilter, Assembly-CSharp",
+        "_minCutoff": 1.0,
+        "_beta": 0.007,
+        "_dcutoff": 1.0
+      }
+    },
+    {
+      "type": "Incremental",
+      "axis": "Z",
+      "incrementAction": "Media.VolumeUp",
+      "decrementAction": "Media.VolumeDown",
+      "settings": {
+        "interval": 0.02
+      }
+    }
+  ]
+}

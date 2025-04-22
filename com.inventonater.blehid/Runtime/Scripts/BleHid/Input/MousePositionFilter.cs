@@ -33,14 +33,62 @@ namespace Inventonater.BleHid
             Filter.Reset();
         }
 
+        /// <summary>
+        /// Set the input filter by type
+        /// </summary>
         public void SetInputFilter(InputFilterFactory.FilterType value)
         {
             if (CurrentFilterType == value) return;
             CurrentFilterType = value;
             Filter = InputFilterFactory.CreateFilter(CurrentFilterType);
             Filter.Reset();
-            BleHidManager.Instance.InputRouter.Mapping.MousePositionFilter.Filter = Filter;
+            
+            // Update the filter in the input router if available
+            if (BleHidManager.Instance?.InputRouter?.Mapping?.MousePositionFilter != null)
+            {
+                BleHidManager.Instance.InputRouter.Mapping.MousePositionFilter.Filter = Filter;
+            }
+            
             LoggingManager.Instance.AddLogEntry($"Changed input filter to: {Filter.Name}");
+        }
+        
+        /// <summary>
+        /// Set the input filter directly with a pre-configured filter instance
+        /// </summary>
+        public void SetInputFilter(IInputFilter filter)
+        {
+            if (filter == null) return;
+            
+            // Try to determine the filter type
+            CurrentFilterType = DetermineFilterType(filter);
+            
+            // Set the filter
+            Filter = filter;
+            Filter.Reset();
+            
+            // Update the filter in the input router if available
+            if (BleHidManager.Instance?.InputRouter?.Mapping?.MousePositionFilter != null)
+            {
+                BleHidManager.Instance.InputRouter.Mapping.MousePositionFilter.Filter = Filter;
+            }
+            
+            LoggingManager.Instance.AddLogEntry($"Applied custom filter: {Filter.Name}");
+        }
+        
+        /// <summary>
+        /// Determine the filter type from a filter instance
+        /// </summary>
+        private InputFilterFactory.FilterType DetermineFilterType(IInputFilter filter)
+        {
+            if (filter is OneEuroFilter) return InputFilterFactory.FilterType.OneEuro;
+            if (filter is KalmanFilter) return InputFilterFactory.FilterType.Kalman;
+            if (filter is ExponentialMovingAverageFilter) return InputFilterFactory.FilterType.ExponentialMA;
+            if (filter is DoubleExponentialFilter) return InputFilterFactory.FilterType.DoubleExponential;
+            if (filter is PredictiveFilter) return InputFilterFactory.FilterType.Predictive;
+            if (filter is MuteFilter) return InputFilterFactory.FilterType.Mute;
+            if (filter is RawPassthrough) return InputFilterFactory.FilterType.None;
+            
+            return InputFilterFactory.FilterType.OneEuro; // Default
         }
 
         public void SetValue(Vector3 absolutePosition) => _pendingPosition = absolutePosition;

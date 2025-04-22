@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using UnityEngine;
 
 namespace Inventonater.BleHid
@@ -7,54 +8,154 @@ namespace Inventonater.BleHid
     [DefaultExecutionOrder(ExecutionOrder.Process)]
     public class InputDeviceMapping : MonoBehaviour
     {
-        public MousePositionFilter MousePositionFilter => _mousePositionFilter;
+        [SerializeField] private string _configurationPath = "";
+        [SerializeField] private bool _loadDefaultConfigOnStart = true;
+        
+        public MousePositionFilter MousePositionFilter { get; private set; }
 
         public readonly Dictionary<BleHidButtonEvent, Action> ButtonMapping = new();
         public readonly Dictionary<BleHidDirection, Action> DirectionMapping = new();
         private readonly List<IAxisMapping> _axisMappings = new();
 
-        public KeyboardBridge Keyboard => _keyboard;
-        public MouseBridge Mouse => _mouse;
-        public MediaBridge Media => _media;
-
         [SerializeField] private BleHidButtonEvent _pendingButtonEvent;
         [SerializeField] private BleHidDirection _pendingDirection;
-        [SerializeField] private KeyboardBridge _keyboard;
-        [SerializeField] private MouseBridge _mouse;
-        [SerializeField] private MediaBridge _media;
-        [SerializeField] private MousePositionFilter _mousePositionFilter;
+
+        private MappingConfiguration _currentConfig;
+        private ActionResolver _actionResolver;
+        private AxisMappingFactory _axisMappingFactory;
+        private MappingConfigurationManager _configManager;
+
+        private BleBridge BleBridge => BleHidManager.Instance.BleBridge;
+        private MouseBridge Mouse => BleBridge.Mouse;
+        private KeyboardBridge Keyboard => BleBridge.Keyboard;
+        private MediaBridge Media => BleBridge.Media;
 
         private void Awake()
         {
-            var manager = BleHidManager.Instance;
-            _keyboard = new KeyboardBridge(manager);
-            _mouse = new MouseBridge(manager);
-            _media = new MediaBridge(manager);
-
-            AddPressRelease(BleHidButtonEvent.Id.Primary, 0);
-            AddPressRelease(BleHidButtonEvent.Id.Secondary, 1);
-            AddDirection(BleHidDirection.Up, BleHidConstants.KEY_UP);
-            AddDirection(BleHidDirection.Right, BleHidConstants.KEY_RIGHT);
-            AddDirection(BleHidDirection.Down, BleHidConstants.KEY_DOWN);
-            AddDirection(BleHidDirection.Left, BleHidConstants.KEY_LEFT);
-
-            _axisMappings.Add(_mousePositionFilter = new MousePositionFilter(Mouse));
-            _axisMappings.Add(new AxisMappingIncremental(BleHidAxis.Z, () => Media.VolumeUp(), () => Media.VolumeDown()));
+            _actionResolver = new ActionResolver(BleBridge);
+            _axisMappingFactory = new AxisMappingFactory(BleBridge, _actionResolver);
+            _configManager = new MappingConfigurationManager();
+            
+            if (_loadDefaultConfigOnStart)
+            {
+                if (string.IsNullOrEmpty(_configurationPath))
+                {
+                    _configurationPath = _configManager.GetDefaultConfigPath();
+                }
+                
+                LoadConfiguration(_configurationPath);
+            }
         }
-
-        private void AddDirection(BleHidDirection dir, byte hidConstant) => DirectionMapping.Add(dir, () => Keyboard.SendKey(hidConstant));
-
-        public void AddPressRelease(BleHidButtonEvent.Id button, int mouseButtonId)
+        
+        public void LoadConfiguration(string path)
         {
-            ButtonMapping.Add(new BleHidButtonEvent(button, BleHidButtonEvent.Action.Press), () => Mouse.PressMouseButton(mouseButtonId));
-            ButtonMapping.Add(new BleHidButtonEvent(button, BleHidButtonEvent.Action.Release), () => Mouse.ReleaseMouseButton(mouseButtonId));
+            try
+            {
+                if (File.Exists(path))
+                {
+                    _currentConfig = _configManager.LoadConfiguration(path);
+                }
+                else
+                {
+                    _currentConfig = _configManager.CreateDefaultConfiguration();
+                    _configManager.SaveConfiguration(_currentConfig, path);
+                }
+                
+                ApplyConfiguration(_currentConfig);
+                LoggingManager.Instance.AddLogEntry($"Loaded input configuration: {_currentConfig.Name}");
+            }
+            catch (Exception e)
+            {
+                Debug.LogError($"Failed to load configuration: {e.Message}");
+                
+                // Fall back to default configuration
+                _currentConfig = _configManager.CreateDefaultConfiguration();
+                ApplyConfiguration(_currentConfig);
+            }
+        }
+        
+        public void SaveConfiguration(string path)
+        {
+            if (_currentConfig != null)
+            {
+                _configManager.SaveConfiguration(_currentConfig, path);
+            }
         }
 
-        public void AddTap(BleHidButtonEvent.Id button, byte hidConstant) =>
-            ButtonMapping.Add(new BleHidButtonEvent(button, BleHidButtonEvent.Action.Tap), () => Keyboard.SendKey(hidConstant));
-
-        public void AddDoubleTap(BleHidButtonEvent.Id button, byte hidConstant) =>
-            ButtonMapping.Add(new BleHidButtonEvent(button, BleHidButtonEvent.Action.DoubleTap), () => Keyboard.SendKey(hidConstant));
+        public void ApplyConfiguration(MappingConfiguration config)
+        {
+            // Clear existing mappings
+            ButtonMapping.Clear();
+            DirectionMapping.Clear();
+            _axisMappings.Clear();
+            
+            // Apply button mappings
+            foreach (var mapping in config.ButtonMappings)
+            {
+                ApplyButtonMapping(mapping);
+            }
+            
+            // Apply direction mappings
+            foreach (var mapping in config.DirectionMappings)
+            {
+                ApplyDirectionMapping(mapping);
+            }
+            
+            // Apply axis mappings
+            foreach (var mapping in config.AxisMappings)
+            {
+                ApplyAxisMapping(mapping);
+            }
+        }
+        
+        private void ApplyButtonMapping(ButtonMappingEntry mapping)
+        {
+            // Parse input event (e.g., "Primary.Press")
+            string[] parts = mapping.InputEvent.Split('.');
+            if (parts.Length != 2) return;
+            
+            if (!Enum.TryParse<BleHidButtonEvent.Id>(parts[0], out var buttonId)) return;
+            if (!Enum.TryParse<BleHidButtonEvent.Action>(parts[1], out var buttonAction)) return;
+            
+            var buttonEvent = new BleHidButtonEvent(buttonId, buttonAction);
+            var parameters = new Dictionary<string, object>();
+            
+            // Add any additional parameters
+            if (!string.IsNullOrEmpty(mapping.KeyCode))
+                parameters["keyCode"] = mapping.KeyCode;
+            
+            // Resolve and register the action
+            ButtonMapping[buttonEvent] = _actionResolver.ResolveAction(mapping.Action, parameters);
+        }
+        
+        private void ApplyDirectionMapping(DirectionMappingEntry mapping)
+        {
+            if (!Enum.TryParse<BleHidDirection>(mapping.InputDirection, out var direction)) return;
+            
+            var parameters = new Dictionary<string, object>();
+            
+            // Add any additional parameters
+            if (!string.IsNullOrEmpty(mapping.KeyCode))
+                parameters["keyCode"] = mapping.KeyCode;
+            
+            // Resolve and register the action
+            DirectionMapping[direction] = _actionResolver.ResolveAction(mapping.Action, parameters);
+        }
+        
+        private void ApplyAxisMapping(AxisMappingEntry mapping)
+        {
+            var axisMapping = _axisMappingFactory.CreateAxisMapping(mapping);
+            if (axisMapping != null)
+            {
+                _axisMappings.Add(axisMapping);
+                
+                // Store reference to MousePositionFilter if it's that type
+                if (axisMapping is MousePositionFilter mouseFilter)
+                {
+                    MousePositionFilter = mouseFilter;
+                }
+            }
+        }
 
         public void SetDirection(BleHidDirection direction) => _pendingDirection = direction;
         public void SetButtonEvent(BleHidButtonEvent buttonEvent) => _pendingButtonEvent = buttonEvent;

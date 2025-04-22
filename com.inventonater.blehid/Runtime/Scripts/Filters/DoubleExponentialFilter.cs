@@ -1,40 +1,32 @@
 using Inventonater.BleHid;
 using UnityEngine;
+using Newtonsoft.Json;
 
 namespace Inventonater.BleHid
 {
     /// <summary>
-    /// Double Exponential Smoothing filter (Holt Filter) that models both
-    /// level (position) and trend (velocity)
+    /// Double exponential smoothing filter (Holt's method)
     /// </summary>
     public class DoubleExponentialFilter : IInputFilter
     {
-        private static LoggingManager Logger => LoggingManager.Instance;
-
-        // Filter parameters
-        private float _alpha;        // Level smoothing factor (0-1)
-        private float _beta;         // Trend smoothing factor (0-1)
+        [JsonProperty]
+        private float _alpha; // Level smoothing factor
         
-        // Filter state
-        private Vector2 _level;      // Current smoothed position vector
-        private Vector2 _trend;      // Current trend (velocity) vector
-        private bool _initialized;   // Whether filter has been initialized
+        [JsonProperty]
+        private float _beta;  // Trend smoothing factor
         
-        /// <summary>
-        /// Display name of the filter for UI
-        /// </summary>
-        public string Name => "Double Exponential";
+        [JsonIgnore]
+        private Vector2 _level;
         
-        /// <summary>
-        /// Brief description of how the filter works
-        /// </summary>
-        public string Description => "Smoothing filter that models both position and trend (velocity)";
+        [JsonIgnore]
+        private Vector2 _trend;
         
-        /// <summary>
-        /// Creates a new instance of the Double Exponential Filter
-        /// </summary>
-        /// <param name="alpha">Level smoothing factor (0-1): higher = less smoothing, default: 0.5</param>
-        /// <param name="beta">Trend smoothing factor (0-1): higher = faster trend adaptation, default: 0.1</param>
+        [JsonIgnore]
+        private bool _initialized;
+        
+        public string Name => "Double Exp";
+        public string Description => "Double exponential smoothing filter (Holt's method)";
+        
         public DoubleExponentialFilter(float alpha = 0.5f, float beta = 0.1f)
         {
             _alpha = Mathf.Clamp01(alpha);
@@ -42,55 +34,40 @@ namespace Inventonater.BleHid
             Reset();
         }
         
-        /// <summary>
-        /// Reset filter state
-        /// </summary>
         public void Reset()
         {
-            _initialized = false;
             _level = Vector2.zero;
             _trend = Vector2.zero;
+            _initialized = false;
         }
-
-        /// <summary>
-        /// Draw the filter's parameter controls in the current GUI layout
-        /// </summary>
+        
         public void DrawParameterControls()
         {
-            // Draw alpha slider (level smoothing)
-            GUILayout.Label("Level Smoothing: Smoothing applied to position");
+            GUILayout.Label("Alpha: Level smoothing factor");
             float newAlpha = UIHelper.SliderWithLabels(
-                "Strong", _alpha, 0.1f, 0.9f, "Light", 
-                "Level Smoothing: {0:F2}", UIHelper.StandardSliderOptions);
+                "More Smooth", _alpha, 0.1f, 0.9f, "Less Smooth", 
+                "Alpha: {0:F2}", UIHelper.StandardSliderOptions);
                 
             if (newAlpha != _alpha)
             {
                 _alpha = newAlpha;
-                Logger.AddLogEntry($"Changed double exp. level smoothing to: {_alpha:F2}");
+                LoggingManager.Instance.AddLogEntry($"Changed double exp filter alpha to: {_alpha:F2}");
             }
             
-            // Draw beta slider (trend smoothing)
-            GUILayout.Label("Trend Smoothing: Smoothing applied to velocity");
+            GUILayout.Label("Beta: Trend smoothing factor");
             float newBeta = UIHelper.SliderWithLabels(
-                "Strong", _beta, 0.01f, 0.5f, "Light", 
-                "Trend Smoothing: {0:F3}", UIHelper.StandardSliderOptions);
+                "More Stable", _beta, 0.01f, 0.5f, "More Responsive", 
+                "Beta: {0:F2}", UIHelper.StandardSliderOptions);
                 
             if (newBeta != _beta)
             {
                 _beta = newBeta;
-                Logger.AddLogEntry($"Changed double exp. trend smoothing to: {_beta:F3}");
+                LoggingManager.Instance.AddLogEntry($"Changed double exp filter beta to: {_beta:F2}");
             }
         }
         
-        /// <summary>
-        /// Filter a 2D vector using double exponential smoothing
-        /// </summary>
-        /// <param name="point">Input vector</param>
-        /// <param name="timestamp">Current timestamp (unused in this filter)</param>
-        /// <returns>Filtered output vector</returns>
         public Vector2 Filter(Vector2 point, float timestamp)
         {
-            // Initialize if needed
             if (!_initialized)
             {
                 _level = point;
@@ -99,16 +76,16 @@ namespace Inventonater.BleHid
                 return point;
             }
             
-            // Store old level for trend calculation
-            Vector2 oldLevel = _level;
+            // Store previous level
+            Vector2 prevLevel = _level;
             
-            // Update level (position estimate) treating the vector as a whole
-            _level = _alpha * point + (1 - _alpha) * (_level + _trend);
+            // Update level: level = α * observation + (1 - α) * (prevLevel + prevTrend)
+            _level = _alpha * point + (1 - _alpha) * (prevLevel + _trend);
             
-            // Update trend (velocity estimate) treating the vector as a whole
-            _trend = _beta * (_level - oldLevel) + (1 - _beta) * _trend;
+            // Update trend: trend = β * (level - prevLevel) + (1 - β) * prevTrend
+            _trend = _beta * (_level - prevLevel) + (1 - _beta) * _trend;
             
-            // Return smoothed value with trend component
+            // Return level (could also return level + trend for one-step forecast)
             return _level;
         }
     }

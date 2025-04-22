@@ -1,5 +1,6 @@
 using Inventonater.BleHid;
 using UnityEngine;
+using Newtonsoft.Json;
 
 namespace Inventonater.BleHid
 {
@@ -10,14 +11,21 @@ namespace Inventonater.BleHid
     {
         private LoggingManager logger => LoggingManager.Instance;
         // Filter parameters
+        [JsonProperty]
         private float _processNoise;       // Process noise covariance
+        [JsonProperty]
         private float _measurementNoise;   // Measurement noise covariance
         
-        // Filter state
+        // Filter state - these don't need to be serialized
+        [JsonIgnore]
         private Vector2 _state;           // Current state estimate [x, y]
+        [JsonIgnore]
         private Vector2 _stateVelocity;   // Current velocity estimate [vx, vy]
+        [JsonIgnore]
         private Matrix4x4 _errorCovariance; // Error covariance matrix
+        [JsonIgnore]
         private float _lastTime;          // Last update timestamp
+        [JsonIgnore]
         private bool _initialized;        // Whether filter has been initialized
         
         /// <summary>

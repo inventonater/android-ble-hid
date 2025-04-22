@@ -30,6 +30,8 @@ namespace Inventonater.BleHid
         public ConnectionManager ConnectionManager { get; private set; }
         public InputRouter InputRouter { get; private set; }
         public InputDeviceMapping Mapping { get; private set; }
+
+        public BleBridge BleBridge { get; private set; }
         public static BleHidManager Instance => FindFirstObjectByType<BleHidManager>();
 
         private void Awake()
@@ -42,6 +44,7 @@ namespace Inventonater.BleHid
             }
             Application.runInBackground = true;
 
+            BleBridge = new BleBridge(this);
             BleEventSystem = gameObject.AddComponent<BleEventSystem>();
             Mapping = gameObject.AddComponent<InputDeviceMapping>();
             InputRouter = gameObject.AddComponent<InputRouter>();

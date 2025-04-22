@@ -12,7 +12,7 @@ namespace Inventonater.BleHid
     {
         public const string Name = "Keyboard";
         public override string TabName => Name;
-        private KeyboardBridge Keyboard => BleHidManager.InputRouter.Mapping.Keyboard;
+        private KeyboardBridge Keyboard => BleHidManager.BleBridge.Keyboard;
 
         // Key mapping for characters to key codes
         private static readonly Dictionary<string, byte> keyMapping = new Dictionary<string, byte>()
@@ -72,9 +72,8 @@ namespace Inventonater.BleHid
             textToSend = GUILayout.TextField(textToSend, UIHelper.StandardButtonOptions);
 
             // Send button using ActionButton to maintain consistency
-            Action action = () => SendTextMessage();
             string editorMessage = GetTextActionMessage();
-            if (UIHelper.Button("Send Text", action, editorMessage, UIHelper.StandardButtonOptions))
+            if (UIHelper.Button("Send Text", SendTextMessage, editorMessage, UIHelper.StandardButtonOptions))
             {
                 // ActionButton handles the action
             }

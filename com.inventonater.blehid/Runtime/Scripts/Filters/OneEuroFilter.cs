@@ -1,5 +1,6 @@
 using Inventonater.BleHid;
 using UnityEngine;
+using Newtonsoft.Json;
 
 namespace Inventonater.BleHid
 {
@@ -12,14 +13,21 @@ namespace Inventonater.BleHid
         private static LoggingManager logger => LoggingManager.Instance;
 
         // Filter parameters
+        [JsonProperty]
         private float _minCutoff;    // Minimum cutoff frequency
+        [JsonProperty]
         private float _beta;         // Cutoff slope (speed coefficient)
+        [JsonProperty]
         private float _dcutoff;      // Derivative cutoff frequency
         
-        // Filter state
+        // Filter state - these don't need to be serialized
+        [JsonIgnore]
         private Vector2 _xPrev;     // Previous filtered position vector
+        [JsonIgnore]
         private Vector2 _dxPrev;    // Previous derivative vector
+        [JsonIgnore]
         private float _lastTime;     // Last update timestamp
+        [JsonIgnore]
         private bool _initialized;   // Whether filter has been initialized
         
         /// <summary>

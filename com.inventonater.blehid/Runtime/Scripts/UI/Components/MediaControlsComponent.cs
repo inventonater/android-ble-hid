@@ -11,7 +11,7 @@ namespace Inventonater.BleHid
     {
         public const string Name = "Media";
         public override string TabName => Name;
-        private MediaBridge Media => BleHidManager.InputRouter.Mapping.Media;
+        private MediaBridge Media => BleHidManager.BleBridge.Media;
 
         public override void ComponentShown() { }
         public override void ComponentHidden() { }

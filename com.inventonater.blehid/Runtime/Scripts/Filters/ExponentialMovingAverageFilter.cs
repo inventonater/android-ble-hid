@@ -1,74 +1,56 @@
 using Inventonater.BleHid;
 using UnityEngine;
+using Newtonsoft.Json;
 
 namespace Inventonater.BleHid
 {
     /// <summary>
-    /// Simple Exponential Moving Average (EMA) filter for mouse input
+    /// Simple exponential moving average filter
     /// </summary>
     public class ExponentialMovingAverageFilter : IInputFilter
     {
-        private static LoggingManager Logger => LoggingManager.Instance;
-
-        // Filter parameters
-        private float _alpha;        // Smoothing factor (0-1): higher = less smoothing
-        private float _minChange;    // Minimum change threshold
+        [JsonProperty]
+        private float _alpha;
         
-        // Filter state
-        private Vector2 _lastValue;  // Last filtered vector
-        private bool _initialized;   // Whether filter has been initialized
+        [JsonProperty]
+        private float _minChange;
         
-        /// <summary>
-        /// Display name of the filter for UI
-        /// </summary>
+        [JsonIgnore]
+        private Vector2 _prevFiltered;
+        
+        [JsonIgnore]
+        private bool _initialized;
+        
         public string Name => "EMA Filter";
+        public string Description => "Simple exponential moving average filter";
         
-        /// <summary>
-        /// Brief description of how the filter works
-        /// </summary>
-        public string Description => "Simple low-pass filter with consistent smoothing";
-        
-        /// <summary>
-        /// Creates a new instance of the EMA Filter
-        /// </summary>
-        /// <param name="alpha">Smoothing factor (0-1): higher = less smoothing, default: 0.5</param>
-        /// <param name="minChange">Minimum change threshold to process, default: 0.0001</param>
         public ExponentialMovingAverageFilter(float alpha = 0.5f, float minChange = 0.0001f)
         {
             _alpha = Mathf.Clamp01(alpha);
-            _minChange = minChange;
+            _minChange = Mathf.Max(0, minChange);
             Reset();
         }
         
-        /// <summary>
-        /// Reset filter state
-        /// </summary>
         public void Reset()
         {
+            _prevFiltered = Vector2.zero;
             _initialized = false;
-            _lastValue = Vector2.zero;
         }
         
-        /// <summary>
-        /// Draw the filter's parameter controls in the current GUI layout
-        /// </summary>
-        /// <param name="logger">Logger for UI events</param>
         public void DrawParameterControls()
         {
-            // Draw alpha slider (smoothing amount)
-            GUILayout.Label("Smoothing Factor: Adjusts filtering strength");
+            GUILayout.Label("Alpha: Smoothing factor (0-1)");
             float newAlpha = UIHelper.SliderWithLabels(
-                "Strong", _alpha, 0.05f, 1.0f, "Light", 
-                "Smoothing: {0:F2}", UIHelper.StandardSliderOptions);
+                "More Smooth", _alpha, 0.05f, 1.0f, "Less Smooth", 
+                "Alpha: {0:F2}", UIHelper.StandardSliderOptions);
                 
             if (newAlpha != _alpha)
             {
                 _alpha = newAlpha;
-                Logger.AddLogEntry($"Changed EMA filter smoothing to: {_alpha:F2}");
+                LoggingManager.Instance.AddLogEntry($"Changed EMA filter alpha to: {_alpha:F2}");
             }
             
-            // Draw min change threshold
-            GUILayout.Label("Minimum Change: Threshold for movement detection");
+            GUILayout.Label("Min Change: Threshold for movement");
             float newMinChange = UIHelper.SliderWithLabels(
                 "Low", _minChange, 0.0001f, 0.01f, "High", 
                 "Min Change: {0:F4}", UIHelper.StandardSliderOptions);
@@ -76,36 +58,29 @@ namespace Inventonater.BleHid
             if (newMinChange != _minChange)
             {
                 _minChange = newMinChange;
-                Logger.AddLogEntry($"Changed EMA filter minimum change to: {_minChange:F4}");
+                LoggingManager.Instance.AddLogEntry($"Changed EMA filter min change to: {_minChange:F4}");
             }
         }
         
-        /// <summary>
-        /// Filter a 2D vector using exponential moving average
-        /// </summary>
-        /// <param name="point">Input vector</param>
-        /// <param name="timestamp">Current timestamp (unused in this filter)</param>
-        /// <returns>Filtered output vector</returns>
         public Vector2 Filter(Vector2 point, float timestamp)
         {
-            // Initialize if needed
             if (!_initialized)
             {
-                _lastValue = point;
+                _prevFiltered = point;
                 _initialized = true;
                 return point;
             }
             
-            // Apply EMA formula to the entire vector: output = alpha * current + (1 - alpha) * lastOutput
-            Vector2 filteredValue = (_alpha * point) + ((1 - _alpha) * _lastValue);
+            // Apply EMA formula: y[n] = α * x[n] + (1-α) * y[n-1]
+            Vector2 filtered = _alpha * point + (1 - _alpha) * _prevFiltered;
             
             // Only update if change is significant
-            if ((filteredValue - _lastValue).sqrMagnitude >= _minChange * _minChange)
+            if ((filtered - _prevFiltered).sqrMagnitude > _minChange * _minChange)
             {
-                _lastValue = filteredValue;
+                _prevFiltered = filtered;
             }
             
-            return _lastValue;
+            return _prevFiltered;
         }
     }
 }

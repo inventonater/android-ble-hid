@@ -1,125 +1,104 @@
 using Inventonater.BleHid;
 using UnityEngine;
+using Newtonsoft.Json;
 
 namespace Inventonater.BleHid
 {
     /// <summary>
-    /// Predictive filter that attempts to compensate for latency by
-    /// predicting where the pointer will be in the near future
+    /// Predictive filter that attempts to compensate for latency
     /// </summary>
     public class PredictiveFilter : IInputFilter
     {
-        private LoggingManager Logger => LoggingManager.Instance;
-
-        // Filter parameters
-        private float _predictionTime;    // Time to predict ahead (seconds)
-        private float _smoothingFactor;   // Smoothing factor for velocity (0-1)
+        [JsonProperty]
+        private float _predictionTime; // Time to predict ahead in seconds
         
-        // Filter state
-        private Vector2 _lastPosition;    // Last input position
-        private Vector2 _velocity;        // Estimated velocity
-        private float _lastTime;          // Last update timestamp
-        private bool _initialized;        // Whether filter has been initialized
+        [JsonProperty]
+        private float _smoothingFactor; // Smoothing factor for velocity calculation
         
-        /// <summary>
-        /// Display name of the filter for UI
-        /// </summary>
+        [JsonIgnore]
+        private Vector2 _lastPosition;
+        
+        [JsonIgnore]
+        private Vector2 _velocity;
+        
+        [JsonIgnore]
+        private float _lastTimestamp;
+        
+        [JsonIgnore]
+        private bool _initialized;
+        
         public string Name => "Predictive";
+        public string Description => "Predicts future position to compensate for latency";
         
-        /// <summary>
-        /// Brief description of how the filter works
-        /// </summary>
-        public string Description => "Attempts to reduce perceived latency by predicting future position";
-        
-        /// <summary>
-        /// Creates a new instance of the Predictive Filter
-        /// </summary>
-        /// <param name="predictionTime">Time to predict ahead in seconds (default: 0.05)</param>
-        /// <param name="smoothingFactor">Velocity smoothing factor (default: 0.5)</param>
         public PredictiveFilter(float predictionTime = 0.05f, float smoothingFactor = 0.5f)
         {
-            _predictionTime = Mathf.Clamp(predictionTime, 0.01f, 0.2f);
+            _predictionTime = Mathf.Max(0.01f, predictionTime);
             _smoothingFactor = Mathf.Clamp01(smoothingFactor);
             Reset();
         }
         
-        /// <summary>
-        /// Reset filter state
-        /// </summary>
         public void Reset()
         {
-            _initialized = false;
             _lastPosition = Vector2.zero;
             _velocity = Vector2.zero;
-            _lastTime = 0;
+            _lastTimestamp = 0;
+            _initialized = false;
         }
-
-        /// <summary>
-        /// Draw the filter's parameter controls in the current GUI layout
-        /// </summary>
+        
         public void DrawParameterControls()
         {
-            // Draw prediction time slider
-            GUILayout.Label("Prediction Time: How far ahead to predict (higher = more aggressive)");
+            GUILayout.Label("Prediction Time: How far ahead to predict (seconds)");
             float newPredictionTime = UIHelper.SliderWithLabels(
-                "Short", _predictionTime, 0.01f, 0.2f, "Long", 
+                "Less", _predictionTime, 0.01f, 0.2f, "More", 
                 "Prediction: {0:F3}s", UIHelper.StandardSliderOptions);
                 
             if (newPredictionTime != _predictionTime)
             {
                 _predictionTime = newPredictionTime;
-                Logger.AddLogEntry($"Changed prediction time to: {_predictionTime:F3}s");
+                LoggingManager.Instance.AddLogEntry($"Changed prediction time to: {_predictionTime:F3}s");
             }
             
-            // Draw smoothing factor slider
-            GUILayout.Label("Smoothing: Controls velocity calculation smoothness");
+            GUILayout.Label("Smoothing: Velocity smoothing factor");
             float newSmoothingFactor = UIHelper.SliderWithLabels(
-                "Strong", _smoothingFactor, 0.1f, 0.9f, "Light", 
+                "More Smooth", _smoothingFactor, 0.1f, 0.9f, "Less Smooth", 
                 "Smoothing: {0:F2}", UIHelper.StandardSliderOptions);
                 
             if (newSmoothingFactor != _smoothingFactor)
             {
                 _smoothingFactor = newSmoothingFactor;
-                Logger.AddLogEntry($"Changed predictive filter smoothing to: {_smoothingFactor:F2}");
+                LoggingManager.Instance.AddLogEntry($"Changed velocity smoothing to: {_smoothingFactor:F2}");
             }
         }
         
-        /// <summary>
-        /// Filter a 2D vector using predictive filtering
-        /// </summary>
-        /// <param name="point">Input vector</param>
-        /// <param name="timestamp">Current timestamp (seconds)</param>
-        /// <returns>Filtered (predicted) output vector</returns>
         public Vector2 Filter(Vector2 point, float timestamp)
         {
-            // Initialize if needed
             if (!_initialized)
             {
                 _lastPosition = point;
                 _velocity = Vector2.zero;
-                _lastTime = timestamp;
+                _lastTimestamp = timestamp;
                 _initialized = true;
                 return point;
             }
             
             // Calculate time delta
-            float dt = timestamp - _lastTime;
-            if (dt <= 0.0f) dt = 0.001f; // Prevent division by zero
-            _lastTime = timestamp;
+            float deltaTime = timestamp - _lastTimestamp;
+            if (deltaTime <= 0.0001f) deltaTime = 0.016f; // Default to 60fps if delta is too small
+            _lastTimestamp = timestamp;
             
-            // Compute instantaneous velocity
-            Vector2 instantVelocity = (point - _lastPosition) / dt;
+            // Calculate instantaneous velocity
+            Vector2 instantVelocity = (point - _lastPosition) / deltaTime;
             
-            // Smooth velocity estimate with exponential moving average
+            // Update smoothed velocity using exponential smoothing
             _velocity = _smoothingFactor * instantVelocity + (1 - _smoothingFactor) * _velocity;
             
-            // Update last position for next frame
+            // Update last position
             _lastPosition = point;
             
             // Predict future position
-            Vector2 prediction = point + (_velocity * _predictionTime);
+            Vector2 predictedPosition = point + _velocity * _predictionTime;
             
-            return prediction;
+            return predictedPosition;
         }
     }
 }

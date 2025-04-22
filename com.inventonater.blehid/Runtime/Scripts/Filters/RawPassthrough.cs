@@ -1,8 +1,10 @@
 using Inventonater.BleHid;
 using UnityEngine;
+using Newtonsoft.Json;
 
 namespace Inventonater.BleHid
 {
+    [JsonObject(MemberSerialization.OptIn)]
     public class RawPassthrough : IInputFilter
     {
         public string Name => "No Filter";
