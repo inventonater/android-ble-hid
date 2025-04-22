@@ -174,13 +174,30 @@ namespace Inventonater.BleHid
                 // Calculate a better height for the scroll view - make it proportional to screen height
                 float scrollViewHeight = Mathf.Max(Screen.height * 0.3f, 300);
                 
-                // Use a simple scroll view with default styles to support touch input
+                // Create a custom style for the vertical scrollbar - twice as wide for better touch
+                GUIStyle wideVerticalScrollbarStyle = new GUIStyle(GUI.skin.verticalScrollbar);
+                wideVerticalScrollbarStyle.fixedWidth = 80f; // Double the previous width (was 40f)
+                
+                // Also need to make the thumb (slider part) wider to be more touch-friendly
+                GUIStyle wideThumbStyle = new GUIStyle(GUI.skin.verticalScrollbarThumb);
+                wideThumbStyle.fixedWidth = 70f; // Make the thumb nearly as wide as the scrollbar
+                
+                // Store the original thumb style to restore later
+                GUIStyle originalThumbStyle = GUI.skin.verticalScrollbarThumb;
+                
+                // Apply our custom thumb style
+                GUI.skin.verticalScrollbarThumb = wideThumbStyle;
+                
+                // Use a scroll view with custom vertical scrollbar style
                 // alwaysShowVertical=true so we have a scrollbar visual indicator
                 // alwaysShowHorizontal=false to eliminate the warnings
                 _deviceListScrollPosition = GUILayout.BeginScrollView(
                     _deviceListScrollPosition,
                     false,  // Never show horizontal scrollbar
                     true,   // Always show vertical scrollbar
+                    GUI.skin.scrollView, // Default scroll view style
+                    wideVerticalScrollbarStyle, // Custom wider vertical scrollbar
+                    GUIStyle.none, // No horizontal scrollbar style to avoid warnings
                     GUILayout.Height(scrollViewHeight)
                 );
                 
@@ -210,6 +227,9 @@ namespace Inventonater.BleHid
                 }
                 
                 GUILayout.EndScrollView();
+                
+                // Restore the original thumb style 
+                GUI.skin.verticalScrollbarThumb = originalThumbStyle;
             }
             
             GUILayout.EndVertical();
