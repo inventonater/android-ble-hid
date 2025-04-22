@@ -177,11 +177,11 @@ public class BleHidManager {
         Set<BluetoothDevice> bondedDevices = bluetoothAdapter.getBondedDevices();
         for (BluetoothDevice device : bondedDevices) {
             Map<String, String> deviceInfo = new HashMap<>();
-            deviceInfo.put("name", device.getName() != null ? device.getName() : "Unknown");
+            deviceInfo.put("name", BluetoothDeviceHelper.getDeviceName(device));
             deviceInfo.put("address", device.getAddress());
-            deviceInfo.put("type", getDeviceTypeString(device.getType()));
-            deviceInfo.put("bondState", getBondStateString(device.getBondState()));
-            deviceInfo.put("uuids", getDeviceUuidsString(device));
+            deviceInfo.put("type", BluetoothDeviceHelper.getDeviceTypeString(device.getType()));
+            deviceInfo.put("bondState", BluetoothDeviceHelper.getBondStateString(device.getBondState()));
+            deviceInfo.put("uuids", BluetoothDeviceHelper.getDeviceUuidsString(device));
             
             deviceInfoList.add(deviceInfo);
         }
@@ -235,56 +235,7 @@ public class BleHidManager {
         }
     }
     
-    /**
-     * Helper method to get device type as a string.
-     */
-    private String getDeviceTypeString(int type) {
-        switch (type) {
-            case BluetoothDevice.DEVICE_TYPE_CLASSIC:
-                return "CLASSIC";
-            case BluetoothDevice.DEVICE_TYPE_LE:
-                return "LE";
-            case BluetoothDevice.DEVICE_TYPE_DUAL:
-                return "DUAL";
-            case BluetoothDevice.DEVICE_TYPE_UNKNOWN:
-            default:
-                return "UNKNOWN";
-        }
-    }
-    
-    /**
-     * Helper method to get bond state as a string.
-     */
-    private String getBondStateString(int bondState) {
-        switch (bondState) {
-            case BluetoothDevice.BOND_BONDED:
-                return "BONDED";
-            case BluetoothDevice.BOND_BONDING:
-                return "BONDING";
-            case BluetoothDevice.BOND_NONE:
-            default:
-                return "NONE";
-        }
-    }
-    
-    /**
-     * Helper method to get a device's UUIDs as a string.
-     */
-    private String getDeviceUuidsString(BluetoothDevice device) {
-        if (device.getUuids() == null || device.getUuids().length == 0) {
-            return "None";
-        }
-        
-        StringBuilder sb = new StringBuilder();
-        for (android.os.ParcelUuid uuid : device.getUuids()) {
-            if (sb.length() > 0) {
-                sb.append(", ");
-            }
-            sb.append(uuid.toString());
-        }
-        
-        return sb.toString();
-    }
+    // Helper methods for device information have been moved to BluetoothDeviceHelper class
 
     /**
      * Checks if the device supports BLE peripheral mode.
@@ -635,8 +586,7 @@ public class BleHidManager {
      */
     void onDeviceConnected(BluetoothDevice device) {
         connectedDevice = device;
-        String deviceName = device.getName() != null ? device.getName() : device.getAddress();
-        Log.i(TAG, "Device connected: " + deviceName + " (" + device.getAddress() + ")");
+        Log.i(TAG, "Device connected: " + BluetoothDeviceHelper.getDeviceInfo(device));
         
         // Stop advertising once connected
         stopAdvertising();
@@ -656,8 +606,7 @@ public class BleHidManager {
      * @param device The disconnected device
      */
     void onDeviceDisconnected(BluetoothDevice device) {
-        String deviceName = device.getName() != null ? device.getName() : device.getAddress();
-        Log.i(TAG, "Device disconnected: " + deviceName + " (" + device.getAddress() + ")");
+        Log.i(TAG, "Device disconnected: " + BluetoothDeviceHelper.getDeviceInfo(device));
         
         // Notify connection manager
         connectionManager.onDeviceDisconnected();
