@@ -33,6 +33,7 @@ namespace Inventonater.BleHid
         private LocalControlComponent localComponent;
         private ErrorHandlingComponent errorComponent;
         private ConnectionParametersComponent connectionParametersComponent;
+        private IdentityManagerComponent identityComponent;
 
         private Vector2 localTabScrollPosition = Vector2.zero;
         private float nextPermissionCheckTime = 0f;
@@ -61,12 +62,14 @@ namespace Inventonater.BleHid
             keyboardComponent = new KeyboardControlsComponent();
             localComponent = new LocalControlComponent(this);
             connectionParametersComponent = new ConnectionParametersComponent();
+            identityComponent = new IdentityManagerComponent();
 
             AddTab(mediaComponent);
             AddTab(mouseComponent);
             AddTab(keyboardComponent);
             AddTab(localComponent);
             AddTab(connectionParametersComponent);
+            AddTab(identityComponent);
 
             // Start initialization process
             StartCoroutine(bleHidManager.BleInitializer.Initialize());
@@ -244,6 +247,9 @@ namespace Inventonater.BleHid
                 case 4: // Connection Parameters tab
                     DrawConnectionParametersTab();
                     break;
+                case 5: // Identity tab
+                    DrawIdentityTab();
+                    break;
             }
         }
 
@@ -305,6 +311,13 @@ namespace Inventonater.BleHid
             GUI.enabled = bleHidManager.IsConnected || IsEditorMode;
             connectionParametersComponent.DrawUI();
             GUI.enabled = true;
+        }
+        
+        private void DrawIdentityTab()
+        {
+            // Identity management is always enabled
+            GUI.enabled = true;
+            identityComponent.DrawUI();
         }
 
         private void OnInitializeComplete(bool success, string message)

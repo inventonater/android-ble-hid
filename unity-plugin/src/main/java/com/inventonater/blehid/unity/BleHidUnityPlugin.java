@@ -16,6 +16,8 @@ import com.inventonater.blehid.core.LocalInputManager;
 import com.inventonater.blehid.core.OptionsConstants;
 import com.inventonater.blehid.core.VideoOptions;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -849,6 +851,79 @@ public class BleHidUnityPlugin {
             return false;
         }
         return true;
+    }
+    
+    /**
+     * Gets the BleHidManager instance.
+     * This provides direct access to core functionality.
+     * 
+     * @return The BleHidManager instance
+     */
+    public BleHidManager getBleHidManager() {
+        return bleHidManager;
+    }
+    
+    // ==================== Identity Management Methods ====================
+    
+    /**
+     * Sets the BLE peripheral identity (UUID and device name).
+     * This helps maintain a consistent identity across app restarts
+     * for persistent device recognition and pairing.
+     * 
+     * @param identityUuid The UUID string to use as the device's unique identifier
+     * @param deviceName Optional custom device name (can be null for default)
+     * @return true if identity was set successfully
+     */
+    public boolean setBleIdentity(String identityUuid, String deviceName) {
+        if (!checkInitialized()) return false;
+        
+        Log.i(TAG, "Setting BLE identity: UUID=" + identityUuid + ", Name=" + deviceName);
+        return bleHidManager.setBleIdentity(identityUuid, deviceName);
+    }
+    
+    /**
+     * Gets detailed information about all devices currently bonded to this peripheral.
+     * 
+     * @return List of maps containing device information
+     */
+    public List<Map<String, String>> getBondedDevicesInfo() {
+        if (!checkInitialized()) return new ArrayList<>();
+        
+        return bleHidManager.getBondedDevicesInfo();
+    }
+    
+    /**
+     * Checks if a specific device is bonded to this peripheral.
+     * 
+     * @param address The MAC address of the device to check
+     * @return true if the device is bonded
+     */
+    public boolean isDeviceBonded(String address) {
+        if (!checkInitialized()) return false;
+        
+        if (address == null || address.isEmpty()) {
+            Log.e(TAG, "Invalid device address");
+            return false;
+        }
+        
+        return bleHidManager.isDeviceBonded(address);
+    }
+    
+    /**
+     * Removes a bond with a specific device.
+     * 
+     * @param address The MAC address of the device to forget
+     * @return true if the device was forgotten or already not bonded
+     */
+    public boolean removeBond(String address) {
+        if (!checkInitialized()) return false;
+        
+        if (address == null || address.isEmpty()) {
+            Log.e(TAG, "Invalid device address");
+            return false;
+        }
+        
+        return bleHidManager.removeBond(address);
     }
     
     /**

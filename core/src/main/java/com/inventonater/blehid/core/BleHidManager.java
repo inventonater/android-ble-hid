@@ -7,10 +7,16 @@ import android.content.Context;
 import android.content.Intent;
 import android.os.Build;
 import android.util.Log;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 /**
  * Central manager class for BLE HID functionality.
  * Coordinates between the advertiser, GATT server, and pairing components.
+ * Now supports persistent device identity and bond management.
  */
 public class BleHidManager {
     private static final String TAG = "BleHidManager";
@@ -120,6 +126,164 @@ public class BleHidManager {
         if (isInitialized) {
             advertiser.stopAdvertising();
         }
+    }
+    
+    /**
+     * Sets the device identity used for advertising.
+     * This identity will persist across app restarts so peripheral can be recognized
+     * by previously paired devices.
+     * 
+     * @param identityUuid UUID string to use as unique identity
+     * @param deviceName Custom name to use for the device (can be null for default)
+     * @return true if identity was set successfully
+     */
+    public boolean setBleIdentity(String identityUuid, String deviceName) {
+        if (!isInitialized) {
+            Log.e(TAG, "Cannot set identity: Not initialized");
+            return false;
+        }
+        
+        return advertiser.setDeviceIdentity(identityUuid, deviceName);
+    }
+    
+    /**
+     * Gets a list of devices currently bonded to this peripheral.
+     * 
+     * @return List of bonded BluetoothDevice objects
+     */
+    public List<BluetoothDevice> getBondedDevices() {
+        if (bluetoothAdapter == null) {
+            Log.e(TAG, "Cannot get bonded devices: No Bluetooth adapter");
+            return new ArrayList<>();
+        }
+        
+        Set<BluetoothDevice> bondedSet = bluetoothAdapter.getBondedDevices();
+        return new ArrayList<>(bondedSet);
+    }
+    
+    /**
+     * Gets detailed information about bonded devices.
+     * 
+     * @return List of maps containing device information
+     */
+    public List<Map<String, String>> getBondedDevicesInfo() {
+        List<Map<String, String>> deviceInfoList = new ArrayList<>();
+        
+        if (bluetoothAdapter == null) {
+            Log.e(TAG, "Cannot get bonded devices info: No Bluetooth adapter");
+            return deviceInfoList;
+        }
+        
+        Set<BluetoothDevice> bondedDevices = bluetoothAdapter.getBondedDevices();
+        for (BluetoothDevice device : bondedDevices) {
+            Map<String, String> deviceInfo = new HashMap<>();
+            deviceInfo.put("name", device.getName() != null ? device.getName() : "Unknown");
+            deviceInfo.put("address", device.getAddress());
+            deviceInfo.put("type", getDeviceTypeString(device.getType()));
+            deviceInfo.put("bondState", getBondStateString(device.getBondState()));
+            deviceInfo.put("uuids", getDeviceUuidsString(device));
+            
+            deviceInfoList.add(deviceInfo);
+        }
+        
+        return deviceInfoList;
+    }
+    
+    /**
+     * Checks if a specific device is bonded to this peripheral.
+     * 
+     * @param address The MAC address of the device to check
+     * @return true if the device is bonded
+     */
+    public boolean isDeviceBonded(String address) {
+        if (bluetoothAdapter == null || address == null || address.isEmpty()) {
+            return false;
+        }
+        
+        BluetoothDevice device = bluetoothAdapter.getRemoteDevice(address);
+        return device != null && device.getBondState() == BluetoothDevice.BOND_BONDED;
+    }
+    
+    /**
+     * Removes a bond with a specific device.
+     * 
+     * @param address The MAC address of the device to forget
+     * @return true if the device was forgotten or already not bonded
+     */
+    public boolean removeBond(String address) {
+        if (bluetoothAdapter == null || address == null || address.isEmpty()) {
+            Log.e(TAG, "Cannot remove bond: Invalid parameters");
+            return false;
+        }
+        
+        try {
+            BluetoothDevice device = bluetoothAdapter.getRemoteDevice(address);
+            if (device == null) {
+                Log.e(TAG, "Cannot remove bond: Device not found");
+                return false;
+            }
+            
+            if (device.getBondState() != BluetoothDevice.BOND_BONDED) {
+                Log.i(TAG, "Device not bonded: " + address);
+                return true; // Already not bonded
+            }
+            
+            return pairingManager.removeBond(device);
+        } catch (Exception e) {
+            Log.e(TAG, "Error removing bond: " + e.getMessage(), e);
+            return false;
+        }
+    }
+    
+    /**
+     * Helper method to get device type as a string.
+     */
+    private String getDeviceTypeString(int type) {
+        switch (type) {
+            case BluetoothDevice.DEVICE_TYPE_CLASSIC:
+                return "CLASSIC";
+            case BluetoothDevice.DEVICE_TYPE_LE:
+                return "LE";
+            case BluetoothDevice.DEVICE_TYPE_DUAL:
+                return "DUAL";
+            case BluetoothDevice.DEVICE_TYPE_UNKNOWN:
+            default:
+                return "UNKNOWN";
+        }
+    }
+    
+    /**
+     * Helper method to get bond state as a string.
+     */
+    private String getBondStateString(int bondState) {
+        switch (bondState) {
+            case BluetoothDevice.BOND_BONDED:
+                return "BONDED";
+            case BluetoothDevice.BOND_BONDING:
+                return "BONDING";
+            case BluetoothDevice.BOND_NONE:
+            default:
+                return "NONE";
+        }
+    }
+    
+    /**
+     * Helper method to get a device's UUIDs as a string.
+     */
+    private String getDeviceUuidsString(BluetoothDevice device) {
+        if (device.getUuids() == null || device.getUuids().length == 0) {
+            return "None";
+        }
+        
+        StringBuilder sb = new StringBuilder();
+        for (android.os.ParcelUuid uuid : device.getUuids()) {
+            if (sb.length() > 0) {
+                sb.append(", ");
+            }
+            sb.append(uuid.toString());
+        }
+        
+        return sb.toString();
     }
 
     /**

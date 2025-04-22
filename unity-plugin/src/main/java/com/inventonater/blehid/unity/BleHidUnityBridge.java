@@ -24,6 +24,16 @@ public class BleHidUnityBridge {
         }
         return instance;
     }
+    
+    /**
+     * Get the BleHidManager instance from the plugin.
+     * This is used by the BleHidPlugin class for direct access.
+     * 
+     * @return The BleHidManager instance
+     */
+    public com.inventonater.blehid.core.BleHidManager getBleHidManager() {
+        return plugin.getBleHidManager();
+    }
 
     private BleHidUnityBridge() {
         // Private constructor to enforce singleton pattern
@@ -233,6 +243,50 @@ public class BleHidUnityBridge {
      */
     public boolean stopForegroundService() {
         return BleHidUnityPlugin.stopForegroundService();
+    }
+    
+    // ===================== Identity Management Methods =====================
+    
+    /**
+     * Sets the BLE peripheral identity (UUID and device name).
+     * This helps maintain a consistent identity across app restarts
+     * for persistent device recognition and pairing.
+     * 
+     * @param identityUuid The UUID string to use as the device's unique identifier
+     * @param deviceName Optional custom device name (can be null for default)
+     * @return true if identity was set successfully
+     */
+    public boolean setBleIdentity(String identityUuid, String deviceName) {
+        return plugin.setBleIdentity(identityUuid, deviceName);
+    }
+    
+    /**
+     * Gets detailed information about all devices currently bonded to this peripheral.
+     * 
+     * @return List of maps containing device information
+     */
+    public java.util.List<java.util.Map<String, String>> getBondedDevicesInfo() {
+        return plugin.getBondedDevicesInfo();
+    }
+    
+    /**
+     * Checks if a specific device is bonded to this peripheral.
+     * 
+     * @param address The MAC address of the device to check
+     * @return true if the device is bonded
+     */
+    public boolean isDeviceBonded(String address) {
+        return plugin.isDeviceBonded(address);
+    }
+    
+    /**
+     * Removes a bond with a specific device.
+     * 
+     * @param address The MAC address of the device to forget
+     * @return true if the device was forgotten or already not bonded
+     */
+    public boolean removeBond(String address) {
+        return plugin.removeBond(address);
     }
     
     // Local Control methods

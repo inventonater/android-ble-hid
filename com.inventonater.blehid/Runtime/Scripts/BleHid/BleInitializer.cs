@@ -190,9 +190,38 @@ namespace Inventonater.BleHid
                     _manager.BleEventSystem.OnError?.Invoke(BleHidConstants.ERROR_INITIALIZATION_FAILED, message);
                     _manager.BleEventSystem.OnInitializeComplete?.Invoke(false, message);
                 }
+                else
+                {
+                    // Initialize device identity for consistent recognition across app restarts
+                    InitializeDeviceIdentity();
+                }
             }
 
             isInitializing = false;
+        }
+
+        /// <summary>
+        /// Initialize the device identity to ensure consistent recognition across app restarts.
+        /// </summary>
+        private void InitializeDeviceIdentity()
+        {
+            try
+            {
+                bool identitySet = _manager.IdentityManager.InitializeIdentity();
+                if (identitySet)
+                {
+                    Debug.Log("Device identity initialized successfully");
+                }
+                else
+                {
+                    Debug.LogWarning("Failed to initialize device identity");
+                }
+            }
+            catch (Exception e)
+            {
+                Debug.LogError($"Error initializing device identity: {e.Message}");
+                // Don't fail BLE initialization if identity fails - it's a non-critical feature
+            }
         }
 
         /// <summary>

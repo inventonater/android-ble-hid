@@ -30,6 +30,7 @@ namespace Inventonater.BleHid
         public ConnectionManager ConnectionManager { get; private set; }
         public InputRouter InputRouter { get; private set; }
         public InputDeviceMapping Mapping { get; private set; }
+        public BleIdentityManager IdentityManager { get; private set; }
 
         public BleBridge BleBridge { get; private set; }
         public static BleHidManager Instance => FindFirstObjectByType<BleHidManager>();
@@ -53,6 +54,7 @@ namespace Inventonater.BleHid
             BleInitializer = new BleInitializer(this);
             BleAdvertiser = new BleAdvertiser(this);
             ConnectionManager = new ConnectionManager(this);
+            IdentityManager = new BleIdentityManager(this);
             PipWorker = new PipBackgroundWorker();
 
             BleEventSystem.OnPipModeChanged += HandlePipModeChanged;

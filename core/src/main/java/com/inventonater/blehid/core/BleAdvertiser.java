@@ -13,6 +13,7 @@ import android.os.ParcelUuid;
 import android.util.Log;
 import android.widget.Toast;
 
+import java.nio.ByteBuffer;
 import java.util.UUID;
 
 /**
@@ -20,7 +21,7 @@ import java.util.UUID;
  * This class manages the Bluetooth LE advertising process for advertising 
  * the device as a HID peripheral.
  * 
- * DIAGNOSTIC VERSION: Enhanced with better logging and fallback options
+ * IDENTITY SUPPORT: Enhanced to support persistent device identity
  */
 public class BleAdvertiser {
     private static final String TAG = "BleAdvertiser";
@@ -53,6 +54,11 @@ public class BleAdvertiser {
     
     // TX power level (matches the constants in BleConnectionManager)
     private int txPowerLevel = AdvertiseSettings.ADVERTISE_TX_POWER_MEDIUM; // Default to medium power
+    
+    // Identity management
+    private UUID deviceIdentityUuid = null;
+    private String customDeviceName = null;
+    private static final int MANUFACTURER_ID = 0x0822; // Example ID, consider registering with Bluetooth SIG
     
     // New options
     private boolean forceAdvertising = true; // Override capability check
@@ -184,9 +190,9 @@ public class BleAdvertiser {
         // Log device capabilities
         logDeviceCapabilities();
         
-        // Set simplified device name for better compatibility
+        // Set device name (use custom name if available)
         try {
-            String deviceName = "Android BLE Mouse";
+            String deviceName = customDeviceName != null ? customDeviceName : "Android BLE Mouse";
             bluetoothAdapter.setName(deviceName);
             Log.i(TAG, "📱 Device name set to: " + deviceName);
         } catch (Exception e) {
@@ -325,6 +331,7 @@ public class BleAdvertiser {
 
     /**
      * Builds a minimal advertising data payload that's guaranteed to fit within BLE size limits.
+     * Now includes manufacturer data with device identity when available.
      * 
      * @return The configured AdvertiseData
      */
@@ -342,11 +349,30 @@ public class BleAdvertiser {
             dataBuilder.addServiceUuid(shortHidUuid);
             
             Log.d(TAG, "📦 Added shortened HID service UUID to advertisement data");
+            
+            // Add manufacturer data with identity UUID if available
+            if (deviceIdentityUuid != null) {
+                // Convert UUID to bytes (use only first 16 bytes if the byte array is larger)
+                byte[] identityBytes = convertUuidToBytes(deviceIdentityUuid);
+                dataBuilder.addManufacturerData(MANUFACTURER_ID, identityBytes);
+                Log.d(TAG, "📦 Added device identity to manufacturer data: " + deviceIdentityUuid.toString());
+            }
         } catch (Exception e) {
-            Log.e(TAG, "❌ Error adding service UUID: " + e.getMessage());
+            Log.e(TAG, "❌ Error adding advertising data: " + e.getMessage());
         }
         
         return dataBuilder.build();
+    }
+    
+    /**
+     * Converts a UUID to a byte array for use in manufacturer data.
+     * Limits to the first 16 bytes to keep the advertisement packet small.
+     */
+    private byte[] convertUuidToBytes(UUID uuid) {
+        ByteBuffer buffer = ByteBuffer.allocate(16);
+        buffer.putLong(uuid.getMostSignificantBits());
+        buffer.putLong(uuid.getLeastSignificantBits());
+        return buffer.array();
     }
 
     /**
@@ -360,8 +386,46 @@ public class BleAdvertiser {
                 .setIncludeDeviceName(true)
                 .setIncludeTxPowerLevel(false); // Omit TX power level to save space
         
-        Log.d(TAG, "📦 Created minimal scan response with only device name");
+        Log.d(TAG, "📦 Created minimal scan response with device name: " + 
+              (customDeviceName != null ? customDeviceName : "Default"));
         return responseBuilder.build();
+    }
+    
+    /**
+     * Sets the device identity for advertising.
+     * This identity will be included in manufacturer data to help central devices
+     * recognize this peripheral across app restarts.
+     * 
+     * @param identityUuid The UUID string representing device identity
+     * @param deviceName Optional custom device name (can be null for default)
+     * @return true if identity was set successfully
+     */
+    public boolean setDeviceIdentity(String identityUuid, String deviceName) {
+        try {
+            if (identityUuid != null && !identityUuid.isEmpty()) {
+                this.deviceIdentityUuid = UUID.fromString(identityUuid);
+                Log.i(TAG, "📱 Device identity UUID set to: " + identityUuid);
+            } else {
+                this.deviceIdentityUuid = null;
+                Log.w(TAG, "⚠️ No identity UUID provided, using default advertising");
+            }
+            
+            this.customDeviceName = deviceName;
+            Log.i(TAG, "📱 Custom device name set to: " + 
+                  (deviceName != null ? deviceName : "null (will use default)"));
+            
+            // If already advertising, restart to apply new identity
+            if (isAdvertising) {
+                Log.i(TAG, "🔄 Restarting advertising to apply new identity");
+                stopAdvertising();
+                return startAdvertising();
+            }
+            
+            return true;
+        } catch (Exception e) {
+            Log.e(TAG, "❌ Failed to set device identity", e);
+            return false;
+        }
     }
     
     /**
