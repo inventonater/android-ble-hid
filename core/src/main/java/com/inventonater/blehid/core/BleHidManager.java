@@ -236,6 +236,26 @@ public class BleHidManager {
     }
     
     // Helper methods for device information have been moved to BluetoothDeviceHelper class
+    
+    /**
+     * Validates the connection state for HID operations.
+     * Checks if the system is initialized and if a device is connected.
+     * 
+     * @return true if the system is ready for HID operations, false otherwise
+     */
+    protected boolean validateConnectionState() {
+        if (!isInitialized) {
+            Log.e(TAG, "Not initialized");
+            return false;
+        }
+        
+        if (connectedDevice == null) {
+            Log.e(TAG, "No device connected");
+            return false;
+        }
+        
+        return true;
+    }
 
     /**
      * Checks if the device supports BLE peripheral mode.
@@ -309,8 +329,7 @@ public class BleHidManager {
      * @return true if the command was sent successfully, false otherwise
      */
     public boolean playPause() {
-        if (!isInitialized || connectedDevice == null) {
-            Log.e(TAG, "Not connected or initialized");
+        if (!validateConnectionState()) {
             return false;
         }
         
@@ -323,8 +342,7 @@ public class BleHidManager {
      * @return true if the command was sent successfully, false otherwise
      */
     public boolean nextTrack() {
-        if (!isInitialized || connectedDevice == null) {
-            Log.e(TAG, "Not connected or initialized");
+        if (!validateConnectionState()) {
             return false;
         }
         
@@ -337,8 +355,7 @@ public class BleHidManager {
      * @return true if the command was sent successfully, false otherwise
      */
     public boolean previousTrack() {
-        if (!isInitialized || connectedDevice == null) {
-            Log.e(TAG, "Not connected or initialized");
+        if (!validateConnectionState()) {
             return false;
         }
         
@@ -351,8 +368,7 @@ public class BleHidManager {
      * @return true if the command was sent successfully, false otherwise
      */
     public boolean volumeUp() {
-        if (!isInitialized || connectedDevice == null) {
-            Log.e(TAG, "Not connected or initialized");
+        if (!validateConnectionState()) {
             return false;
         }
         
@@ -365,8 +381,7 @@ public class BleHidManager {
      * @return true if the command was sent successfully, false otherwise
      */
     public boolean volumeDown() {
-        if (!isInitialized || connectedDevice == null) {
-            Log.e(TAG, "Not connected or initialized");
+        if (!validateConnectionState()) {
             return false;
         }
         
@@ -379,8 +394,7 @@ public class BleHidManager {
      * @return true if the command was sent successfully, false otherwise
      */
     public boolean mute() {
-        if (!isInitialized || connectedDevice == null) {
-            Log.e(TAG, "Not connected or initialized");
+        if (!validateConnectionState()) {
             return false;
         }
         
@@ -397,8 +411,7 @@ public class BleHidManager {
      * @return true if the command was sent successfully, false otherwise
      */
     public boolean moveMouse(int x, int y) {
-        if (!isInitialized || connectedDevice == null) {
-            Log.e(TAG, "Not connected or initialized");
+        if (!validateConnectionState()) {
             return false;
         }
         
@@ -412,8 +425,7 @@ public class BleHidManager {
      * @return true if the command was sent successfully, false otherwise
      */
     public boolean pressMouseButton(int button) {
-        if (!isInitialized || connectedDevice == null) {
-            Log.e(TAG, "Not connected or initialized");
+        if (!validateConnectionState()) {
             return false;
         }
         
@@ -426,8 +438,7 @@ public class BleHidManager {
      * @return true if the command was sent successfully, false otherwise
      */
     public boolean releaseMouseButtons() {
-        if (!isInitialized || connectedDevice == null) {
-            Log.e(TAG, "Not connected or initialized");
+        if (!validateConnectionState()) {
             return false;
         }
         
@@ -441,8 +452,7 @@ public class BleHidManager {
      * @return true if the command was sent successfully, false otherwise
      */
     public boolean releaseMouseButton(int button) {
-        if (!isInitialized || connectedDevice == null) {
-            Log.e(TAG, "Not connected or initialized");
+        if (!validateConnectionState()) {
             return false;
         }
         
@@ -456,8 +466,7 @@ public class BleHidManager {
      * @return true if the command was sent successfully, false otherwise
      */
     public boolean clickMouseButton(int button) {
-        if (!isInitialized || connectedDevice == null) {
-            Log.e(TAG, "Not connected or initialized");
+        if (!validateConnectionState()) {
             return false;
         }
         
@@ -471,8 +480,7 @@ public class BleHidManager {
      * @return true if the command was sent successfully, false otherwise
      */
     public boolean scrollMouseWheel(int amount) {
-        if (!isInitialized || connectedDevice == null) {
-            Log.e(TAG, "Not connected or initialized");
+        if (!validateConnectionState()) {
             return false;
         }
         
@@ -490,8 +498,7 @@ public class BleHidManager {
      * @return true if successful, false otherwise
      */
     public boolean sendCombinedReport(int mediaButtons, int mouseButtons, int x, int y) {
-        if (!isInitialized || connectedDevice == null) {
-            Log.e(TAG, "Not connected or initialized");
+        if (!validateConnectionState()) {
             return false;
         }
         
@@ -508,8 +515,7 @@ public class BleHidManager {
      * @return true if successful, false otherwise
      */
     public boolean sendKey(byte keyCode, int modifiers) {
-        if (!isInitialized || connectedDevice == null) {
-            Log.e(TAG, "Not connected or initialized");
+        if (!validateConnectionState()) {
             return false;
         }
         
@@ -522,8 +528,7 @@ public class BleHidManager {
      * @return true if successful, false otherwise
      */
     public boolean releaseAllKeys() {
-        if (!isInitialized || connectedDevice == null) {
-            Log.e(TAG, "Not connected or initialized");
+        if (!validateConnectionState()) {
             return false;
         }
         
@@ -538,8 +543,7 @@ public class BleHidManager {
      * @return true if successful, false otherwise
      */
     public boolean sendKeys(byte[] keyCodes, int modifiers) {
-        if (!isInitialized || connectedDevice == null) {
-            Log.e(TAG, "Not connected or initialized");
+        if (!validateConnectionState()) {
             return false;
         }
         
@@ -554,8 +558,7 @@ public class BleHidManager {
      * @return true if successful, false otherwise
      */
     public boolean typeKey(byte keyCode, int modifiers) {
-        if (!isInitialized || connectedDevice == null) {
-            Log.e(TAG, "Not connected or initialized");
+        if (!validateConnectionState()) {
             return false;
         }
         
@@ -569,8 +572,7 @@ public class BleHidManager {
      * @return true if successful, false otherwise
      */
     public boolean typeText(String text) {
-        if (!isInitialized || connectedDevice == null) {
-            Log.e(TAG, "Not connected or initialized");
+        if (!validateConnectionState()) {
             return false;
         }
         
