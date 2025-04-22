@@ -74,9 +74,14 @@ namespace Inventonater.BleHid
             GUILayout.BeginVertical(GUI.skin.box);
             GUILayout.Label("Device Name:", boldStyle);
             
+            // Create a custom style for the text field with larger height
+            GUIStyle largeTextFieldStyle = new GUIStyle(GUI.skin.textField);
+            largeTextFieldStyle.fontSize = GUI.skin.textField.fontSize;
+            largeTextFieldStyle.fixedHeight = 60f; // Match standard button height
+            
             GUILayout.BeginHorizontal();
-            _newDeviceName = GUILayout.TextField(_newDeviceName, GUILayout.ExpandWidth(true));
-            if (GUILayout.Button("Save", GUILayout.Width(100), GUILayout.Height(40)))
+            _newDeviceName = GUILayout.TextField(_newDeviceName, largeTextFieldStyle, GUILayout.ExpandWidth(true));
+            if (GUILayout.Button("Save", GUILayout.Width(100), GUILayout.Height(60)))
             {
                 SaveDeviceName();
             }
@@ -117,9 +122,21 @@ namespace Inventonater.BleHid
                 }
                 GUILayout.EndHorizontal();
                 
+                // Calculate a better height for the scroll view - make it proportional to screen height
+                float scrollViewHeight = Mathf.Max(Screen.height * 0.3f, 300);
+                
+                // Create custom scroll view styles for better touch interaction
+                GUIStyle verticalScrollbarStyle = new GUIStyle(GUI.skin.verticalScrollbar);
+                verticalScrollbarStyle.fixedWidth = 40f; // Wider scrollbar for touch
+                
+                GUIStyle horizontalScrollbarStyle = new GUIStyle(GUI.skin.horizontalScrollbar);
+                horizontalScrollbarStyle.fixedHeight = 40f; // Taller scrollbar for touch
+                
                 _deviceListScrollPosition = GUILayout.BeginScrollView(
-                    _deviceListScrollPosition, 
-                    GUILayout.Height(Mathf.Min(_pairedDevices.Count * 70, 200))
+                    _deviceListScrollPosition,
+                    verticalScrollbarStyle,
+                    horizontalScrollbarStyle,
+                    GUILayout.Height(scrollViewHeight)
                 );
                 
                 foreach (var device in _pairedDevices)
