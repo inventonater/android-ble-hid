@@ -235,39 +235,37 @@ namespace Inventonater.BleHid
         
         public static bool HasUserAuthorizedPermission(string permission)
         {
-            if (Application.platform != RuntimePlatform.Android)
-                return true;
-                
-            AndroidJavaClass unityPlayer = new AndroidJavaClass("com.unity3d.player.UnityPlayer");
-            AndroidJavaObject currentActivity = unityPlayer.GetStatic<AndroidJavaObject>("currentActivity");
-            AndroidJavaClass compatClass = new AndroidJavaClass("androidx.core.content.ContextCompat");
-            AndroidJavaClass permissionClass = new AndroidJavaClass("android.content.pm.PackageManager");
-            int granted = permissionClass.GetStatic<int>("PERMISSION_GRANTED");
-            
-            int result = compatClass.CallStatic<int>("checkSelfPermission", currentActivity, permission);
-            return result == granted;
-        }
-        
-        public static void RequestUserPermission(string permission)
-        {
-            if (Application.platform != RuntimePlatform.Android)
-                return;
-                
+            if (Application.platform != RuntimePlatform.Android) return true;
+
             try
             {
-                AndroidJavaClass unityPlayer = new AndroidJavaClass("com.unity3d.player.UnityPlayer");
-                AndroidJavaObject currentActivity = unityPlayer.GetStatic<AndroidJavaObject>("currentActivity");
-                AndroidJavaClass compatClass = new AndroidJavaClass("androidx.core.app.ActivityCompat");
-                
-                // Request permission - this will show the permission dialog
-                compatClass.CallStatic("requestPermissions", currentActivity, new string[] { permission }, 0);
+                var activity = new AndroidJavaClass("com.unity3d.player.UnityPlayer").GetStatic<AndroidJavaObject>("currentActivity");
+                const int GRANTED = 0; // PackageManager.PERMISSION_GRANTED
+                int result = activity.Call<int>("checkSelfPermission", permission);
+                return result == GRANTED;
+            }
+            catch (Exception e)
+            {
+                Debug.LogError($"Error checking permission {permission}: {e.Message}");
+                return false;
+            }
+        }
+
+        public static void RequestUserPermission(string permission)
+        {
+            if (Application.platform != RuntimePlatform.Android) return;
+
+            try
+            {
+                var activity = new AndroidJavaClass("com.unity3d.player.UnityPlayer").GetStatic<AndroidJavaObject>("currentActivity");
+                activity.Call("requestPermissions", new[] { permission }, 0);
             }
             catch (Exception e)
             {
                 Debug.LogError($"Error requesting permission {permission}: {e.Message}");
             }
         }
-        
+
         public static bool CheckBluetoothPermissions()
         {
             if (Application.platform != RuntimePlatform.Android)

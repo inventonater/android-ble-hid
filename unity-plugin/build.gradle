@@ -171,6 +171,10 @@ dependencies {
     // Use api instead of implementation to ensure core classes are included
     api project(':core')
     
+    // Explicitly include AndroidX dependencies to ensure they're bundled in the AAR
+    api rootProject.ext.deps.appcompat
+    api rootProject.ext.deps.core
+    
     testImplementation rootProject.ext.deps.junit
     androidTestImplementation rootProject.ext.deps.androidxTestJunit
     
