@@ -3,11 +3,13 @@ package com.inventonater.blehid.unity;
 import android.app.Activity;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
+import android.bluetooth.BluetoothGatt;
 import android.content.Context;
 import android.content.Intent;
 import android.util.Log;
 
 import com.inventonater.blehid.core.BleConnectionManager;
+import com.inventonater.blehid.core.BleGattServerManager;
 import com.inventonater.blehid.core.BleHidManager;
 import com.inventonater.blehid.core.BlePairingManager;
 import com.inventonater.blehid.core.CameraOptions;
@@ -277,6 +279,60 @@ public class BleHidUnityPlugin {
     public boolean isConnected() {
         if (!checkInitialized()) return false;
         return bleHidManager.isConnected();
+    }
+    
+    /**
+     * Disconnect from the currently connected device.
+     * This explicitly closes the GATT connection.
+     * 
+     * @return true if disconnect was successful or already disconnected, false otherwise
+     */
+    public boolean disconnect() {
+        if (!checkInitialized()) return false;
+        
+        // If no device is connected, return true (already disconnected)
+        if (!bleHidManager.isConnected()) {
+            Log.d(TAG, "No device connected, already disconnected");
+            return true;
+        }
+        
+        BluetoothDevice device = bleHidManager.getConnectedDevice();
+        if (device == null) {
+            Log.e(TAG, "Connected device reference is null");
+            return false;
+        }
+        
+        try {
+            // Get the GATT server manager from the BleHidManager
+            BleGattServerManager gattManager = bleHidManager.getGattServerManager();
+            if (gattManager == null) {
+                Log.e(TAG, "GATT server manager is null");
+                return false;
+            }
+            
+            // Get client GATT connection for the connected device
+            BluetoothGatt gatt = gattManager.getGattForConnectedDevice();
+            if (gatt != null) {
+                Log.i(TAG, "Disconnecting from device: " + device.getAddress());
+                
+                // Disconnect and close the GATT connection
+                gatt.disconnect();
+                
+                // No need to call gatt.close() here as it's done in the onConnectionStateChange callback
+                
+                Log.d(TAG, "Disconnect request sent successfully");
+                return true;
+            } else {
+                Log.e(TAG, "No GATT connection found for connected device");
+                return false;
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "Error disconnecting from device: " + e.getMessage(), e);
+            if (callback != null) {
+                callback.onError(ERROR_NOT_CONNECTED, "Error disconnecting: " + e.getMessage());
+            }
+            return false;
+        }
     }
     
     /**

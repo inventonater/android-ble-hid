@@ -126,5 +126,32 @@ namespace Inventonater.BleHid
                 return null;
             }
         }
+        
+        /// <summary>
+        /// Disconnects from the currently connected device.
+        /// </summary>
+        /// <returns>True if the disconnect command was sent successfully, false otherwise.</returns>
+        public bool Disconnect()
+        {
+            if (!manager.IsConnected) return true; // Already disconnected
+            
+            try 
+            { 
+                bool success = manager.BleInitializer.Call<bool>("disconnect");
+                if (success)
+                {
+                    Debug.Log("Disconnect request sent successfully");
+                }
+                return success;
+            }
+            catch (Exception e)
+            {
+                string message = "Exception disconnecting: " + e.Message;
+                Debug.LogException(e);
+                manager.LastErrorMessage = message;
+                manager.BleEventSystem.OnError?.Invoke(BleHidConstants.ERROR_GENERAL_ERROR, message);
+                return false;
+            }
+        }
     }
 }

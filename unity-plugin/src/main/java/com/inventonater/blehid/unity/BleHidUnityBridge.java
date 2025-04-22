@@ -151,6 +151,15 @@ public class BleHidUnityBridge {
         return plugin.isConnected();
     }
 
+    /**
+     * Disconnect from the currently connected device.
+     * 
+     * @return true if disconnect was successful or already disconnected, false otherwise
+     */
+    public boolean disconnect() {
+        return plugin.disconnect();
+    }
+
     public String[] getConnectedDeviceInfo() {
         return plugin.getConnectedDeviceInfo();
     }

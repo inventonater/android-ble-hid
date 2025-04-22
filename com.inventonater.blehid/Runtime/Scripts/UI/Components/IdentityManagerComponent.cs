@@ -22,6 +22,7 @@ namespace Inventonater.BleHid
         private Color _statusColor = Color.white;
         private bool _showConfirmResetDialog = false;
         private bool _showConfirmForgetDialog = false;
+        private bool _showConfirmDisconnectDialog = false;
         private string _deviceToForget = string.Empty;
         private string _deviceToForgetName = string.Empty;
 
@@ -30,11 +31,6 @@ namespace Inventonater.BleHid
             // Initialize with current values
             RefreshIdentityDisplay();
             RefreshPairedDevices();
-        }
-
-        public override void Update()
-        {
-            // Nothing to update per-frame for this component
         }
 
         public override void ComponentShown()
@@ -48,6 +44,32 @@ namespace Inventonater.BleHid
             // Clear any pending dialogs
             _showConfirmResetDialog = false;
             _showConfirmForgetDialog = false;
+            _showConfirmDisconnectDialog = false;
+        }
+        
+        /// <summary>
+        /// Disconnects from the currently connected device.
+        /// </summary>
+        private void DisconnectDevice()
+        {
+            if (BleHidManager == null || !BleHidManager.IsConnected)
+                return;
+                
+            bool success = BleHidManager.BleBridge.Connection.Disconnect();
+            if (success)
+            {
+                Debug.Log("Disconnect command sent successfully");
+                ShowNotification("Disconnecting from device...");
+            }
+            else
+            {
+                Debug.LogError("Failed to disconnect");
+                ShowNotification("Failed to disconnect from device", isError: true);
+            }
+        }
+
+        public override void Update()
+        {
         }
 
         public override void DrawUI()
@@ -55,6 +77,33 @@ namespace Inventonater.BleHid
             GUIStyle boldStyle = new GUIStyle(GUI.skin.label) { fontStyle = FontStyle.Bold };
             
             UIHelper.BeginSection("Device Identity");
+            
+            // Connected Device Section (shown only when a device is connected)
+            if (BleHidManager.IsConnected && !string.IsNullOrEmpty(BleHidManager.ConnectedDeviceAddress))
+            {
+                GUILayout.BeginVertical(new GUIStyle(GUI.skin.box) 
+                { 
+                    normal = { background = UIHelper.MakeColorTexture(new Color(0.0f, 0.5f, 0.0f, 0.2f)) } 
+                });
+                GUILayout.BeginHorizontal();
+                GUILayout.Label("Connected Device:", boldStyle, GUILayout.Width(150));
+                GUILayout.Label(BleHidManager.ConnectedDeviceName ?? "Unknown Device", 
+                    new GUIStyle(GUI.skin.label) { fontStyle = FontStyle.Bold, normal = { textColor = Color.green } });
+                GUILayout.EndHorizontal();
+                
+                GUILayout.BeginHorizontal();
+                GUILayout.Label("Address:", GUILayout.Width(150));
+                GUILayout.Label(BleHidManager.ConnectedDeviceAddress);
+                GUILayout.EndHorizontal();
+                
+                if (GUILayout.Button("Disconnect", GUILayout.Height(50)))
+                {
+                    _showConfirmDisconnectDialog = true;
+                }
+                GUILayout.EndVertical();
+                
+                GUILayout.Space(10);
+            }
             
             // Device UUID
             GUILayout.BeginVertical(GUI.skin.box);
@@ -107,7 +156,7 @@ namespace Inventonater.BleHid
             
             // Paired Devices
             GUILayout.BeginVertical(GUI.skin.box);
-            GUILayout.Label("Paired Devices:", boldStyle);
+            GUILayout.Label("Paired Previously on this Phone:", boldStyle);
             
             if (_pairedDevices.Count == 0)
             {
@@ -125,17 +174,13 @@ namespace Inventonater.BleHid
                 // Calculate a better height for the scroll view - make it proportional to screen height
                 float scrollViewHeight = Mathf.Max(Screen.height * 0.3f, 300);
                 
-                // Create custom scroll view styles for better touch interaction
-                GUIStyle verticalScrollbarStyle = new GUIStyle(GUI.skin.verticalScrollbar);
-                verticalScrollbarStyle.fixedWidth = 40f; // Wider scrollbar for touch
-                
-                GUIStyle horizontalScrollbarStyle = new GUIStyle(GUI.skin.horizontalScrollbar);
-                horizontalScrollbarStyle.fixedHeight = 40f; // Taller scrollbar for touch
-                
+                // Use a simple scroll view with default styles to support touch input
+                // alwaysShowVertical=true so we have a scrollbar visual indicator
+                // alwaysShowHorizontal=false to eliminate the warnings
                 _deviceListScrollPosition = GUILayout.BeginScrollView(
                     _deviceListScrollPosition,
-                    verticalScrollbarStyle,
-                    horizontalScrollbarStyle,
+                    false,  // Never show horizontal scrollbar
+                    true,   // Always show vertical scrollbar
                     GUILayout.Height(scrollViewHeight)
                 );
                 
@@ -230,6 +275,52 @@ namespace Inventonater.BleHid
                 {
                     _showConfirmResetDialog = false;
                     ResetIdentity();
+                }
+                GUILayout.EndHorizontal();
+                
+                GUILayout.EndVertical();
+                GUILayout.EndArea();
+            }
+            
+            // Disconnect confirmation dialog
+            if (_showConfirmDisconnectDialog)
+            {
+                // Create a semi-transparent overlay
+                GUI.Box(new Rect(0, 0, Screen.width, Screen.height), GUIContent.none, 
+                    new GUIStyle(){ normal = { background = UIHelper.MakeColorTexture(new Color(0,0,0,0.5f)) } });
+                
+                // Center the dialog
+                float dialogWidth = 450;
+                float dialogHeight = 200;
+                Rect dialogRect = new Rect(
+                    (Screen.width - dialogWidth) / 2,
+                    (Screen.height - dialogHeight) / 2,
+                    dialogWidth, 
+                    dialogHeight);
+                
+                GUILayout.BeginArea(dialogRect, GUI.skin.box);
+                
+                GUILayout.BeginVertical();
+                GUILayout.Label("Disconnect Device", 
+                    new GUIStyle(GUI.skin.label) { fontSize = 22, fontStyle = FontStyle.Bold, alignment = TextAnchor.MiddleCenter });
+                
+                GUILayout.Space(10);
+                
+                GUILayout.Label($"Disconnect from '{BleHidManager.ConnectedDeviceName}'?", 
+                    new GUIStyle(GUI.skin.label) { wordWrap = true });
+                
+                GUILayout.Space(20);
+                
+                GUILayout.BeginHorizontal();
+                if (GUILayout.Button("Cancel", GUILayout.Height(50)))
+                {
+                    _showConfirmDisconnectDialog = false;
+                }
+                
+                if (GUILayout.Button("Disconnect", GUILayout.Height(50)))
+                {
+                    _showConfirmDisconnectDialog = false;
+                    DisconnectDevice();
                 }
                 GUILayout.EndHorizontal();
                 
@@ -376,7 +467,6 @@ namespace Inventonater.BleHid
                 ShowNotification($"Found {_pairedDevices.Count} paired device(s)");
             }
         }
-
 
         private void ForgetDevice(string address, string name)
         {

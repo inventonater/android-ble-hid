@@ -15,7 +15,6 @@ namespace Inventonater.BleHid
             _manager = manager;
         }
         
-#if UNITY_ANDROID && !UNITY_EDITOR
         /// <summary>
         /// Sets the BLE peripheral identity (UUID and device name) for consistent recognition across app restarts.
         /// </summary>
@@ -24,6 +23,12 @@ namespace Inventonater.BleHid
         /// <returns>True if identity was set successfully</returns>
         public bool SetBleIdentity(string identityUuid, string deviceName)
         {
+            if (Application.isEditor)
+            {
+                Debug.Log($"[EDITOR] SetBleIdentity bond for identityUuid: {identityUuid}, deviceName: {deviceName}");
+                return true;
+            }
+
             if (!_manager.ConfirmIsInitialized()) return false;
             
             using (AndroidJavaClass unityBridge = new AndroidJavaClass("com.inventonater.blehid.unity.BleHidUnityBridge"))
@@ -39,8 +44,10 @@ namespace Inventonater.BleHid
         /// <returns>List of dictionaries containing device information</returns>
         public List<Dictionary<string, string>> GetBondedDevicesInfo()
         {
+            if (Application.isEditor) return MockBondedDevicesInfo();
+
             if (!_manager.ConfirmIsInitialized()) return new List<Dictionary<string, string>>();
-            
+
             using (AndroidJavaClass unityBridge = new AndroidJavaClass("com.inventonater.blehid.unity.BleHidUnityBridge"))
             using (AndroidJavaObject bridgeInstance = unityBridge.CallStatic<AndroidJavaObject>("getInstance"))
             {
@@ -56,8 +63,14 @@ namespace Inventonater.BleHid
         /// <returns>True if the device is bonded</returns>
         public bool IsDeviceBonded(string address)
         {
+            if (Application.isEditor)
+            {
+                Debug.Log($"[EDITOR] IsDeviceBonded bond for device {address}");
+                return true;
+            }
+
             if (!_manager.ConfirmIsInitialized()) return false;
-            
+
             using (AndroidJavaClass unityBridge = new AndroidJavaClass("com.inventonater.blehid.unity.BleHidUnityBridge"))
             using (AndroidJavaObject bridgeInstance = unityBridge.CallStatic<AndroidJavaObject>("getInstance"))
             {
@@ -72,6 +85,11 @@ namespace Inventonater.BleHid
         /// <returns>True if the bond was successfully removed</returns>
         public bool RemoveBond(string address)
         {
+            if (Application.isEditor)
+            {
+                Debug.Log($"[EDITOR] Removing bond for device {address}");
+                return true;
+            }
             if (!_manager.ConfirmIsInitialized()) return false;
             
             using (AndroidJavaClass unityBridge = new AndroidJavaClass("com.inventonater.blehid.unity.BleHidUnityBridge"))
@@ -111,19 +129,12 @@ namespace Inventonater.BleHid
             
             return result;
         }
-#else
-        // Stub implementations for editor/non-Android platforms
-        public bool SetBleIdentity(string identityUuid, string deviceName)
-        {
-            Debug.Log($"[EDITOR] Setting BLE identity: UUID={identityUuid}, Name={deviceName}");
-            return true;
-        }
-        
-        public List<Dictionary<string, string>> GetBondedDevicesInfo()
+
+        private static List<Dictionary<string, string>> MockBondedDevicesInfo()
         {
             // Return mock data for testing in the editor
             List<Dictionary<string, string>> mockDevices = new List<Dictionary<string, string>>();
-            
+
             Dictionary<string, string> device1 = new Dictionary<string, string>
             {
                 { "name", "Mock PC" },
@@ -132,7 +143,7 @@ namespace Inventonater.BleHid
                 { "bondState", "BONDED" },
                 { "uuids", "None" }
             };
-            
+
             Dictionary<string, string> device2 = new Dictionary<string, string>
             {
                 { "name", "Mock Laptop" },
@@ -141,24 +152,17 @@ namespace Inventonater.BleHid
                 { "bondState", "BONDED" },
                 { "uuids", "None" }
             };
-            
+
             mockDevices.Add(device1);
             mockDevices.Add(device2);
-            
+            mockDevices.Add(device1);
+            mockDevices.Add(device2);
+            mockDevices.Add(device1);
+            mockDevices.Add(device2);
+            mockDevices.Add(device1);
+            mockDevices.Add(device2);
+
             return mockDevices;
         }
-        
-        public bool IsDeviceBonded(string address)
-        {
-            Debug.Log($"[EDITOR] Checking if device {address} is bonded");
-            return true; // Always return true in editor
-        }
-        
-        public bool RemoveBond(string address)
-        {
-            Debug.Log($"[EDITOR] Removing bond for device {address}");
-            return true;
-        }
-#endif
     }
 }
