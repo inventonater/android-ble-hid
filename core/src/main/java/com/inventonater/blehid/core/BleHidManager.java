@@ -22,7 +22,7 @@ public class BleHidManager {
     private static final String TAG = "BleHidManager";
 
     private final Context context;
-    private final BluetoothManager bluetoothManager;
+    private final BluetoothEnvironmentValidator environmentValidator;
     private final BluetoothAdapter bluetoothAdapter;
     private final BleAdvertiser advertiser;
     private final BleGattServerManager gattServerManager;
@@ -30,6 +30,9 @@ public class BleHidManager {
     private final BleConnectionManager connectionManager;
     // Using media service for HID functionality
     private final HidMediaService hidMediaService;
+    
+    // Initialization coordinator
+    private final BleInitializationCoordinator initializationCoordinator;
 
     private boolean isInitialized = false;
     private BluetoothDevice connectedDevice = null;
@@ -42,25 +45,27 @@ public class BleHidManager {
     public BleHidManager(Context context) {
         this.context = context.getApplicationContext(); // Use application context to prevent leaks
         
-        // Get Bluetooth adapter
-        bluetoothManager = (BluetoothManager) context.getSystemService(Context.BLUETOOTH_SERVICE);
-        if (bluetoothManager == null) {
-            Log.e(TAG, "Bluetooth manager not found");
-            bluetoothAdapter = null;
-        } else {
-            bluetoothAdapter = bluetoothManager.getAdapter();
-        }
+        // Initialize environment validator first
+        this.environmentValidator = new BluetoothEnvironmentValidator(context);
+        
+        // Get Bluetooth adapter via the validator
+        this.bluetoothAdapter = environmentValidator.getBluetoothAdapter();
         
         // Initialize components
-        advertiser = new BleAdvertiser(this);
-        gattServerManager = new BleGattServerManager(this);
-        pairingManager = new BlePairingManager(this);
-        connectionManager = new BleConnectionManager(this);
-        hidMediaService = new HidMediaService(this);
+        this.advertiser = new BleAdvertiser(this);
+        this.gattServerManager = new BleGattServerManager(this);
+        this.pairingManager = new BlePairingManager(this);
+        this.connectionManager = new BleConnectionManager(this);
+        this.hidMediaService = new HidMediaService(this);
+        
+        // Create initialization coordinator last
+        this.initializationCoordinator = new BleInitializationCoordinator(
+            context, gattServerManager, hidMediaService);
     }
 
     /**
      * Initializes the BLE HID functionality.
+     * Delegates to the BleInitializationCoordinator which handles the initialization process.
      * 
      * @return true if initialization was successful, false otherwise
      */
@@ -70,39 +75,15 @@ public class BleHidManager {
             return true;
         }
         
-        if (bluetoothAdapter == null) {
-            Log.e(TAG, "Bluetooth not supported");
-            return false;
+        boolean success = initializationCoordinator.initialize();
+        if (success) {
+            isInitialized = true;
+            Log.i(TAG, "BLE HID Manager initialized successfully");
+        } else {
+            Log.e(TAG, "Initialization failed");
         }
         
-        if (!bluetoothAdapter.isEnabled()) {
-            Log.e(TAG, "Bluetooth is not enabled");
-            return false;
-        }
-        
-        if (!isBlePeripheralSupported()) {
-            Log.e(TAG, "BLE Peripheral mode not supported");
-            return false;
-        }
-        
-        // Initialize components
-        boolean gattInitialized = gattServerManager.initialize();
-        if (!gattInitialized) {
-            Log.e(TAG, "Failed to initialize GATT server");
-            return false;
-        }
-        
-        // Initialize HID service
-        boolean hidInitialized = hidMediaService.initialize();
-        if (!hidInitialized) {
-            Log.e(TAG, "Failed to initialize HID service");
-            gattServerManager.close();
-            return false;
-        }
-        
-        isInitialized = true;
-        Log.i(TAG, "BLE HID Manager initialized successfully");
-        return true;
+        return success;
     }
 
     /**
@@ -259,19 +240,12 @@ public class BleHidManager {
 
     /**
      * Checks if the device supports BLE peripheral mode.
+     * Delegates to the BluetoothEnvironmentValidator for the actual check.
      * 
      * @return true if peripheral mode is supported, false otherwise
      */
     public boolean isBlePeripheralSupported() {
-        if (bluetoothAdapter == null) {
-            return false;
-        }
-        
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-            return bluetoothAdapter.isMultipleAdvertisementSupported();
-        }
-        
-        return false;
+        return environmentValidator.isPeripheralModeSupported();
     }
 
     /**
@@ -297,7 +271,7 @@ public class BleHidManager {
     }
 
     public BluetoothManager getBluetoothManager() {
-        return bluetoothManager;
+        return (BluetoothManager) context.getSystemService(Context.BLUETOOTH_SERVICE);
     }
 
     public BluetoothAdapter getBluetoothAdapter() {
