@@ -687,26 +687,28 @@ public class BleHidManager {
     }
     
     /**
-     * Explicitly sets the connection state.
-     * This is used in cases where we need to forcibly update the connection state
-     * without going through the normal flow, such as during manual disconnection.
+     * Forces a disconnection regardless of the current connection state.
+     * This method should be used only in exceptional cases where you need to 
+     * forcibly close a connection outside the normal BLE disconnect flow, such as:
+     * - When handling external disconnect requests (e.g., from UI)
+     * - When cleaning up resources during application shutdown
+     * - When resolving connection state inconsistencies
      * 
-     * @param connected true if connected, false if disconnected
+     * For normal connection lifecycles, the system should rely on the automatic
+     * callbacks (onDeviceConnected/onDeviceDisconnected) instead.
      */
-    public void setConnected(boolean connected) {
-        Log.i(TAG, "Explicitly setting connection state to: " + (connected ? "connected" : "disconnected"));
+    public void forceDisconnect() {
+        Log.i(TAG, "Forcing disconnection");
         
-        if (!connected) {
-            BluetoothDevice device = connectedDevice;
-            connectedDevice = null;
+        BluetoothDevice device = connectedDevice;
+        connectedDevice = null;
+        
+        if (device != null) {
+            // Call connection manager to maintain consistency
+            connectionManager.onDeviceDisconnected();
             
-            if (device != null) {
-                // Call connection manager to maintain consistency
-                connectionManager.onDeviceDisconnected();
-                
-                // Restart advertising after disconnect
-                startAdvertising();
-            }
+            // Restart advertising after disconnect
+            startAdvertising();
         }
     }
     

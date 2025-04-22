@@ -333,7 +333,7 @@ public class BleHidUnityPlugin {
                 // Manually update connection state since we know we've disconnected
                 if (bleHidManager.isConnected()) {
                     Log.i(TAG, "Manually updating connection state to disconnected");
-                    bleHidManager.setConnected(false);
+                    bleHidManager.forceDisconnect();
                     
                     // Notify Unity about disconnection
                     if (callback != null) {
@@ -350,7 +350,7 @@ public class BleHidUnityPlugin {
                 // Even though we couldn't find the GATT connection, we should still update the state
                 if (bleHidManager.isConnected()) {
                     Log.i(TAG, "Forcibly updating connection state to disconnected");
-                    bleHidManager.setConnected(false);
+                    bleHidManager.forceDisconnect();
                     
                     // Notify Unity about disconnection
                     if (callback != null) {
