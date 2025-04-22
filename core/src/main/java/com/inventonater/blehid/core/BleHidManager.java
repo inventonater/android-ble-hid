@@ -687,6 +687,30 @@ public class BleHidManager {
     }
     
     /**
+     * Explicitly sets the connection state.
+     * This is used in cases where we need to forcibly update the connection state
+     * without going through the normal flow, such as during manual disconnection.
+     * 
+     * @param connected true if connected, false if disconnected
+     */
+    public void setConnected(boolean connected) {
+        Log.i(TAG, "Explicitly setting connection state to: " + (connected ? "connected" : "disconnected"));
+        
+        if (!connected) {
+            BluetoothDevice device = connectedDevice;
+            connectedDevice = null;
+            
+            if (device != null) {
+                // Call connection manager to maintain consistency
+                connectionManager.onDeviceDisconnected();
+                
+                // Restart advertising after disconnect
+                startAdvertising();
+            }
+        }
+    }
+    
+    /**
      * Returns the BleAdvertiser instance.
      * 
      * @return The BleAdvertiser instance

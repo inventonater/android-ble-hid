@@ -19,15 +19,30 @@ namespace Inventonater.BleHid
         /// <returns>True if disconnect was successful or already disconnected, false otherwise</returns>
         public bool Disconnect()
         {
-            if (!_manager.ConfirmIsInitialized()) return false;
+            Debug.Log("[ConnectionBridge] Disconnect method called");
+            
+            if (!_manager.ConfirmIsInitialized()) 
+            {
+                Debug.LogError("[ConnectionBridge] Cannot disconnect - manager not initialized");
+                return false;
+            }
+            
+            if (!_manager.IsConnected)
+            {
+                Debug.Log("[ConnectionBridge] Already disconnected (IsConnected = false)");
+                return true; // Already disconnected is a success case
+            }
             
             try
             {
-                return _manager.BleInitializer.Call<bool>("disconnect");
+                Debug.Log($"[ConnectionBridge] Calling Java disconnect method via BleInitializer. Device: {_manager.ConnectedDeviceName} ({_manager.ConnectedDeviceAddress})");
+                bool result = _manager.BleInitializer.Call<bool>("disconnect");
+                Debug.Log($"[ConnectionBridge] Java disconnect call returned: {result}");
+                return result;
             }
             catch (Exception e)
             {
-                Debug.LogError($"Error disconnecting: {e.Message}");
+                Debug.LogError($"[ConnectionBridge] Error disconnecting: {e.Message}");
                 _manager.BleEventSystem.OnError?.Invoke(BleHidConstants.ERROR_GENERAL_ERROR, $"Failed to disconnect: {e.Message}");
                 return false;
             }

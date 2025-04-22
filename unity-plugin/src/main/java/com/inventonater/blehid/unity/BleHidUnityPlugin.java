@@ -288,7 +288,12 @@ public class BleHidUnityPlugin {
      * @return true if disconnect was successful or already disconnected, false otherwise
      */
     public boolean disconnect() {
-        if (!checkInitialized()) return false;
+        Log.i(TAG, "=========== DISCONNECT called from Unity ===========");
+        
+        if (!checkInitialized()) {
+            Log.e(TAG, "Cannot disconnect - not initialized");
+            return false;
+        }
         
         // If no device is connected, return true (already disconnected)
         if (!bleHidManager.isConnected()) {
@@ -298,9 +303,11 @@ public class BleHidUnityPlugin {
         
         BluetoothDevice device = bleHidManager.getConnectedDevice();
         if (device == null) {
-            Log.e(TAG, "Connected device reference is null");
+            Log.e(TAG, "Connected device reference is null despite isConnected=true");
             return false;
         }
+        
+        Log.i(TAG, "Starting disconnect process for device: " + device.getName() + " (" + device.getAddress() + ")");
         
         try {
             // Get the GATT server manager from the BleHidManager
@@ -313,18 +320,46 @@ public class BleHidUnityPlugin {
             // Get client GATT connection for the connected device
             BluetoothGatt gatt = gattManager.getGattForConnectedDevice();
             if (gatt != null) {
-                Log.i(TAG, "Disconnecting from device: " + device.getAddress());
+                Log.i(TAG, "Found active GATT connection for device: " + device.getAddress());
                 
                 // Disconnect and close the GATT connection
+                Log.i(TAG, "Calling gatt.disconnect()");
                 gatt.disconnect();
                 
-                // No need to call gatt.close() here as it's done in the onConnectionStateChange callback
+                // Force close after disconnect to ensure resources are released
+                Log.i(TAG, "Calling gatt.close() to fully release connection");
+                gatt.close();
                 
-                Log.d(TAG, "Disconnect request sent successfully");
+                // Manually update connection state since we know we've disconnected
+                if (bleHidManager.isConnected()) {
+                    Log.i(TAG, "Manually updating connection state to disconnected");
+                    bleHidManager.setConnected(false);
+                    
+                    // Notify Unity about disconnection
+                    if (callback != null) {
+                        Log.i(TAG, "Sending disconnection notification to Unity");
+                        callback.onConnectionStateChanged(false, null, null);
+                    }
+                }
+                
+                Log.i(TAG, "Disconnect process completed successfully");
                 return true;
             } else {
-                Log.e(TAG, "No GATT connection found for connected device");
-                return false;
+                Log.e(TAG, "No GATT connection found for connected device despite isConnected=true");
+                
+                // Even though we couldn't find the GATT connection, we should still update the state
+                if (bleHidManager.isConnected()) {
+                    Log.i(TAG, "Forcibly updating connection state to disconnected");
+                    bleHidManager.setConnected(false);
+                    
+                    // Notify Unity about disconnection
+                    if (callback != null) {
+                        Log.i(TAG, "Sending disconnection notification to Unity");
+                        callback.onConnectionStateChanged(false, null, null);
+                    }
+                }
+                
+                return true; // Return true since we've at least updated the state
             }
         } catch (Exception e) {
             Log.e(TAG, "Error disconnecting from device: " + e.getMessage(), e);
