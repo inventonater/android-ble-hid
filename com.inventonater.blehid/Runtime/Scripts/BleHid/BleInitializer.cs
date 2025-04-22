@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Linq;
+using Unity.Profiling;
 using UnityEngine;
 
 namespace Inventonater.BleHid
@@ -12,10 +13,13 @@ namespace Inventonater.BleHid
     {
         private readonly BleHidManager _manager;
         public AndroidJavaObject BridgeInstance { get; private set; }
+        static readonly ProfilerMarker _marker = new("BleHid.BleInitializer.BridgeInstance.Call");
 
         private bool _verbose = true;
         public void Call(string methodName, params object[] args)
         {
+            using var profilerMarker = _marker.Auto();
+
             if(_verbose) LoggingManager.Instance.AddLogEntry($" -- {methodName} {string.Join(", ", args)}");
             if (Application.isEditor) return;
 
@@ -24,6 +28,8 @@ namespace Inventonater.BleHid
 
         public T Call<T>(string methodName, params object[] args)
         {
+            using var profilerMarker = _marker.Auto();
+
             if(_verbose) LoggingManager.Instance.AddLogEntry($" -- {methodName} {string.Join(", ", args)}");
             if (Application.isEditor) return default;
 

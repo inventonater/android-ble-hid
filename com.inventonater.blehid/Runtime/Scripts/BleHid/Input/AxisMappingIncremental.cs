@@ -1,4 +1,5 @@
 using System;
+using Unity.Profiling;
 using UnityEngine;
 
 namespace Inventonater.BleHid
@@ -13,6 +14,7 @@ namespace Inventonater.BleHid
         private int _pendingDelta;
         private readonly float _interval;
         float _lastIncrement;
+        static readonly ProfilerMarker _profileMarker = new("BleHid.AxisMappingIncremental.Update");
 
         public AxisMappingIncremental(BleHidAxis axis, Action increment, Action decrement, float interval = 0.02f)
         {
@@ -45,6 +47,8 @@ namespace Inventonater.BleHid
 
         public void Update(float time)
         {
+            using var profile = _profileMarker.Auto();
+
             if (time < _lastIncrement + _interval) return;
             _lastIncrement = time;
 

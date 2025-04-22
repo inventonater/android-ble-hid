@@ -1,4 +1,5 @@
 using System;
+using Unity.Profiling;
 using UnityEngine;
 
 namespace Inventonater.BleHid
@@ -9,8 +10,12 @@ namespace Inventonater.BleHid
         private BleHidManager _manager;
         public MouseBridge(BleHidManager manager) => _manager = manager;
 
+        static readonly ProfilerMarker _marker = new("BleHid.MouseBridge.MoveMouse");
+
         public bool MoveMouse(int deltaX, int deltaY)
         {
+            using var profilerMarker = _marker.Auto();
+
             if (deltaX == 0 && deltaY == 0) return false;
 
             if (deltaX < -127 || deltaX > 127 || deltaY < -127 || deltaY > 127)

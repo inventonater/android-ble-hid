@@ -9,9 +9,12 @@ namespace Inventonater.BleHid
         private Thread workerThread;
         private volatile bool isRunning;
         private int counter = 0;
+        private bool _enabled = false;
 
         public void Start()
         {
+            if (!_enabled) return;
+
             if (isRunning && workerThread != null)
             {
                 Debug.Log("Background worker is already running");

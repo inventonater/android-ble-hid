@@ -1,4 +1,5 @@
 using System;
+using Unity.Profiling;
 using UnityEngine;
 
 namespace Inventonater.BleHid
@@ -8,6 +9,7 @@ namespace Inventonater.BleHid
     {
         public IInputFilter Filter { get; private set; }
         public InputFilterFactory.FilterType CurrentFilterType { get; private set; }
+        static readonly ProfilerMarker _profileMarker = new("BleHid.MousePositionFilter.Update");
 
         private Vector2? _lastFilteredPosition;
         public float GlobalScale = 1.0f;
@@ -95,6 +97,7 @@ namespace Inventonater.BleHid
 
         public void Update(float time)
         {
+            using var profilerMarker = _profileMarker.Auto();
             if (_flipY) _pendingPosition.y = -_pendingPosition.y;
 
             Vector2 filteredPosition = Filter.Filter(_pendingPosition, time);

@@ -16,7 +16,7 @@ namespace Inventonater.BleHid
         private Vector2 scrollPosition;
         private readonly string logFileName = "ble_hid_events.log";
         private string logFilePath;
-        private bool logToFile = true;
+        private bool logToFile = false;
         
         /// <summary>
         /// Gets the path to the log file

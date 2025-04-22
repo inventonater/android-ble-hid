@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using Unity.Profiling;
 using UnityEngine;
 
 namespace Inventonater.BleHid
@@ -9,7 +10,7 @@ namespace Inventonater.BleHid
     public class InputDeviceMapping : MonoBehaviour
     {
         [SerializeField] private string _configurationPath = "";
-        [SerializeField] private bool _loadDefaultConfigOnStart = true;
+        [SerializeField] private bool _loadDefaultConfigOnStart = false;
         
         public MousePositionFilter MousePositionFilter { get; private set; }
 
@@ -38,6 +39,8 @@ namespace Inventonater.BleHid
             
             if (_loadDefaultConfigOnStart)
             {
+                LoggingManager.Instance.AddLogEntry("Loading configuration...");
+
                 if (string.IsNullOrEmpty(_configurationPath))
                 {
                     _configurationPath = _configManager.GetDefaultConfigPath();
@@ -45,7 +48,31 @@ namespace Inventonater.BleHid
                 
                 LoadConfiguration(_configurationPath);
             }
+            else
+            {
+                LoggingManager.Instance.AddLogEntry("Loading hardcoded configuration");
+                AddPressRelease(BleHidButtonEvent.Id.Primary, 0);
+                AddPressRelease(BleHidButtonEvent.Id.Secondary, 1);
+                AddDirection(BleHidDirection.Up, BleHidConstants.KEY_UP);
+                AddDirection(BleHidDirection.Right, BleHidConstants.KEY_RIGHT);
+                AddDirection(BleHidDirection.Down, BleHidConstants.KEY_DOWN);
+                AddDirection(BleHidDirection.Left, BleHidConstants.KEY_LEFT);
+                _axisMappings.Add(MousePositionFilter = new MousePositionFilter(Mouse));
+                _axisMappings.Add(new AxisMappingIncremental(BleHidAxis.Z, () => Media.VolumeUp(), () => Media.VolumeDown()));
+            }
         }
+        private void AddDirection(BleHidDirection dir, byte hidConstant) => DirectionMapping.Add(dir, () => Keyboard.SendKey(hidConstant));
+
+        public void AddPressRelease(BleHidButtonEvent.Id button, int mouseButtonId)
+        {
+            ButtonMapping.Add(new BleHidButtonEvent(button, BleHidButtonEvent.Action.Press), () => Mouse.PressMouseButton(mouseButtonId));
+            ButtonMapping.Add(new BleHidButtonEvent(button, BleHidButtonEvent.Action.Release), () => Mouse.ReleaseMouseButton(mouseButtonId));
+        }
+        public void AddTap(BleHidButtonEvent.Id button, byte hidConstant) =>
+            ButtonMapping.Add(new BleHidButtonEvent(button, BleHidButtonEvent.Action.Tap), () => Keyboard.SendKey(hidConstant));
+
+        public void AddDoubleTap(BleHidButtonEvent.Id button, byte hidConstant) =>
+            ButtonMapping.Add(new BleHidButtonEvent(button, BleHidButtonEvent.Action.DoubleTap), () => Keyboard.SendKey(hidConstant));
         
         public void LoadConfiguration(string path)
         {
@@ -170,22 +197,36 @@ namespace Inventonater.BleHid
             foreach (var axisMapping in _axisMappings) axisMapping.ResetPosition();
         }
 
+        static readonly ProfilerMarker _profileMarkerButtonEvent = new("BleHid.InputDeviceMapping.Update.ButtonEvent");
+        static readonly ProfilerMarker _profileMarkerDirection = new("BleHid.InputDeviceMapping.Update.DirectionMapping");
+        static readonly ProfilerMarker _profileMarkerAxis = new("BleHid.InputDeviceMapping.Update.AxisMapping");
+
+
         // ExecutionOrder Process
         private void Update()
         {
-            if (_pendingButtonEvent != BleHidButtonEvent.None && ButtonMapping.TryGetValue(_pendingButtonEvent, out var buttonAction))
+            using (_profileMarkerButtonEvent.Auto())
             {
-                buttonAction();
-                _pendingButtonEvent = BleHidButtonEvent.None;
+                if (_pendingButtonEvent != BleHidButtonEvent.None && ButtonMapping.TryGetValue(_pendingButtonEvent, out var buttonAction))
+                {
+                    buttonAction();
+                    _pendingButtonEvent = BleHidButtonEvent.None;
+                }
             }
 
-            if (_pendingDirection != BleHidDirection.None && DirectionMapping.TryGetValue(_pendingDirection, out var directionAction))
+            using (_profileMarkerDirection.Auto())
             {
-                directionAction();
-                _pendingDirection = BleHidDirection.None;
+                if (_pendingDirection != BleHidDirection.None && DirectionMapping.TryGetValue(_pendingDirection, out var directionAction))
+                {
+                    directionAction();
+                    _pendingDirection = BleHidDirection.None;
+                }
             }
 
-            foreach (var axisMapping in _axisMappings) axisMapping.Update(Time.time);
+            using (_profileMarkerAxis.Auto())
+            {
+                foreach (var axisMapping in _axisMappings) axisMapping.Update(Time.time);
+            }
         }
     }
 }
