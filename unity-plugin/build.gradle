@@ -19,6 +19,9 @@ def getAndIncrementBuildNumber() {
 // Get the incremented build number right away
 def currentBuildNumber = getAndIncrementBuildNumber()
 
+def unityDir = "$rootDir/unity-test/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary"
+def unityClassesJar = file("$unityDir/libs/unity-classes.jar")
+
 android {
     namespace 'com.inventonater.blehid'
     compileSdk rootProject.ext.compileSdkVersion
@@ -51,6 +54,17 @@ android {
         sourceCompatibility rootProject.ext.javaVersion
         targetCompatibility rootProject.ext.javaVersion
     }
+
+    sourceSets {
+        main.java.srcDir "$unityDir/src/main/java"
+    }
+
+    // Strip Unity classes so they are NOT packaged into your AAR
+    packagingOptions {
+        resources.excludes += [
+            '**/com/unity3d/player/UnityPlayer*.class'
+        ]
+    }
     
     packagingOptions {
         exclude 'META-INF/MANIFEST.MF'
@@ -60,31 +74,8 @@ android {
         doNotStrip '**/*.so'
     }
     
-    // Enable buildConfig generation
     buildFeatures {
         buildConfig = true
-    }
-}
-
-// No longer copying core classes - using dependency approach instead
-
-// Keep these tasks for backward compatibility, but they're not part of the default build process
-// They can be run manually with: ./gradlew copyPluginToUnityTest copyCoreToUnityTest
-task copyPluginToUnityTest(type: Copy, dependsOn: 'assembleRelease') {
-    description = 'Copies the plugin AAR to unity-test/Assets (legacy approach, use only for compatibility)'
-    from "${buildDir}/outputs/aar/unity-plugin-release.aar"
-    into "../unity-test/Assets/Plugins/Android"
-    rename { String fileName ->
-        fileName.replace("unity-plugin-release.aar", "BleHidPlugin.aar")
-    }
-}
-
-task copyCoreToUnityTest(type: Copy, dependsOn: ':core:assembleRelease') {
-    description = 'Copies the core AAR to unity-test/Assets (legacy approach, use only for compatibility)'
-    from "../core/build/outputs/aar/core-release.aar"
-    into "../unity-test/Assets/Plugins/Android"
-    rename { String fileName ->
-        fileName.replace("core-release.aar", "BleHidCore.aar")
     }
 }
 
@@ -181,6 +172,6 @@ dependencies {
     // Kotlin dependencies
     implementation 'org.jetbrains.kotlin:kotlin-stdlib:1.8.10'
     
-    // Unity classes are provided by Unity's Android Player at runtime
-    compileOnly fileTree(dir: '/Applications/Unity/Hub/Editor/6000.0.41f1/PlaybackEngines/AndroidPlayer/Variations/il2cpp/Development/Classes', include: ['*.jar'])
+    // engine stubs
+    compileOnly files(unityClassesJar)
 }

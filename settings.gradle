@@ -1,17 +1,3 @@
-/**
- * Project Settings for Inventonater HID
- * 
- * This project is structured into modules:
- * - core: Core BLE HID functionality library (can be reused in other projects)
- * - unity-plugin: Unity integration for using BLE HID in Unity games/apps
- * 
- * Note: The app module has been removed as it's not needed for the Unity package
- */
 rootProject.name = 'inventonater-hid'
-// App module is not needed for the Unity package, so it's commented out
-// include ':app'
 include ':core'
-// Media player functionality has been added to unity-plugin
 include ':unity-plugin'
-// Diagnostic module is still not updated
-// include ':ble-diagnostic'

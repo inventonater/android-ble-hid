@@ -27,7 +27,6 @@ android {
 
 dependencies {
     implementation rootProject.ext.deps.core
-    // Removed androidx.appcompat - using standard Android Notification APIs instead
     testImplementation rootProject.ext.deps.junit
     androidTestImplementation rootProject.ext.deps.androidxTestJunit
     

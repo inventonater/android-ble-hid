@@ -1,4 +1,4 @@
-package com.company.product;
+package com.inventonater.blehid.unity;
 import com.unity3d.player.UnityPlayerActivity;
 import com.unity3d.player.UnityPlayer;
 import android.os.Bundle;
@@ -9,7 +9,7 @@ import android.view.View;
 import android.graphics.Point;
 import android.content.res.Configuration;
 
-public class OverrideExample extends UnityPlayerActivity {
+public class BleHidUnityPlayerActivity extends UnityPlayerActivity {
   
     @Override
     protected void onCreate(Bundle savedInstanceState) {
