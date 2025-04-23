@@ -69,25 +69,29 @@ namespace Inventonater.BleHid
         {
             string[] parts = message.Split(':');
             bool connected = bool.Parse(parts[0]);
-            string deviceName = null;
-            string deviceAddress = null;
-            
+            string deviceName = parts.Length > 1 ? parts[1] : "";
+            string deviceAddress = parts.Length > 2 ? parts[2] : "";
+            SetConnection(connected, parts, deviceName, deviceAddress);
+        }
+
+        private void SetConnection(bool connected, string[] parts, string deviceName, string deviceAddress)
+        {
             if (connected && parts.Length >= 3)
             {
                 deviceName = parts[1];
                 deviceAddress = parts[2];
             }
-            
+
             manager.IsConnected = connected;
             manager.ConnectedDeviceName = deviceName;
             manager.ConnectedDeviceAddress = deviceAddress;
-            
+
             if (connected) Debug.Log($"BLE device connected: {deviceName} ({deviceAddress})");
             else Debug.Log("BLE device disconnected");
 
             OnConnectionStateChanged?.Invoke(connected, deviceName, deviceAddress);
         }
-        
+
         public void HandlePairingStateChanged(string message)
         {
             string[] parts = message.Split(':');

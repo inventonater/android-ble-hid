@@ -25,7 +25,7 @@ namespace Inventonater.BleHid
 
             if (!_manager.IsConnected) return false;
 
-            try { return _manager.BleInitializer.Call<bool>("moveMouse", deltaX, deltaY); }
+            try { return _manager.Bridge.Call<bool>("moveMouse", deltaX, deltaY); }
             catch (Exception e)
             {
                 Debug.LogException(e);
@@ -38,7 +38,7 @@ namespace Inventonater.BleHid
         {
             if (!_manager.ConfirmIsConnected()) return false;
 
-            try { return _manager.BleInitializer.Call<bool>("pressMouseButton", button); }
+            try { return _manager.Bridge.Call<bool>("pressMouseButton", button); }
             catch (Exception e)
             {
                 Debug.LogException(e);
@@ -50,7 +50,7 @@ namespace Inventonater.BleHid
         {
             if (!_manager.ConfirmIsConnected()) return false;
 
-            try { return _manager.BleInitializer.Call<bool>("releaseMouseButton", button); }
+            try { return _manager.Bridge.Call<bool>("releaseMouseButton", button); }
             catch (Exception e)
             {
                 Debug.LogException(e);
@@ -62,7 +62,7 @@ namespace Inventonater.BleHid
         {
             if (!_manager.ConfirmIsConnected()) return false;
 
-            try { return _manager.BleInitializer.Call<bool>("clickMouseButton", button); }
+            try { return _manager.Bridge.Call<bool>("clickMouseButton", button); }
             catch (Exception e)
             {
                 Debug.LogException(e);

@@ -47,8 +47,6 @@ namespace Inventonater.BleHid
             AddTab(new AccessibilityUI(this));
             AddTab(new ConnectionUI());
             AddTab(new IdentityUI());
-
-            BleHidManager.Instance.BleInitializer.Initialize();
         }
 
         private void Update()

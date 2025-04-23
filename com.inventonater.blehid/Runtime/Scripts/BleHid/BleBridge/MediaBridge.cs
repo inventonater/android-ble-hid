@@ -13,7 +13,7 @@ namespace Inventonater.BleHid
         {
             if (!_manager.ConfirmIsConnected()) return false;
 
-            try { return _manager.BleInitializer.Call<bool>("playPause"); }
+            try { return _manager.Bridge.Call<bool>("playPause"); }
             catch (Exception e)
             {
                 Debug.LogException(e);
@@ -25,7 +25,7 @@ namespace Inventonater.BleHid
         {
             if (!_manager.ConfirmIsConnected()) return false;
 
-            try { return _manager.BleInitializer.Call<bool>("nextTrack"); }
+            try { return _manager.Bridge.Call<bool>("nextTrack"); }
             catch (Exception e)
             {
                 Debug.LogException(e);
@@ -37,7 +37,7 @@ namespace Inventonater.BleHid
         {
             if (!_manager.ConfirmIsConnected()) return false;
 
-            try { return _manager.BleInitializer.Call<bool>("previousTrack"); }
+            try { return _manager.Bridge.Call<bool>("previousTrack"); }
             catch (Exception e)
             {
                 Debug.LogException(e);
@@ -49,7 +49,7 @@ namespace Inventonater.BleHid
         {
             if (!_manager.ConfirmIsConnected()) return false;
 
-            try { return _manager.BleInitializer.Call<bool>("volumeUp"); }
+            try { return _manager.Bridge.Call<bool>("volumeUp"); }
             catch (Exception e)
             {
                 Debug.LogException(e);
@@ -61,7 +61,7 @@ namespace Inventonater.BleHid
         {
             if (!_manager.ConfirmIsConnected()) return false;
 
-            try { return _manager.BleInitializer.Call<bool>("volumeDown"); }
+            try { return _manager.Bridge.Call<bool>("volumeDown"); }
             catch (Exception e)
             {
                 Debug.LogException(e);
@@ -73,7 +73,7 @@ namespace Inventonater.BleHid
         {
             if (!_manager.ConfirmIsConnected()) return false;
 
-            try { return _manager.BleInitializer.Call<bool>("mute"); }
+            try { return _manager.Bridge.Call<bool>("mute"); }
             catch (Exception e)
             {
                 Debug.LogException(e);

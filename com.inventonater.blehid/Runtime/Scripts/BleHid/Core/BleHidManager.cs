@@ -6,8 +6,9 @@ namespace Inventonater.BleHid
     [DefaultExecutionOrder(ExecutionOrder.Initialize)]
     public class BleHidManager : MonoBehaviour
     {
-        public bool IsAdvertising { get; internal set; }
+        public bool IsInitialized { get; private set; }
         public bool IsConnected { get; internal set; }
+        public bool IsAdvertising { get; internal set; }
         public string ConnectedDeviceName { get; internal set; }
         public string ConnectedDeviceAddress { get; internal set; }
         public int ConnectionInterval { get; internal set; }
@@ -20,15 +21,15 @@ namespace Inventonater.BleHid
         public bool IsInPipMode { get; internal set; }
         public PipBackgroundWorker PipWorker { get; private set; }
 
-        public BleInitializer BleInitializer { get; private set; }
+        public JavaBridge Bridge { get; private set; }
         public BleEventSystem BleEventSystem { get; private set; }
         public BleAdvertiser BleAdvertiser { get; private set; }
         public ConnectionManager ConnectionManager { get; private set; }
         public InputRouter InputRouter { get; private set; }
         public InputDeviceMapping Mapping { get; private set; }
         public BleIdentityManager IdentityManager { get; private set; }
-
         public BleBridge BleBridge { get; private set; }
+
         public static BleHidManager Instance => FindFirstObjectByType<BleHidManager>();
 
         private void Awake()
@@ -44,7 +45,7 @@ namespace Inventonater.BleHid
             InputRouter = gameObject.AddComponent<InputRouter>();
             InputRouter.SetMapping(Mapping);
 
-            BleInitializer = new BleInitializer(this);
+            Bridge = new JavaBridge();
             BleAdvertiser = new BleAdvertiser(this);
             ConnectionManager = new ConnectionManager(this);
             IdentityManager = new BleIdentityManager(BleBridge.Identity);
@@ -52,6 +53,59 @@ namespace Inventonater.BleHid
 
             BleEventSystem.OnPipModeChanged += HandlePipModeChanged;
             Debug.Log("BleHidManager initialized");
+        }
+
+        private void Start()
+        {
+            Initialize();
+        }
+
+        private void Initialize()
+        {
+            if (IsInitialized) return;
+            Application.runInBackground = true;
+            if (Application.isEditor)
+            {
+                LoggingManager.Instance.AddLogEntry("BLE HID is only supported on Android");
+                return;
+            }
+
+            try
+            {
+                BleHidPermissionHandler.RequestAllPermissions();
+
+                IsInitialized = Bridge.Call<bool>("initialize", gameObject.name);
+
+                // Initialize the foreground service manager
+                // manager.ForegroundServiceManager.Initialize(bridgeInstance);
+
+                if (!IsInitialized)
+                {
+                    string message = "Failed to initialize BLE HID plugin";
+                    LoggingManager.Instance.AddLogError(message);
+                    BleEventSystem.OnError?.Invoke(BleHidConstants.ERROR_INITIALIZATION_FAILED, message);
+                    BleEventSystem.OnInitializeComplete?.Invoke(false, message);
+                    return;
+                }
+
+                IdentityManager.InitializeIdentity();
+            }
+            catch (Exception e)
+            {
+                string message = "Exception during initialization: " + e.Message;
+                LoggingManager.Instance.AddLogError(message);
+                BleEventSystem.OnError?.Invoke(BleHidConstants.ERROR_INITIALIZATION_FAILED, message);
+                BleEventSystem.OnInitializeComplete?.Invoke(false, message);
+            }
+        }
+
+        public void Close()
+        {
+            IsAdvertising = false;
+            IsConnected = false;
+            ConnectedDeviceName = null;
+            ConnectedDeviceAddress = null;
+            Debug.Log("BleHidManager closed");
         }
 
         public void HandlePipModeChanged(bool isInPipMode)
@@ -97,12 +151,12 @@ namespace Inventonater.BleHid
         {
             // Stop the background worker if it's running
             PipWorker.Stop();
-            BleInitializer.Close();
+            Close();
         }
 
         public bool ConfirmIsInitialized()
         {
-            if (BleInitializer.IsInitialized) return true;
+            if (IsInitialized) return true;
 
             string message = "BLE HID plugin not initialized";
             Debug.LogError(message);

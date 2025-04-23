@@ -92,8 +92,6 @@ namespace Inventonater.BleHid
 
         public override void DrawUI()
         {
-            bool connected = BleHidManager.IsConnected;
-
             UIHelper.BeginSection("Connection Parameters");
 
             // Performance metrics
@@ -115,7 +113,7 @@ namespace Inventonater.BleHid
             }
 
             GUILayout.Space(10);
-
+            bool connected = BleHidManager.IsConnected;
             // Status message
             GUILayout.Label("Status: " + (string.IsNullOrEmpty(statusMessage) ? (connected ? "Connected" : "Not Connected") : statusMessage));
 

@@ -13,7 +13,7 @@ namespace Inventonater.BleHid
         {
             if (!_manager.ConfirmIsConnected()) return false;
 
-            try { return _manager.BleInitializer.Call<bool>("sendKey", (int)keyCode); }
+            try { return _manager.Bridge.Call<bool>("sendKey", (int)keyCode); }
             catch (Exception e)
             {
                 Debug.LogException(e);
@@ -25,7 +25,7 @@ namespace Inventonater.BleHid
         {
             if (!_manager.ConfirmIsConnected()) return false;
 
-            try { return _manager.BleInitializer.Call<bool>("sendKeyWithModifiers", (int)keyCode, (int)modifiers); }
+            try { return _manager.Bridge.Call<bool>("sendKeyWithModifiers", (int)keyCode, (int)modifiers); }
             catch (Exception e)
             {
                 Debug.LogException(e);
@@ -37,7 +37,7 @@ namespace Inventonater.BleHid
         {
             if (!_manager.ConfirmIsConnected()) return false;
 
-            try { return _manager.BleInitializer.Call<bool>("typeText", text); }
+            try { return _manager.Bridge.Call<bool>("typeText", text); }
             catch (Exception e)
             {
                 Debug.LogException(e);

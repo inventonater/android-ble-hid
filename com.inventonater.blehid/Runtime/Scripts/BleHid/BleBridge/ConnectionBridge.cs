@@ -26,17 +26,11 @@ namespace Inventonater.BleHid
                 Debug.LogError("[ConnectionBridge] Cannot disconnect - manager not initialized");
                 return false;
             }
-            
-            if (!_manager.IsConnected)
-            {
-                Debug.Log("[ConnectionBridge] Already disconnected (IsConnected = false)");
-                return true; // Already disconnected is a success case
-            }
-            
+
             try
             {
                 Debug.Log($"[ConnectionBridge] Calling Java disconnect method via BleInitializer. Device: {_manager.ConnectedDeviceName} ({_manager.ConnectedDeviceAddress})");
-                bool result = _manager.BleInitializer.Call<bool>("disconnect");
+                bool result = _manager.Bridge.Call<bool>("disconnect");
                 Debug.Log($"[ConnectionBridge] Java disconnect call returned: {result}");
                 return result;
             }

@@ -52,9 +52,6 @@ namespace Inventonater.BleHid
         /// </summary>
         private void DisconnectDevice()
         {
-            if (BleHidManager == null || !BleHidManager.IsConnected)
-                return;
-                
             bool success = BleHidManager.BleBridge.Connection.Disconnect();
             if (success)
             {

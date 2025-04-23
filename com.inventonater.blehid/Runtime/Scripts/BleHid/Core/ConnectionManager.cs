@@ -26,7 +26,7 @@ namespace Inventonater.BleHid
         {
             if (!manager.ConfirmIsConnected()) return false;
 
-            try { return manager.BleInitializer.Call<bool>("requestConnectionPriority", priority); }
+            try { return manager.Bridge.Call<bool>("requestConnectionPriority", priority); }
             catch (Exception e)
             {
                 LoggingManager.Instance.AddLogError("Exception requesting connection priority: " + e.Message);
@@ -50,7 +50,7 @@ namespace Inventonater.BleHid
                 return false;
             }
 
-            try { return manager.BleInitializer.Call<bool>("requestMtu", mtu); }
+            try { return manager.Bridge.Call<bool>("requestMtu", mtu); }
             catch (Exception e)
             {
                 LoggingManager.Instance.AddLogError("Exception requesting MTU: " + e.Message);
@@ -66,7 +66,7 @@ namespace Inventonater.BleHid
         {
             if (!manager.ConfirmIsConnected()) return false;
 
-            try { return manager.BleInitializer.Call<bool>("readRssi"); }
+            try { return manager.Bridge.Call<bool>("readRssi"); }
             catch (Exception e)
             {
                 LoggingManager.Instance.AddLogError("Exception reading RSSI: " + e.Message);
@@ -84,7 +84,7 @@ namespace Inventonater.BleHid
 
             try
             {
-                AndroidJavaObject parametersMap = manager.BleInitializer.Call<AndroidJavaObject>("getConnectionParameters");
+                AndroidJavaObject parametersMap = manager.Bridge.Call<AndroidJavaObject>("getConnectionParameters");
                 if (parametersMap == null) { return null; }
 
                 Dictionary<string, string> result = new Dictionary<string, string>();
@@ -119,11 +119,9 @@ namespace Inventonater.BleHid
         /// <returns>True if the disconnect command was sent successfully, false otherwise.</returns>
         public bool Disconnect()
         {
-            if (!manager.IsConnected) return true; // Already disconnected
-            
-            try 
+            try
             { 
-                bool success = manager.BleInitializer.Call<bool>("disconnect");
+                bool success = manager.Bridge.Call<bool>("disconnect");
                 if (success)
                 {
                     Debug.Log("Disconnect request sent successfully");
