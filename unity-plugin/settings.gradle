@@ -1,0 +1,2 @@
+// This is a stand-alone Gradle project
+rootProject.name = "blehid-unity-plugin"

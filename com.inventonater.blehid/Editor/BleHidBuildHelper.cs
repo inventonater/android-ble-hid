@@ -75,9 +75,12 @@ namespace Inventonater.BleHid.Editor
             // Ensure users know about the included manifest
             Debug.Log("Note: The BleHid package includes AndroidManifest.xml with all required Bluetooth permissions.");
             
-            // Execute gradle build
+            // Execute gradle build from the unity-plugin directory directly
             string projectRoot = Path.GetFullPath(Path.Combine(Application.dataPath, "../.."));
-            string gradleCommand = $"cd {projectRoot} && ./gradlew :unity-plugin:copyToUnity";
+            string unityPluginDir = Path.Combine(projectRoot, "unity-plugin");
+            
+            // Ensure gradlew is executable
+            string gradleCommand = $"cd {unityPluginDir} && chmod +x ./gradlew && ./gradlew copyToUnity";
             
             Debug.Log($"Executing: {gradleCommand}");
             

@@ -4,8 +4,7 @@ A Bluetooth Low Energy (BLE) Human Interface Device (HID) library for Android th
 
 ## Project Structure
 
-- **core**: Core BLE HID functionality implementation
-- **unity-plugin**: Unity bridge that wraps the core module
+- **unity-plugin**: Java project containing both core BLE HID functionality and Unity bridge
 - **com.inventonater.blehid**: Unity package (UPM)
 
 ## Building and Installation

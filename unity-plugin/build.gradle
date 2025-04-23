@@ -1,5 +1,119 @@
-plugins {
-    id 'com.android.library'
+// Main build file for the standalone unity-plugin module
+buildscript {
+    repositories {
+        google()
+        mavenCentral()
+    }
+    dependencies {
+        classpath 'com.android.tools.build:gradle:8.1.0'
+    }
+}
+
+apply plugin: 'com.android.library'
+
+// Configure repositories for dependencies
+repositories {
+    google()
+    mavenCentral()
+}
+
+// Android configuration
+android {
+    namespace 'com.inventonater.blehid'
+    compileSdkVersion 34
+    
+    defaultConfig {
+        minSdkVersion 24
+        targetSdkVersion 34
+        
+        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+        consumerProguardFiles "consumer-rules.pro"
+        
+        // Plugin-specific version info
+        def buildNumber = getAndIncrementBuildNumber()
+        buildConfigField "String", "PLUGIN_VERSION", "\"1.0.0\""
+        buildConfigField "int", "PLUGIN_BUILD_NUMBER", "$buildNumber"
+        buildConfigField "String", "BUILD_TIMESTAMP", "\"${new Date().format('yyyy-MM-dd HH:mm:ss')}\""
+    }
+    
+    buildTypes {
+        release {
+            minifyEnabled false
+        }
+    }
+    
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_11
+        targetCompatibility JavaVersion.VERSION_11
+    }
+
+    // Unity integration
+    def unityDir = "../unity-test/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary"
+    
+    sourceSets {
+        main {
+            java {
+                srcDirs = ['src/main/java']
+                if (file(unityDir).exists()) {
+                    srcDirs += "$unityDir/src/main/java"
+                }
+            }
+        }
+    }
+
+    packagingOptions {
+        resources {
+            excludes += ['**/com/unity3d/player/UnityPlayer*.class',
+                        'META-INF/MANIFEST.MF',
+                        'META-INF/LICENSE.txt',
+                        'META-INF/NOTICE.txt']
+            pickFirsts += ['classes.jar']
+        }
+    }
+    
+    buildFeatures {
+        buildConfig true
+    }
+    
+    lint {
+        abortOnError false
+    }
+}
+
+// Dependencies
+dependencies {
+    implementation 'androidx.core:core:1.10.1'
+    
+    // Unity engine stubs
+    def unityDir = "../unity-test/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary"
+    if (file("$unityDir/libs/unity-classes.jar").exists()) {
+        compileOnly files("$unityDir/libs/unity-classes.jar")
+    }
+}
+
+// Fix dependency conflicts by enforcing consistent versions
+configurations.all {
+    resolutionStrategy {
+        // Force consistent Kotlin stdlib version across all dependencies
+        force 'org.jetbrains.kotlin:kotlin-stdlib:1.8.10'
+        force 'org.jetbrains.kotlin:kotlin-stdlib-jdk7:1.8.10'
+        force 'org.jetbrains.kotlin:kotlin-stdlib-jdk8:1.8.10'
+        force 'org.jetbrains.kotlin:kotlin-stdlib-common:1.8.10'
+        force 'org.jetbrains.kotlin:kotlin-reflect:1.8.10'
+        
+        // Force consistent AndroidX versions
+        force 'androidx.appcompat:appcompat:1.6.1'
+        force 'androidx.core:core:1.10.1'
+        force 'androidx.constraintlayout:constraintlayout:2.1.4'
+        force 'androidx.activity:activity:1.6.0'
+        force 'androidx.fragment:fragment:1.3.6'
+        force 'androidx.lifecycle:lifecycle-runtime:2.5.1'
+        force 'androidx.lifecycle:lifecycle-viewmodel:2.5.1'
+        force 'androidx.savedstate:savedstate:1.2.0'
+        force 'androidx.drawerlayout:drawerlayout:1.1.1'
+        force 'androidx.annotation:annotation:1.6.0'
+        force 'androidx.annotation:annotation-experimental:1.3.0'
+    }
 }
 
 // Function to load, increment, and save the build number
@@ -18,70 +132,7 @@ def getAndIncrementBuildNumber() {
     return buildNumber
 }
 
-// Get the incremented build number right away
-def currentBuildNumber = getAndIncrementBuildNumber()
-
-def unityDir = "$rootDir/unity-test/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary"
-def unityClassesJar = file("$unityDir/libs/unity-classes.jar")
-
-android {
-    namespace 'com.inventonater.blehid'
-    compileSdk rootProject.ext.compileSdkVersion
-    
-    defaultConfig {
-        minSdk rootProject.ext.minSdkVersion
-        targetSdk rootProject.ext.targetSdkVersion
-        
-        testInstrumentationRunner rootProject.ext.testInstrumentationRunner
-        consumerProguardFiles "consumer-rules.pro"
-        
-        // Plugin-specific version info
-        buildConfigField "String", "PLUGIN_VERSION", "\"1.0.0\""
-        buildConfigField "int", "PLUGIN_BUILD_NUMBER", "$currentBuildNumber"
-        buildConfigField "String", "BUILD_TIMESTAMP", "\"${new Date().format('yyyy-MM-dd HH:mm:ss')}\""
-    }
-    
-    // Temporarily disable lint to verify our consolidation changes
-    lint {
-        abortOnError false
-    }
-    
-    buildTypes {
-        release {
-            minifyEnabled false
-        }
-    }
-    
-    compileOptions {
-        sourceCompatibility rootProject.ext.javaVersion
-        targetCompatibility rootProject.ext.javaVersion
-    }
-
-    sourceSets {
-        main.java.srcDir "$unityDir/src/main/java"
-    }
-
-    // Strip Unity classes so they are NOT packaged into your AAR
-    packagingOptions {
-        resources.excludes += [
-            '**/com/unity3d/player/UnityPlayer*.class'
-        ]
-    }
-    
-    packagingOptions {
-        exclude 'META-INF/MANIFEST.MF'
-        exclude 'META-INF/LICENSE.txt'
-        exclude 'META-INF/NOTICE.txt'
-        pickFirst 'classes.jar'
-        doNotStrip '**/*.so'
-    }
-    
-    buildFeatures {
-        buildConfig = true
-    }
-}
-
-// Custom task to copy the consolidated AAR to Unity package
+// Custom tasks for AAR handling
 tasks.register('copyConsolidatedAarToPackage', Copy) {
     dependsOn 'assembleRelease'
     from "${buildDir}/outputs/aar/unity-plugin-release.aar"
@@ -94,61 +145,33 @@ tasks.register('copyConsolidatedAarToPackage', Copy) {
     }
 }
 
-// Custom task to stamp the consolidated AAR file with a timestamp for Git tracking
 tasks.register('stampAarFile') {
     description = 'Adds a timestamp to the consolidated AAR file to ensure Git recognizes changes'
-    
-    // Make this task depend on the package copy task
     dependsOn copyConsolidatedAarToPackage
     
-    // Define the path to the AAR file
     def consolidatedAarFile = file("../com.inventonater.blehid/Runtime/Plugins/Android/BleHid.aar")
     
     doLast {
-        // Function to stamp an AAR file
-        def stampAarFile = { aarFile ->
-            if (aarFile.exists()) {
-                // Create a temporary file with timestamp
-                def tempFile = File.createTempFile("timestamp", ".txt")
-                tempFile.text = "Build timestamp: ${new Date()} - Consolidated AAR containing both core and unity plugin"
-                
-                // Add the timestamp to the AAR (which is just a ZIP file)
-                ant.zip(destfile: aarFile, update: true) {
-                    zipfileset(file: tempFile, fullpath: "timestamp.txt")
-                }
-                
-                // Clean up
-                tempFile.delete()
-                
-                logger.lifecycle("Consolidated AAR file stamped: ${aarFile.name}")
-                return true
-            } else {
-                logger.error("Consolidated AAR file not found: ${aarFile.name}")
-                throw new GradleException("Consolidated AAR file not found for stamping")
+        if (consolidatedAarFile.exists()) {
+            def tempFile = File.createTempFile("timestamp", ".txt")
+            tempFile.text = "Build timestamp: ${new Date()} - Consolidated AAR with core and unity plugin"
+            
+            ant.zip(destfile: consolidatedAarFile, update: true) {
+                zipfileset(file: tempFile, fullpath: "timestamp.txt")
             }
+            
+            tempFile.delete()
+            logger.lifecycle("Consolidated AAR file stamped: ${consolidatedAarFile.name}")
+        } else {
+            logger.error("Consolidated AAR file not found: ${consolidatedAarFile.name}")
+            throw new GradleException("Consolidated AAR file not found for stamping")
         }
-        
-        stampAarFile(consolidatedAarFile)
-        logger.lifecycle("Consolidated AAR stamped successfully")
     }
 }
 
-// Task to copy the consolidated AAR to Unity package and stamp it
 tasks.register('copyToUnity') {
     dependsOn stampAarFile
     description = 'Copies the consolidated AAR to the Unity package and stamps it for Git tracking'
 }
 
-// More descriptive alias for new projects
-tasks.register('copyToPackage') {
-    dependsOn copyToUnity
-    description = 'Alias for copyToUnity - copies consolidated AAR to the package structure'
-}
-
-dependencies {
-    // Core implementation is now directly included in this module
-    implementation rootProject.ext.deps.core
-    
-    // Unity engine stubs
-    compileOnly files(unityClassesJar)
-}
+// Clean task is already provided by Gradle
