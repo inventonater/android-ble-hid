@@ -7,7 +7,7 @@ namespace Inventonater.BleHid
     /// <summary>
     /// UI component for local device control functionality
     /// </summary>
-    public class LocalControlComponent : UIComponent
+    public class AccessibilityUI : SectionUI
     {
         public const string Name = "Local";
         public override string TabName => Name;
@@ -19,9 +19,9 @@ namespace Inventonater.BleHid
         // Button height constant
         private const float BUTTON_HEIGHT = 60f;
 
-        public LocalControlComponent(MonoBehaviour owner) => this.owner = owner;
-        public override void ComponentShown() { }
-        public override void ComponentHidden() { }
+        public AccessibilityUI(MonoBehaviour owner) => this.owner = owner;
+        public override void Shown() { }
+        public override void Hidden() { }
         public override void Update() { }
 
         public override void DrawUI()

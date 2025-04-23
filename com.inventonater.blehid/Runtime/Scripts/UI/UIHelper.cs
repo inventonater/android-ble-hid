@@ -19,6 +19,15 @@ namespace Inventonater.BleHid
         public static readonly GUILayoutOption[] StandardSliderOptions = new GUILayoutOption[] { GUILayout.Height(StandardSliderHeight) };
         public static readonly GUILayoutOption[] LargeSliderOptions = new GUILayoutOption[] { GUILayout.Height(LargeSliderHeight) };
 
+        public static void SetupGUIStyles()
+        {
+            // Set up GUI style for better touch targets
+            GUI.skin.button.fontSize = 24;
+            GUI.skin.label.fontSize = 20;
+            GUI.skin.textField.fontSize = 20;
+            GUI.skin.box.fontSize = 20;
+        }
+
         public static bool Button(string label, Action runtimeAction, string logMessage = null, GUILayoutOption[] options = null)
         {
 

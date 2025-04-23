@@ -7,14 +7,14 @@ namespace Inventonater.BleHid
     /// <summary>
     /// UI component for media controls (play/pause, volume, etc.)
     /// </summary>
-    public class MediaControlsComponent : UIComponent
+    public class MediaDeviceUI : SectionUI
     {
         public const string Name = "Media";
         public override string TabName => Name;
         private MediaBridge Media => BleHidManager.BleBridge.Media;
 
-        public override void ComponentShown() { }
-        public override void ComponentHidden() { }
+        public override void Shown() { }
+        public override void Hidden() { }
         public override void Update(){}
 
         public override void DrawUI()

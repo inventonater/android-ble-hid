@@ -2,7 +2,8 @@
     "name": "Inventonater.BleHid",
     "rootNamespace": "Inventonater.BleHid",
     "references": [
-        "Unity.TextMeshPro"
+        "Unity.TextMeshPro",
+        "UniTask"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

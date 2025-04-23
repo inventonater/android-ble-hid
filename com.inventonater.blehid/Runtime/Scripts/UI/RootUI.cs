@@ -12,31 +12,29 @@ namespace Inventonater.BleHid
     /// organizing features (media, mouse, keyboard, local) into a modular
     /// component-based system using Unity's OnGUI for reliable touch input handling.
     /// </summary>
-    public class BleHidControlPanel : MonoBehaviour
+    public class RootUI : MonoBehaviour
     {
         private BleHidManager bleHidManager;
 
         // Dictionary to map tab names to their corresponding components
-        private readonly List<UIComponent> tabComponents = new();
-        void AddTab(UIComponent component) => tabComponents.Add(component);
+        private readonly List<SectionUI> tabComponents = new();
+        void AddTab(SectionUI component) => tabComponents.Add(component);
         private int currentTabIndex = 0;
-        private UIComponent currentTabComponent => tabComponents[currentTabIndex];
+        private SectionUI CurrentTab => tabComponents[currentTabIndex];
         private IEnumerable<string> tabNames => tabComponents.Select(t => t.TabName);
         private bool isInitialized = false;
 
         private static bool IsEditorMode => Application.isEditor;
         private static LoggingManager Logger => LoggingManager.Instance;
-        private StatusComponent statusComponent;
-        private MediaControlsComponent mediaComponent;
-        private MouseControlsComponent mouseComponent;
-        private KeyboardControlsComponent keyboardComponent;
-        private LocalControlComponent localComponent;
-        private ErrorHandlingComponent errorComponent;
-        private ConnectionParametersComponent connectionParametersComponent;
-        private IdentityManagerComponent identityComponent;
-
+        private StatusUI _statusUI;
+        private MediaDeviceUI _media;
+        private MouseDeviceUI _mouse;
+        private KeyboardUI _keyboard;
+        private AccessibilityUI _local;
+        private PermissionsUI permissionsUI;
+        private ConnectionUI _connectionUI;
+        private IdentityUI _identity;
         private Vector2 localTabScrollPosition = Vector2.zero;
-        private float nextPermissionCheckTime = 0f;
 
         private void Start()
         {
@@ -51,118 +49,53 @@ namespace Inventonater.BleHid
             bleHidManager.BleEventSystem.OnError += OnError;
             bleHidManager.BleEventSystem.OnDebugLog += OnDebugLog;
 
-            statusComponent = new StatusComponent();
-            statusComponent.SetInitialized(isInitialized);
+            _statusUI = new StatusUI();
+            _statusUI.SetInitialized(isInitialized);
             
             // Initialize error component first to ensure accessibility UI appears from startup
-            errorComponent = new ErrorHandlingComponent(this);
+            permissionsUI = new PermissionsUI(this);
 
-            mediaComponent = new MediaControlsComponent();
-            mouseComponent = new MouseControlsComponent();
-            keyboardComponent = new KeyboardControlsComponent();
-            localComponent = new LocalControlComponent(this);
-            connectionParametersComponent = new ConnectionParametersComponent();
-            identityComponent = new IdentityManagerComponent();
+            _media = new MediaDeviceUI();
+            _mouse = new MouseDeviceUI();
+            _keyboard = new KeyboardUI();
+            _local = new AccessibilityUI(this);
+            _connectionUI = new ConnectionUI();
+            _identity = new IdentityUI();
 
-            AddTab(mediaComponent);
-            AddTab(mouseComponent);
-            AddTab(keyboardComponent);
-            AddTab(localComponent);
-            AddTab(connectionParametersComponent);
-            AddTab(identityComponent);
+            AddTab(_media);
+            AddTab(_mouse);
+            AddTab(_keyboard);
+            AddTab(_local);
+            AddTab(_connectionUI);
+            AddTab(_identity);
 
             // Start initialization process
             StartCoroutine(bleHidManager.BleInitializer.Initialize());
             Logger.AddLogEntry("Starting BLE HID initialization...");
-            
-            // Check all permissions - accessibility status is already being checked in the constructor
-            errorComponent.CheckMissingPermissions();
-            errorComponent.CheckNotificationPermissionStatus();
-            
-            // Perform an extra check to ensure the accessibility service status is detected
-            // This helps on devices where the first check might not be reliable
-            StartCoroutine(DelayedAccessibilityCheck(1.0f));
-        }
-        
-        /// <summary>
-        /// Perform a delayed check of the accessibility service status
-        /// </summary>
-        private IEnumerator DelayedAccessibilityCheck(float delaySeconds)
-        {
-            yield return new WaitForSeconds(delaySeconds);
-            errorComponent.CheckAccessibilityServiceStatus();
-            Logger.AddLogEntry("Performing startup accessibility service check");
+
+            permissionsUI.InitialCheck();
         }
 
         private void Update()
         {
-            currentTabComponent.Update();
-            PerformPeriodicPermissionChecks();
-        }
-
-        private const float PERMISSION_CHECK_INTERVAL = 3.0f; // Check every 3 seconds
-
-        private void PerformPeriodicPermissionChecks()
-        {
-            // Check if we need to check permissions
-            if (!errorComponent.HasPermissionError &&
-                !errorComponent.HasAccessibilityError &&
-                !errorComponent.HasNotificationPermissionError) return;
-                
-            if (Time.time < nextPermissionCheckTime) return;
-
-            // Schedule next check
-            nextPermissionCheckTime = Time.time + PERMISSION_CHECK_INTERVAL;
-
-            // Check permissions
-            if (errorComponent.HasPermissionError)
-            {
-                errorComponent.CheckMissingPermissions();
-                LoggingManager.Instance.AddLogEntry("Periodic permission check");
-            }
-
-            // Check accessibility service
-            if (errorComponent.HasAccessibilityError)
-            {
-                errorComponent.CheckAccessibilityServiceStatus();
-                LoggingManager.Instance.AddLogEntry("Periodic accessibility check");
-            }
-            
-            // Check notification permission
-            if (errorComponent.HasNotificationPermissionError)
-            {
-                errorComponent.CheckNotificationPermissionStatus();
-                LoggingManager.Instance.AddLogEntry("Periodic notification permission check");
-            }
+            permissionsUI.Update();
+            CurrentTab.Update();
         }
 
         private void OnGUI()
         {
-            SetupGUIStyles();
-            DrawLayoutArea();
-        }
+            UIHelper.SetupGUIStyles();
 
-        private void SetupGUIStyles()
-        {
-            // Set up GUI style for better touch targets
-            GUI.skin.button.fontSize = 24;
-            GUI.skin.label.fontSize = 20;
-            GUI.skin.textField.fontSize = 20;
-            GUI.skin.box.fontSize = 20;
-        }
-
-        private void DrawLayoutArea()
-        {
             // Adjust layout to fill the screen
             float padding = 10;
             Rect layoutArea = new Rect(padding, padding, Screen.width - padding * 2, Screen.height - padding * 2);
             GUILayout.BeginArea(layoutArea);
 
-            DrawErrorWarnings();
-            DrawStatusArea();
+            permissionsUI.DrawErrorWarnings();
+            _statusUI.DrawUI();
 
             // If we have a permission error or accessibility error, don't show the rest of the UI
-            if (HasCriticalErrors())
+            if (permissionsUI.HasCriticalErrors())
             {
                 GUILayout.EndArea();
                 return;
@@ -171,16 +104,16 @@ namespace Inventonater.BleHid
             var newTabIndex = GUILayout.Toolbar(currentTabIndex, tabNames.ToArray(), GUILayout.Height(60));
             if (newTabIndex != currentTabIndex)
             {
-                currentTabComponent.ComponentHidden();
-                Logger.AddLogEntry($"Tab '{currentTabComponent.TabName}' deactivated");
+                CurrentTab.Hidden();
+                Logger.AddLogEntry($"Tab '{CurrentTab.TabName}' deactivated");
 
                 currentTabIndex = newTabIndex;
 
-                currentTabComponent.ComponentShown();
-                Logger.AddLogEntry($"Tab '{currentTabComponent.TabName}' activated");
+                CurrentTab.Shown();
+                Logger.AddLogEntry($"Tab '{CurrentTab.TabName}' activated");
             }
 
-            if (currentTabComponent.TabName == LocalControlComponent.Name) GUILayout.BeginVertical(GUI.skin.box); // No fixed height for Local tab
+            if (CurrentTab.TabName == AccessibilityUI.Name) GUILayout.BeginVertical(GUI.skin.box); // No fixed height for Local tab
             else GUILayout.BeginVertical(GUI.skin.box, GUILayout.Height(Screen.height * 0.45f));
 
             if (bleHidManager != null && (isInitialized || IsEditorMode)) DrawSelectedTab();
@@ -189,43 +122,6 @@ namespace Inventonater.BleHid
 
             Logger.DrawLogUI();
             GUILayout.EndArea();
-        }
-
-        private void DrawErrorWarnings()
-        {
-            // Permission error warning - show at the top with a red background
-            if (errorComponent.HasPermissionError)
-            {
-                errorComponent.DrawPermissionErrorUI();
-                GUILayout.Space(20);
-            }
-
-            // Accessibility error - always show full UI at the top with other permissions
-            if (errorComponent.HasAccessibilityError)
-            {
-                errorComponent.DrawAccessibilityErrorUI(true); // Show full UI with button
-                GUILayout.Space(20);
-            }
-            
-            // Notification permission error - show at the top but don't block functionality
-            if (errorComponent.HasNotificationPermissionError)
-            {
-                errorComponent.DrawNotificationPermissionErrorUI();
-                GUILayout.Space(20);
-            }
-        }
-
-        private void DrawStatusArea()
-        {
-            // Status area
-            statusComponent.DrawUI();
-        }
-
-        private bool HasCriticalErrors()
-        {
-            // Only treat regular permissions as blocking errors
-            // Accessibility errors are shown at the top but don't block the UI completely
-            return errorComponent.HasPermissionError;
         }
 
         private void DrawSelectedTab()
@@ -253,7 +149,7 @@ namespace Inventonater.BleHid
             }
         }
 
-        private void DrawTab(UIComponent tab)
+        private void DrawTab(SectionUI tab)
         {
             GUI.enabled = bleHidManager.IsConnected || IsEditorMode;
             tab.DrawUI();
@@ -264,7 +160,7 @@ namespace Inventonater.BleHid
         {
             // Remote BLE controls need a connected device
             GUI.enabled = bleHidManager.IsConnected || IsEditorMode;
-            mediaComponent.DrawUI();
+            _media.DrawUI();
             GUI.enabled = true;
         }
 
@@ -272,7 +168,7 @@ namespace Inventonater.BleHid
         {
             // Remote BLE controls need a connected device
             GUI.enabled = bleHidManager.IsConnected || IsEditorMode;
-            mouseComponent.DrawUI();
+            _mouse.DrawUI();
             GUI.enabled = true;
         }
 
@@ -280,7 +176,7 @@ namespace Inventonater.BleHid
         {
             // Remote BLE controls need a connected device
             GUI.enabled = bleHidManager.IsConnected || IsEditorMode;
-            keyboardComponent.DrawUI();
+            _keyboard.DrawUI();
             GUI.enabled = true;
         }
 
@@ -300,7 +196,7 @@ namespace Inventonater.BleHid
                 GUILayout.ExpandHeight(true)
             );
 
-            localComponent.DrawUI();
+            _local.DrawUI();
 
             GUILayout.EndScrollView();
         }
@@ -309,7 +205,7 @@ namespace Inventonater.BleHid
         {
             // Connection parameters need a connected device
             GUI.enabled = bleHidManager.IsConnected || IsEditorMode;
-            connectionParametersComponent.DrawUI();
+            _connectionUI.DrawUI();
             GUI.enabled = true;
         }
         
@@ -317,13 +213,13 @@ namespace Inventonater.BleHid
         {
             // Identity management is always enabled
             GUI.enabled = true;
-            identityComponent.DrawUI();
+            _identity.DrawUI();
         }
 
         private void OnInitializeComplete(bool success, string message)
         {
             isInitialized = success;
-            statusComponent.SetInitialized(success);
+            _statusUI.SetInitialized(success);
 
             if (success) { Logger.AddLogEntry("BLE HID initialized successfully: " + message); }
             else
@@ -331,7 +227,7 @@ namespace Inventonater.BleHid
                 Logger.AddLogEntry("BLE HID initialization failed: " + message);
 
                 // Check if this is a permission error
-                if (message.Contains("permission")) { errorComponent.SetPermissionError(message); }
+                if (message.Contains("permission")) { permissionsUI.SetPermissionError(message); }
             }
         }
 
@@ -357,17 +253,17 @@ namespace Inventonater.BleHid
             switch (errorCode)
             {
                 case BleHidConstants.ERROR_PERMISSIONS_NOT_GRANTED:
-                    errorComponent.SetPermissionError(errorMessage);
+                    permissionsUI.SetPermissionError(errorMessage);
                     break;
                 case BleHidConstants.ERROR_ACCESSIBILITY_NOT_ENABLED:
-                    errorComponent.SetAccessibilityError(true);
+                    permissionsUI.SetAccessibilityError(true);
                     Logger.AddLogEntry("Accessibility error: " + errorMessage);
-                    errorComponent.CheckAccessibilityServiceStatus();
+                    permissionsUI.CheckAccessibilityServiceStatus();
                     break;
                 case BleHidConstants.ERROR_NOTIFICATION_PERMISSION_NOT_GRANTED:
-                    errorComponent.SetNotificationPermissionError(true, errorMessage);
+                    permissionsUI.SetNotificationPermissionError(true, errorMessage);
                     Logger.AddLogEntry("Notification permission error: " + errorMessage);
-                    errorComponent.CheckNotificationPermissionStatus();
+                    permissionsUI.CheckNotificationPermissionStatus();
                     break;
                 default:
                     Logger.AddLogEntry("Error " + errorCode + ": " + errorMessage);

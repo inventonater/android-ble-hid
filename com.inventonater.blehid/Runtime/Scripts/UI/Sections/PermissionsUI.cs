@@ -9,18 +9,18 @@ namespace Inventonater.BleHid
     /// <summary>
     /// Handles error UI for permissions and accessibility
     /// </summary>
-    public class ErrorHandlingComponent
+    public class PermissionsUI
     {
         private BleHidManager BleHidManager => BleHidManager.Instance;
         private LoggingManager Logger => LoggingManager.Instance;
         private bool IsEditorMode => Application.isEditor;
+        private float nextPermissionCheckTime = 0f;
 
         // Permission state
         private bool hasPermissionError = false;
         private string permissionErrorMessage = "";
-        private List<BleHidPermissionHandler.AndroidPermission> missingPermissions = new List<BleHidPermissionHandler.AndroidPermission>();
-        private bool checkingPermissions = false;
-        
+        private List<BleHidPermissionHandler.AndroidPermission> missingPermissions = new();
+
         // Notification permission state
         private bool hasNotificationPermissionError = false;
         private string notificationErrorMessage = "Notification permission is needed for app notifications";
@@ -42,8 +42,9 @@ namespace Inventonater.BleHid
         public bool HasPermissionError => hasPermissionError;
         public bool HasAccessibilityError => hasAccessibilityError;
         public bool HasNotificationPermissionError => hasNotificationPermissionError;
+        private void OpenAppSettings() => BleHidPermissionHandler.OpenAppSettings();
 
-        public ErrorHandlingComponent(MonoBehaviour owner)
+        public PermissionsUI(MonoBehaviour owner)
         {
             this.owner = owner;
             
@@ -53,6 +54,92 @@ namespace Inventonater.BleHid
             
             CheckAccessibilityServiceStatus();
         }
+
+        public void InitialCheck()
+        {
+            // Check all permissions - accessibility status is already being checked in the constructor
+            CheckMissingPermissions();
+            CheckNotificationPermissionStatus();
+
+            // Perform an extra check to ensure the accessibility service status is detected
+            // This helps on devices where the first check might not be reliable
+            CheckAccessibilityServiceStatus();
+            Logger.AddLogEntry("Performing startup accessibility service check");
+        }
+
+
+        public void Update()
+        {
+            PerformPeriodicPermissionChecks();
+        }
+
+        private const float PERMISSION_CHECK_INTERVAL = 3.0f; // Check every 3 seconds
+
+        private void PerformPeriodicPermissionChecks()
+        {
+            // Check if we need to check permissions
+            if (!HasPermissionError &&
+                !HasAccessibilityError &&
+                !HasNotificationPermissionError) return;
+
+            if (Time.time < nextPermissionCheckTime) return;
+
+            // Schedule next check
+            nextPermissionCheckTime = Time.time + PERMISSION_CHECK_INTERVAL;
+
+            // Check permissions
+            if (HasPermissionError)
+            {
+                CheckMissingPermissions();
+                LoggingManager.Instance.AddLogEntry("Periodic permission check");
+            }
+
+            // Check accessibility service
+            if (HasAccessibilityError)
+            {
+                CheckAccessibilityServiceStatus();
+                LoggingManager.Instance.AddLogEntry("Periodic accessibility check");
+            }
+
+            // Check notification permission
+            if (HasNotificationPermissionError)
+            {
+                CheckNotificationPermissionStatus();
+                LoggingManager.Instance.AddLogEntry("Periodic notification permission check");
+            }
+        }
+
+        public void DrawErrorWarnings()
+        {
+            // Permission error warning - show at the top with a red background
+            if (HasPermissionError)
+            {
+                DrawPermissionErrorUI();
+                GUILayout.Space(20);
+            }
+
+            // Accessibility error - always show full UI at the top with other permissions
+            if (HasAccessibilityError)
+            {
+                DrawAccessibilityErrorUI(true); // Show full UI with button
+                GUILayout.Space(20);
+            }
+
+            // Notification permission error - show at the top but don't block functionality
+            if (HasNotificationPermissionError)
+            {
+                DrawNotificationPermissionErrorUI();
+                GUILayout.Space(20);
+            }
+        }
+
+        public bool HasCriticalErrors()
+        {
+            // Only treat regular permissions as blocking errors
+            // Accessibility errors are shown at the top but don't block the UI completely
+            return HasPermissionError;
+        }
+
 
         /// <summary>
         /// Set a permission error
@@ -106,7 +193,6 @@ namespace Inventonater.BleHid
         /// </summary>
         public void CheckMissingPermissions()
         {
-            checkingPermissions = true;
             owner.StartCoroutine(CheckMissingPermissionsCoroutine());
         }
         
@@ -171,21 +257,25 @@ namespace Inventonater.BleHid
             // Header
             DrawPermissionErrorHeader();
 
-            if (checkingPermissions)
-            {
-                GUILayout.Label("Checking permissions...", GUIStyle.none);
-            }
-            else if (missingPermissions.Count > 0)
+            if (missingPermissions.Count > 0)
             {
                 DrawMissingPermissionsList();
             }
             else
             {
-                DrawGenericPermissionError();
+                GUILayout.Label("Permission error occurred but no missing permissions were found.", GUIStyle.none);
+                GUILayout.Label("This could be a temporary issue. Please try again.", GUIStyle.none);
             }
 
             // Retry button
-            DrawPermissionRetryButton();
+            GUILayout.Space(10);
+
+            if (GUILayout.Button("Check Permissions Again", GUILayout.Height(60)))
+            {
+                // Re-check permissions
+                CheckMissingPermissions();
+                Logger.AddLogEntry("Rechecking permissions...");
+            }
 
             GUILayout.EndVertical();
         }
@@ -204,8 +294,29 @@ namespace Inventonater.BleHid
 
             GUILayout.Label(accessibilityErrorMessage, GUIStyle.none);
 
-            if (fullUI) DrawFullAccessibilityUI();
-            else DrawSimpleAccessibilityNotice();
+            if (fullUI)
+            {
+                GUILayout.Space(10);
+
+                if (GUILayout.Button("Open Accessibility Settings", GUILayout.Height(60)))
+                {
+                    OpenAccessibilitySettings();
+                }
+
+                // Detailed instructions
+                GUILayout.Space(10);
+                GUILayout.Label("To enable the accessibility service:", GUIStyle.none);
+                GUILayout.Label("1. Tap 'Open Accessibility Settings'", GUIStyle.none);
+                GUILayout.Label("2. Find 'BLE HID' in the list", GUIStyle.none);
+                GUILayout.Label("3. Toggle it ON", GUIStyle.none);
+                GUILayout.Label("4. Accept the permissions", GUIStyle.none);
+            }
+            else
+            {
+                GUILayout.Space(5);
+                GUILayout.Label("The accessibility service is required for local device control", GUIStyle.none);
+                GUILayout.Label("Look for the 'Open Accessibility Settings' button at the top of the screen", GUIStyle.none);
+            }
 
             GUILayout.EndVertical();
         }
@@ -228,30 +339,21 @@ namespace Inventonater.BleHid
 
             foreach (var permission in missingPermissions)
             {
-                DrawPermissionRequestRow(permission);
+                GUILayout.BeginHorizontal();
+
+                GUILayout.Label($"• {permission.Name}: {permission.Description}",
+                    GUIStyle.none, GUILayout.Width(Screen.width * 0.6f));
+
+                if (GUILayout.Button("Request", GUILayout.Height(40)))
+                {
+                    Logger.AddLogEntry($"Requesting permission: {permission.Name}");
+                    owner.StartCoroutine(RequestSinglePermission(permission));
+                }
+
+                GUILayout.EndHorizontal();
             }
 
             // Open settings button
-            DrawOpenSettingsButton();
-        }
-
-        private void DrawPermissionRequestRow(BleHidPermissionHandler.AndroidPermission permission)
-        {
-            GUILayout.BeginHorizontal();
-
-            GUILayout.Label($"• {permission.Name}: {permission.Description}",
-                GUIStyle.none, GUILayout.Width(Screen.width * 0.6f));
-
-            if (GUILayout.Button("Request", GUILayout.Height(40)))
-            {
-                RequestPermission(permission);
-            }
-
-            GUILayout.EndHorizontal();
-        }
-
-        private void DrawOpenSettingsButton()
-        {
             GUILayout.Space(10);
             GUILayout.Label("If permission requests don't work, try granting them manually:", GUIStyle.none);
 
@@ -260,60 +362,6 @@ namespace Inventonater.BleHid
                 Logger.AddLogEntry("Opening app settings");
                 OpenAppSettings();
             }
-        }
-
-        private void DrawGenericPermissionError()
-        {
-            GUILayout.Label("Permission error occurred but no missing permissions were found.", GUIStyle.none);
-            GUILayout.Label("This could be a temporary issue. Please try again.", GUIStyle.none);
-        }
-
-        private void DrawPermissionRetryButton()
-        {
-            GUILayout.Space(10);
-
-            if (GUILayout.Button("Check Permissions Again", GUILayout.Height(60)))
-            {
-                // Re-check permissions
-                CheckMissingPermissions();
-                Logger.AddLogEntry("Rechecking permissions...");
-            }
-        }
-
-        private void DrawFullAccessibilityUI()
-        {
-            GUILayout.Space(10);
-
-            if (GUILayout.Button("Open Accessibility Settings", GUILayout.Height(60)))
-            {
-                OpenAccessibilitySettings();
-            }
-
-            // Detailed instructions
-            GUILayout.Space(10);
-            GUILayout.Label("To enable the accessibility service:", GUIStyle.none);
-            GUILayout.Label("1. Tap 'Open Accessibility Settings'", GUIStyle.none);
-            GUILayout.Label("2. Find 'BLE HID' in the list", GUIStyle.none);
-            GUILayout.Label("3. Toggle it ON", GUIStyle.none);
-            GUILayout.Label("4. Accept the permissions", GUIStyle.none);
-        }
-
-        private void DrawSimpleAccessibilityNotice()
-        {
-            GUILayout.Space(5);
-            GUILayout.Label("The accessibility service is required for local device control", GUIStyle.none);
-            GUILayout.Label("Look for the 'Open Accessibility Settings' button at the top of the screen", GUIStyle.none);
-        }
-
-        private void RequestPermission(BleHidPermissionHandler.AndroidPermission permission)
-        {
-            Logger.AddLogEntry($"Requesting permission: {permission.Name}");
-            owner.StartCoroutine(RequestSinglePermission(permission));
-        }
-
-        private void OpenAppSettings()
-        {
-            BleHidPermissionHandler.OpenAppSettings();
         }
 
         private void OpenAccessibilitySettings()
@@ -349,30 +397,26 @@ namespace Inventonater.BleHid
         {
             yield return null; // Wait a frame to let UI update
 
-            if (!IsEditorMode)
-            {
-                missingPermissions = BleHidPermissionHandler.GetMissingPermissions();
-
-                // Log the results
-                if (missingPermissions.Count > 0)
-                {
-                    string missingList = string.Join(", ", missingPermissions.Select(p => p.Name).ToArray());
-                    Logger.AddLogEntry($"Missing permissions: {missingList}");
-                    hasPermissionError = true;
-                }
-                else
-                {
-                    Logger.AddLogEntry("All required permissions are granted");
-                    hasPermissionError = false;
-                }
-            }
-            else
+            if (IsEditorMode)
             {
                 missingPermissions.Clear();
                 hasPermissionError = false;
+                yield break;
             }
 
-            checkingPermissions = false;
+            missingPermissions = BleHidPermissionHandler.GetMissingPermissions();
+
+            if (missingPermissions.Count > 0)
+            {
+                string missingList = string.Join(", ", missingPermissions.Select(p => p.Name).ToArray());
+                Logger.AddLogEntry($"Missing permissions: {missingList}");
+                hasPermissionError = true;
+            }
+            else
+            {
+                Logger.AddLogEntry("All required permissions are granted");
+                hasPermissionError = false;
+            }
         }
         
         /// <summary>
@@ -444,5 +488,6 @@ namespace Inventonater.BleHid
                 }
             }
         }
+
     }
 }

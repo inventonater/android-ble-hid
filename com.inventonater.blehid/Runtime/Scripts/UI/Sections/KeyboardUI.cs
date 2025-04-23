@@ -8,7 +8,7 @@ namespace Inventonater.BleHid
     /// <summary>
     /// UI component for keyboard controls
     /// </summary>
-    public class KeyboardControlsComponent : UIComponent
+    public class KeyboardUI : SectionUI
     {
         public const string Name = "Keyboard";
         public override string TabName => Name;
@@ -53,8 +53,8 @@ namespace Inventonater.BleHid
         private readonly string[] row2 = { "A", "S", "D", "F", "G", "H", "J", "K", "L" };
         private readonly string[] row3 = { "Z", "X", "C", "V", "B", "N", "M" };
 
-        public override void ComponentShown() { }
-        public override void ComponentHidden() { }
+        public override void Shown() { }
+        public override void Hidden() { }
         public override void Update() { }
 
         public override void DrawUI()

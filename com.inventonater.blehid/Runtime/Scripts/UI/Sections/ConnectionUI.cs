@@ -7,7 +7,7 @@ namespace Inventonater.BleHid
     /// <summary>
     /// UI Component for displaying and controlling BLE connection parameters
     /// </summary>
-    public class ConnectionParametersComponent : UIComponent
+    public class ConnectionUI : SectionUI
     {
         public const string Name = "Connection";
         public override string TabName => Name;
@@ -55,7 +55,7 @@ namespace Inventonater.BleHid
         private Color intervalColor = Color.white;
         private Color mtuColor = Color.white;
 
-        public ConnectionParametersComponent()
+        public ConnectionUI()
         {
             // Initialize performance metrics
             _lastFpsUpdateTime = Time.time;
@@ -73,8 +73,8 @@ namespace Inventonater.BleHid
             // Initialize with current values if connected
             UpdateValuesFromManager();
         }
-        public override void ComponentShown() { }
-        public override void ComponentHidden() { }
+        public override void Shown() { }
+        public override void Hidden() { }
         public override void Update()
         {
             // Update FPS counter

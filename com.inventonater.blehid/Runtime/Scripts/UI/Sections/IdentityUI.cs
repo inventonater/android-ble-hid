@@ -7,7 +7,7 @@ namespace Inventonater.BleHid
     /// UI component for managing BLE peripheral device identity.
     /// Allows viewing and changing the device name and resetting the identity UUID.
     /// </summary>
-    public class IdentityManagerComponent : UIComponent
+    public class IdentityUI : SectionUI
     {
         public const string Name = "Identity";
         public override string TabName => Name;
@@ -26,20 +26,20 @@ namespace Inventonater.BleHid
         private string _deviceToForget = string.Empty;
         private string _deviceToForgetName = string.Empty;
 
-        public IdentityManagerComponent()
+        public IdentityUI()
         {
             // Initialize with current values
             RefreshIdentityDisplay();
             RefreshPairedDevices();
         }
 
-        public override void ComponentShown()
+        public override void Shown()
         {
             RefreshIdentityDisplay();
             RefreshPairedDevices();
         }
 
-        public override void ComponentHidden()
+        public override void Hidden()
         {
             // Clear any pending dialogs
             _showConfirmResetDialog = false;

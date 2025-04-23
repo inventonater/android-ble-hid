@@ -6,7 +6,7 @@ namespace Inventonater.BleHid
     /// <summary>
     /// UI component for displaying BLE HID status and advertising controls
     /// </summary>
-    public class StatusComponent
+    public class StatusUI
     {
         private bool isInitialized = false;
         private BleHidManager BleHidManager => BleHidManager.Instance;

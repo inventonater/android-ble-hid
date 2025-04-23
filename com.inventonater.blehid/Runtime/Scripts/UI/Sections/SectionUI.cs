@@ -8,7 +8,7 @@ namespace Inventonater.BleHid
     /// Base class for UI components in the BLE HID system.
     /// Each component handles a specific section of the UI.
     /// </summary>
-    public abstract class UIComponent
+    public abstract class SectionUI
     {
         protected BleHidManager BleHidManager => BleHidManager.Instance;
         protected LoggingManager Logger => LoggingManager.Instance;
@@ -16,7 +16,7 @@ namespace Inventonater.BleHid
         public abstract string TabName { get; }
         public abstract void Update();
         public abstract void DrawUI();
-        public abstract void ComponentShown();
-        public abstract void ComponentHidden();
+        public abstract void Shown();
+        public abstract void Hidden();
     }
 }

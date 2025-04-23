@@ -3,7 +3,7 @@ using System;
 
 namespace Inventonater.BleHid
 {
-    public class MouseControlsComponent : UIComponent, IInputSourceDevice
+    public class MouseDeviceUI : SectionUI, IInputSourceDevice
     {
         public string Name { get; } = "Mouse";
         public event Action<BleHidButtonEvent> NotifyButtonEvent = delegate { };
@@ -15,12 +15,12 @@ namespace Inventonater.BleHid
 
         private Rect touchpadRect = new(Screen.width / 2 - 150, Screen.height / 2 - 100, 300, 200);
 
-        public override void ComponentShown()
+        public override void Shown()
         {
             if (!BleHidManager.Instance.InputRouter.HasDevice) BleHidManager.Instance.InputRouter.SetSourceDevice(this);
         }
 
-        public override void ComponentHidden()
+        public override void Hidden()
         {
         }
 
