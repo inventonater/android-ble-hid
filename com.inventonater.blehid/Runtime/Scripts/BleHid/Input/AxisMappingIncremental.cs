@@ -15,6 +15,7 @@ namespace Inventonater.BleHid
         private readonly float _interval;
         float _lastIncrement;
         static readonly ProfilerMarker _profileMarker = new("BleHid.AxisMappingIncremental.Update");
+        private bool _active;
 
         public AxisMappingIncremental(BleHidAxis axis, Action increment, Action decrement, float interval = 0.02f)
         {
@@ -22,6 +23,17 @@ namespace Inventonater.BleHid
             _increment = increment;
             _decrement = decrement;
             _interval = interval;
+        }
+
+        public bool Active
+        {
+            get => _active;
+            set
+            {
+                if (_active == value) return;
+                ResetPosition();
+                _active = value;
+            }
         }
 
         public void ResetPosition()
@@ -49,6 +61,7 @@ namespace Inventonater.BleHid
         {
             using var profile = _profileMarker.Auto();
 
+            if (!_active) return;
             if (time < _lastIncrement + _interval) return;
             _lastIncrement = time;
 

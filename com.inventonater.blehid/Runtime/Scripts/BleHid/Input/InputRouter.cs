@@ -1,3 +1,4 @@
+using JetBrains.Annotations;
 using UnityEngine;
 
 namespace Inventonater.BleHid
@@ -11,9 +12,9 @@ namespace Inventonater.BleHid
         private IInputSourceDevice _sourceDevice;
         [SerializeField] private InputDeviceMapping _mapping;
 
-        public InputDeviceMapping Mapping => _mapping;
         public bool HasMapping => _mapping != null;
         public bool HasDevice => _sourceDevice != null;
+        [CanBeNull] public InputDeviceMapping Mapping => _mapping;
 
         public void SetMapping(InputDeviceMapping mapping)
         {

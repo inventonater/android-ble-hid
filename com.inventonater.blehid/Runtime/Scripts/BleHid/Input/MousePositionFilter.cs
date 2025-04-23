@@ -46,14 +46,16 @@ namespace Inventonater.BleHid
             Filter.Reset();
             
             // Update the filter in the input router if available
-            if (BleHidManager.Instance?.InputRouter?.Mapping?.MousePositionFilter != null)
-            {
-                BleHidManager.Instance.InputRouter.Mapping.MousePositionFilter.Filter = Filter;
-            }
-            
+            SetFilterToMapping();
             LoggingManager.Instance.AddLogEntry($"Changed input filter to: {Filter.Name}");
         }
-        
+
+        private void SetFilterToMapping()
+        {
+            var mousePositionfilter = BleHidManager.Instance.InputRouter?.Mapping?.MousePositionFilter;
+            if(mousePositionfilter != null) mousePositionfilter.Filter = Filter;
+        }
+
         /// <summary>
         /// Set the input filter directly with a pre-configured filter instance
         /// </summary>
@@ -69,10 +71,7 @@ namespace Inventonater.BleHid
             Filter.Reset();
             
             // Update the filter in the input router if available
-            if (BleHidManager.Instance?.InputRouter?.Mapping?.MousePositionFilter != null)
-            {
-                BleHidManager.Instance.InputRouter.Mapping.MousePositionFilter.Filter = Filter;
-            }
+            SetFilterToMapping();
             
             LoggingManager.Instance.AddLogEntry($"Applied custom filter: {Filter.Name}");
         }

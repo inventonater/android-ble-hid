@@ -58,7 +58,12 @@ namespace Inventonater.BleHid
                 AddDirection(BleHidDirection.Down, BleHidConstants.KEY_DOWN);
                 AddDirection(BleHidDirection.Left, BleHidConstants.KEY_LEFT);
                 _axisMappings.Add(MousePositionFilter = new MousePositionFilter(Mouse));
-                _axisMappings.Add(new AxisMappingIncremental(BleHidAxis.Z, () => Media.VolumeUp(), () => Media.VolumeDown()));
+
+                var volumeMapping = new AxisMappingIncremental(BleHidAxis.Z, () => Media.VolumeUp(), () => Media.VolumeDown());
+
+                ButtonMapping.Add(new BleHidButtonEvent(BleHidButtonEvent.Id.Primary, BleHidButtonEvent.Action.Press), () => volumeMapping.Active = true);
+                ButtonMapping.Add(new BleHidButtonEvent(BleHidButtonEvent.Id.Primary, BleHidButtonEvent.Action.Release), () => volumeMapping.Active = false);
+                _axisMappings.Add(volumeMapping);
             }
         }
         private void AddDirection(BleHidDirection dir, byte hidConstant) => DirectionMapping.Add(dir, () => Keyboard.SendKey(hidConstant));
