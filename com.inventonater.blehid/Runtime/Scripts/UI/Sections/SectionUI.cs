@@ -10,8 +10,6 @@ namespace Inventonater.BleHid
     /// </summary>
     public abstract class SectionUI
     {
-        protected BleHidManager BleHidManager => BleHidManager.Instance;
-        protected LoggingManager Logger => LoggingManager.Instance;
         protected bool IsEditorMode => Application.isEditor;
         public abstract string TabName { get; }
         public abstract void Update();

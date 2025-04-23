@@ -15,7 +15,6 @@ namespace Inventonater.BleHid
         public ConnectionBridge ConnectionBridge { get; private set; }
         public InputRouter InputRouter { get; private set; }
         public InputDeviceMapping Mapping { get; private set; }
-        public BleIdentityManager IdentityManager { get; private set; }
         public BleBridge BleBridge { get; private set; }
 
         public static BleHidManager Instance => FindFirstObjectByType<BleHidManager>();
@@ -34,7 +33,6 @@ namespace Inventonater.BleHid
             InputRouter.SetMapping(Mapping);
 
             ConnectionBridge = new ConnectionBridge(JavaBridge);
-            IdentityManager = new BleIdentityManager(ConnectionBridge);
             PipWorker = new PipBackgroundWorker();
 
             BleEventSystem.OnPipModeChanged += HandlePipModeChanged;
@@ -74,7 +72,7 @@ namespace Inventonater.BleHid
                     return;
                 }
 
-                IdentityManager.InitializeIdentity();
+                ConnectionBridge.InitializeIdentity();
             }
             catch (Exception e)
             {

@@ -56,7 +56,7 @@ namespace Inventonater.BleHid
         private Color mtuColor = Color.white;
 
         private ConnectionBridge ConnectionBridge { get; }
-        public ConnectionUI(ConnectionBridge connectionBridge)
+        public ConnectionUI(ConnectionBridge connectionBridge, BleEventSystem bleEventSystem)
         {
             ConnectionBridge = connectionBridge;
             // Initialize performance metrics
@@ -67,10 +67,10 @@ namespace Inventonater.BleHid
             _targetFrameRate = 60;
             Application.targetFrameRate = _targetFrameRate;
 
-            BleHidManager.BleEventSystem.OnConnectionParametersChanged += HandleConnectionParametersChanged;
-            BleHidManager.BleEventSystem.OnRssiRead += HandleRssiRead;
-            BleHidManager.BleEventSystem.OnConnectionParameterRequestComplete += HandleConnectionParameterRequestComplete;
-            BleHidManager.BleEventSystem.OnConnectionStateChanged += HandleConnectionStateChanged;
+            bleEventSystem.OnConnectionParametersChanged += HandleConnectionParametersChanged;
+            bleEventSystem.OnRssiRead += HandleRssiRead;
+            bleEventSystem.OnConnectionParameterRequestComplete += HandleConnectionParameterRequestComplete;
+            bleEventSystem.OnConnectionStateChanged += HandleConnectionStateChanged;
 
             // Initialize with current values if connected
             UpdateValuesFromManager();
@@ -111,11 +111,11 @@ namespace Inventonater.BleHid
             {
                 _targetFrameRate = roundedFrameRate;
                 Application.targetFrameRate = _targetFrameRate;
-                Logger.AddLogEntry($"Target framerate set to: {_targetFrameRate}");
+                LoggingManager.Instance.AddLogEntry($"Target framerate set to: {_targetFrameRate}");
             }
 
             GUILayout.Space(10);
-            bool connected = BleHidManager.ConnectionBridge.IsConnected;
+            bool connected = ConnectionBridge.IsConnected;
             // Status message
             GUILayout.Label("Status: " + (string.IsNullOrEmpty(statusMessage) ? (connected ? "Connected" : "Not Connected") : statusMessage));
 
@@ -313,7 +313,7 @@ namespace Inventonater.BleHid
         {
             statusMessage = message;
             statusColor = color;
-            Logger.AddLogEntry(message);
+            LoggingManager.Instance.AddLogEntry(message);
         }
 
         private void UpdateValuesFromManager()

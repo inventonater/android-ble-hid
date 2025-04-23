@@ -175,7 +175,7 @@ namespace Inventonater.BleHid
         {
             if (IsEditorMode)
             {
-                Logger.AddLogEntry(editorMessage);
+                LoggingManager.Instance.AddLogEntry(editorMessage);
             }
             else
             {
@@ -185,7 +185,7 @@ namespace Inventonater.BleHid
                 }
                 catch (Exception ex)
                 {
-                    Logger.AddLogEntry($"Error executing local control: {ex.Message}");
+                    LoggingManager.Instance.AddLogEntry($"Error executing local control: {ex.Message}");
                 }
             }
         }
@@ -246,7 +246,7 @@ namespace Inventonater.BleHid
 
             localControlInitialized = true;
 
-            Logger.AddLogEntry("Initializing local control...");
+            LoggingManager.Instance.AddLogEntry("Initializing local control...");
 
 #if UNITY_ANDROID && !UNITY_EDITOR
             // Android-specific initialization
@@ -281,9 +281,9 @@ namespace Inventonater.BleHid
             }
 #else
             // Editor-mode initialization
-            Logger.AddLogEntry("Editor mode: Local control simulated initialization");
+            LoggingManager.Instance.AddLogEntry("Editor mode: Local control simulated initialization");
             yield return new WaitForSeconds(0.5f); // Simulate initialization delay
-            Logger.AddLogEntry("Editor mode: Local control initialization complete");
+            LoggingManager.Instance.AddLogEntry("Editor mode: Local control initialization complete");
 #endif
         }
     }

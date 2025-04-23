@@ -1,3 +1,4 @@
+using System;
 using JetBrains.Annotations;
 using UnityEngine;
 
@@ -8,6 +9,7 @@ namespace Inventonater.BleHid
     {
         public delegate void InputDeviceChangedEvent(IInputSourceDevice prev, IInputSourceDevice next);
         public event InputDeviceChangedEvent WhenDeviceChanged = delegate { };
+        public event Action<InputDeviceMapping> WhenMappingChanged = delegate { };
 
         private IInputSourceDevice _sourceDevice;
         [SerializeField] private InputDeviceMapping _mapping;
@@ -20,6 +22,7 @@ namespace Inventonater.BleHid
         {
             _mapping = mapping;
             _mapping.ResetPosition();
+            WhenMappingChanged(_mapping);
         }
 
         public void SetSourceDevice(IInputSourceDevice inputSourceDevice)

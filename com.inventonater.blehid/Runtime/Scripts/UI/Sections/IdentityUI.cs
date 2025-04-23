@@ -53,7 +53,7 @@ namespace Inventonater.BleHid
         /// </summary>
         private void DisconnectDevice()
         {
-            bool success = BleHidManager.BleBridge.Connection.Disconnect();
+            bool success = ConnectionBridge.Disconnect();
             if (success)
             {
                 Debug.Log("Disconnect command sent successfully");
@@ -395,14 +395,11 @@ namespace Inventonater.BleHid
 
         private void RefreshIdentityDisplay()
         {
-            if (BleHidManager == null || BleHidManager.IdentityManager == null)
-                return;
-
             // Get the UUID
-            _deviceUuid = BleHidManager.IdentityManager.GetOrCreateDeviceUuid();
+            _deviceUuid = ConnectionBridge.GetOrCreateDeviceUuid();
 
             // Format creation date
-            string creationDate = BleHidManager.IdentityManager.GetIdentityCreationDate();
+            string creationDate = ConnectionBridge.GetIdentityCreationDate();
             if (creationDate == "Unknown")
                 _creationDate = "Creation date: Unknown";
             else
@@ -419,15 +416,12 @@ namespace Inventonater.BleHid
             }
 
             // Get current device name
-            _deviceName = BleHidManager.IdentityManager.GetDeviceName();
+            _deviceName = ConnectionBridge.GetDeviceName();
             _newDeviceName = _deviceName;
         }
 
         private void SaveDeviceName()
         {
-            if (BleHidManager == null || BleHidManager.IdentityManager == null)
-                return;
-
             string newName = _newDeviceName.Trim();
             if (string.IsNullOrEmpty(newName))
             {
@@ -437,7 +431,7 @@ namespace Inventonater.BleHid
             }
 
             // Set new device name
-            bool success = BleHidManager.IdentityManager.SetDeviceName(newName);
+            bool success = ConnectionBridge.SetDeviceName(newName);
             if (success)
             {
                 _deviceName = newName;
@@ -453,10 +447,7 @@ namespace Inventonater.BleHid
 
         private void ResetIdentity()
         {
-            if (BleHidManager == null || BleHidManager.IdentityManager == null)
-                return;
-
-            bool success = BleHidManager.IdentityManager.ResetIdentity();
+            bool success = ConnectionBridge.ResetIdentity();
             if (success)
             {
                 RefreshIdentityDisplay();
@@ -474,24 +465,13 @@ namespace Inventonater.BleHid
 
         private void RefreshPairedDevices()
         {
-            if (BleHidManager == null || BleHidManager.IdentityManager == null)
-                return;
-
-            // Get paired devices
-            _pairedDevices = BleHidManager.IdentityManager.GetBondedDevices();
-            
-            if (_pairedDevices.Count > 0)
-            {
-                ShowNotification($"Found {_pairedDevices.Count} paired device(s)");
-            }
+            _pairedDevices = ConnectionBridge.GetBondedDevices();
+            if (_pairedDevices.Count > 0) ShowNotification($"Found {_pairedDevices.Count} paired device(s)");
         }
 
         private void ForgetDevice(string address, string name)
         {
-            if (BleHidManager == null || BleHidManager.IdentityManager == null)
-                return;
-
-            bool success = BleHidManager.IdentityManager.ForgetDevice(address);
+            bool success = ConnectionBridge.RemoveBond(address);
             if (success)
             {
                 // Refresh the device list
@@ -511,7 +491,7 @@ namespace Inventonater.BleHid
         {
             _statusMessage = message;
             _statusColor = isError ? Color.red : Color.green;
-            Logger.AddLogEntry(isError ? "ERROR: " + message : message);
+            LoggingManager.Instance.AddLogEntry(isError ? "ERROR: " + message : message);
 
             // Clear the status message after 3 seconds
             clearStatusAfterDelay();

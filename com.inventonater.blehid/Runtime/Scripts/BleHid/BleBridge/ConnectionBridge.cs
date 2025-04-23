@@ -9,6 +9,11 @@ namespace Inventonater.BleHid
     /// </summary>
     public class ConnectionBridge
     {
+        private const string IDENTITY_UUID_KEY = "ble_peripheral_uuid";
+        private const string DEVICE_NAME_KEY = "ble_peripheral_name";
+        private const string IDENTITY_CREATED_KEY = "ble_identity_created_time";
+        private const string DEFAULT_DEVICE_NAME = "BLE HID Device";
+
         private readonly JavaBridge _java;
         public ConnectionBridge(JavaBridge java) => _java = java;
 
@@ -33,6 +38,49 @@ namespace Inventonater.BleHid
         public bool StartAdvertising() => _java.Call<bool>("startAdvertising");
         public void StopAdvertising() => _java.Call("stopAdvertising");
         public bool GetAdvertisingState() => _java.Call<bool>("isAdvertising");
+
+        public string GetDeviceName() => PlayerPrefs.GetString(DEVICE_NAME_KEY, DEFAULT_DEVICE_NAME);
+        public string GetIdentityCreationDate() => PlayerPrefs.GetString(IDENTITY_CREATED_KEY, "Unknown");
+
+        public bool InitializeIdentity()
+        {
+            string identityUuid = GetOrCreateDeviceUuid();
+            string deviceName = GetDeviceName();
+
+            Debug.Log($"Initializing BLE identity: {identityUuid}, Name: {deviceName}");
+            return SetBleIdentity(identityUuid, deviceName);
+        }
+
+        public string GetOrCreateDeviceUuid()
+        {
+            if (PlayerPrefs.HasKey(IDENTITY_UUID_KEY)) return PlayerPrefs.GetString(IDENTITY_UUID_KEY);
+            string newUuid = Guid.NewGuid().ToString();
+            PlayerPrefs.SetString(IDENTITY_UUID_KEY, newUuid);
+
+            PlayerPrefs.SetString(IDENTITY_CREATED_KEY, DateTime.Now.ToString("o"));
+            PlayerPrefs.Save();
+
+            Debug.Log($"Created new BLE device identity: {newUuid}");
+            return newUuid;
+        }
+
+        public bool SetDeviceName(string name)
+        {
+            if (string.IsNullOrEmpty(name)) name = DEFAULT_DEVICE_NAME;
+            PlayerPrefs.SetString(DEVICE_NAME_KEY, name);
+            PlayerPrefs.Save();
+            return SetBleIdentity(GetOrCreateDeviceUuid(), name);
+        }
+
+        public bool ResetIdentity()
+        {
+            string newUuid = Guid.NewGuid().ToString();
+            PlayerPrefs.SetString(IDENTITY_UUID_KEY, newUuid);
+            PlayerPrefs.SetString(IDENTITY_CREATED_KEY, DateTime.Now.ToString("o"));
+            PlayerPrefs.Save();
+            Debug.Log($"Reset BLE device identity to: {newUuid}");
+            return SetBleIdentity(newUuid, GetDeviceName());
+        }
 
         public bool SetTransmitPowerLevel(int level)
         {
@@ -83,18 +131,15 @@ namespace Inventonater.BleHid
                 Dictionary<string, string> result = new Dictionary<string, string>();
 
                 // Convert Java Map to C# Dictionary
-                using (AndroidJavaObject entrySet = parametersMap.Call<AndroidJavaObject>("entrySet"))
-                using (AndroidJavaObject iterator = entrySet.Call<AndroidJavaObject>("iterator"))
+                using AndroidJavaObject entrySet = parametersMap.Call<AndroidJavaObject>("entrySet");
+                using AndroidJavaObject iterator = entrySet.Call<AndroidJavaObject>("iterator");
+
+                while (iterator.Call<bool>("hasNext"))
                 {
-                    while (iterator.Call<bool>("hasNext"))
-                    {
-                        using (AndroidJavaObject entry = iterator.Call<AndroidJavaObject>("next"))
-                        {
-                            string key = entry.Call<AndroidJavaObject>("getKey").Call<string>("toString");
-                            string value = entry.Call<AndroidJavaObject>("getValue").Call<string>("toString");
-                            result[key] = value;
-                        }
-                    }
+                    using AndroidJavaObject entry = iterator.Call<AndroidJavaObject>("next");
+                    string key = entry.Call<AndroidJavaObject>("getKey").Call<string>("toString");
+                    string value = entry.Call<AndroidJavaObject>("getValue").Call<string>("toString");
+                    result[key] = value;
                 }
 
                 return result;
@@ -124,7 +169,7 @@ namespace Inventonater.BleHid
         /// Gets detailed information about all devices currently bonded to this peripheral.
         /// </summary>
         /// <returns>List of dictionaries containing device information</returns>
-        public List<Dictionary<string, string>> GetBondedDevicesInfo()
+        public List<Dictionary<string, string>> GetBondedDevices()
         {
             if (Application.isEditor) return MockBondedDevicesInfo();
             AndroidJavaObject javaList = _java.Call<AndroidJavaObject>("getBondedDevicesInfo");

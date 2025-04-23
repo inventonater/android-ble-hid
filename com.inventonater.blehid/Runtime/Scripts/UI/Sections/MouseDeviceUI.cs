@@ -15,6 +15,25 @@ namespace Inventonater.BleHid
 
         private Rect touchpadRect = new(Screen.width / 2 - 150, Screen.height / 2 - 100, 300, 200);
 
+        private readonly MouseBridge _mouse;
+        private MousePositionFilter _mousePositionFilter;
+        private readonly string[] _buttonLabels = { "Left Click", "Middle Click", "Right Click" };
+        private readonly string[] _buttonMessages = { "Left click pressed", "Middle click pressed", "Right click pressed" };
+        private readonly Action[] _buttonActions;
+
+        public MouseDeviceUI(MouseBridge mouse)
+        {
+            _mouse = mouse;
+            _buttonActions = new Action[] {
+                () => _mouse.ClickMouseButton(BleHidConstants.BUTTON_LEFT),
+                () => _mouse.ClickMouseButton(BleHidConstants.BUTTON_MIDDLE),
+                () => _mouse.ClickMouseButton(BleHidConstants.BUTTON_RIGHT)
+            };
+            BleHidManager.Instance.InputRouter.WhenMappingChanged += HandleMappingChanged;
+        }
+
+        private void HandleMappingChanged(InputDeviceMapping mapping) => _mousePositionFilter = mapping.MousePositionFilter;
+
         public override void Shown()
         {
             if (!BleHidManager.Instance.InputRouter.HasDevice) BleHidManager.Instance.InputRouter.SetSourceDevice(this);
@@ -57,6 +76,13 @@ namespace Inventonater.BleHid
 
         public override void DrawUI()
         {
+            DrawTouchpad();
+            if (_mousePositionFilter != null) DrawFilterSection();
+            DrawMouseButtons();
+        }
+
+        private void DrawTouchpad()
+        {
             UIHelper.BeginSection("Mouse Touchpad");
             GUILayout.Label("Touchpad Area: Touch and drag to control mouse pointer");
             GUILayout.Label("Drag in touchpad area to send mouse movement to connected device");
@@ -70,24 +96,31 @@ namespace Inventonater.BleHid
                 Rect lastRect = GUILayoutUtility.GetLastRect();
                 touchpadRect = new Rect(lastRect.x, lastRect.y, lastRect.width, lastRect.height);
             }
-
             UIHelper.EndSection();
+        }
 
+        private void DrawMouseButtons()
+        {
+            UIHelper.BeginSection("Mouse Buttons");
+            GUILayout.Label("Click buttons to send mouse button actions to the connected device");
+            UIHelper.ActionButtonRow(_buttonLabels, _buttonActions, _buttonMessages, UIHelper.LargeButtonOptions);
+            UIHelper.EndSection();
+        }
+
+        private void DrawFilterSection()
+        {
             UIHelper.BeginSection("Mouse Tuning");
-
-            var mousePositionFilter = BleHidManager.Instance.InputRouter.Mapping.MousePositionFilter;
-            IInputFilter filter = mousePositionFilter.Filter;
-
+            IInputFilter filter = _mousePositionFilter.Filter;
 
             // --- GLOBAL SETTINGS SECTION ---
             GUILayout.Label("Global Speed: Adjusts overall mouse movement speed");
-            mousePositionFilter.GlobalScale =
-                UIHelper.SliderWithLabels("Slow", mousePositionFilter.GlobalScale, 0.25f, 10.0f, "Fast", "Global Speed: {0:F2}×", UIHelper.StandardSliderOptions);
+            _mousePositionFilter.GlobalScale =
+                UIHelper.SliderWithLabels("Slow", _mousePositionFilter.GlobalScale, 0.25f, 10.0f, "Fast", "Global Speed: {0:F2}×", UIHelper.StandardSliderOptions);
             GUILayout.Label("Horizontal Speed: Adjusts left-right sensitivity");
-            mousePositionFilter.HorizontalSensitivity = UIHelper.SliderWithLabels("Low", mousePositionFilter.HorizontalSensitivity, 1.0f, 10.0f, "High", "Horizontal Speed: {0:F1}",
+            _mousePositionFilter.HorizontalSensitivity = UIHelper.SliderWithLabels("Low", _mousePositionFilter.HorizontalSensitivity, 1.0f, 10.0f, "High", "Horizontal Speed: {0:F1}",
                 UIHelper.StandardSliderOptions);
             GUILayout.Label("Vertical Speed: Adjusts up-down sensitivity");
-            mousePositionFilter.VerticalSensitivity = UIHelper.SliderWithLabels("Low", mousePositionFilter.VerticalSensitivity, 1.0f, 10.0f, "High", "Vertical Speed: {0:F1}",
+            _mousePositionFilter.VerticalSensitivity = UIHelper.SliderWithLabels("Low", _mousePositionFilter.VerticalSensitivity, 1.0f, 10.0f, "High", "Vertical Speed: {0:F1}",
                 UIHelper.StandardSliderOptions);
 
             GUILayout.Space(10);
@@ -100,10 +133,9 @@ namespace Inventonater.BleHid
 
             foreach (var filterType in InputFilterFactory.GetAvailableFilterTypes())
             {
-                bool isSelected = filterType == mousePositionFilter.CurrentFilterType;
+                bool isSelected = filterType == _mousePositionFilter.CurrentFilterType;
                 GUI.enabled = !isSelected;
-                if (GUILayout.Button(InputFilterFactory.GetFilterName(filterType), isSelected ? GUI.skin.box : GUI.skin.button, GUILayout.Height(30)))
-                    mousePositionFilter.SetInputFilter(filterType);
+                if (GUILayout.Button(InputFilterFactory.GetFilterName(filterType), isSelected ? GUI.skin.box : GUI.skin.button, GUILayout.Height(30))) _mousePositionFilter.SetInputFilter(filterType);
                 GUI.enabled = true;
             }
 
@@ -118,28 +150,6 @@ namespace Inventonater.BleHid
             // Let the filter draw its own parameter controls
             if (filter != null) { filter.DrawParameterControls(); }
 
-            UIHelper.EndSection();
-
-            // Mouse button controls
-            UIHelper.BeginSection("Mouse Buttons");
-
-            GUILayout.Label("Click buttons to send mouse button actions to the connected device");
-
-            string[] buttonLabels = { "Left Click", "Middle Click", "Right Click" };
-            Action[] buttonActions =
-            {
-                () => BleHidManager.BleBridge.Mouse.ClickMouseButton(BleHidConstants.BUTTON_LEFT),
-                () => BleHidManager.BleBridge.Mouse.ClickMouseButton(BleHidConstants.BUTTON_MIDDLE),
-                () => BleHidManager.BleBridge.Mouse.ClickMouseButton(BleHidConstants.BUTTON_RIGHT)
-            };
-            string[] buttonMessages =
-            {
-                "Left click pressed",
-                "Middle click pressed",
-                "Right click pressed"
-            };
-
-            UIHelper.ActionButtonRow(buttonLabels, buttonActions, buttonMessages, UIHelper.LargeButtonOptions);
             UIHelper.EndSection();
         }
     }

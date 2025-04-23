@@ -12,7 +12,7 @@ namespace Inventonater.BleHid
     {
         public const string Name = "Keyboard";
         public override string TabName => Name;
-        private KeyboardBridge Keyboard => BleHidManager.BleBridge.Keyboard;
+        private KeyboardBridge Keyboard => BleHidManager.Instance.BleBridge.Keyboard;
 
         // Key mapping for characters to key codes
         private static readonly Dictionary<string, byte> keyMapping = new Dictionary<string, byte>()
@@ -156,12 +156,12 @@ namespace Inventonater.BleHid
         {
             if (string.IsNullOrEmpty(textToSend))
             {
-                Logger.AddLogEntry("Cannot send empty text");
+                LoggingManager.Instance.AddLogEntry("Cannot send empty text");
                 return;
             }
 
             if (!IsEditorMode) Keyboard.TypeText(textToSend);
-            Logger.AddLogEntry("Text sent: " + textToSend);
+            LoggingManager.Instance.AddLogEntry("Text sent: " + textToSend);
             textToSend = "";
         }
 
@@ -175,13 +175,13 @@ namespace Inventonater.BleHid
             byte keyCode = GetKeyCode(key);
             if (keyCode <= 0) return;
 
-            if (IsEditorMode) Logger.AddLogEntry("Key pressed: " + key);
+            if (IsEditorMode) LoggingManager.Instance.AddLogEntry("Key pressed: " + key);
             else Keyboard.SendKey(keyCode);
         }
 
         private void SendSpecialKey(byte keyCode, string keyName)
         {
-            if (IsEditorMode) Logger.AddLogEntry($"{keyName} key pressed");
+            if (IsEditorMode) LoggingManager.Instance.AddLogEntry($"{keyName} key pressed");
             else Keyboard.SendKey(keyCode);
         }
 
