@@ -40,7 +40,13 @@ namespace Inventonater.BleHid
                 logToFile = false;
             }
         }
-        
+
+        public void AddLogError(string message)
+        {
+            Debug.LogError(message);
+            AddLogEntry(message);
+        }
+
         /// <summary>
         /// Add a log entry with timestamp
         /// </summary>

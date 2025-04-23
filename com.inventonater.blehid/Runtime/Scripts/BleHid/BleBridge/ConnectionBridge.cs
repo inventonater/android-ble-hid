@@ -42,8 +42,7 @@ namespace Inventonater.BleHid
             }
             catch (Exception e)
             {
-                Debug.LogError($"[ConnectionBridge] Error disconnecting: {e.Message}");
-                _manager.BleEventSystem.OnError?.Invoke(BleHidConstants.ERROR_GENERAL_ERROR, $"Failed to disconnect: {e.Message}");
+                LoggingManager.Instance.AddLogError($"Failed to disconnect: {e.Message}");
                 return false;
             }
         }

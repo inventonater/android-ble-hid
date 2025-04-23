@@ -6,14 +6,10 @@ namespace Inventonater.BleHid
     [DefaultExecutionOrder(ExecutionOrder.Initialize)]
     public class BleHidManager : MonoBehaviour
     {
-        // State properties
-        public bool IsInitialized { get; internal set; }
         public bool IsAdvertising { get; internal set; }
         public bool IsConnected { get; internal set; }
         public string ConnectedDeviceName { get; internal set; }
         public string ConnectedDeviceAddress { get; internal set; }
-        public string LastErrorMessage { get; internal set; }
-        public int LastErrorCode { get; internal set; }
         public int ConnectionInterval { get; internal set; }
         public int SlaveLatency { get; internal set; }
         public int SupervisionTimeout { get; internal set; }
@@ -38,11 +34,8 @@ namespace Inventonater.BleHid
         private void Awake()
         {
             Debug.Log("BleHidManager starting");
-            if (Application.isEditor)
-            {
-                IsInitialized = true;
-                IsConnected = true;
-            }
+            if (Application.isEditor) IsConnected = true;
+
             Application.runInBackground = true;
 
             BleBridge = new BleBridge(this);
@@ -54,7 +47,7 @@ namespace Inventonater.BleHid
             BleInitializer = new BleInitializer(this);
             BleAdvertiser = new BleAdvertiser(this);
             ConnectionManager = new ConnectionManager(this);
-            IdentityManager = new BleIdentityManager(this);
+            IdentityManager = new BleIdentityManager(BleBridge.Identity);
             PipWorker = new PipBackgroundWorker();
 
             BleEventSystem.OnPipModeChanged += HandlePipModeChanged;
@@ -109,7 +102,7 @@ namespace Inventonater.BleHid
 
         public bool ConfirmIsInitialized()
         {
-            if (IsInitialized) return true;
+            if (BleInitializer.IsInitialized) return true;
 
             string message = "BLE HID plugin not initialized";
             Debug.LogError(message);

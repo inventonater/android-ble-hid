@@ -39,7 +39,7 @@ namespace Inventonater.BleHid
             eventSystem.OnDebugLog += OnDebugLog;
 
             _statusUI = new StatusUI();
-            _permissionsUI = new PermissionsUI(this);
+            _permissionsUI = new PermissionsUI();
 
             AddTab(new MediaDeviceUI());
             AddTab(new MouseDeviceUI());
@@ -48,10 +48,7 @@ namespace Inventonater.BleHid
             AddTab(new ConnectionUI());
             AddTab(new IdentityUI());
 
-            StartCoroutine(BleHidManager.Instance.BleInitializer.Initialize());
-            Logger.AddLogEntry("Starting BLE HID initialization...");
-
-            _permissionsUI.InitialCheck();
+            BleHidManager.Instance.BleInitializer.Initialize();
         }
 
         private void Update()
@@ -69,15 +66,8 @@ namespace Inventonater.BleHid
             Rect layoutArea = new Rect(padding, padding, Screen.width - padding * 2, Screen.height - padding * 2);
             GUILayout.BeginArea(layoutArea);
 
-            _permissionsUI.DrawErrorWarnings();
+            _permissionsUI.DrawIssues();
             _statusUI.DrawUI();
-
-            // If we have a permission error or accessibility error, don't show the rest of the UI
-            if (_permissionsUI.HasCriticalErrors())
-            {
-                GUILayout.EndArea();
-                return;
-            }
 
             var newTabIndex = GUILayout.Toolbar(_currentTabIndex, _activeTabNames, GUILayout.Height(60));
             if (newTabIndex != _currentTabIndex)
@@ -126,15 +116,8 @@ namespace Inventonater.BleHid
         private void OnInitializeComplete(bool success, string message)
         {
             _statusUI.SetInitialized(success);
-
-            if (success) { Logger.AddLogEntry("BLE HID initialized successfully: " + message); }
-            else
-            {
-                Logger.AddLogEntry("BLE HID initialization failed: " + message);
-
-                // Check if this is a permission error
-                if (message.Contains("permission")) { _permissionsUI.SetPermissionError(message); }
-            }
+            if (success) Logger.AddLogEntry("BLE HID initialized successfully: " + message);
+            else Logger.AddLogError("BLE HID initialization failed: " + message);
         }
 
         private void OnAdvertisingStateChanged(bool advertising, string message)
@@ -156,20 +139,7 @@ namespace Inventonater.BleHid
 
         private void OnError(int errorCode, string errorMessage)
         {
-            switch (errorCode)
-            {
-                case BleHidConstants.ERROR_PERMISSIONS_NOT_GRANTED:
-                    _permissionsUI.SetPermissionError(errorMessage);
-                    break;
-                case BleHidConstants.ERROR_ACCESSIBILITY_NOT_ENABLED:
-                    _permissionsUI.SetAccessibilityError(true);
-                    Logger.AddLogEntry("Accessibility error: " + errorMessage);
-                    _permissionsUI.CheckAccessibilityServiceStatus();
-                    break;
-                default:
-                    Logger.AddLogEntry("Error " + errorCode + ": " + errorMessage);
-                    break;
-            }
+            Logger.AddLogEntry("Error " + errorCode + ": " + errorMessage);
         }
 
         private void OnDebugLog(string message) => Logger.AddLogEntry("Debug: " + message);

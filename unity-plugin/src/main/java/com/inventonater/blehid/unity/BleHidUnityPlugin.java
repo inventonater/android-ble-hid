@@ -38,8 +38,7 @@ public class BleHidUnityPlugin {
     public static final int ERROR_PERIPHERAL_NOT_SUPPORTED = 1005;
     public static final int ERROR_ADVERTISING_FAILED = 1006;
     public static final int ERROR_INVALID_PARAMETER = 1007;
-    public static final int ERROR_ACCESSIBILITY_NOT_ENABLED = 1008;
-    
+
     private static BleHidUnityPlugin instance;
     private Activity unityActivity;
     private BleHidManager bleHidManager;

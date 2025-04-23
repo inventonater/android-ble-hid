@@ -92,8 +92,7 @@ namespace Inventonater.BleHid
 
         public override void DrawUI()
         {
-            bool connected = BleHidManager != null && BleHidManager.IsConnected;
-            bool initialized = BleHidManager != null && BleHidManager.IsInitialized;
+            bool connected = BleHidManager.IsConnected;
 
             UIHelper.BeginSection("Connection Parameters");
 
@@ -263,8 +262,6 @@ namespace Inventonater.BleHid
             GUILayout.BeginVertical(GUI.skin.box);
             GUILayout.Label("Transmit Power:", boldStyle);
 
-            GUI.enabled = initialized || IsEditorMode;
-
             // Get the current TX power level name
             string currentLevel = "Unknown";
             if (requestedTxPowerLevel >= 0 && requestedTxPowerLevel < txPowerLevelNames.Length)
@@ -296,8 +293,6 @@ namespace Inventonater.BleHid
             GUILayout.BeginVertical(GUI.skin.box);
             GUILayout.Label("Actions:", boldStyle);
 
-            GUI.enabled = connected || IsEditorMode;
-
             if (UIHelper.Button("Read RSSI", ReadRssi, "Read current RSSI value", UIHelper.StandardButtonOptions))
             {
                 SetStatus("Reading RSSI...", Color.yellow);
@@ -310,9 +305,7 @@ namespace Inventonater.BleHid
 
             GUI.enabled = true;
             GUILayout.EndVertical();
-
             GUILayout.Space(10);
-
             UIHelper.EndSection();
         }
 
@@ -346,22 +339,22 @@ namespace Inventonater.BleHid
 
         private void RequestConnectionPriority(int priority)
         {
-            if (BleHidManager.IsConnected) BleHidManager.ConnectionManager.RequestConnectionPriority(priority);
+            BleHidManager.ConnectionManager.RequestConnectionPriority(priority);
         }
 
         private void RequestMtu()
         {
-            if (BleHidManager.IsConnected) BleHidManager.ConnectionManager.RequestMtu(requestedMtu);
+            BleHidManager.ConnectionManager.RequestMtu(requestedMtu);
         }
 
         private void SetTransmitPowerLevel(int level)
         {
-            if (BleHidManager.IsInitialized) BleHidManager.BleAdvertiser.SetTransmitPowerLevel(level);
+            BleHidManager.BleAdvertiser.SetTransmitPowerLevel(level);
         }
 
         private void ReadRssi()
         {
-            if (BleHidManager.IsConnected) BleHidManager.ConnectionManager.ReadRssi();
+            BleHidManager.ConnectionManager.ReadRssi();
         }
 
         private void RefreshParameters()

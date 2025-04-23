@@ -9,7 +9,6 @@ namespace Inventonater.BleHid
     {
         private BleHidCallbackHandler callbackHandler;
 
-        // Event declarations that will be forwarded from the callback handler
         public BleHidCallbackHandler.InitializeCompleteHandler OnInitializeComplete = delegate { };
         public BleHidCallbackHandler.AdvertisingStateChangedHandler OnAdvertisingStateChanged = delegate { };
         public BleHidCallbackHandler.ConnectionStateChangedHandler OnConnectionStateChanged = delegate { };

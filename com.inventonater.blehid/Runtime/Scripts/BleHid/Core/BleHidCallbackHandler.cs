@@ -34,7 +34,6 @@ namespace Inventonater.BleHid
         
         // Reference to the main manager to update its state
         private BleHidManager manager;
-        
         public BleHidCallbackHandler(BleHidManager manager)
         {
             this.manager = manager;
@@ -42,11 +41,9 @@ namespace Inventonater.BleHid
         
         public void HandleInitializeComplete(string message)
         {
-            string[] parts = message.Split(new char[] { ':' }, 2);
+            string[] parts = message.Split(new[] { ':' }, 2);
             bool success = bool.Parse(parts[0]);
             string msg = parts.Length > 1 ? parts[1] : "";
-            
-            manager.IsInitialized = success;
             
             if (success) Debug.Log("BLE HID initialized successfully: " + msg);
             else Debug.LogError("BLE HID initialization failed: " + msg);
@@ -103,15 +100,11 @@ namespace Inventonater.BleHid
         
         public void HandleError(string message)
         {
-            string[] parts = message.Split(new char[] { ':' }, 2);
+            string[] parts = message.Split(new[] { ':' }, 2);
             int errorCode = int.Parse(parts[0]);
             string errorMessage = parts.Length > 1 ? parts[1] : "";
-            
-            manager.LastErrorCode = errorCode;
-            manager.LastErrorMessage = errorMessage;
-            
-            Debug.LogError($"BLE HID error {errorCode}: {errorMessage}");
             OnError?.Invoke(errorCode, errorMessage);
+            LoggingManager.Instance.AddLogError($"BLE HID error {errorCode}: {errorMessage}");
         }
         
         public void HandleConnectionParametersChanged(string message)

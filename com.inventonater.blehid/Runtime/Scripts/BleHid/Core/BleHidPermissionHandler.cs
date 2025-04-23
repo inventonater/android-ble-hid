@@ -11,7 +11,7 @@ namespace Inventonater.BleHid
     /// Specifically manages Bluetooth permissions needed for Android 12+ devices 
     /// and other runtime permissions required by the plugin.
     /// </summary>
-    public abstract class BleHidPermissionHandler
+    public static class BleHidPermissionHandler
     {
         public class AndroidPermission
         {
@@ -33,19 +33,14 @@ namespace Inventonater.BleHid
         };
 
         public static IEnumerable<AndroidPermission> GetMissingPermissions() => Permissions.Where(p => !HasUserAuthorizedPermission(p));
-        public static bool CheckBluetoothPermissions() => GetMissingPermissions().Any();
 
         /// <summary>
         /// Request Bluetooth permissions required for Android 12+ (API level 31+)
         /// </summary>
-        public static IEnumerator RequestPermissionsAndWait()
+        public static void RequestAllPermissions()
         {
             Debug.Log("Requesting Android Bluetooth permissions");
-            foreach (AndroidPermission permission in Permissions)
-            {
-                yield return RequestAndroidPermissionAndWait(permission);
-                yield return new WaitForSeconds(0.5f);
-            }
+            foreach (AndroidPermission permission in Permissions) RequestPermission(permission);
         }
 
         public static void OpenAppSettings()
@@ -75,20 +70,16 @@ namespace Inventonater.BleHid
             catch (Exception e) { LoggingManager.Instance.AddLogEntry("Failed to open app settings: " + e.Message); }
         }
 
-        public static IEnumerator RequestAndroidPermissionAndWait(AndroidPermission permission)
+        public static void RequestPermission(AndroidPermission permission)
         {
-            if (!HasUserAuthorizedPermission(permission))
-            {
-                Debug.Log($"Requesting permission: {permission}");
-                RequestUserPermission(permission);
-
-                // Wait briefly to allow the permission dialog to show and be handled
-                yield return new WaitForSeconds(0.5f);
-            }
+            if (HasUserAuthorizedPermission(permission)) return;
+            RequestPermissionInternal(permission);
         }
 
         public static bool HasUserAuthorizedPermission(AndroidPermission permission)
         {
+            if (Application.platform != RuntimePlatform.Android) return true;
+
             try
             {
                 var activity = new AndroidJavaClass("com.unity3d.player.UnityPlayer").GetStatic<AndroidJavaObject>("currentActivity");
@@ -103,10 +94,11 @@ namespace Inventonater.BleHid
             }
         }
 
-        public static void RequestUserPermission(AndroidPermission permission)
+        private static void RequestPermissionInternal(AndroidPermission permission)
         {
             if (Application.platform != RuntimePlatform.Android) return;
 
+            Debug.Log($"Requesting permission: {permission.PermissionString}");
             try
             {
                 var activity = new AndroidJavaClass("com.unity3d.player.UnityPlayer").GetStatic<AndroidJavaObject>("currentActivity");

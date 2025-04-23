@@ -51,12 +51,7 @@ namespace Inventonater.BleHid
             }
             catch (Exception e)
             {
-                string message = "Exception starting advertising: " + e.Message;
-                Debug.LogError(message);
-                Debug.LogException(e);
-                manager.LastErrorMessage = message;
-                manager.LastErrorCode = BleHidConstants.ERROR_ADVERTISING_FAILED;
-                manager.BleEventSystem.OnError?.Invoke(BleHidConstants.ERROR_ADVERTISING_FAILED, message);
+                LoggingManager.Instance.AddLogError("Exception starting advertising: " + e.Message);
                 return false;
             }
         }
@@ -71,9 +66,7 @@ namespace Inventonater.BleHid
             try { manager.BleInitializer.Call("stopAdvertising"); }
             catch (Exception e)
             {
-                string message = "Exception stopping advertising: " + e.Message;
-                Debug.LogException(e);
-                manager.BleEventSystem.OnError?.Invoke(BleHidConstants.ERROR_ADVERTISING_FAILED, message);
+                LoggingManager.Instance.AddLogError("Exception stopping advertising: " + e.Message);
             }
         }
 
@@ -88,7 +81,7 @@ namespace Inventonater.BleHid
             try { return manager.BleInitializer.Call<bool>("isAdvertising"); }
             catch (Exception e)
             {
-                Debug.LogException(e);
+                LoggingManager.Instance.AddLogError(e.Message);
                 return false;
             }
         }
@@ -105,20 +98,14 @@ namespace Inventonater.BleHid
 
             if (level < 0 || level > 2)
             {
-                string message = "Invalid TX power level: " + level + ". Must be between 0 and 2.";
-                Debug.LogError(message);
-                manager.LastErrorMessage = message;
-                manager.BleEventSystem.OnError?.Invoke(BleHidConstants.ERROR_INVALID_PARAMETER, message);
+                LoggingManager.Instance.AddLogError("Invalid TX power level: " + level + ". Must be between 0 and 2.");
                 return false;
             }
 
             try { return manager.BleInitializer.Call<bool>("setTransmitPowerLevel", level); }
             catch (Exception e)
             {
-                string message = "Exception setting TX power level: " + e.Message;
-                Debug.LogException(e);
-                manager.LastErrorMessage = message;
-                manager.BleEventSystem.OnError?.Invoke(BleHidConstants.ERROR_INVALID_PARAMETER, message);
+                LoggingManager.Instance.AddLogError("Exception setting TX power level: " + e.Message);
                 return false;
             }
         }

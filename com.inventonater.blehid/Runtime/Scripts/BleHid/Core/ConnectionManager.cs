@@ -29,10 +29,7 @@ namespace Inventonater.BleHid
             try { return manager.BleInitializer.Call<bool>("requestConnectionPriority", priority); }
             catch (Exception e)
             {
-                string message = "Exception requesting connection priority: " + e.Message;
-                Debug.LogException(e);
-                manager.LastErrorMessage = message;
-                manager.BleEventSystem.OnError?.Invoke(BleHidConstants.ERROR_NOT_CONNECTED, message);
+                LoggingManager.Instance.AddLogError("Exception requesting connection priority: " + e.Message);
                 return false;
             }
         }
@@ -49,20 +46,14 @@ namespace Inventonater.BleHid
 
             if (mtu < 23 || mtu > 517)
             {
-                string message = "Invalid MTU size: " + mtu + ". Must be between 23 and 517.";
-                Debug.LogError(message);
-                manager.LastErrorMessage = message;
-                manager.BleEventSystem.OnError?.Invoke(BleHidConstants.ERROR_INVALID_PARAMETER, message);
+                LoggingManager.Instance.AddLogError("Invalid MTU size: " + mtu + ". Must be between 23 and 517.");
                 return false;
             }
 
             try { return manager.BleInitializer.Call<bool>("requestMtu", mtu); }
             catch (Exception e)
             {
-                string message = "Exception requesting MTU: " + e.Message;
-                Debug.LogException(e);
-                manager.LastErrorMessage = message;
-                manager.BleEventSystem.OnError?.Invoke(BleHidConstants.ERROR_NOT_CONNECTED, message);
+                LoggingManager.Instance.AddLogError("Exception requesting MTU: " + e.Message);
                 return false;
             }
         }
@@ -78,10 +69,7 @@ namespace Inventonater.BleHid
             try { return manager.BleInitializer.Call<bool>("readRssi"); }
             catch (Exception e)
             {
-                string message = "Exception reading RSSI: " + e.Message;
-                Debug.LogException(e);
-                manager.LastErrorMessage = message;
-                manager.BleEventSystem.OnError?.Invoke(BleHidConstants.ERROR_NOT_CONNECTED, message);
+                LoggingManager.Instance.AddLogError("Exception reading RSSI: " + e.Message);
                 return false;
             }
         }
@@ -120,9 +108,7 @@ namespace Inventonater.BleHid
             }
             catch (Exception e)
             {
-                string message = "Exception getting connection parameters: " + e.Message;
-                Debug.LogException(e);
-                manager.LastErrorMessage = message;
+                LoggingManager.Instance.AddLogError("Exception getting connection parameters: " + e.Message);
                 return null;
             }
         }
@@ -146,10 +132,7 @@ namespace Inventonater.BleHid
             }
             catch (Exception e)
             {
-                string message = "Exception disconnecting: " + e.Message;
-                Debug.LogException(e);
-                manager.LastErrorMessage = message;
-                manager.BleEventSystem.OnError?.Invoke(BleHidConstants.ERROR_GENERAL_ERROR, message);
+                LoggingManager.Instance.AddLogError("Exception disconnecting: " + e.Message);
                 return false;
             }
         }
