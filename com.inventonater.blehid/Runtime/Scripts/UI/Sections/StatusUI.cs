@@ -9,7 +9,8 @@ namespace Inventonater.BleHid
     public class StatusUI
     {
         private bool isInitialized = false;
-        private BleHidManager BleHidManager => BleHidManager.Instance;
+        private ConnectionBridge _connectionBridge;
+        public StatusUI(ConnectionBridge connectionBridge) => _connectionBridge = connectionBridge;
         private bool IsEditorMode => Application.isEditor;
 
         public void SetInitialized(bool initialized) => isInitialized = initialized;
@@ -30,12 +31,12 @@ namespace Inventonater.BleHid
 
         private void DrawConnectionInfo()
         {
-            if (BleHidManager.IsConnected)
+            if (_connectionBridge.IsConnected)
             {
                 // Connected - show device details
-                GUILayout.Label("Connected to: " + BleHidManager.ConnectedDeviceName);
-                GUILayout.Label("Device: " + BleHidManager.ConnectedDeviceName +
-                                " (" + BleHidManager.ConnectedDeviceAddress + ")");
+                GUILayout.Label("Connected to: " + _connectionBridge.ConnectedDeviceName);
+                GUILayout.Label("Device: " + _connectionBridge.ConnectedDeviceName +
+                                " (" + _connectionBridge.ConnectedDeviceAddress + ")");
             }
             else
             {
@@ -49,7 +50,7 @@ namespace Inventonater.BleHid
         {
             if (isInitialized || IsEditorMode)
             {
-                string[] labels = { BleHidManager.IsAdvertising ? "Stop Advertising" : "Start Advertising" };
+                string[] labels = { _connectionBridge.IsAdvertising ? "Stop Advertising" : "Start Advertising" };
                 Action[] actions = { ToggleAdvertising };
                 string[] messages = { "Advertising toggle (not functional in editor)" };
 
@@ -69,8 +70,8 @@ namespace Inventonater.BleHid
 
         private void ToggleAdvertising()
         {
-            if (BleHidManager.IsAdvertising) BleHidManager.BleAdvertiser.StopAdvertising();
-            else BleHidManager.BleAdvertiser.StartAdvertising();
+            if (_connectionBridge.IsAdvertising) _connectionBridge.StopAdvertising();
+            else _connectionBridge.StartAdvertising();
         }
     }
 }

@@ -9,6 +9,7 @@ namespace Inventonater.BleHid
     /// </summary>
     public class IdentityUI : SectionUI
     {
+        public ConnectionBridge ConnectionBridge { get; }
         public const string Name = "Identity";
         public override string TabName => Name;
 
@@ -26,9 +27,9 @@ namespace Inventonater.BleHid
         private string _deviceToForget = string.Empty;
         private string _deviceToForgetName = string.Empty;
 
-        public IdentityUI()
+        public IdentityUI(ConnectionBridge connectionBridge)
         {
-            // Initialize with current values
+            ConnectionBridge = connectionBridge;
             RefreshIdentityDisplay();
             RefreshPairedDevices();
         }
@@ -76,7 +77,7 @@ namespace Inventonater.BleHid
             UIHelper.BeginSection("Device Identity");
             
             // Connected Device Section (shown only when a device is connected)
-            if (BleHidManager.IsConnected && !string.IsNullOrEmpty(BleHidManager.ConnectedDeviceAddress))
+            if (ConnectionBridge.IsConnected && !string.IsNullOrEmpty(ConnectionBridge.ConnectedDeviceAddress))
             {
                 GUILayout.BeginVertical(new GUIStyle(GUI.skin.box) 
                 { 
@@ -84,13 +85,13 @@ namespace Inventonater.BleHid
                 });
                 GUILayout.BeginHorizontal();
                 GUILayout.Label("Connected Device:", boldStyle, GUILayout.Width(150));
-                GUILayout.Label(BleHidManager.ConnectedDeviceName ?? "Unknown Device", 
+                GUILayout.Label(ConnectionBridge.ConnectedDeviceName ?? "Unknown Device",
                     new GUIStyle(GUI.skin.label) { fontStyle = FontStyle.Bold, normal = { textColor = Color.green } });
                 GUILayout.EndHorizontal();
                 
                 GUILayout.BeginHorizontal();
                 GUILayout.Label("Address:", GUILayout.Width(150));
-                GUILayout.Label(BleHidManager.ConnectedDeviceAddress);
+                GUILayout.Label(ConnectionBridge.ConnectedDeviceAddress);
                 GUILayout.EndHorizontal();
                 
                 if (GUILayout.Button("Disconnect", GUILayout.Height(50)))
@@ -323,7 +324,7 @@ namespace Inventonater.BleHid
                 
                 GUILayout.Space(10);
                 
-                GUILayout.Label($"Disconnect from '{BleHidManager.ConnectedDeviceName}'?", 
+                GUILayout.Label($"Disconnect from '{ConnectionBridge.ConnectedDeviceName}'?",
                     new GUIStyle(GUI.skin.label) { wordWrap = true });
                 
                 GUILayout.Space(20);
@@ -510,13 +511,8 @@ namespace Inventonater.BleHid
         {
             _statusMessage = message;
             _statusColor = isError ? Color.red : Color.green;
-            
-            // Log the message
-            if (Logger != null)
-            {
-                Logger.AddLogEntry(isError ? "ERROR: " + message : message);
-            }
-            
+            Logger.AddLogEntry(isError ? "ERROR: " + message : message);
+
             // Clear the status message after 3 seconds
             clearStatusAfterDelay();
         }

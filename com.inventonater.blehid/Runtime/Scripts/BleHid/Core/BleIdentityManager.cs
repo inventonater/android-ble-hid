@@ -11,14 +11,14 @@ namespace Inventonater.BleHid
         private const string IDENTITY_CREATED_KEY = "ble_identity_created_time";
         private const string DEFAULT_DEVICE_NAME = "BLE HID Device";
 
-        private readonly IdentityBridge _identityBridge;
-        public BleIdentityManager(IdentityBridge identityBridge) => _identityBridge = identityBridge;
+        private readonly ConnectionBridge _connectionBridge;
+        public BleIdentityManager(ConnectionBridge connectionBridge) => _connectionBridge = connectionBridge;
 
         public string GetDeviceName() => PlayerPrefs.GetString(DEVICE_NAME_KEY, DEFAULT_DEVICE_NAME);
         public string GetIdentityCreationDate() => PlayerPrefs.GetString(IDENTITY_CREATED_KEY, "Unknown");
-        public List<Dictionary<string, string>> GetBondedDevices() => _identityBridge.GetBondedDevicesInfo();
-        public bool IsDeviceBonded(string address) => _identityBridge.IsDeviceBonded(address);
-        public bool ForgetDevice(string address) => _identityBridge.RemoveBond(address);
+        public List<Dictionary<string, string>> GetBondedDevices() => _connectionBridge.GetBondedDevicesInfo();
+        public bool IsDeviceBonded(string address) => _connectionBridge.IsDeviceBonded(address);
+        public bool ForgetDevice(string address) => _connectionBridge.RemoveBond(address);
 
         public bool InitializeIdentity()
         {
@@ -26,7 +26,7 @@ namespace Inventonater.BleHid
             string deviceName = GetDeviceName();
 
             Debug.Log($"Initializing BLE identity: {identityUuid}, Name: {deviceName}");
-            return _identityBridge.SetBleIdentity(identityUuid, deviceName);
+            return _connectionBridge.SetBleIdentity(identityUuid, deviceName);
         }
 
         public string GetOrCreateDeviceUuid()
@@ -47,7 +47,7 @@ namespace Inventonater.BleHid
             if (string.IsNullOrEmpty(name)) name = DEFAULT_DEVICE_NAME;
             PlayerPrefs.SetString(DEVICE_NAME_KEY, name);
             PlayerPrefs.Save();
-            return _identityBridge.SetBleIdentity(GetOrCreateDeviceUuid(), name);
+            return _connectionBridge.SetBleIdentity(GetOrCreateDeviceUuid(), name);
         }
 
         public bool ResetIdentity()
@@ -57,7 +57,7 @@ namespace Inventonater.BleHid
             PlayerPrefs.SetString(IDENTITY_CREATED_KEY, DateTime.Now.ToString("o"));
             PlayerPrefs.Save();
             Debug.Log($"Reset BLE device identity to: {newUuid}");
-            return _identityBridge.SetBleIdentity(newUuid, GetDeviceName());
+            return _connectionBridge.SetBleIdentity(newUuid, GetDeviceName());
         }
     }
 }

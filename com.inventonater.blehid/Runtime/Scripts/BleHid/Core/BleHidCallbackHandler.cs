@@ -57,7 +57,7 @@ namespace Inventonater.BleHid
             bool advertising = bool.Parse(parts[0]);
             string msg = parts.Length > 1 ? parts[1] : "";
             
-            manager.IsAdvertising = advertising;
+            manager.ConnectionBridge.IsAdvertising = advertising;
             
             if (advertising) Debug.Log("BLE advertising started: " + msg);
             else Debug.Log("BLE advertising stopped: " + msg);
@@ -82,9 +82,9 @@ namespace Inventonater.BleHid
                 deviceAddress = parts[2];
             }
 
-            manager.IsConnected = connected;
-            manager.ConnectedDeviceName = deviceName;
-            manager.ConnectedDeviceAddress = deviceAddress;
+            manager.ConnectionBridge.IsConnected = connected;
+            manager.ConnectionBridge.ConnectedDeviceName = deviceName;
+            manager.ConnectionBridge.ConnectedDeviceAddress = deviceAddress;
 
             if (connected) Debug.Log($"BLE device connected: {deviceName} ({deviceAddress})");
             else Debug.Log("BLE device disconnected");

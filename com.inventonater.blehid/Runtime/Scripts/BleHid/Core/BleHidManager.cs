@@ -7,24 +7,12 @@ namespace Inventonater.BleHid
     public class BleHidManager : MonoBehaviour
     {
         public bool IsInitialized { get; private set; }
-        public bool IsConnected { get; internal set; }
-        public bool IsAdvertising { get; internal set; }
-        public string ConnectedDeviceName { get; internal set; }
-        public string ConnectedDeviceAddress { get; internal set; }
-        public int ConnectionInterval { get; internal set; }
-        public int SlaveLatency { get; internal set; }
-        public int SupervisionTimeout { get; internal set; }
-        public int MtuSize { get; internal set; }
-        public int Rssi { get; internal set; }
-        public int TxPowerLevel { get; internal set; }
-        
         public bool IsInPipMode { get; internal set; }
         public PipBackgroundWorker PipWorker { get; private set; }
 
-        public JavaBridge Bridge { get; private set; }
+        public JavaBridge JavaBridge { get; private set; }
         public BleEventSystem BleEventSystem { get; private set; }
-        public BleAdvertiser BleAdvertiser { get; private set; }
-        public ConnectionManager ConnectionManager { get; private set; }
+        public ConnectionBridge ConnectionBridge { get; private set; }
         public InputRouter InputRouter { get; private set; }
         public InputDeviceMapping Mapping { get; private set; }
         public BleIdentityManager IdentityManager { get; private set; }
@@ -35,20 +23,18 @@ namespace Inventonater.BleHid
         private void Awake()
         {
             Debug.Log("BleHidManager starting");
-            if (Application.isEditor) IsConnected = true;
 
             Application.runInBackground = true;
 
-            BleBridge = new BleBridge(this);
+            JavaBridge = new JavaBridge();
+            BleBridge = new BleBridge(JavaBridge);
             BleEventSystem = gameObject.AddComponent<BleEventSystem>();
             Mapping = gameObject.AddComponent<InputDeviceMapping>();
             InputRouter = gameObject.AddComponent<InputRouter>();
             InputRouter.SetMapping(Mapping);
 
-            Bridge = new JavaBridge();
-            BleAdvertiser = new BleAdvertiser(this);
-            ConnectionManager = new ConnectionManager(this);
-            IdentityManager = new BleIdentityManager(BleBridge.Identity);
+            ConnectionBridge = new ConnectionBridge(JavaBridge);
+            IdentityManager = new BleIdentityManager(ConnectionBridge);
             PipWorker = new PipBackgroundWorker();
 
             BleEventSystem.OnPipModeChanged += HandlePipModeChanged;
@@ -74,7 +60,7 @@ namespace Inventonater.BleHid
             {
                 BleHidPermissionHandler.RequestAllPermissions();
 
-                IsInitialized = Bridge.Call<bool>("initialize", gameObject.name);
+                IsInitialized = JavaBridge.Call<bool>("initialize", gameObject.name);
 
                 // Initialize the foreground service manager
                 // manager.ForegroundServiceManager.Initialize(bridgeInstance);
@@ -101,10 +87,10 @@ namespace Inventonater.BleHid
 
         public void Close()
         {
-            IsAdvertising = false;
-            IsConnected = false;
-            ConnectedDeviceName = null;
-            ConnectedDeviceAddress = null;
+            ConnectionBridge.IsAdvertising = false;
+            ConnectionBridge.IsConnected = false;
+            ConnectionBridge.ConnectedDeviceName = null;
+            ConnectionBridge.ConnectedDeviceAddress = null;
             Debug.Log("BleHidManager closed");
         }
 
@@ -152,27 +138,6 @@ namespace Inventonater.BleHid
             // Stop the background worker if it's running
             PipWorker.Stop();
             Close();
-        }
-
-        public bool ConfirmIsInitialized()
-        {
-            if (IsInitialized) return true;
-
-            string message = "BLE HID plugin not initialized";
-            Debug.LogError(message);
-            BleEventSystem.OnError?.Invoke(BleHidConstants.ERROR_NOT_INITIALIZED, message);
-            return false;
-        }
-
-        public bool ConfirmIsConnected()
-        {
-            if (!ConfirmIsInitialized()) return false;
-            if (IsConnected) return true;
-
-            string message = "No BLE device connected";
-            Debug.LogError(message);
-            BleEventSystem.OnError?.Invoke(BleHidConstants.ERROR_NOT_CONNECTED, message);
-            return false;
         }
     }
 }

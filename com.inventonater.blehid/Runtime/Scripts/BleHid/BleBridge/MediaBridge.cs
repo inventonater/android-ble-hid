@@ -6,79 +6,14 @@ namespace Inventonater.BleHid
     [Serializable]
     public class MediaBridge
     {
-        private BleHidManager _manager;
-        public MediaBridge(BleHidManager manager) => _manager = manager;
+        private JavaBridge _java;
+        public MediaBridge(JavaBridge java) => _java = java;
 
-        public bool PlayPause()
-        {
-            if (!_manager.ConfirmIsConnected()) return false;
-
-            try { return _manager.Bridge.Call<bool>("playPause"); }
-            catch (Exception e)
-            {
-                Debug.LogException(e);
-                return false;
-            }
-        }
-
-        public bool NextTrack()
-        {
-            if (!_manager.ConfirmIsConnected()) return false;
-
-            try { return _manager.Bridge.Call<bool>("nextTrack"); }
-            catch (Exception e)
-            {
-                Debug.LogException(e);
-                return false;
-            }
-        }
-
-        public bool PreviousTrack()
-        {
-            if (!_manager.ConfirmIsConnected()) return false;
-
-            try { return _manager.Bridge.Call<bool>("previousTrack"); }
-            catch (Exception e)
-            {
-                Debug.LogException(e);
-                return false;
-            }
-        }
-
-        public bool VolumeUp()
-        {
-            if (!_manager.ConfirmIsConnected()) return false;
-
-            try { return _manager.Bridge.Call<bool>("volumeUp"); }
-            catch (Exception e)
-            {
-                Debug.LogException(e);
-                return false;
-            }
-        }
-
-        public bool VolumeDown()
-        {
-            if (!_manager.ConfirmIsConnected()) return false;
-
-            try { return _manager.Bridge.Call<bool>("volumeDown"); }
-            catch (Exception e)
-            {
-                Debug.LogException(e);
-                return false;
-            }
-        }
-
-        public bool Mute()
-        {
-            if (!_manager.ConfirmIsConnected()) return false;
-
-            try { return _manager.Bridge.Call<bool>("mute"); }
-            catch (Exception e)
-            {
-                Debug.LogException(e);
-                return false;
-            }
-        }
+        public bool PlayPause() => _java.Call<bool>("playPause");
+        public bool NextTrack() => _java.Call<bool>("nextTrack");
+        public bool PreviousTrack() => _java.Call<bool>("previousTrack");
+        public bool VolumeUp() => _java.Call<bool>("volumeUp");
+        public bool VolumeDown() => _java.Call<bool>("volumeDown");
+        public bool Mute() => _java.Call<bool>("mute");
     }
 }

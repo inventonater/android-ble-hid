@@ -34,15 +34,15 @@ namespace Inventonater.BleHid
             callbackHandler.OnPairingStateChanged += (status, deviceAddress) => OnPairingStateChanged?.Invoke(status, deviceAddress);
             callbackHandler.OnConnectionParametersChanged += (interval, latency, timeout, mtu) =>
             {
-                manager.ConnectionInterval = interval;
-                manager.SlaveLatency = latency;
-                manager.SupervisionTimeout = timeout;
-                manager.MtuSize = mtu;
+                manager.ConnectionBridge.ConnectionInterval = interval;
+                manager.ConnectionBridge.SlaveLatency = latency;
+                manager.ConnectionBridge.SupervisionTimeout = timeout;
+                manager.ConnectionBridge.MtuSize = mtu;
                 OnConnectionParametersChanged?.Invoke(interval, latency, timeout, mtu);
             };
             callbackHandler.OnRssiRead += (rssi) =>
             {
-                manager.Rssi = rssi;
+                manager.ConnectionBridge.Rssi = rssi;
                 OnRssiRead?.Invoke(rssi);
             };
             callbackHandler.OnConnectionParameterRequestComplete += (paramName, success, actualValue) =>

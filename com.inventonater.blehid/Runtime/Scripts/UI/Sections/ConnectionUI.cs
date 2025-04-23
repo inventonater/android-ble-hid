@@ -55,8 +55,10 @@ namespace Inventonater.BleHid
         private Color intervalColor = Color.white;
         private Color mtuColor = Color.white;
 
-        public ConnectionUI()
+        private ConnectionBridge ConnectionBridge { get; }
+        public ConnectionUI(ConnectionBridge connectionBridge)
         {
+            ConnectionBridge = connectionBridge;
             // Initialize performance metrics
             _lastFpsUpdateTime = Time.time;
             _currentFps = 0;
@@ -113,7 +115,7 @@ namespace Inventonater.BleHid
             }
 
             GUILayout.Space(10);
-            bool connected = BleHidManager.IsConnected;
+            bool connected = BleHidManager.ConnectionBridge.IsConnected;
             // Status message
             GUILayout.Label("Status: " + (string.IsNullOrEmpty(statusMessage) ? (connected ? "Connected" : "Not Connected") : statusMessage));
 
@@ -316,7 +318,7 @@ namespace Inventonater.BleHid
 
         private void UpdateValuesFromManager()
         {
-            if (!BleHidManager.IsConnected)
+            if (!ConnectionBridge.IsConnected)
             {
                 // Clear all parameter values
                 connectionInterval = "--";
@@ -328,38 +330,36 @@ namespace Inventonater.BleHid
             }
 
             // Update parameter values
-            connectionInterval = BleHidManager.ConnectionInterval.ToString();
-            slaveLatency = BleHidManager.SlaveLatency.ToString();
-            supervisionTimeout = BleHidManager.SupervisionTimeout.ToString();
-            rssi = BleHidManager.Rssi.ToString();
-            mtuSize = BleHidManager.MtuSize.ToString();
+            connectionInterval = ConnectionBridge.ConnectionInterval.ToString();
+            slaveLatency = ConnectionBridge.SlaveLatency.ToString();
+            supervisionTimeout = ConnectionBridge.SupervisionTimeout.ToString();
+            rssi = ConnectionBridge.Rssi.ToString();
+            mtuSize = ConnectionBridge.MtuSize.ToString();
         }
 
         private void RequestConnectionPriority(int priority)
         {
-            BleHidManager.ConnectionManager.RequestConnectionPriority(priority);
+            ConnectionBridge.RequestConnectionPriority(priority);
         }
 
         private void RequestMtu()
         {
-            BleHidManager.ConnectionManager.RequestMtu(requestedMtu);
+            ConnectionBridge.RequestMtu(requestedMtu);
         }
 
         private void SetTransmitPowerLevel(int level)
         {
-            BleHidManager.BleAdvertiser.SetTransmitPowerLevel(level);
+            ConnectionBridge.SetTransmitPowerLevel(level);
         }
 
         private void ReadRssi()
         {
-            BleHidManager.ConnectionManager.ReadRssi();
+            ConnectionBridge.ReadRssi();
         }
 
         private void RefreshParameters()
         {
-            if (!BleHidManager.IsConnected) return;
-
-            Dictionary<string, string> parameters = BleHidManager.ConnectionManager.GetConnectionParameters();
+            Dictionary<string, string> parameters = ConnectionBridge.GetConnectionParameters();
             if (parameters != null)
             {
                 SetStatus("Parameters refreshed", Color.green);

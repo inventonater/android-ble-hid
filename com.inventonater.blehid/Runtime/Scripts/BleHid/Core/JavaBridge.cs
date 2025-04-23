@@ -10,11 +10,10 @@ namespace Inventonater.BleHid
 
         public JavaBridge()
         {
-            if (Application.platform == RuntimePlatform.Android)
-            {
-                AndroidJavaClass bridgeClass = new AndroidJavaClass("com.inventonater.blehid.unity.BleHidUnityBridge");
-                JavaObject = bridgeClass.CallStatic<AndroidJavaObject>("getInstance");
-            }
+            if (Application.platform != RuntimePlatform.Android) return;
+
+            AndroidJavaClass bridgeClass = new AndroidJavaClass("com.inventonater.blehid.unity.BleHidUnityBridge");
+            JavaObject = bridgeClass.CallStatic<AndroidJavaObject>("getInstance");
         }
 
         ~JavaBridge()
@@ -32,14 +31,18 @@ namespace Inventonater.BleHid
         {
             using var profilerMarker = _marker.Auto();
             if (_verbose) LoggingManager.Instance.AddLogEntry($" -- {methodName} {string.Join(", ", args)}");
-            JavaObject?.Call(methodName, args);
+            try { JavaObject?.Call(methodName, args); }
+            catch (Exception e) { LoggingManager.Instance.AddLogException(e); }
         }
 
         public T Call<T>(string methodName, params object[] args)
         {
             using var profilerMarker = _marker.Auto();
             if (_verbose) LoggingManager.Instance.AddLogEntry($" -- {methodName} {string.Join(", ", args)}");
-            return JavaObject != null ? JavaObject.Call<T>(methodName, args) : default;
+
+            try { return JavaObject.Call<T>(methodName, args); }
+            catch (Exception e) { LoggingManager.Instance.AddLogException(e); }
+            return default;
         }
     }
 }

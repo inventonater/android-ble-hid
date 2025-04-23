@@ -5,35 +5,29 @@ using UnityEngine;
 
 namespace Inventonater.BleHid
 {
-    /// <summary>
-    /// Manages logging functionality for the BLE HID system
-    /// </summary>
     public class LoggingManager
     {
         public static LoggingManager Instance { get; private set; } = new();
-        
+
         private List<string> logMessages = new List<string>();
         private Vector2 scrollPosition;
         private readonly string logFileName = "ble_hid_events.log";
         private string logFilePath;
         private bool logToFile = false;
-        
+
         /// <summary>
         /// Gets the path to the log file
         /// </summary>
         public string LogFilePath => logFilePath;
-        
-        private LoggingManager() 
-        { 
+
+        private LoggingManager()
+        {
             // Initialize file logging
             logFilePath = Path.Combine(Application.persistentDataPath, logFileName);
             Debug.Log($"LoggingManager initialized. Log file path: {logFilePath}");
-            
+
             // Create the log file or clear it if it exists
-            try
-            {
-                File.WriteAllText(logFilePath, $"[{DateTime.Now}] BLE HID Logging started\n");
-            }
+            try { File.WriteAllText(logFilePath, $"[{DateTime.Now}] BLE HID Logging started\n"); }
             catch (Exception ex)
             {
                 Debug.LogError($"Failed to initialize log file: {ex.Message}");
@@ -41,19 +35,16 @@ namespace Inventonater.BleHid
             }
         }
 
-        public void AddLogError(string message)
-        {
-            Debug.LogError(message);
-            AddLogEntry(message);
-        }
+        public void AddLogException(Exception exception) => AddLogError(exception.Message);
+        public void AddLogError(string message) => AddLogEntry(message, true);
 
         /// <summary>
         /// Add a log entry with timestamp
         /// </summary>
-        public void AddLogEntry(string entry)
+        public void AddLogEntry(string entry, bool isError = false)
         {
             if (string.IsNullOrEmpty(entry)) return;
-            
+
             string timestamp = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff");
             string logEntry = timestamp + " - " + entry;
 
@@ -61,24 +52,19 @@ namespace Inventonater.BleHid
             logMessages.Add(logEntry);
 
             // Keep the log size reasonable
-            if (logMessages.Count > 100)
-            {
-                logMessages.RemoveAt(0);
-            }
+            if (logMessages.Count > 100) { logMessages.RemoveAt(0); }
 
             // Auto-scroll to bottom
             scrollPosition = new Vector2(0, float.MaxValue);
 
             // Also log to Unity console
-            Debug.Log(logEntry);
-            
+            if (isError) Debug.LogError(logEntry);
+            else Debug.Log(logEntry);
+
             // Log to file if enabled
             if (logToFile)
             {
-                try
-                {
-                    File.AppendAllText(logFilePath, logEntry + "\n");
-                }
+                try { File.AppendAllText(logFilePath, logEntry + "\n"); }
                 catch (Exception ex)
                 {
                     Debug.LogError($"Failed to write to log file: {ex.Message}");
@@ -86,7 +72,7 @@ namespace Inventonater.BleHid
                 }
             }
         }
-        
+
         /// <summary>
         /// Draw the log UI
         /// </summary>
@@ -94,13 +80,11 @@ namespace Inventonater.BleHid
         {
             GUILayout.Label("Log:");
             scrollPosition = GUILayout.BeginScrollView(scrollPosition, GUI.skin.box, GUILayout.Height(Screen.height * 0.2f));
-            foreach (string log in logMessages)
-            {
-                GUILayout.Label(log);
-            }
+            foreach (string log in logMessages) { GUILayout.Label(log); }
+
             GUILayout.EndScrollView();
         }
-        
+
         /// <summary>
         /// Get all log messages
         /// </summary>
@@ -108,7 +92,7 @@ namespace Inventonater.BleHid
         {
             return new List<string>(logMessages);
         }
-        
+
         /// <summary>
         /// Read log entries directly from the log file
         /// </summary>
@@ -122,7 +106,7 @@ namespace Inventonater.BleHid
                 {
                     string[] allLines = File.ReadAllLines(logFilePath);
                     int linesToRead = Math.Min(maxLines, allLines.Length);
-                    
+
                     if (linesToRead > 0)
                     {
                         string[] selectedLines = new string[linesToRead];
@@ -130,15 +114,12 @@ namespace Inventonater.BleHid
                         return string.Join("\n", selectedLines);
                     }
                 }
-                
+
                 return "No log file entries found.";
             }
-            catch (Exception ex)
-            {
-                return $"Error reading log file: {ex.Message}";
-            }
+            catch (Exception ex) { return $"Error reading log file: {ex.Message}"; }
         }
-        
+
         /// <summary>
         /// Enable or disable logging to file
         /// </summary>

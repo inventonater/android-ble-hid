@@ -38,15 +38,16 @@ namespace Inventonater.BleHid
             eventSystem.OnError += OnError;
             eventSystem.OnDebugLog += OnDebugLog;
 
-            _statusUI = new StatusUI();
+            var connectionBridge = BleHidManager.Instance.ConnectionBridge;
+            _statusUI = new StatusUI(connectionBridge);
             _permissionsUI = new PermissionsUI();
 
             AddTab(new MediaDeviceUI());
             AddTab(new MouseDeviceUI());
             AddTab(new KeyboardUI());
             AddTab(new AccessibilityUI(this));
-            AddTab(new ConnectionUI());
-            AddTab(new IdentityUI());
+            AddTab(new ConnectionUI(connectionBridge));
+            AddTab(new IdentityUI(connectionBridge));
         }
 
         private void Update()

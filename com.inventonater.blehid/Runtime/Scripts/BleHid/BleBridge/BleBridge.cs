@@ -9,22 +9,19 @@ namespace Inventonater.BleHid
         [SerializeField] private KeyboardBridge _keyboard;
         [SerializeField] private MouseBridge _mouse;
         [SerializeField] private MediaBridge _media;
-        [SerializeField] private IdentityBridge _identity;
         [SerializeField] private ConnectionBridge _connection;
 
         public KeyboardBridge Keyboard => _keyboard;
         public MouseBridge Mouse => _mouse;
         public MediaBridge Media => _media;
-        public IdentityBridge Identity => _identity;
         public ConnectionBridge Connection => _connection;
 
-        public BleBridge(BleHidManager manager)
+        public BleBridge(JavaBridge java)
         {
-            _keyboard = new KeyboardBridge(manager);
-            _mouse = new MouseBridge(manager);
-            _media = new MediaBridge(manager);
-            _identity = new IdentityBridge(manager);
-            _connection = new ConnectionBridge(manager);
+            _keyboard = new KeyboardBridge(java);
+            _mouse = new MouseBridge(java);
+            _media = new MediaBridge(java);
+            _connection = new ConnectionBridge(java);
         }
     }
 }
