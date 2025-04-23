@@ -1018,6 +1018,44 @@ public class BleHidUnityPlugin {
     }
     
     /**
+     * Initiates pairing (bonding) with a remote device by MAC address.
+     *
+     * @param address The MAC address of the device to pair with.
+     * @return true if the bond request was successfully initiated.
+     */
+    public boolean pairDevice(String address) {
+        if (!checkInitialized()) {
+            callback.onError(ERROR_NOT_INITIALIZED, "Plugin not initialized");
+            return false;
+        }
+        try {
+            BluetoothDevice device = BluetoothAdapter.getDefaultAdapter().getRemoteDevice(address);
+            return bleHidManager.getBlePairingManager().createBond(device);
+        } catch (Exception e) {
+            callback.onError(ERROR_INVALID_PARAMETER, "pairDevice error: " + e.getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * Gets the raw bond state of a remote device.
+     *
+     * @param address The MAC address of the device to query.
+     * @return One of BluetoothDevice.BOND_NONE, BOND_BONDING, or BOND_BONDED.
+     */
+    public int getBondState(String address) {
+        if (!checkInitialized()) {
+            return BluetoothDevice.BOND_NONE;
+        }
+        try {
+            BluetoothDevice device = BluetoothAdapter.getDefaultAdapter().getRemoteDevice(address);
+            return bleHidManager.getBlePairingManager().getBondState(device);
+        } catch (Exception e) {
+            return BluetoothDevice.BOND_NONE;
+        }
+    }
+    
+    /**
      * The Unity player activity class name used in this project
      * This is the specific activity class used by this Unity project
      */

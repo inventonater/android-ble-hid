@@ -298,6 +298,26 @@ public class BleHidUnityBridge {
         return plugin.removeBond(address);
     }
     
+    /**
+     * Initiates pairing (bonding) with a remote device.
+     *
+     * @param address The MAC address of the device to pair with.
+     * @return true if the bond request was successfully initiated.
+     */
+    public boolean pairDevice(String address) {
+        return plugin.pairDevice(address);
+    }
+
+    /**
+     * Gets the raw bond state of a remote device.
+     *
+     * @param address The MAC address of the device to query.
+     * @return One of BluetoothDevice.BOND_NONE, BOND_BONDING, or BOND_BONDED.
+     */
+    public int getBondState(String address) {
+        return plugin.getBondState(address);
+    }
+    
     // Local Control methods
     
     public boolean initializeLocalControl() {

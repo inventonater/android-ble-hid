@@ -217,12 +217,18 @@ namespace Inventonater.BleHid
                         GUILayout.Label($"Type: {type}");
                     }
                     
+                    GUILayout.BeginHorizontal();
+                    if (GUILayout.Button("Pair", GUILayout.Height(30)))
+                    {
+                        PairDevice(address, name);
+                    }
                     if (GUILayout.Button("Forget Device", GUILayout.Height(30)))
                     {
                         _deviceToForget = address;
                         _deviceToForgetName = name;
                         _showConfirmForgetDialog = true;
                     }
+                    GUILayout.EndHorizontal();
                     GUILayout.EndVertical();
                 }
                 
@@ -506,6 +512,29 @@ namespace Inventonater.BleHid
             {
                 Debug.LogError($"Failed to forget device: {name} ({address})");
                 ShowNotification($"Failed to forget device: {name}", isError: true);
+            }
+        }
+
+        /// <summary>
+        /// Initiates pairing (bonding) with a remote device.
+        /// </summary>
+        /// <param name="address">MAC address of the device to pair with.</param>
+        /// <param name="name">Friendly name of the device (for logging/UI).</param>
+        private void PairDevice(string address, string name)
+        {
+            if (BleHidManager == null || BleHidManager.IdentityManager == null)
+                return;
+
+            bool success = BleHidManager.IdentityManager.PairDevice(address);
+            if (success)
+            {
+                Debug.Log($"Pairing initiated: {name} ({address})");
+                ShowNotification($"Pairing initiated: {name}");
+            }
+            else
+            {
+                Debug.LogError($"Failed to initiate pairing: {name} ({address})");
+                ShowNotification($"Failed to initiate pairing: {name}", isError: true);
             }
         }
 

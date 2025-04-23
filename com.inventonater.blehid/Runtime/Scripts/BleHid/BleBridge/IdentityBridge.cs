@@ -99,6 +99,38 @@ namespace Inventonater.BleHid
             }
         }
         
+        /// <summary>
+        /// Initiates pairing (bonding) with a remote device.
+        /// </summary>
+        /// <param name="address">MAC address of the device to pair with.</param>
+        /// <returns>True if the bond request was successfully initiated.</returns>
+        public bool PairDevice(string address)
+        {
+            if (Application.isEditor) return true;
+            if (!_manager.ConfirmIsInitialized()) return false;
+            using (AndroidJavaClass unityBridge = new AndroidJavaClass("com.inventonater.blehid.unity.BleHidUnityBridge"))
+            using (AndroidJavaObject bridgeInstance = unityBridge.CallStatic<AndroidJavaObject>("getInstance"))
+            {
+                return bridgeInstance.Call<bool>("pairDevice", address);
+            }
+        }
+
+        /// <summary>
+        /// Gets the raw bond state of a remote device.
+        /// </summary>
+        /// <param name="address">MAC address of the device to query.</param>
+        /// <returns>One of BluetoothDevice.BOND_NONE, BOND_BONDING, or BOND_BONDED.</returns>
+        public int GetBondState(string address)
+        {
+            if (Application.isEditor) return 12; // BOND_BONDED
+            if (!_manager.ConfirmIsInitialized()) return 10; // BOND_NONE
+            using (AndroidJavaClass unityBridge = new AndroidJavaClass("com.inventonater.blehid.unity.BleHidUnityBridge"))
+            using (AndroidJavaObject bridgeInstance = unityBridge.CallStatic<AndroidJavaObject>("getInstance"))
+            {
+                return bridgeInstance.Call<int>("getBondState", address);
+            }
+        }
+        
         // Helper method to convert Java List<Map<String, String>> to C# List<Dictionary<string, string>>
         private List<Dictionary<string, string>> ConvertJavaListToDeviceInfoList(AndroidJavaObject javaList)
         {

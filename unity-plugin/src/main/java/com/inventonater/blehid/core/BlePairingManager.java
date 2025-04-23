@@ -313,6 +313,19 @@ public class BlePairingManager {
     }
     
     /**
+     * Returns the raw bond state of a device.
+     *
+     * @param device The BluetoothDevice to query.
+     * @return One of BluetoothDevice.BOND_NONE, BOND_BONDING, or BOND_BONDED.
+     */
+    public int getBondState(BluetoothDevice device) {
+        if (device == null) {
+            return BluetoothDevice.BOND_NONE;
+        }
+        return device.getBondState();
+    }
+    
+    /**
      * Converts a bond state integer to a string for logging.
      * 
      * @param bondState The bond state to convert

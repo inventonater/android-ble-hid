@@ -152,5 +152,24 @@ namespace Inventonater.BleHid
         {
             return _bleHidManager.BleBridge.Identity.RemoveBond(address);
         }
+        /// <summary>
+        /// Initiates pairing (bonding) with a remote device by MAC address.
+        /// </summary>
+        /// <param name="address">The MAC address of the device to pair with.</param>
+        /// <returns>True if the bond request was successfully initiated.</returns>
+        public bool PairDevice(string address)
+        {
+            return _bleHidManager.BleBridge.Identity.PairDevice(address);
+        }
+
+        /// <summary>
+        /// Gets the raw bond state of a remote device.
+        /// </summary>
+        /// <param name="address">The MAC address of the device to query.</param>
+        /// <returns>One of BluetoothDevice.BOND_NONE, BOND_BONDING, or BOND_BONDED.</returns>
+        public int GetBondState(string address)
+        {
+            return _bleHidManager.BleBridge.Identity.GetBondState(address);
+        }
     }
 }
