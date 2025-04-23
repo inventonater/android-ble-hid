@@ -56,7 +56,7 @@ namespace Inventonater.BleHid
         private Color mtuColor = Color.white;
 
         private ConnectionBridge ConnectionBridge { get; }
-        public ConnectionUI(ConnectionBridge connectionBridge, BleEventSystem bleEventSystem)
+        public ConnectionUI(ConnectionBridge connectionBridge, JavaBroadcaster javaBroadcaster)
         {
             ConnectionBridge = connectionBridge;
             // Initialize performance metrics
@@ -67,10 +67,10 @@ namespace Inventonater.BleHid
             _targetFrameRate = 60;
             Application.targetFrameRate = _targetFrameRate;
 
-            bleEventSystem.OnConnectionParametersChanged += HandleConnectionParametersChanged;
-            bleEventSystem.OnRssiRead += HandleRssiRead;
-            bleEventSystem.OnConnectionParameterRequestComplete += HandleConnectionParameterRequestComplete;
-            bleEventSystem.OnConnectionStateChanged += HandleConnectionStateChanged;
+            javaBroadcaster.OnConnectionParametersChanged += HandleConnectionParametersChanged;
+            javaBroadcaster.OnRssiRead += HandleRssiRead;
+            javaBroadcaster.OnConnectionParameterRequestComplete += HandleConnectionParameterRequestComplete;
+            javaBroadcaster.OnConnectionStateChanged += HandleConnectionStateChanged;
 
             // Initialize with current values if connected
             UpdateValuesFromManager();

@@ -7,11 +7,12 @@ namespace Inventonater.BleHid
     public class JavaBridge
     {
         private AndroidJavaObject JavaObject { get; }
+        static readonly ProfilerMarker _marker = new("BleHid.BleBridgeCaller.Call");
+        private readonly bool _verbose = true;
 
         public JavaBridge()
         {
             if (Application.platform != RuntimePlatform.Android) return;
-
             AndroidJavaClass bridgeClass = new AndroidJavaClass("com.inventonater.blehid.unity.BleHidUnityBridge");
             JavaObject = bridgeClass.CallStatic<AndroidJavaObject>("getInstance");
         }
@@ -23,10 +24,6 @@ namespace Inventonater.BleHid
             catch (Exception e) { Debug.LogException(e); }
             JavaObject.Dispose();
         }
-
-        static readonly ProfilerMarker _marker = new("BleHid.BleBridgeCaller.Call");
-        private readonly bool _verbose = true;
-
         public void Call(string methodName, params object[] args)
         {
             using var profilerMarker = _marker.Auto();

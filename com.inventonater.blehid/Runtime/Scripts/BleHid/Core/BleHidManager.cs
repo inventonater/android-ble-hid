@@ -11,7 +11,7 @@ namespace Inventonater.BleHid
         public PipBackgroundWorker PipWorker { get; private set; }
 
         public JavaBridge JavaBridge { get; private set; }
-        public BleEventSystem BleEventSystem { get; private set; }
+        public JavaBroadcaster JavaBroadcaster { get; private set; }
         public ConnectionBridge ConnectionBridge { get; private set; }
         public InputRouter InputRouter { get; private set; }
         public InputDeviceMapping Mapping { get; private set; }
@@ -27,7 +27,7 @@ namespace Inventonater.BleHid
 
             JavaBridge = new JavaBridge();
             BleBridge = new BleBridge(JavaBridge);
-            BleEventSystem = gameObject.AddComponent<BleEventSystem>();
+            JavaBroadcaster = gameObject.AddComponent<JavaBroadcaster>();
             Mapping = gameObject.AddComponent<InputDeviceMapping>();
             InputRouter = gameObject.AddComponent<InputRouter>();
             InputRouter.SetMapping(Mapping);
@@ -35,7 +35,12 @@ namespace Inventonater.BleHid
             ConnectionBridge = new ConnectionBridge(JavaBridge);
             PipWorker = new PipBackgroundWorker();
 
-            BleEventSystem.OnPipModeChanged += HandlePipModeChanged;
+            JavaBroadcaster.OnPipModeChanged += HandlePipModeChanged;
+            JavaBroadcaster.OnAdvertisingStateChanged += (advertising, message) => ConnectionBridge.IsAdvertising = advertising;
+            JavaBroadcaster.OnConnectionStateChanged += (connected, deviceName, address) => ConnectionBridge.SetConnectionState(connected, deviceName, address);
+            JavaBroadcaster.OnConnectionParametersChanged += (interval, latency, timeout, mtu) => ConnectionBridge.SetConnectionParameters(interval, latency, timeout, mtu);
+            JavaBroadcaster.OnRssiRead += rssi => ConnectionBridge.Rssi = rssi;
+
             Debug.Log("BleHidManager initialized");
         }
 
@@ -67,8 +72,8 @@ namespace Inventonater.BleHid
                 {
                     string message = "Failed to initialize BLE HID plugin";
                     LoggingManager.Instance.AddLogError(message);
-                    BleEventSystem.OnError?.Invoke(BleHidConstants.ERROR_INITIALIZATION_FAILED, message);
-                    BleEventSystem.OnInitializeComplete?.Invoke(false, message);
+                    JavaBroadcaster.OnError?.Invoke(BleHidConstants.ERROR_INITIALIZATION_FAILED, message);
+                    JavaBroadcaster.OnInitializeComplete?.Invoke(false, message);
                     return;
                 }
 
@@ -78,8 +83,8 @@ namespace Inventonater.BleHid
             {
                 string message = "Exception during initialization: " + e.Message;
                 LoggingManager.Instance.AddLogError(message);
-                BleEventSystem.OnError?.Invoke(BleHidConstants.ERROR_INITIALIZATION_FAILED, message);
-                BleEventSystem.OnInitializeComplete?.Invoke(false, message);
+                JavaBroadcaster.OnError?.Invoke(BleHidConstants.ERROR_INITIALIZATION_FAILED, message);
+                JavaBroadcaster.OnInitializeComplete?.Invoke(false, message);
             }
         }
 

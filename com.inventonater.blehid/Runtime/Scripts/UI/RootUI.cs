@@ -34,13 +34,13 @@ namespace Inventonater.BleHid
             var connectionBridge = bleHidManager.ConnectionBridge;
             var mouseBridge = bleHidManager.BleBridge.Mouse;
 
-            var eventSystem = FindFirstObjectByType<BleEventSystem>();
-            eventSystem.OnInitializeComplete += OnInitializeComplete;
-            eventSystem.OnAdvertisingStateChanged += OnAdvertisingStateChanged;
-            eventSystem.OnConnectionStateChanged += OnConnectionStateChanged;
-            eventSystem.OnPairingStateChanged += OnPairingStateChanged;
-            eventSystem.OnError += OnError;
-            eventSystem.OnDebugLog += OnDebugLog;
+            var javaBroadcaster = FindFirstObjectByType<JavaBroadcaster>();
+            javaBroadcaster.OnInitializeComplete += OnInitializeComplete;
+            javaBroadcaster.OnAdvertisingStateChanged += OnAdvertisingStateChanged;
+            javaBroadcaster.OnConnectionStateChanged += OnConnectionStateChanged;
+            javaBroadcaster.OnPairingStateChanged += OnPairingStateChanged;
+            javaBroadcaster.OnError += OnError;
+            javaBroadcaster.OnDebugLog += OnDebugLog;
 
             _statusUI = new StatusUI(connectionBridge);
             _permissionsUI = new PermissionsUI();
@@ -49,7 +49,7 @@ namespace Inventonater.BleHid
             AddTab(new MouseDeviceUI(mouseBridge));
             AddTab(new KeyboardUI());
             AddTab(new AccessibilityUI(this));
-            AddTab(new ConnectionUI(connectionBridge, eventSystem));
+            AddTab(new ConnectionUI(connectionBridge, javaBroadcaster));
             AddTab(new IdentityUI(connectionBridge));
         }
 

@@ -42,6 +42,21 @@ namespace Inventonater.BleHid
         public string GetDeviceName() => PlayerPrefs.GetString(DEVICE_NAME_KEY, DEFAULT_DEVICE_NAME);
         public string GetIdentityCreationDate() => PlayerPrefs.GetString(IDENTITY_CREATED_KEY, "Unknown");
 
+        public void SetConnectionState(bool connected, string deviceName, string deviceAddress)
+        {
+            IsConnected = connected;
+            ConnectedDeviceName = deviceName;
+            ConnectedDeviceAddress = deviceAddress;
+        }
+
+        public void SetConnectionParameters(int interval, int latency, int timeout, int mtu)
+        {
+            ConnectionInterval = interval;
+            SlaveLatency = latency;
+            SupervisionTimeout = timeout;
+            MtuSize = mtu;
+        }
+
         public bool InitializeIdentity()
         {
             string identityUuid = GetOrCreateDeviceUuid();
