@@ -1,5 +1,3 @@
-using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
@@ -14,71 +12,51 @@ namespace Inventonater.BleHid
     /// </summary>
     public class RootUI : MonoBehaviour
     {
-        private BleHidManager bleHidManager;
-
-        // Dictionary to map tab names to their corresponding components
-        private readonly List<SectionUI> tabComponents = new();
-        void AddTab(SectionUI component) => tabComponents.Add(component);
-        private int currentTabIndex = 0;
-        private SectionUI CurrentTab => tabComponents[currentTabIndex];
-        private IEnumerable<string> tabNames => tabComponents.Select(t => t.TabName);
-        private bool isInitialized = false;
-
-        private static bool IsEditorMode => Application.isEditor;
         private static LoggingManager Logger => LoggingManager.Instance;
+
+        private readonly List<SectionUI> _tabComponents = new();
+        private string[] _activeTabNames;
+        void AddTab(SectionUI component)
+        {
+            _tabComponents.Add(component);
+            _activeTabNames = _tabComponents.Select(t => t.TabName).ToArray();
+        }
+
+        private int _currentTabIndex = 0;
+        private SectionUI CurrentTab => _tabComponents[_currentTabIndex];
         private StatusUI _statusUI;
-        private MediaDeviceUI _media;
-        private MouseDeviceUI _mouse;
-        private KeyboardUI _keyboard;
-        private AccessibilityUI _local;
-        private PermissionsUI permissionsUI;
-        private ConnectionUI _connectionUI;
-        private IdentityUI _identity;
-        private Vector2 localTabScrollPosition = Vector2.zero;
+        private PermissionsUI _permissionsUI;
+        private Vector2 _localTabScrollPosition = Vector2.zero;
 
         private void Start()
         {
-            // Check if running in the Unity Editor
-            if (IsEditorMode) isInitialized = true; // Auto-initialize in editor
-
-            bleHidManager = FindFirstObjectByType<BleHidManager>();
-            bleHidManager.BleEventSystem.OnInitializeComplete += OnInitializeComplete;
-            bleHidManager.BleEventSystem.OnAdvertisingStateChanged += OnAdvertisingStateChanged;
-            bleHidManager.BleEventSystem.OnConnectionStateChanged += OnConnectionStateChanged;
-            bleHidManager.BleEventSystem.OnPairingStateChanged += OnPairingStateChanged;
-            bleHidManager.BleEventSystem.OnError += OnError;
-            bleHidManager.BleEventSystem.OnDebugLog += OnDebugLog;
+            var eventSystem = FindFirstObjectByType<BleEventSystem>();
+            eventSystem.OnInitializeComplete += OnInitializeComplete;
+            eventSystem.OnAdvertisingStateChanged += OnAdvertisingStateChanged;
+            eventSystem.OnConnectionStateChanged += OnConnectionStateChanged;
+            eventSystem.OnPairingStateChanged += OnPairingStateChanged;
+            eventSystem.OnError += OnError;
+            eventSystem.OnDebugLog += OnDebugLog;
 
             _statusUI = new StatusUI();
-            _statusUI.SetInitialized(isInitialized);
-            
-            // Initialize error component first to ensure accessibility UI appears from startup
-            permissionsUI = new PermissionsUI(this);
+            _permissionsUI = new PermissionsUI(this);
 
-            _media = new MediaDeviceUI();
-            _mouse = new MouseDeviceUI();
-            _keyboard = new KeyboardUI();
-            _local = new AccessibilityUI(this);
-            _connectionUI = new ConnectionUI();
-            _identity = new IdentityUI();
+            AddTab(new MediaDeviceUI());
+            AddTab(new MouseDeviceUI());
+            AddTab(new KeyboardUI());
+            AddTab(new AccessibilityUI(this));
+            AddTab(new ConnectionUI());
+            AddTab(new IdentityUI());
 
-            AddTab(_media);
-            AddTab(_mouse);
-            AddTab(_keyboard);
-            AddTab(_local);
-            AddTab(_connectionUI);
-            AddTab(_identity);
-
-            // Start initialization process
-            StartCoroutine(bleHidManager.BleInitializer.Initialize());
+            StartCoroutine(BleHidManager.Instance.BleInitializer.Initialize());
             Logger.AddLogEntry("Starting BLE HID initialization...");
 
-            permissionsUI.InitialCheck();
+            _permissionsUI.InitialCheck();
         }
 
         private void Update()
         {
-            permissionsUI.Update();
+            _permissionsUI.Update();
             CurrentTab.Update();
         }
 
@@ -91,23 +69,23 @@ namespace Inventonater.BleHid
             Rect layoutArea = new Rect(padding, padding, Screen.width - padding * 2, Screen.height - padding * 2);
             GUILayout.BeginArea(layoutArea);
 
-            permissionsUI.DrawErrorWarnings();
+            _permissionsUI.DrawErrorWarnings();
             _statusUI.DrawUI();
 
             // If we have a permission error or accessibility error, don't show the rest of the UI
-            if (permissionsUI.HasCriticalErrors())
+            if (_permissionsUI.HasCriticalErrors())
             {
                 GUILayout.EndArea();
                 return;
             }
 
-            var newTabIndex = GUILayout.Toolbar(currentTabIndex, tabNames.ToArray(), GUILayout.Height(60));
-            if (newTabIndex != currentTabIndex)
+            var newTabIndex = GUILayout.Toolbar(_currentTabIndex, _activeTabNames, GUILayout.Height(60));
+            if (newTabIndex != _currentTabIndex)
             {
                 CurrentTab.Hidden();
                 Logger.AddLogEntry($"Tab '{CurrentTab.TabName}' deactivated");
 
-                currentTabIndex = newTabIndex;
+                _currentTabIndex = newTabIndex;
 
                 CurrentTab.Shown();
                 Logger.AddLogEntry($"Tab '{CurrentTab.TabName}' activated");
@@ -116,7 +94,7 @@ namespace Inventonater.BleHid
             if (CurrentTab.TabName == AccessibilityUI.Name) GUILayout.BeginVertical(GUI.skin.box); // No fixed height for Local tab
             else GUILayout.BeginVertical(GUI.skin.box, GUILayout.Height(Screen.height * 0.45f));
 
-            if (bleHidManager != null && (isInitialized || IsEditorMode)) DrawSelectedTab();
+            DrawTabWithScroll(CurrentTab);
 
             GUILayout.EndVertical();
 
@@ -124,101 +102,29 @@ namespace Inventonater.BleHid
             GUILayout.EndArea();
         }
 
-        private void DrawSelectedTab()
-        {
-            switch (currentTabIndex)
-            {
-                case 0: // Media tab
-                    DrawMediaTab();
-                    break;
-                case 1: // Mouse tab
-                    DrawMouseTab();
-                    break;
-                case 2: // Keyboard tab
-                    DrawKeyboardTab();
-                    break;
-                case 3: // Local Control tab
-                    DrawLocalControlTab();
-                    break;
-                case 4: // Connection Parameters tab
-                    DrawConnectionParametersTab();
-                    break;
-                case 5: // Identity tab
-                    DrawIdentityTab();
-                    break;
-            }
-        }
-
         private void DrawTab(SectionUI tab)
         {
-            GUI.enabled = bleHidManager.IsConnected || IsEditorMode;
+            GUI.enabled = true;
             tab.DrawUI();
             GUI.enabled = true;
         }
 
-        private void DrawMediaTab()
+        private void DrawTabWithScroll(SectionUI tab)
         {
-            // Remote BLE controls need a connected device
-            GUI.enabled = bleHidManager.IsConnected || IsEditorMode;
-            _media.DrawUI();
-            GUI.enabled = true;
-        }
-
-        private void DrawMouseTab()
-        {
-            // Remote BLE controls need a connected device
-            GUI.enabled = bleHidManager.IsConnected || IsEditorMode;
-            _mouse.DrawUI();
-            GUI.enabled = true;
-        }
-
-        private void DrawKeyboardTab()
-        {
-            // Remote BLE controls need a connected device
-            GUI.enabled = bleHidManager.IsConnected || IsEditorMode;
-            _keyboard.DrawUI();
-            GUI.enabled = true;
-        }
-
-        private void DrawLocalControlTab()
-        {
-            // Local controls always enabled since they don't rely on a BLE connection
             GUI.enabled = true;
 
-            // Always show the Local Control UI
-            // The accessibility error is now displayed at the top of the screen
-
-            // Wrap local controls in a scroll view
             float viewHeight = Screen.height * 0.45f; // Maintain consistent view height
-            localTabScrollPosition = GUILayout.BeginScrollView(
-                localTabScrollPosition,
-                GUILayout.MinHeight(viewHeight),
-                GUILayout.ExpandHeight(true)
-            );
+            _localTabScrollPosition = GUILayout.BeginScrollView(_localTabScrollPosition, GUILayout.MinHeight(viewHeight), GUILayout.ExpandHeight(true));
 
-            _local.DrawUI();
+            tab.DrawUI();
 
             GUILayout.EndScrollView();
-        }
 
-        private void DrawConnectionParametersTab()
-        {
-            // Connection parameters need a connected device
-            GUI.enabled = bleHidManager.IsConnected || IsEditorMode;
-            _connectionUI.DrawUI();
             GUI.enabled = true;
-        }
-        
-        private void DrawIdentityTab()
-        {
-            // Identity management is always enabled
-            GUI.enabled = true;
-            _identity.DrawUI();
         }
 
         private void OnInitializeComplete(bool success, string message)
         {
-            isInitialized = success;
             _statusUI.SetInitialized(success);
 
             if (success) { Logger.AddLogEntry("BLE HID initialized successfully: " + message); }
@@ -227,7 +133,7 @@ namespace Inventonater.BleHid
                 Logger.AddLogEntry("BLE HID initialization failed: " + message);
 
                 // Check if this is a permission error
-                if (message.Contains("permission")) { permissionsUI.SetPermissionError(message); }
+                if (message.Contains("permission")) { _permissionsUI.SetPermissionError(message); }
             }
         }
 
@@ -253,17 +159,12 @@ namespace Inventonater.BleHid
             switch (errorCode)
             {
                 case BleHidConstants.ERROR_PERMISSIONS_NOT_GRANTED:
-                    permissionsUI.SetPermissionError(errorMessage);
+                    _permissionsUI.SetPermissionError(errorMessage);
                     break;
                 case BleHidConstants.ERROR_ACCESSIBILITY_NOT_ENABLED:
-                    permissionsUI.SetAccessibilityError(true);
+                    _permissionsUI.SetAccessibilityError(true);
                     Logger.AddLogEntry("Accessibility error: " + errorMessage);
-                    permissionsUI.CheckAccessibilityServiceStatus();
-                    break;
-                case BleHidConstants.ERROR_NOTIFICATION_PERMISSION_NOT_GRANTED:
-                    permissionsUI.SetNotificationPermissionError(true, errorMessage);
-                    Logger.AddLogEntry("Notification permission error: " + errorMessage);
-                    permissionsUI.CheckNotificationPermissionStatus();
+                    _permissionsUI.CheckAccessibilityServiceStatus();
                     break;
                 default:
                     Logger.AddLogEntry("Error " + errorCode + ": " + errorMessage);

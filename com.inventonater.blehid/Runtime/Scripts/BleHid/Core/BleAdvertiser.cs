@@ -27,23 +27,6 @@ namespace Inventonater.BleHid
             {
                 Debug.Log("BleHidManager: Attempting to start advertising...");
 
-                // Verify Bluetooth is enabled
-                string errorMsg;
-                if (!BleHidEnvironmentChecker.IsBluetoothEnabled(out errorMsg))
-                {
-                    Debug.LogError("BleHidManager: " + errorMsg);
-                    manager.BleEventSystem.OnError?.Invoke(BleHidConstants.ERROR_BLUETOOTH_DISABLED, errorMsg);
-                    return false;
-                }
-
-                // Verify device supports advertising
-                if (!BleHidEnvironmentChecker.SupportsBleAdvertising(out errorMsg))
-                {
-                    Debug.LogError("BleHidManager: " + errorMsg);
-                    manager.BleEventSystem.OnError?.Invoke(BleHidConstants.ERROR_PERIPHERAL_NOT_SUPPORTED, errorMsg);
-                    return false;
-                }
-
                 // Add extra debug info
                 try
                 {

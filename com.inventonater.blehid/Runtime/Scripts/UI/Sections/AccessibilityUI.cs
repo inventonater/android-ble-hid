@@ -96,32 +96,23 @@ namespace Inventonater.BleHid
         {
             UIHelper.BeginSection("Camera Controls");
 
-            bool permissionGranted = CheckCameraPermission();
+            // Camera button position label
+            GUILayout.Label("Camera Button Position");
+            GUILayout.Space(5);
 
-            if (!permissionGranted)
+            // Camera launch buttons
+            string[] cameraButtonLabels = { "Launch Camera", "Launch Video" };
+            Action[] cameraButtonActions =
             {
-                DrawCameraPermissionRequest();
-            }
-            else
-            {
-                // Camera button position label
-                GUILayout.Label("Camera Button Position");
-                GUILayout.Space(5);
+                () => ExecuteLocalControl(l => l.LaunchCameraApp(), "Launch Camera pressed (not available in editor)"),
+                () => ExecuteLocalControl(l => l.LaunchVideoCapture(), "Launch Video pressed (not available in editor)")
+            };
 
-                // Camera launch buttons
-                string[] cameraButtonLabels = { "Launch Camera", "Launch Video" };
-                Action[] cameraButtonActions =
-                {
-                    () => ExecuteLocalControl(l => l.LaunchCameraApp(), "Launch Camera pressed (not available in editor)"),
-                    () => ExecuteLocalControl(l => l.LaunchVideoCapture(), "Launch Video pressed (not available in editor)")
-                };
-
-                UIHelper.ActionButtonRow(
-                    cameraButtonLabels,
-                    cameraButtonActions,
-                    cameraButtonLabels,
-                    UIHelper.StandardButtonOptions);
-            }
+            UIHelper.ActionButtonRow(
+                cameraButtonLabels,
+                cameraButtonActions,
+                cameraButtonLabels,
+                UIHelper.StandardButtonOptions);
 
             UIHelper.EndSection();
         }
@@ -229,29 +220,6 @@ namespace Inventonater.BleHid
             }
 
             return false;
-        }
-
-        private bool CheckCameraPermission()
-        {
-            hasCameraPermission = BleHidPermissionHandler.CheckCameraPermission();
-            return hasCameraPermission;
-        }
-
-        private void DrawCameraPermissionRequest()
-        {
-            GUILayout.Space(5);
-            GUILayout.Label("Camera permission required for camera features");
-            GUILayout.Space(5);
-
-            void Action()
-            {
-                owner.StartCoroutine(BleHidPermissionHandler.RequestCameraPermission());
-            }
-
-            if (UIHelper.Button("Request Camera Permission", Action, "Requesting camera permission", UIHelper.StandardButtonOptions))
-            {
-                // Button action handled by ActionButton
-            }
         }
 
         private void ShowInitializingUI()

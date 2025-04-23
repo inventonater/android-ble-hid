@@ -16,11 +16,12 @@ namespace Inventonater.BleHid
         static readonly ProfilerMarker _marker = new("BleHid.BleInitializer.BridgeInstance.Call");
 
         private bool _verbose = true;
+
         public void Call(string methodName, params object[] args)
         {
             using var profilerMarker = _marker.Auto();
 
-            if(_verbose) LoggingManager.Instance.AddLogEntry($" -- {methodName} {string.Join(", ", args)}");
+            if (_verbose) LoggingManager.Instance.AddLogEntry($" -- {methodName} {string.Join(", ", args)}");
             if (Application.isEditor) return;
 
             BridgeInstance.Call(methodName, args);
@@ -30,7 +31,7 @@ namespace Inventonater.BleHid
         {
             using var profilerMarker = _marker.Auto();
 
-            if(_verbose) LoggingManager.Instance.AddLogEntry($" -- {methodName} {string.Join(", ", args)}");
+            if (_verbose) LoggingManager.Instance.AddLogEntry($" -- {methodName} {string.Join(", ", args)}");
             if (Application.isEditor) return default;
 
             return BridgeInstance.Call<T>(methodName, args);
@@ -62,78 +63,30 @@ namespace Inventonater.BleHid
 
             Application.runInBackground = true;
 
-            // Only run on Android
-            if (Application.platform != RuntimePlatform.Android)
+            if (Application.isEditor)
             {
                 string message = "BLE HID is only supported on Android";
-                Debug.LogWarning(message);
+                LoggingManager.Instance.AddLogEntry(message);
                 _manager.BleEventSystem.OnError?.Invoke(BleHidConstants.ERROR_PERIPHERAL_NOT_SUPPORTED, message);
+                _manager.BleEventSystem.OnInitializeComplete(false, message);
+                isInitializing = false;
+                yield break;
+            }
+
+            yield return _manager.StartCoroutine(BleHidPermissionHandler.RequestPermissionsAndWait());
+
+            // Check if required permissions were granted
+            if (!BleHidPermissionHandler.CheckBluetoothPermissions())
+            {
+                string message = "Bluetooth permissions not granted";
+                Debug.LogError(message);
+                _manager.BleEventSystem.OnError?.Invoke(BleHidConstants.ERROR_PERMISSIONS_NOT_GRANTED, message);
                 _manager.BleEventSystem.OnInitializeComplete?.Invoke(false, message);
                 isInitializing = false;
                 yield break;
             }
+            Debug.Log("Bluetooth permissions granted");
 
-            // Check if plugins are loaded
-            string errorMsg;
-            if (!BleHidEnvironmentChecker.VerifyPluginsLoaded(out errorMsg))
-            {
-                Debug.LogError(errorMsg);
-                _manager.BleEventSystem.OnError?.Invoke(BleHidConstants.ERROR_INITIALIZATION_FAILED, errorMsg);
-                _manager.BleEventSystem.OnInitializeComplete?.Invoke(false, errorMsg);
-                isInitializing = false;
-                yield break;
-            }
-
-            // Request runtime permissions for Android
-            if (Application.platform == RuntimePlatform.Android)
-            {
-                Debug.Log("Checking Android version for permissions...");
-
-                // Get Android version
-                int sdkInt = GetAndroidSDKVersion();
-                Debug.Log($"Android SDK version: {sdkInt}");
-
-                // For Android 12+ (API 31+), request Bluetooth permissions
-                if (sdkInt >= 31)
-                {
-                    yield return _manager.StartCoroutine(BleHidPermissionHandler.RequestBluetoothPermissions());
-
-                    // Check if required permissions were granted
-                    if (!BleHidPermissionHandler.CheckBluetoothPermissions())
-                    {
-                        string message = "Bluetooth permissions not granted";
-                        Debug.LogError(message);
-                        _manager.BleEventSystem.OnError?.Invoke(BleHidConstants.ERROR_PERMISSIONS_NOT_GRANTED, message);
-                        _manager.BleEventSystem.OnInitializeComplete?.Invoke(false, message);
-                        isInitializing = false;
-                        yield break;
-                    }
-
-                    Debug.Log("Bluetooth permissions granted");
-                }
-                
-                // For Android 13+ (API 33+), request notification permissions
-                if (sdkInt >= 33)
-                {
-                    yield return _manager.StartCoroutine(BleHidPermissionHandler.RequestNotificationPermission());
-                    
-                    // Check if notification permission was granted
-                    if (!BleHidPermissionHandler.CheckNotificationPermission())
-                    {
-                        // Just log a warning but don't fail initialization - notifications aren't critical
-                        string message = "Notification permission not granted";
-                        Debug.LogWarning(message);
-                        _manager.BleEventSystem.OnDebugLog?.Invoke(message);
-                        // We don't break here since notification permissions aren't critical for functionality
-                    }
-                    else
-                    {
-                        Debug.Log("Notification permission granted");
-                    }
-                }
-            }
-
-            // Create bridge and initialize
             bool initResult = false;
 
             try
@@ -144,12 +97,9 @@ namespace Inventonater.BleHid
                 BridgeInstance = bridgeClass.CallStatic<AndroidJavaObject>("getInstance");
                 Debug.Log("Successfully connected to com.inventonater.blehid.unity.BleHidUnityBridge");
 
-                // Verify the bridge interface
-                if (!BleHidEnvironmentChecker.VerifyBridgeInterface(BridgeInstance, out errorMsg)) { throw new Exception(errorMsg); }
-
                 // Initialize the bridge with this GameObject's name for callbacks
                 initResult = BridgeInstance.Call<bool>("initialize", _manager.gameObject.name);
-                
+
                 // Initialize the foreground service manager
                 // manager.ForegroundServiceManager.Initialize(bridgeInstance);
 
@@ -208,14 +158,8 @@ namespace Inventonater.BleHid
             try
             {
                 bool identitySet = _manager.IdentityManager.InitializeIdentity();
-                if (identitySet)
-                {
-                    Debug.Log("Device identity initialized successfully");
-                }
-                else
-                {
-                    Debug.LogWarning("Failed to initialize device identity");
-                }
+                if (identitySet) { Debug.Log("Device identity initialized successfully"); }
+                else { Debug.LogWarning("Failed to initialize device identity"); }
             }
             catch (Exception e)
             {
@@ -224,50 +168,6 @@ namespace Inventonater.BleHid
             }
         }
 
-        /// <summary>
-        /// Get the Android SDK version
-        /// </summary>
-        /// <returns>SDK version number, or -1 if not on Android</returns>
-        public static int GetAndroidSDKVersion()
-        {
-            if (Application.platform != RuntimePlatform.Android) return -1;
-
-            try
-            {
-                AndroidJavaClass versionClass = new AndroidJavaClass("android.os.Build$VERSION");
-                return versionClass.GetStatic<int>("SDK_INT");
-            }
-            catch (Exception e)
-            {
-                Debug.LogError("Failed to get Android SDK version: " + e.Message);
-                return -1;
-            }
-        }
-
-        /// <summary>
-        /// Run diagnostic checks and return a comprehensive report of the system state.
-        /// </summary>
-        /// <returns>A string containing the diagnostic information.</returns>
-        public string RunEnvironmentDiagnostics()
-        {
-            return BleHidEnvironmentChecker.RunEnvironmentDiagnostics(_manager);
-        }
-
-        /// <summary>
-        /// Get diagnostic information from the plugin.
-        /// </summary>
-        /// <returns>A string with diagnostic information.</returns>
-        public string GetDiagnosticInfo()
-        {
-            if (!_manager.ConfirmIsInitialized()) return "Not initialized";
-
-            try { return BridgeInstance.Call<string>("getDiagnosticInfo"); }
-            catch (Exception e)
-            {
-                Debug.LogException(e);
-                return "Error getting diagnostic info: " + e.Message;
-            }
-        }
 
         /// <summary>
         /// Close the plugin and release all resources.

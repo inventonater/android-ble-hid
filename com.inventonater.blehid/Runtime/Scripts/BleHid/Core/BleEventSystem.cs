@@ -7,25 +7,24 @@ namespace Inventonater.BleHid
     /// </summary>
     public class BleEventSystem : MonoBehaviour
     {
-        private BleHidManager manager;
         private BleHidCallbackHandler callbackHandler;
 
         // Event declarations that will be forwarded from the callback handler
-        public BleHidCallbackHandler.InitializeCompleteHandler OnInitializeComplete;
-        public BleHidCallbackHandler.AdvertisingStateChangedHandler OnAdvertisingStateChanged;
-        public BleHidCallbackHandler.ConnectionStateChangedHandler OnConnectionStateChanged;
-        public BleHidCallbackHandler.PairingStateChangedHandler OnPairingStateChanged;
-        public BleHidCallbackHandler.ConnectionParametersChangedHandler OnConnectionParametersChanged;
-        public BleHidCallbackHandler.RssiReadHandler OnRssiRead;
-        public BleHidCallbackHandler.ConnectionParameterRequestCompleteHandler OnConnectionParameterRequestComplete;
-        public BleHidCallbackHandler.ErrorHandler OnError;
-        public BleHidCallbackHandler.DebugLogHandler OnDebugLog;
-        public BleHidCallbackHandler.PipModeChangedHandler OnPipModeChanged;
+        public BleHidCallbackHandler.InitializeCompleteHandler OnInitializeComplete = delegate { };
+        public BleHidCallbackHandler.AdvertisingStateChangedHandler OnAdvertisingStateChanged = delegate { };
+        public BleHidCallbackHandler.ConnectionStateChangedHandler OnConnectionStateChanged = delegate { };
+        public BleHidCallbackHandler.PairingStateChangedHandler OnPairingStateChanged = delegate { };
+        public BleHidCallbackHandler.ConnectionParametersChangedHandler OnConnectionParametersChanged = delegate { };
+        public BleHidCallbackHandler.RssiReadHandler OnRssiRead = delegate { };
+        public BleHidCallbackHandler.ConnectionParameterRequestCompleteHandler OnConnectionParameterRequestComplete = delegate { };
+        public BleHidCallbackHandler.ErrorHandler OnError = delegate { };
+        public BleHidCallbackHandler.DebugLogHandler OnDebugLog = delegate { };
+        public BleHidCallbackHandler.PipModeChangedHandler OnPipModeChanged = delegate { };
 
         public void Awake()
         {
-            this.manager = BleHidManager.Instance;
-            
+            var manager = BleHidManager.Instance;
+
             // Create the callback handler
             callbackHandler = new BleHidCallbackHandler(manager);
 
@@ -98,7 +97,7 @@ namespace Inventonater.BleHid
         {
             callbackHandler.HandleConnectionParameterRequestComplete(message);
         }
-        
+
         public void HandlePipModeChanged(string message)
         {
             callbackHandler.HandlePipModeChanged(message);
