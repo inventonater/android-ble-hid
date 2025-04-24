@@ -1,7 +1,6 @@
 package com.inventonater.blehid.unity;
 
 import android.app.Activity;
-import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothGatt;
 import android.content.Context;
@@ -12,11 +11,8 @@ import com.inventonater.blehid.core.BleConnectionManager;
 import com.inventonater.blehid.core.BleGattServerManager;
 import com.inventonater.blehid.core.BleHidManager;
 import com.inventonater.blehid.core.BlePairingManager;
-import com.inventonater.blehid.core.CameraOptions;
 import com.inventonater.blehid.core.HidConstants;
 import com.inventonater.blehid.core.LocalInputManager;
-import com.inventonater.blehid.core.OptionsConstants;
-import com.inventonater.blehid.core.VideoOptions;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -76,35 +72,19 @@ public class BleHidUnityPlugin {
         this.unityActivity = activity;
         this.callback = callback;
         
-        // Create BLE HID manager
         bleHidManager = new BleHidManager(activity);
-        
-        // Check if BLE peripheral mode is supported
-        if (!bleHidManager.isBlePeripheralSupported()) {
-            String error = "BLE peripheral mode is not supported on this device";
-            Log.e(TAG, error);
-            if (callback != null) {
-                callback.onError(ERROR_PERIPHERAL_NOT_SUPPORTED, error);
-                callback.onInitializeComplete(false, error);
-            }
-            return false;
-        }
-        
-        // Set up pairing callback
-        bleHidManager.getBlePairingManager().setPairingCallback(new BlePairingManager.PairingCallback() {
+        BlePairingManager blePairingManager = bleHidManager.getBlePairingManager();
+
+        blePairingManager.setPairingCallback(new BlePairingManager.PairingCallback() {
             @Override
             public void onPairingRequested(BluetoothDevice device, int variant) {
                 final String deviceInfo = getDeviceInfo(device);
                 final String message = "Pairing requested by " + deviceInfo + ", variant: " + variant;
                 Log.d(TAG, message);
                 
-                if (callback != null) {
-                    callback.onDebugLog(message);
-                    callback.onPairingStateChanged("REQUESTED", device.getAddress());
-                }
-                
-                // Auto-accept pairing requests
-                bleHidManager.getBlePairingManager().setPairingConfirmation(device, true);
+                callback.onDebugLog(message);
+                callback.onPairingStateChanged("REQUESTED", device.getAddress());
+                blePairingManager.setPairingConfirmation(device, true);
             }
             
             @Override
@@ -114,11 +94,9 @@ public class BleHidUnityPlugin {
                 final String message = "Pairing " + result + " with " + deviceInfo;
                 Log.d(TAG, message);
                 
-                if (callback != null) {
-                    callback.onDebugLog(message);
-                    callback.onPairingStateChanged(result, device.getAddress());
-                    updateConnectionStatus();
-                }
+                callback.onDebugLog(message);
+                callback.onPairingStateChanged(result, device.getAddress());
+                updateConnectionStatus();
             }
         });
         
@@ -233,18 +211,14 @@ public class BleHidUnityPlugin {
         boolean result = bleHidManager.startAdvertising();
         if (result) {
             Log.d(TAG, "Advertising started");
-            if (callback != null) {
-                callback.onAdvertisingStateChanged(true, "Advertising started");
-                callback.onDebugLog("Advertising started");
-            }
+            callback.onAdvertisingStateChanged(true, "Advertising started");
+            callback.onDebugLog("Advertising started");
         } else {
             String error = "Failed to start advertising";
             Log.e(TAG, error);
-            if (callback != null) {
-                callback.onError(ERROR_ADVERTISING_FAILED, error);
-                callback.onAdvertisingStateChanged(false, error);
-                callback.onDebugLog(error);
-            }
+            callback.onError(ERROR_ADVERTISING_FAILED, error);
+            callback.onAdvertisingStateChanged(false, error);
+            callback.onDebugLog(error);
         }
         
         return result;
@@ -258,10 +232,8 @@ public class BleHidUnityPlugin {
         
         bleHidManager.stopAdvertising();
         Log.d(TAG, "Advertising stopped");
-        if (callback != null) {
-            callback.onAdvertisingStateChanged(false, "Advertising stopped");
-            callback.onDebugLog("Advertising stopped");
-        }
+        callback.onAdvertisingStateChanged(false, "Advertising stopped");
+        callback.onDebugLog("Advertising stopped");
     }
     
     /**
@@ -287,86 +259,23 @@ public class BleHidUnityPlugin {
      * @return true if disconnect was successful or already disconnected, false otherwise
      */
     public boolean disconnect() {
-        Log.i(TAG, "=========== DISCONNECT called from Unity ===========");
-        
-        if (!checkInitialized()) {
-            Log.e(TAG, "Cannot disconnect - not initialized");
-            return false;
-        }
-        
-        // If no device is connected, return true (already disconnected)
-        if (!bleHidManager.isConnected()) {
-            Log.d(TAG, "No device connected, already disconnected");
-            return true;
-        }
-        
         BluetoothDevice device = bleHidManager.getConnectedDevice();
-        if (device == null) {
-            Log.e(TAG, "Connected device reference is null despite isConnected=true");
-            return false;
-        }
-        
         Log.i(TAG, "Starting disconnect process for device: " + device.getName() + " (" + device.getAddress() + ")");
-        
-        try {
-            // Get the GATT server manager from the BleHidManager
-            BleGattServerManager gattManager = bleHidManager.getGattServerManager();
-            if (gattManager == null) {
-                Log.e(TAG, "GATT server manager is null");
-                return false;
-            }
-            
-            // Get client GATT connection for the connected device
-            BluetoothGatt gatt = gattManager.getGattForConnectedDevice();
-            if (gatt != null) {
-                Log.i(TAG, "Found active GATT connection for device: " + device.getAddress());
-                
-                // Disconnect and close the GATT connection
-                Log.i(TAG, "Calling gatt.disconnect()");
-                gatt.disconnect();
-                
-                // Force close after disconnect to ensure resources are released
-                Log.i(TAG, "Calling gatt.close() to fully release connection");
-                gatt.close();
-                
-                // Manually update connection state since we know we've disconnected
-                if (bleHidManager.isConnected()) {
-                    Log.i(TAG, "Manually updating connection state to disconnected");
-                    bleHidManager.forceDisconnect();
-                    
-                    // Notify Unity about disconnection
-                    if (callback != null) {
-                        Log.i(TAG, "Sending disconnection notification to Unity");
-                        callback.onConnectionStateChanged(false, null, null);
-                    }
-                }
-                
-                Log.i(TAG, "Disconnect process completed successfully");
-                return true;
-            } else {
-                Log.e(TAG, "No GATT connection found for connected device despite isConnected=true");
-                
-                // Even though we couldn't find the GATT connection, we should still update the state
-                if (bleHidManager.isConnected()) {
-                    Log.i(TAG, "Forcibly updating connection state to disconnected");
-                    bleHidManager.forceDisconnect();
-                    
-                    // Notify Unity about disconnection
-                    if (callback != null) {
-                        Log.i(TAG, "Sending disconnection notification to Unity");
-                        callback.onConnectionStateChanged(false, null, null);
-                    }
-                }
-                
-                return true; // Return true since we've at least updated the state
-            }
-        } catch (Exception e) {
-            Log.e(TAG, "Error disconnecting from device: " + e.getMessage(), e);
-            if (callback != null) {
-                callback.onError(ERROR_NOT_CONNECTED, "Error disconnecting: " + e.getMessage());
-            }
-            return false;
-        }
+
+        BleGattServerManager gattManager = bleHidManager.getGattServerManager();
+        BluetoothGatt gatt = gattManager.getGattForConnectedDevice();
+        if (gatt != null) {
+            gatt.disconnect();
+            gatt.close();
+        } else Log.i(TAG, "No GATT found during disconnect");
+
+        bleHidManager.clearConnectedDevice();
+        callback.onConnectionStateChanged(false, null, null);
+
+        Log.i(TAG, "Disconnect process completed successfully");
+        callback.onDebugLog("Disconnect process completed successfully");
+
+        return true;
     }
     
     /**

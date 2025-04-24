@@ -52,7 +52,7 @@ namespace Inventonater.BleHid
             GUILayout.BeginVertical(AccessibilityError);
             GUILayout.Label("The accessibility service is required for local device control", GUIStyle.none);
             GUILayout.Space(5);
-            if (GUILayout.Button("Open Accessibility Settings", GUILayout.Height(60))) _accessibilityServiceBridge.OpenAccessibilitySettings();
+            if (GUILayout.Button("Open Accessibility Settings", GUILayout.Height(60))) _accessibilityServiceBridge.OpenAccessibilitySettings(true);
             GUILayout.Space(5);
             GUILayout.EndVertical();
         }

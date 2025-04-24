@@ -300,7 +300,6 @@ namespace Inventonater.BleHid
         {
             statusMessage = message;
             statusColor = color;
-            LoggingManager.Instance.Log(message);
         }
 
         private void UpdateValuesFromManager()

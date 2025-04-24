@@ -88,7 +88,35 @@ namespace Inventonater.BleHid
         }
 
 
-        public void OpenAccessibilitySettings() => _java.Call("openAccessibilitySettings");
+        public void OpenAccessibilitySettings(bool direct = false)
+        {
+            if (Application.platform != RuntimePlatform.Android) return;
+
+            if (!direct)
+            {
+                _java.Call("openAccessibilitySettings");
+                return;
+            }
+
+            try
+            {
+                AndroidJavaClass unityPlayer = new AndroidJavaClass("com.unity3d.player.UnityPlayer");
+                AndroidJavaObject currentActivity = unityPlayer.GetStatic<AndroidJavaObject>("currentActivity");
+
+                AndroidJavaClass intentClass = new AndroidJavaClass("android.content.Intent");
+                AndroidJavaObject intent = new AndroidJavaObject("android.content.Intent", "android.settings.ACCESSIBILITY_SETTINGS");
+
+                intent.Call<AndroidJavaObject>("addFlags", intentClass.GetStatic<int>("FLAG_ACTIVITY_NEW_TASK"));
+
+                currentActivity.Call("startActivity", intent);
+                Debug.Log("BleHidLocalControl: Opened accessibility settings via direct intent");
+            }
+            catch (Exception e)
+            {
+                Debug.LogError("BleHidLocalControl: Failed to open accessibility settings: " + e.Message);
+                throw; // Rethrow to allow the caller to handle it
+            }
+        }
 
         public bool PlayPause() => _java.Call<bool>("localPlayPause");
         public bool NextTrack() => _java.Call<bool>("localNextTrack");

@@ -4,7 +4,6 @@ import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothManager;
 import android.content.Context;
-import android.content.Intent;
 import android.util.Log;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -621,19 +620,11 @@ public class BleHidManager {
      * For normal connection lifecycles, the system should rely on the automatic
      * callbacks (onDeviceConnected/onDeviceDisconnected) instead.
      */
-    public void forceDisconnect() {
+    public void clearConnectedDevice() {
         Log.i(TAG, "Forcing disconnection");
-        
         BluetoothDevice device = connectedDevice;
         connectedDevice = null;
-        
-        if (device != null) {
-            // Call connection manager to maintain consistency
-            connectionManager.onDeviceDisconnected();
-            
-            // Restart advertising after disconnect
-            startAdvertising();
-        }
+        if (device != null) connectionManager.onDeviceDisconnected();
     }
     
     /**
