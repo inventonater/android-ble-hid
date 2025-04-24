@@ -6,16 +6,30 @@ using UnityEngine;
 
 namespace Inventonater.BleHid
 {
+    public static class InputDeviceMappingExtensions
+    {
+        public static void AppendValue<T1, T2>(this Dictionary<T1, List<T2>> mapping, T1 key, T2 value)
+        {
+            if (!mapping.TryGetValue(key, out var actions))
+            {
+                actions = new List<T2>();
+                mapping.Add(key, actions);
+            }
+
+            actions.Add(value);
+        }
+    }
+
     [DefaultExecutionOrder(ExecutionOrder.Process)]
     public class InputDeviceMapping : MonoBehaviour
     {
         [SerializeField] private string _configurationPath = "";
         [SerializeField] private bool _loadDefaultConfigOnStart = false;
-        
+
         public MousePositionFilter MousePositionFilter { get; private set; }
 
-        public readonly Dictionary<BleHidButtonEvent, Action> ButtonMapping = new();
-        public readonly Dictionary<BleHidDirection, Action> DirectionMapping = new();
+        public readonly Dictionary<BleHidButtonEvent, List<Action>> ButtonMapping = new();
+        public readonly Dictionary<BleHidDirection, List<Action>> DirectionMapping = new();
         private readonly List<IAxisMapping> _axisMappings = new();
 
         [SerializeField] private BleHidButtonEvent _pendingButtonEvent;
@@ -36,16 +50,13 @@ namespace Inventonater.BleHid
             _actionResolver = new ActionResolver(BleBridge);
             _axisMappingFactory = new AxisMappingFactory(BleBridge, _actionResolver);
             _configManager = new MappingConfigurationManager();
-            
+
             if (_loadDefaultConfigOnStart)
             {
                 LoggingManager.Instance.AddLogEntry("Loading configuration...");
 
-                if (string.IsNullOrEmpty(_configurationPath))
-                {
-                    _configurationPath = _configManager.GetDefaultConfigPath();
-                }
-                
+                if (string.IsNullOrEmpty(_configurationPath)) { _configurationPath = _configManager.GetDefaultConfigPath(); }
+
                 LoadConfiguration(_configurationPath);
             }
             else
@@ -61,57 +72,54 @@ namespace Inventonater.BleHid
 
                 var volumeMapping = new AxisMappingIncremental(BleHidAxis.Z, () => Media.VolumeUp(), () => Media.VolumeDown());
 
-                ButtonMapping.Add(new BleHidButtonEvent(BleHidButtonEvent.Id.Primary, BleHidButtonEvent.Action.Press), () => volumeMapping.Active = true);
-                ButtonMapping.Add(new BleHidButtonEvent(BleHidButtonEvent.Id.Primary, BleHidButtonEvent.Action.Release), () => volumeMapping.Active = false);
+                ButtonMapping.AppendValue(new BleHidButtonEvent(BleHidButtonEvent.Id.Primary, BleHidButtonEvent.Action.Press), () => volumeMapping.Active = true);
+                ButtonMapping.AppendValue(new BleHidButtonEvent(BleHidButtonEvent.Id.Primary, BleHidButtonEvent.Action.Press), () => volumeMapping.Active = true);
+                ButtonMapping.AppendValue(new BleHidButtonEvent(BleHidButtonEvent.Id.Primary, BleHidButtonEvent.Action.Release), () => volumeMapping.Active = false);
                 _axisMappings.Add(volumeMapping);
             }
         }
-        private void AddDirection(BleHidDirection dir, byte hidConstant) => DirectionMapping.Add(dir, () => Keyboard.SendKey(hidConstant));
+
+        private void AddDirection(BleHidDirection dir, byte hidConstant) => DirectionMapping.AppendValue(dir, () => Keyboard.SendKey(hidConstant));
 
         public void AddPressRelease(BleHidButtonEvent.Id button, int mouseButtonId)
         {
-            ButtonMapping.Add(new BleHidButtonEvent(button, BleHidButtonEvent.Action.Press), () => Mouse.PressMouseButton(mouseButtonId));
-            ButtonMapping.Add(new BleHidButtonEvent(button, BleHidButtonEvent.Action.Release), () => Mouse.ReleaseMouseButton(mouseButtonId));
+            ButtonMapping.AppendValue(new BleHidButtonEvent(button, BleHidButtonEvent.Action.Press), () => Mouse.PressMouseButton(mouseButtonId));
+            ButtonMapping.AppendValue(new BleHidButtonEvent(button, BleHidButtonEvent.Action.Release), () => Mouse.ReleaseMouseButton(mouseButtonId));
         }
+
         public void AddTap(BleHidButtonEvent.Id button, byte hidConstant) =>
-            ButtonMapping.Add(new BleHidButtonEvent(button, BleHidButtonEvent.Action.Tap), () => Keyboard.SendKey(hidConstant));
+            ButtonMapping.AppendValue(new BleHidButtonEvent(button, BleHidButtonEvent.Action.Tap), () => Keyboard.SendKey(hidConstant));
 
         public void AddDoubleTap(BleHidButtonEvent.Id button, byte hidConstant) =>
-            ButtonMapping.Add(new BleHidButtonEvent(button, BleHidButtonEvent.Action.DoubleTap), () => Keyboard.SendKey(hidConstant));
-        
+            ButtonMapping.AppendValue(new BleHidButtonEvent(button, BleHidButtonEvent.Action.DoubleTap), () => Keyboard.SendKey(hidConstant));
+
         public void LoadConfiguration(string path)
         {
             try
             {
-                if (File.Exists(path))
-                {
-                    _currentConfig = _configManager.LoadConfiguration(path);
-                }
+                if (File.Exists(path)) { _currentConfig = _configManager.LoadConfiguration(path); }
                 else
                 {
                     _currentConfig = _configManager.CreateDefaultConfiguration();
                     _configManager.SaveConfiguration(_currentConfig, path);
                 }
-                
+
                 ApplyConfiguration(_currentConfig);
                 LoggingManager.Instance.AddLogEntry($"Loaded input configuration: {_currentConfig.Name}");
             }
             catch (Exception e)
             {
                 Debug.LogError($"Failed to load configuration: {e.Message}");
-                
+
                 // Fall back to default configuration
                 _currentConfig = _configManager.CreateDefaultConfiguration();
                 ApplyConfiguration(_currentConfig);
             }
         }
-        
+
         public void SaveConfiguration(string path)
         {
-            if (_currentConfig != null)
-            {
-                _configManager.SaveConfiguration(_currentConfig, path);
-            }
+            if (_currentConfig != null) { _configManager.SaveConfiguration(_currentConfig, path); }
         }
 
         public void ApplyConfiguration(MappingConfiguration config)
@@ -120,72 +128,56 @@ namespace Inventonater.BleHid
             ButtonMapping.Clear();
             DirectionMapping.Clear();
             _axisMappings.Clear();
-            
+
             // Apply button mappings
-            foreach (var mapping in config.ButtonMappings)
-            {
-                ApplyButtonMapping(mapping);
-            }
-            
+            foreach (var mapping in config.ButtonMappings) { ApplyButtonMapping(mapping); }
+
             // Apply direction mappings
-            foreach (var mapping in config.DirectionMappings)
-            {
-                ApplyDirectionMapping(mapping);
-            }
-            
+            foreach (var mapping in config.DirectionMappings) { ApplyDirectionMapping(mapping); }
+
             // Apply axis mappings
-            foreach (var mapping in config.AxisMappings)
-            {
-                ApplyAxisMapping(mapping);
-            }
+            foreach (var mapping in config.AxisMappings) { ApplyAxisMapping(mapping); }
         }
-        
+
         private void ApplyButtonMapping(ButtonMappingEntry mapping)
         {
             // Parse input event (e.g., "Primary.Press")
             string[] parts = mapping.InputEvent.Split('.');
             if (parts.Length != 2) return;
-            
+
             if (!Enum.TryParse<BleHidButtonEvent.Id>(parts[0], out var buttonId)) return;
             if (!Enum.TryParse<BleHidButtonEvent.Action>(parts[1], out var buttonAction)) return;
-            
+
             var buttonEvent = new BleHidButtonEvent(buttonId, buttonAction);
             var parameters = new Dictionary<string, object>();
-            
+
             // Add any additional parameters
             if (!string.IsNullOrEmpty(mapping.KeyCode))
                 parameters["keyCode"] = mapping.KeyCode;
-            
+
             // Resolve and register the action
-            ButtonMapping[buttonEvent] = _actionResolver.ResolveAction(mapping.Action, parameters);
+            ButtonMapping.AppendValue(buttonEvent, _actionResolver.ResolveAction(mapping.Action, parameters));
         }
-        
+
         private void ApplyDirectionMapping(DirectionMappingEntry mapping)
         {
             if (!Enum.TryParse<BleHidDirection>(mapping.InputDirection, out var direction)) return;
-            
+
             var parameters = new Dictionary<string, object>();
-            
-            // Add any additional parameters
-            if (!string.IsNullOrEmpty(mapping.KeyCode))
-                parameters["keyCode"] = mapping.KeyCode;
-            
-            // Resolve and register the action
-            DirectionMapping[direction] = _actionResolver.ResolveAction(mapping.Action, parameters);
+            if (!string.IsNullOrEmpty(mapping.KeyCode)) parameters["keyCode"] = mapping.KeyCode;
+
+            DirectionMapping.AppendValue(direction, _actionResolver.ResolveAction(mapping.Action, parameters));
         }
-        
+
         private void ApplyAxisMapping(AxisMappingEntry mapping)
         {
             var axisMapping = _axisMappingFactory.CreateAxisMapping(mapping);
             if (axisMapping != null)
             {
                 _axisMappings.Add(axisMapping);
-                
+
                 // Store reference to MousePositionFilter if it's that type
-                if (axisMapping is MousePositionFilter mouseFilter)
-                {
-                    MousePositionFilter = mouseFilter;
-                }
+                if (axisMapping is MousePositionFilter mouseFilter) { MousePositionFilter = mouseFilter; }
             }
         }
 
@@ -212,18 +204,18 @@ namespace Inventonater.BleHid
         {
             using (_profileMarkerButtonEvent.Auto())
             {
-                if (_pendingButtonEvent != BleHidButtonEvent.None && ButtonMapping.TryGetValue(_pendingButtonEvent, out var buttonAction))
+                if (_pendingButtonEvent != BleHidButtonEvent.None && ButtonMapping.TryGetValue(_pendingButtonEvent, out var buttonActions))
                 {
-                    buttonAction();
+                    foreach (var action in buttonActions) TryFireAction(action);
                     _pendingButtonEvent = BleHidButtonEvent.None;
                 }
             }
 
             using (_profileMarkerDirection.Auto())
             {
-                if (_pendingDirection != BleHidDirection.None && DirectionMapping.TryGetValue(_pendingDirection, out var directionAction))
+                if (_pendingDirection != BleHidDirection.None && DirectionMapping.TryGetValue(_pendingDirection, out var directionActions))
                 {
-                    directionAction();
+                    foreach (var action in directionActions) TryFireAction(action);
                     _pendingDirection = BleHidDirection.None;
                 }
             }
@@ -232,6 +224,12 @@ namespace Inventonater.BleHid
             {
                 foreach (var axisMapping in _axisMappings) axisMapping.Update(Time.time);
             }
+        }
+
+        private static void TryFireAction(Action action)
+        {
+            try { action(); }
+            catch (Exception e) { LoggingManager.Instance.AddLogException(e); }
         }
     }
 }

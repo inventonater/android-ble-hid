@@ -13,8 +13,8 @@ namespace Inventonater.BleHid
         private static readonly Color accessibilityErrorColor = new Color(0.8f, 0.4f, 0.0f, 1.0f);
         private static readonly Color notificationErrorColor = new Color(0.3f, 0.3f, 0.8f, 1.0f);
         private float _nextCheckTime;
-        private readonly GUIStyle _accessibilityError = UIHelper.CreateErrorStyle(accessibilityErrorColor);
-        private readonly GUIStyle _permissionErrorStyle  = UIHelper.CreateErrorStyle(permissionErrorColor);
+        private static GUIStyle AccessibilityError => UIHelper.CreateErrorStyle(accessibilityErrorColor);
+        private static GUIStyle PermissionErrorStyle  => UIHelper.CreateErrorStyle(permissionErrorColor);
 
         private void OpenAppSettings() => BleHidPermissionHandler.OpenAppSettings();
         private const float PermissionCheckInterval = 3.0f; // Check every 3 seconds
@@ -37,7 +37,7 @@ namespace Inventonater.BleHid
 
         private void DrawMissingAccessibilityService()
         {
-            GUILayout.BeginVertical(_accessibilityError);
+            GUILayout.BeginVertical(AccessibilityError);
             GUILayout.Label("The accessibility service is required for local device control", GUIStyle.none);
             GUILayout.Space(5);
             if (GUILayout.Button("Open Accessibility Settings", GUILayout.Height(60))) BleHidLocalControl.Instance.OpenAccessibilitySettings();
@@ -47,7 +47,7 @@ namespace Inventonater.BleHid
 
         private void DrawMissingPermissions()
         {
-            GUILayout.BeginVertical(_permissionErrorStyle);
+            GUILayout.BeginVertical(PermissionErrorStyle);
 
             GUILayout.Label("Missing Permissions", GUIStyle.none);
             GUILayout.Space(5);
