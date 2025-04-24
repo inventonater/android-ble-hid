@@ -512,4 +512,15 @@ public class BleHidUnityBridge {
     public int getTxPowerLevelHigh() { return BleConnectionManager.TX_POWER_LEVEL_HIGH; }
     public int getTxPowerLevelMedium() { return BleConnectionManager.TX_POWER_LEVEL_MEDIUM; }
     public int getTxPowerLevelLow() { return BleConnectionManager.TX_POWER_LEVEL_LOW; }
+    
+    /**
+     * Notify Unity about PiP mode changes.
+     * This method is called from BleHidUnityPlayerActivity when PiP mode changes.
+     * 
+     * @param isInPipMode true if entering PiP mode, false if exiting
+     */
+    public void notifyPipModeChanged(boolean isInPipMode) {
+        Log.d(TAG, "Notifying Unity about PiP mode change: " + isInPipMode);
+        sendMessageToUnity("HandlePipModeChanged", String.valueOf(isInPipMode));
+    }
 }

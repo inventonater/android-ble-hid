@@ -45,16 +45,14 @@ public class BleHidUnityPlayerActivity extends UnityPlayerActivity {
             // We're entering PiP mode
             // Make sure Unity keeps running
             mUnityPlayer.resume();
-            
-            // Notify Unity/C# that we're in PiP mode
-            UnityPlayer.UnitySendMessage("BleHidManager", "HandlePipModeChanged", "true");
         } else {
             // We're exiting PiP mode
             mUnityPlayer.resume();
-            
-            // Notify Unity/C# that we're out of PiP mode
-            UnityPlayer.UnitySendMessage("BleHidManager", "HandlePipModeChanged", "false");
         }
+        
+        // Use the bridge to notify Unity about PiP mode changes
+        // This ensures we use the same callback mechanism as other events
+        BleHidUnityBridge.getInstance().notifyPipModeChanged(isInPictureInPictureMode);
     }
 
     // @Override
