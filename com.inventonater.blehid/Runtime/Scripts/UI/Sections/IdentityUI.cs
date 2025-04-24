@@ -491,7 +491,7 @@ namespace Inventonater.BleHid
         {
             _statusMessage = message;
             _statusColor = isError ? Color.red : Color.green;
-            LoggingManager.Instance.AddLogEntry(isError ? "ERROR: " + message : message);
+            LoggingManager.Instance.Log(isError ? "ERROR: " + message : message);
 
             // Clear the status message after 3 seconds
             clearStatusAfterDelay();

@@ -156,12 +156,12 @@ namespace Inventonater.BleHid
         {
             if (string.IsNullOrEmpty(textToSend))
             {
-                LoggingManager.Instance.AddLogEntry("Cannot send empty text");
+                LoggingManager.Instance.Log("Cannot send empty text");
                 return;
             }
 
             if (!IsEditorMode) Keyboard.TypeText(textToSend);
-            LoggingManager.Instance.AddLogEntry("Text sent: " + textToSend);
+            LoggingManager.Instance.Log("Text sent: " + textToSend);
             textToSend = "";
         }
 
@@ -175,13 +175,13 @@ namespace Inventonater.BleHid
             byte keyCode = GetKeyCode(key);
             if (keyCode <= 0) return;
 
-            if (IsEditorMode) LoggingManager.Instance.AddLogEntry("Key pressed: " + key);
+            if (IsEditorMode) LoggingManager.Instance.Log("Key pressed: " + key);
             else Keyboard.SendKey(keyCode);
         }
 
         private void SendSpecialKey(byte keyCode, string keyName)
         {
-            if (IsEditorMode) LoggingManager.Instance.AddLogEntry($"{keyName} key pressed");
+            if (IsEditorMode) LoggingManager.Instance.Log($"{keyName} key pressed");
             else Keyboard.SendKey(keyCode);
         }
 

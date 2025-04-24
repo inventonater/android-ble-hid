@@ -2,6 +2,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using Cysharp.Threading.Tasks;
 using UnityEngine;
 
 namespace Inventonater.BleHid
@@ -11,7 +12,7 @@ namespace Inventonater.BleHid
     /// Specifically manages Bluetooth permissions needed for Android 12+ devices 
     /// and other runtime permissions required by the plugin.
     /// </summary>
-    public class BleHidPermissionHandler
+    public class PermissionsBridge
     {
         public class AndroidPermission
         {
@@ -23,7 +24,7 @@ namespace Inventonater.BleHid
         /// <summary>
         /// List of Bluetooth permissions required for Android 12+
         /// </summary>
-        public static readonly AndroidPermission[] Permissions =
+        public readonly AndroidPermission[] Permissions =
         {
             new() { Name = "Bluetooth Connect", PermissionString = "android.permission.BLUETOOTH_CONNECT", Description = "Required to connect to and control Bluetooth devices" },
             new() { Name = "Bluetooth Scan", PermissionString = "android.permission.BLUETOOTH_SCAN", Description = "Required to scan for nearby Bluetooth devices" },
@@ -32,15 +33,35 @@ namespace Inventonater.BleHid
             new() { Name = "Notifications", PermissionString = "android.permission.POST_NOTIFICATIONS", Description = "Required for sending notifications" }
         };
 
-        public IEnumerable<AndroidPermission> GetMissingPermissions() => Permissions.Where(p => !HasUserAuthorizedPermission(p));
+        public IEnumerable<AndroidPermission> MissingPermissions => Permissions.Where(p => !HasUserAuthorizedPermission(p));
+        private IEnumerable<string> MissingPermissionStrings => MissingPermissions.Select(p => p.PermissionString);
+        private bool HasMissingPermissions => MissingPermissions.Any();
 
         /// <summary>
         /// Request Bluetooth permissions required for Android 12+ (API level 31+)
         /// </summary>
-        public void RequestAllPermissions()
+        public async UniTask RequestMissingPermissions()
         {
-            Debug.Log("Requesting Android Bluetooth permissions");
-            foreach (AndroidPermission permission in Permissions) RequestPermission(permission);
+            if (!HasMissingPermissions)
+            {
+                LoggingManager.Instance.Log("No missing permissions.");
+                return;
+            }
+
+            try
+            {
+                LoggingManager.Instance.Log($"RequestMissingPermissions...");
+                var activity = new AndroidJavaClass("com.unity3d.player.UnityPlayer").GetStatic<AndroidJavaObject>("currentActivity");
+                activity.Call("requestPermissions", MissingPermissionStrings, 0);
+
+                while (HasMissingPermissions)
+                {
+                    await UniTask.Delay(1000);
+                    LoggingManager.Instance.Log($"Waiting for permissions...");
+                }
+            }
+            catch (Exception e) { LoggingManager.Instance.Error($"Error requesting permissions {string.Join(", ", MissingPermissionStrings)}: {e.Message}"); }
+            LoggingManager.Instance.Log($"RequestPermission finished");
         }
 
         public void OpenAppSettings()
@@ -67,16 +88,10 @@ namespace Inventonater.BleHid
 
                 currentActivity.Call("startActivity", intent);
             }
-            catch (Exception e) { LoggingManager.Instance.AddLogEntry("Failed to open app settings: " + e.Message); }
+            catch (Exception e) { LoggingManager.Instance.Log("Failed to open app settings: " + e.Message); }
         }
 
-        public void RequestPermission(AndroidPermission permission)
-        {
-            if (HasUserAuthorizedPermission(permission)) return;
-            RequestPermissionInternal(permission);
-        }
-
-        public static bool HasUserAuthorizedPermission(AndroidPermission permission)
+        public bool HasUserAuthorizedPermission(AndroidPermission permission)
         {
             if (Application.platform != RuntimePlatform.Android) return true;
 
@@ -92,19 +107,6 @@ namespace Inventonater.BleHid
                 Debug.LogError($"Error checking permission {permission.PermissionString}: {e.Message}");
                 return false;
             }
-        }
-
-        private static void RequestPermissionInternal(AndroidPermission permission)
-        {
-            if (Application.platform != RuntimePlatform.Android) return;
-
-            Debug.Log($"Requesting permission: {permission.PermissionString}");
-            try
-            {
-                var activity = new AndroidJavaClass("com.unity3d.player.UnityPlayer").GetStatic<AndroidJavaObject>("currentActivity");
-                activity.Call("requestPermissions", new[] { permission.PermissionString }, 0);
-            }
-            catch (Exception e) { Debug.LogError($"Error requesting permission {permission.PermissionString}: {e.Message}"); }
         }
     }
 }

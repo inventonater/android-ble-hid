@@ -90,7 +90,7 @@ namespace Inventonater.BleHid
             if (newMinCutoff != _minCutoff)
             {
                 _minCutoff = newMinCutoff;
-                LoggingManager.Instance.AddLogEntry($"Changed 1€ filter smoothing to: {_minCutoff:F2}");
+                LoggingManager.Instance.Log($"Changed 1€ filter smoothing to: {_minCutoff:F2}");
             }
             
             // Draw beta slider (speed response)
@@ -102,7 +102,7 @@ namespace Inventonater.BleHid
             if (newBeta != _beta)
             {
                 _beta = newBeta;
-                logger.AddLogEntry($"Changed 1€ filter response to: {_beta:F3}");
+                logger.Log($"Changed 1€ filter response to: {_beta:F3}");
             }
         }
         

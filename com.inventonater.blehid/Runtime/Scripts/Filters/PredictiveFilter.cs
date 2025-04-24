@@ -55,7 +55,7 @@ namespace Inventonater.BleHid
             if (newPredictionTime != _predictionTime)
             {
                 _predictionTime = newPredictionTime;
-                LoggingManager.Instance.AddLogEntry($"Changed prediction time to: {_predictionTime:F3}s");
+                LoggingManager.Instance.Log($"Changed prediction time to: {_predictionTime:F3}s");
             }
             
             GUILayout.Label("Smoothing: Velocity smoothing factor");
@@ -66,7 +66,7 @@ namespace Inventonater.BleHid
             if (newSmoothingFactor != _smoothingFactor)
             {
                 _smoothingFactor = newSmoothingFactor;
-                LoggingManager.Instance.AddLogEntry($"Changed velocity smoothing to: {_smoothingFactor:F2}");
+                LoggingManager.Instance.Log($"Changed velocity smoothing to: {_smoothingFactor:F2}");
             }
         }
         

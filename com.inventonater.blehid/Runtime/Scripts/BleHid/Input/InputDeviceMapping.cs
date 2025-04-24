@@ -53,7 +53,7 @@ namespace Inventonater.BleHid
 
             if (_loadDefaultConfigOnStart)
             {
-                LoggingManager.Instance.AddLogEntry("Loading configuration...");
+                LoggingManager.Instance.Log("Loading configuration...");
 
                 if (string.IsNullOrEmpty(_configurationPath)) { _configurationPath = _configManager.GetDefaultConfigPath(); }
 
@@ -61,7 +61,7 @@ namespace Inventonater.BleHid
             }
             else
             {
-                LoggingManager.Instance.AddLogEntry("Loading hardcoded configuration");
+                LoggingManager.Instance.Log("Loading hardcoded configuration");
                 AddPressRelease(BleHidButtonEvent.Id.Primary, 0);
                 AddPressRelease(BleHidButtonEvent.Id.Secondary, 1);
                 AddDirection(BleHidDirection.Up, BleHidConstants.KEY_UP);
@@ -105,7 +105,7 @@ namespace Inventonater.BleHid
                 }
 
                 ApplyConfiguration(_currentConfig);
-                LoggingManager.Instance.AddLogEntry($"Loaded input configuration: {_currentConfig.Name}");
+                LoggingManager.Instance.Log($"Loaded input configuration: {_currentConfig.Name}");
             }
             catch (Exception e)
             {

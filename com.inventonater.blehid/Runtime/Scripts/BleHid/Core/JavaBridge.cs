@@ -27,7 +27,9 @@ namespace Inventonater.BleHid
         public void Call(string methodName, params object[] args)
         {
             using var profilerMarker = _marker.Auto();
-            if (_verbose) LoggingManager.Instance.AddLogEntry($" -- {methodName} {string.Join(", ", args)}");
+            if (_verbose) LoggingManager.Instance.Log($" -- {methodName} {string.Join(", ", args)}");
+            if (Application.platform != RuntimePlatform.Android) return;
+
             try { JavaObject?.Call(methodName, args); }
             catch (Exception e) { LoggingManager.Instance.AddLogException(e); }
         }
@@ -35,7 +37,8 @@ namespace Inventonater.BleHid
         public T Call<T>(string methodName, params object[] args)
         {
             using var profilerMarker = _marker.Auto();
-            if (_verbose) LoggingManager.Instance.AddLogEntry($" -- {methodName} {string.Join(", ", args)}");
+            if (_verbose) LoggingManager.Instance.Log($" -- {methodName} {string.Join(", ", args)}");
+            if (Application.platform != RuntimePlatform.Android) return default;
 
             try { return JavaObject.Call<T>(methodName, args); }
             catch (Exception e) { LoggingManager.Instance.AddLogException(e); }

@@ -47,7 +47,7 @@ namespace Inventonater.BleHid
             if (newAlpha != _alpha)
             {
                 _alpha = newAlpha;
-                LoggingManager.Instance.AddLogEntry($"Changed EMA filter alpha to: {_alpha:F2}");
+                LoggingManager.Instance.Log($"Changed EMA filter alpha to: {_alpha:F2}");
             }
             
             GUILayout.Label("Min Change: Threshold for movement");
@@ -58,7 +58,7 @@ namespace Inventonater.BleHid
             if (newMinChange != _minChange)
             {
                 _minChange = newMinChange;
-                LoggingManager.Instance.AddLogEntry($"Changed EMA filter min change to: {_minChange:F4}");
+                LoggingManager.Instance.Log($"Changed EMA filter min change to: {_minChange:F4}");
             }
         }
         

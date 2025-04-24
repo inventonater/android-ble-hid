@@ -16,7 +16,7 @@ namespace Inventonater.BleHid
         {
             using var profilerMarker = _marker.Auto();
             if (deltaX == 0 && deltaY == 0) return false;
-            if (deltaX < -127 || deltaX > 127 || deltaY < -127 || deltaY > 127) LoggingManager.Instance.AddLogError($"Mouse movement values out of range: {deltaX}, {deltaY}");
+            if (deltaX < -127 || deltaX > 127 || deltaY < -127 || deltaY > 127) LoggingManager.Instance.Error($"Mouse movement values out of range: {deltaX}, {deltaY}");
 
             return _java.Call<bool>("moveMouse", deltaX, deltaY);
         }

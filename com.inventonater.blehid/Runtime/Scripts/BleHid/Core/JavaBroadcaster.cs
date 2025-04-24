@@ -88,7 +88,7 @@ namespace Inventonater.BleHid
             int errorCode = int.Parse(parts[0]);
             string errorMessage = parts.Length > 1 ? parts[1] : "";
             OnError?.Invoke(errorCode, errorMessage);
-            LoggingManager.Instance.AddLogError($"BLE HID error {errorCode}: {errorMessage}");
+            LoggingManager.Instance.Error($"BLE HID error {errorCode}: {errorMessage}");
         }
 
         [Preserve]

@@ -35,7 +35,7 @@ namespace Inventonater.BleHid
             if (buttonPressed)
             {
                 if (!IsEditorMode) runtimeAction?.Invoke();
-                LoggingManager.Instance.AddLogEntry(logMessage);
+                LoggingManager.Instance.Log(logMessage);
             }
 
             return buttonPressed;

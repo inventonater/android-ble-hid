@@ -15,11 +15,6 @@ namespace Inventonater.BleHid
         private string logFilePath;
         private bool logToFile = false;
 
-        /// <summary>
-        /// Gets the path to the log file
-        /// </summary>
-        public string LogFilePath => logFilePath;
-
         private LoggingManager()
         {
             // Initialize file logging
@@ -35,13 +30,13 @@ namespace Inventonater.BleHid
             }
         }
 
-        public void AddLogException(Exception exception) => AddLogError(exception.Message);
-        public void AddLogError(string message) => AddLogEntry(message, true);
+        public void AddLogException(Exception exception) => Error(exception.Message);
+        public void Error(string message) => Log(message, true);
 
         /// <summary>
         /// Add a log entry with timestamp
         /// </summary>
-        public void AddLogEntry(string entry, bool isError = false)
+        public void Log(string entry, bool isError = false)
         {
             if (string.IsNullOrEmpty(entry)) return;
 

@@ -30,7 +30,7 @@ namespace Inventonater.BleHid
             IInputSourceDevice prevSourceDevice = _sourceDevice;
             if (prevSourceDevice != null)
             {
-                LoggingManager.Instance.AddLogEntry($"unregistered: {prevSourceDevice.Name}");
+                LoggingManager.Instance.Log($"unregistered: {prevSourceDevice.Name}");
                 prevSourceDevice.NotifyPosition -= HandlePositionEvent;
                 prevSourceDevice.NotifyButtonEvent -= HandleButtonEvent;
                 prevSourceDevice.NotifyDirection -= HandleDirection;
@@ -41,7 +41,7 @@ namespace Inventonater.BleHid
             _sourceDevice = inputSourceDevice;
             if (_sourceDevice != null)
             {
-                LoggingManager.Instance.AddLogEntry($"registered: {_sourceDevice.Name}");
+                LoggingManager.Instance.Log($"registered: {_sourceDevice.Name}");
                 _sourceDevice.NotifyPosition += HandlePositionEvent;
                 _sourceDevice.NotifyButtonEvent += HandleButtonEvent;
                 _sourceDevice.NotifyDirection += HandleDirection;

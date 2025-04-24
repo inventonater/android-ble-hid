@@ -101,7 +101,7 @@ namespace Inventonater.BleHid
         {
             if (level is >= 0 and <= 2) return _java.Call<bool>("setTransmitPowerLevel", level);
 
-            LoggingManager.Instance.AddLogError("Invalid TX power level: " + level + ". Must be between 0 and 2.");
+            LoggingManager.Instance.Error("Invalid TX power level: " + level + ". Must be between 0 and 2.");
             return false;
         }
 
@@ -122,7 +122,7 @@ namespace Inventonater.BleHid
         public bool RequestMtu(int mtu)
         {
             if (mtu is >= 23 and <= 517) return _java.Call<bool>("requestMtu", mtu);
-            LoggingManager.Instance.AddLogError("Invalid MTU size: " + mtu + ". Must be between 23 and 517.");
+            LoggingManager.Instance.Error("Invalid MTU size: " + mtu + ". Must be between 23 and 517.");
             return false;
         }
 
@@ -161,7 +161,7 @@ namespace Inventonater.BleHid
             }
             catch (Exception e)
             {
-                LoggingManager.Instance.AddLogError("Exception getting connection parameters: " + e.Message);
+                LoggingManager.Instance.Error("Exception getting connection parameters: " + e.Message);
                 return null;
             }
         }

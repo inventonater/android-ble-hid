@@ -83,7 +83,7 @@ namespace Inventonater.BleHid
             if (newProcessNoise != _processNoise)
             {
                 _processNoise = newProcessNoise;
-                logger.AddLogEntry($"Changed Kalman filter process noise to: {_processNoise:F5}");
+                logger.Log($"Changed Kalman filter process noise to: {_processNoise:F5}");
             }
             
             // Draw measurement noise slider
@@ -95,7 +95,7 @@ namespace Inventonater.BleHid
             if (newMeasurementNoise != _measurementNoise)
             {
                 _measurementNoise = newMeasurementNoise;
-                logger.AddLogEntry($"Changed Kalman filter measurement noise to: {_measurementNoise:F3}");
+                logger.Log($"Changed Kalman filter measurement noise to: {_measurementNoise:F3}");
             }
         }
         

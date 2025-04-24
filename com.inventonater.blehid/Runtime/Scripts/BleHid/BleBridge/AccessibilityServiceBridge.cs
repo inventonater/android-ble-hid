@@ -25,11 +25,12 @@ namespace Inventonater.BleHid
         public AccessibilityServiceBridge(JavaBridge java)
         {
             _java = java;
-            var success = _java.Call<bool>("initializeLocalControl");
+            if (Application.isEditor) return;
 
+            var success = _java.Call<bool>("initializeLocalControl");
             if (!success)
             {
-                LoggingManager.Instance.AddLogError($"AccessibilityServiceBridge: Initialization attempt failed");
+                LoggingManager.Instance.Error($"AccessibilityServiceBridge: Initialization attempt failed");
                 return;
             }
 

@@ -51,7 +51,7 @@ namespace Inventonater.BleHid
             if (newAlpha != _alpha)
             {
                 _alpha = newAlpha;
-                LoggingManager.Instance.AddLogEntry($"Changed double exp filter alpha to: {_alpha:F2}");
+                LoggingManager.Instance.Log($"Changed double exp filter alpha to: {_alpha:F2}");
             }
             
             GUILayout.Label("Beta: Trend smoothing factor");
@@ -62,7 +62,7 @@ namespace Inventonater.BleHid
             if (newBeta != _beta)
             {
                 _beta = newBeta;
-                LoggingManager.Instance.AddLogEntry($"Changed double exp filter beta to: {_beta:F2}");
+                LoggingManager.Instance.Log($"Changed double exp filter beta to: {_beta:F2}");
             }
         }
         

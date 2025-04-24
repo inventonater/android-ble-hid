@@ -47,7 +47,7 @@ namespace Inventonater.BleHid
             
             // Update the filter in the input router if available
             SetFilterToMapping();
-            LoggingManager.Instance.AddLogEntry($"Changed input filter to: {Filter.Name}");
+            LoggingManager.Instance.Log($"Changed input filter to: {Filter.Name}");
         }
 
         private void SetFilterToMapping()
@@ -73,7 +73,7 @@ namespace Inventonater.BleHid
             // Update the filter in the input router if available
             SetFilterToMapping();
             
-            LoggingManager.Instance.AddLogEntry($"Applied custom filter: {Filter.Name}");
+            LoggingManager.Instance.Log($"Applied custom filter: {Filter.Name}");
         }
         
         /// <summary>

@@ -1,4 +1,5 @@
 using System;
+using Cysharp.Threading.Tasks;
 using UnityEngine;
 
 namespace Inventonater.BleHid
@@ -9,7 +10,6 @@ namespace Inventonater.BleHid
         public bool IsInitialized { get; private set; }
         public bool IsInPipMode { get; internal set; }
         public PipBackgroundWorker PipWorker { get; private set; }
-
         public JavaBridge JavaBridge { get; private set; }
         public JavaBroadcaster JavaBroadcaster { get; private set; }
         public ConnectionBridge ConnectionBridge { get; private set; }
@@ -17,7 +17,7 @@ namespace Inventonater.BleHid
         public InputDeviceMapping Mapping { get; private set; }
         public BleBridge BleBridge { get; private set; }
         public AccessibilityServiceBridge AccessibilityServiceBridge { get; private set; }
-        public BleHidPermissionHandler BleHidPermissionHandler { get; private set; }
+        public PermissionsBridge PermissionsBridge { get; private set; }
 
         public static BleHidManager Instance => FindFirstObjectByType<BleHidManager>();
 
@@ -29,7 +29,7 @@ namespace Inventonater.BleHid
 
             JavaBridge = new JavaBridge();
             BleBridge = new BleBridge(JavaBridge);
-            BleHidPermissionHandler = new BleHidPermissionHandler();
+            PermissionsBridge = new PermissionsBridge();
             AccessibilityServiceBridge = new AccessibilityServiceBridge(JavaBridge);
             JavaBroadcaster = gameObject.AddComponent<JavaBroadcaster>();
             Mapping = gameObject.AddComponent<InputDeviceMapping>();
@@ -48,26 +48,29 @@ namespace Inventonater.BleHid
             Debug.Log("BleHidManager initialized");
         }
 
-
-
-        private void Start()
+        private async void Start()
         {
-            Initialize();
+            await Initialize();
         }
 
-        private void Initialize()
+        private async UniTask Initialize()
         {
             if (IsInitialized) return;
+
             Application.runInBackground = true;
             if (Application.isEditor)
             {
-                LoggingManager.Instance.AddLogEntry("BLE HID is only supported on Android");
+                LoggingManager.Instance.Log("BLE HID is only supported on Android 1");
+                await UniTask.Delay(1000);
+                LoggingManager.Instance.Log("BLE HID is only supported on Android 2");
+                await UniTask.Delay(1000);
+                LoggingManager.Instance.Log("BLE HID is only supported on Android 3");
                 return;
             }
 
             try
             {
-                BleHidPermissionHandler.RequestAllPermissions();
+                await PermissionsBridge.RequestMissingPermissions();
 
                 IsInitialized = JavaBridge.Call<bool>("initialize", gameObject.name);
 
@@ -77,7 +80,7 @@ namespace Inventonater.BleHid
                 if (!IsInitialized)
                 {
                     string message = "Failed to initialize BLE HID plugin";
-                    LoggingManager.Instance.AddLogError(message);
+                    LoggingManager.Instance.Error(message);
                     JavaBroadcaster.OnError?.Invoke(BleHidConstants.ERROR_INITIALIZATION_FAILED, message);
                     JavaBroadcaster.OnInitializeComplete?.Invoke(false, message);
                     return;
@@ -88,7 +91,7 @@ namespace Inventonater.BleHid
             catch (Exception e)
             {
                 string message = "Exception during initialization: " + e.Message;
-                LoggingManager.Instance.AddLogError(message);
+                LoggingManager.Instance.Error(message);
                 JavaBroadcaster.OnError?.Invoke(BleHidConstants.ERROR_INITIALIZATION_FAILED, message);
                 JavaBroadcaster.OnInitializeComplete?.Invoke(false, message);
             }
@@ -118,7 +121,7 @@ namespace Inventonater.BleHid
                 PipWorker.Start();
                 
                 // Log the event to assist with debugging
-                LoggingManager.Instance.AddLogEntry($"PiP mode entered - background worker started at {DateTime.Now}");
+                LoggingManager.Instance.Log($"PiP mode entered - background worker started at {DateTime.Now}");
             }
             else
             {
@@ -138,7 +141,7 @@ namespace Inventonater.BleHid
                 // The service can be stopped manually if needed
                 
                 // Log the event to assist with debugging
-                LoggingManager.Instance.AddLogEntry($"PiP mode exited at {DateTime.Now}");
+                LoggingManager.Instance.Log($"PiP mode exited at {DateTime.Now}");
             }
         }
 

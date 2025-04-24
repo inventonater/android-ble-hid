@@ -111,7 +111,7 @@ namespace Inventonater.BleHid
             {
                 _targetFrameRate = roundedFrameRate;
                 Application.targetFrameRate = _targetFrameRate;
-                LoggingManager.Instance.AddLogEntry($"Target framerate set to: {_targetFrameRate}");
+                LoggingManager.Instance.Log($"Target framerate set to: {_targetFrameRate}");
             }
 
             GUILayout.Space(10);
@@ -313,7 +313,7 @@ namespace Inventonater.BleHid
         {
             statusMessage = message;
             statusColor = color;
-            LoggingManager.Instance.AddLogEntry(message);
+            LoggingManager.Instance.Log(message);
         }
 
         private void UpdateValuesFromManager()

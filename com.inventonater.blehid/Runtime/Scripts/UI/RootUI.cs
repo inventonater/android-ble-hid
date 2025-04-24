@@ -27,14 +27,15 @@ namespace Inventonater.BleHid
         private StatusUI _statusUI;
         private PermissionsUI _permissionsUI;
         private Vector2 _localTabScrollPosition = Vector2.zero;
+        private BleHidManager _bleHidManager;
 
         private void Start()
         {
-            var bleHidManager = BleHidManager.Instance;
-            var connectionBridge = bleHidManager.ConnectionBridge;
-            var mouseBridge = bleHidManager.BleBridge.Mouse;
-            var bleHidPermissionHandler = bleHidManager.BleHidPermissionHandler;
-            var accessibilityServiceBridge = bleHidManager.AccessibilityServiceBridge;
+            _bleHidManager = BleHidManager.Instance;
+            var connectionBridge = _bleHidManager.ConnectionBridge;
+            var mouseBridge = _bleHidManager.BleBridge.Mouse;
+            var bleHidPermissionHandler = _bleHidManager.PermissionsBridge;
+            var accessibilityServiceBridge = _bleHidManager.AccessibilityServiceBridge;
 
             var javaBroadcaster = FindFirstObjectByType<JavaBroadcaster>();
             javaBroadcaster.OnInitializeComplete += OnInitializeComplete;
@@ -73,24 +74,31 @@ namespace Inventonater.BleHid
             _permissionsUI.DrawIssues();
             _statusUI.DrawUI();
 
-            var newTabIndex = GUILayout.Toolbar(_currentTabIndex, _activeTabNames, GUILayout.Height(60));
-            if (newTabIndex != _currentTabIndex)
+            if (!_bleHidManager.IsInitialized)
             {
-                CurrentTab.Hidden();
-                Logger.AddLogEntry($"Tab '{CurrentTab.TabName}' deactivated");
-
-                _currentTabIndex = newTabIndex;
-
-                CurrentTab.Shown();
-                Logger.AddLogEntry($"Tab '{CurrentTab.TabName}' activated");
+                GUILayout.Space(5);
+                GUILayout.Label("BleHidManager Not Initialized");
+                GUILayout.Space(5);
             }
+            else
+            {
+                var newTabIndex = GUILayout.Toolbar(_currentTabIndex, _activeTabNames, GUILayout.Height(60));
+                if (newTabIndex != _currentTabIndex)
+                {
+                    CurrentTab.Hidden();
+                    Logger.Log($"Tab '{CurrentTab.TabName}' deactivated");
 
-            if (CurrentTab.TabName == AccessibilityUI.Name) GUILayout.BeginVertical(GUI.skin.box); // No fixed height for Local tab
-            else GUILayout.BeginVertical(GUI.skin.box, GUILayout.Height(Screen.height * 0.45f));
+                    _currentTabIndex = newTabIndex;
 
-            DrawTabWithScroll(CurrentTab);
+                    CurrentTab.Shown();
+                    Logger.Log($"Tab '{CurrentTab.TabName}' activated");
+                }
 
-            GUILayout.EndVertical();
+                if (CurrentTab.TabName == AccessibilityUI.Name) GUILayout.BeginVertical(GUI.skin.box); // No fixed height for Local tab
+                else GUILayout.BeginVertical(GUI.skin.box, GUILayout.Height(Screen.height * 0.45f));
+                DrawTabWithScroll(CurrentTab);
+                GUILayout.EndVertical();
+            }
 
             Logger.DrawLogUI();
             GUILayout.EndArea();
@@ -120,32 +128,32 @@ namespace Inventonater.BleHid
         private void OnInitializeComplete(bool success, string message)
         {
             _statusUI.SetInitialized(success);
-            if (success) Logger.AddLogEntry("BLE HID initialized successfully: " + message);
-            else Logger.AddLogError("BLE HID initialization failed: " + message);
+            if (success) Logger.Log("BLE HID initialized successfully: " + message);
+            else Logger.Error("BLE HID initialization failed: " + message);
         }
 
         private void OnAdvertisingStateChanged(bool advertising, string message)
         {
-            if (advertising) Logger.AddLogEntry("BLE advertising started: " + message);
-            else Logger.AddLogEntry("BLE advertising stopped: " + message);
+            if (advertising) Logger.Log("BLE advertising started: " + message);
+            else Logger.Log("BLE advertising stopped: " + message);
         }
 
         private void OnConnectionStateChanged(bool connected, string deviceName, string deviceAddress)
         {
-            if (connected) Logger.AddLogEntry("Device connected: " + deviceName + " (" + deviceAddress + ")");
-            else Logger.AddLogEntry("Device disconnected");
+            if (connected) Logger.Log("Device connected: " + deviceName + " (" + deviceAddress + ")");
+            else Logger.Log("Device disconnected");
         }
 
         private void OnPairingStateChanged(string status, string deviceAddress)
         {
-            Logger.AddLogEntry("Pairing state changed: " + status + (deviceAddress != null ? " (" + deviceAddress + ")" : ""));
+            Logger.Log("Pairing state changed: " + status + (deviceAddress != null ? " (" + deviceAddress + ")" : ""));
         }
 
         private void OnError(int errorCode, string errorMessage)
         {
-            Logger.AddLogEntry("Error " + errorCode + ": " + errorMessage);
+            Logger.Log("Error " + errorCode + ": " + errorMessage);
         }
 
-        private void OnDebugLog(string message) => Logger.AddLogEntry("Debug: " + message);
+        private void OnDebugLog(string message) => Logger.Log("Debug: " + message);
     }
 }

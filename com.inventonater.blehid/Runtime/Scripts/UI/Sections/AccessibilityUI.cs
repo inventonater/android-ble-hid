@@ -1,6 +1,4 @@
 using System;
-using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
 
 namespace Inventonater.BleHid
@@ -10,8 +8,6 @@ namespace Inventonater.BleHid
     /// </summary>
     public class AccessibilityUI : SectionUI
     {
-        private const float BUTTON_HEIGHT = 60f;
-
         public const string Name = "Local";
         public override string TabName => Name;
 
@@ -133,9 +129,11 @@ namespace Inventonater.BleHid
             GUILayout.BeginHorizontal();
             GUILayout.FlexibleSpace();
 
-            Action action = () => NavigateTo(AccessibilityServiceBridge.NavigationDirection.Up);
+            const float BUTTON_HEIGHT = 60f;
+
+            void Action() => NavigateTo(AccessibilityServiceBridge.NavigationDirection.Up);
             GUILayoutOption[] options = { GUILayout.Height(BUTTON_HEIGHT), GUILayout.Width(Screen.width / 3) };
-            if (UIHelper.Button("Up", action, "Local Up pressed", options))
+            if (UIHelper.Button("Up", Action, "Local Up pressed", options))
             {
                 // Button action handled by ActionButton
             }
@@ -150,11 +148,11 @@ namespace Inventonater.BleHid
 
         private void ExecuteLocalControl(Func<AccessibilityServiceBridge, bool> action, string editorMessage)
         {
-            if (IsEditorMode) { LoggingManager.Instance.AddLogEntry(editorMessage); }
+            if (IsEditorMode) { LoggingManager.Instance.Log(editorMessage); }
             else
             {
                 try { action(_bridge); }
-                catch (Exception ex) { LoggingManager.Instance.AddLogEntry($"Error executing local control: {ex.Message}"); }
+                catch (Exception ex) { LoggingManager.Instance.Log($"Error executing local control: {ex.Message}"); }
             }
         }
 
