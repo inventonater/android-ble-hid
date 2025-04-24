@@ -18,6 +18,7 @@ namespace Inventonater.BleHid
         public static readonly GUILayoutOption[] LargeButtonOptions = new GUILayoutOption[] { GUILayout.Height(LargeButtonHeight) };
         public static readonly GUILayoutOption[] StandardSliderOptions = new GUILayoutOption[] { GUILayout.Height(StandardSliderHeight) };
         public static readonly GUILayoutOption[] LargeSliderOptions = new GUILayoutOption[] { GUILayout.Height(LargeSliderHeight) };
+        public static GUIStyle BoldStyle => new(GUI.skin.label) { fontStyle = FontStyle.Bold };
 
         public static void SetupGUIStyles()
         {

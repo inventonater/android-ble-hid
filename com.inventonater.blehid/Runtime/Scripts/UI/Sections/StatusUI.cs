@@ -8,12 +8,12 @@ namespace Inventonater.BleHid
     /// </summary>
     public class StatusUI
     {
-        private bool isInitialized = false;
-        private ConnectionBridge _connectionBridge;
+        private bool _isInitialized = false;
+        private readonly ConnectionBridge _connectionBridge;
         public StatusUI(ConnectionBridge connectionBridge) => _connectionBridge = connectionBridge;
         private bool IsEditorMode => Application.isEditor;
 
-        public void SetInitialized(bool initialized) => isInitialized = initialized;
+        public void SetInitialized(bool initialized) => _isInitialized = initialized;
 
         public void DrawUI()
         {
@@ -21,12 +21,13 @@ namespace Inventonater.BleHid
             DrawStatusInfo();
             DrawConnectionInfo();
             DrawAdvertisingButton();
+            DrawConnectedDevice();
             UIHelper.EndSection();
         }
 
         private void DrawStatusInfo()
         {
-            GUILayout.Label("Status: " + (isInitialized ? "Ready" : "Initializing..."));
+            GUILayout.Label("Status: " + (_isInitialized ? "Ready" : "Initializing..."));
         }
 
         private void DrawConnectionInfo()
@@ -48,7 +49,7 @@ namespace Inventonater.BleHid
 
         private void DrawAdvertisingButton()
         {
-            if (isInitialized || IsEditorMode)
+            if (_isInitialized || IsEditorMode)
             {
                 string[] labels = { _connectionBridge.IsAdvertising ? "Stop Advertising" : "Start Advertising" };
                 Action[] actions = { ToggleAdvertising };
@@ -72,6 +73,31 @@ namespace Inventonater.BleHid
         {
             if (_connectionBridge.IsAdvertising) _connectionBridge.StopAdvertising();
             else _connectionBridge.StartAdvertising();
+        }
+
+        private void DrawConnectedDevice()
+        {
+            if (!_connectionBridge.IsConnected) return;
+            if (string.IsNullOrEmpty(_connectionBridge.ConnectedDeviceAddress)) return;
+
+            var style = new GUIStyle(GUI.skin.box);
+            style.normal.background = UIHelper.MakeColorTexture(new Color(0.0f, 0.5f, 0.0f, 0.2f));
+
+            GUILayout.BeginVertical(style);
+            if (GUILayout.Button("Disconnect", GUILayout.Height(50))) _connectionBridge.Disconnect();
+
+            GUILayout.BeginHorizontal();
+            GUILayout.Label("Connected Device:", UIHelper.BoldStyle, GUILayout.Width(150));
+            GUILayout.Label(_connectionBridge.ConnectedDeviceName ?? "Unknown Device", new GUIStyle(GUI.skin.label) { fontStyle = FontStyle.Bold, normal = { textColor = Color.green } });
+            GUILayout.EndHorizontal();
+
+            GUILayout.BeginHorizontal();
+            GUILayout.Label("Address:", GUILayout.Width(150));
+            GUILayout.Label(_connectionBridge.ConnectedDeviceAddress);
+            GUILayout.EndHorizontal();
+            GUILayout.EndVertical();
+
+            GUILayout.Space(10);
         }
     }
 }

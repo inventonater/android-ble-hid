@@ -50,15 +50,13 @@ namespace Inventonater.BleHid
         private string slaveLatency = "--";
         private string supervisionTimeout = "--";
         private string mtuSize = "--";
-        private string rssi = "--";
-        private Color rssiColor = Color.white;
         private Color intervalColor = Color.white;
         private Color mtuColor = Color.white;
 
-        private ConnectionBridge ConnectionBridge { get; }
+        private readonly ConnectionBridge _connectionBridge;
         public ConnectionUI(ConnectionBridge connectionBridge, JavaBroadcaster javaBroadcaster)
         {
-            ConnectionBridge = connectionBridge;
+            _connectionBridge = connectionBridge;
             // Initialize performance metrics
             _lastFpsUpdateTime = Time.time;
             _currentFps = 0;
@@ -68,7 +66,6 @@ namespace Inventonater.BleHid
             Application.targetFrameRate = _targetFrameRate;
 
             javaBroadcaster.OnConnectionParametersChanged += HandleConnectionParametersChanged;
-            javaBroadcaster.OnRssiRead += HandleRssiRead;
             javaBroadcaster.OnConnectionParameterRequestComplete += HandleConnectionParameterRequestComplete;
             javaBroadcaster.OnConnectionStateChanged += HandleConnectionStateChanged;
 
@@ -97,8 +94,7 @@ namespace Inventonater.BleHid
             UIHelper.BeginSection("Connection Parameters");
 
             // Performance metrics
-            GUILayout.Label($"FPS: {_currentFps:F1}",
-                new GUIStyle(GUI.skin.label) { fontStyle = FontStyle.Bold });
+            GUILayout.Label($"FPS: {_currentFps:F1}", new GUIStyle(GUI.skin.label) { fontStyle = FontStyle.Bold });
 
             // Target framerate slider
             GUILayout.Label("Target FPS: Limits maximum frame rate");
@@ -115,7 +111,7 @@ namespace Inventonater.BleHid
             }
 
             GUILayout.Space(10);
-            bool connected = ConnectionBridge.IsConnected;
+            bool connected = _connectionBridge.IsConnected;
             // Status message
             GUILayout.Label("Status: " + (string.IsNullOrEmpty(statusMessage) ? (connected ? "Connected" : "Not Connected") : statusMessage));
 
@@ -126,34 +122,13 @@ namespace Inventonater.BleHid
             GUILayout.Label("Connection Info:", boldStyle);
 
             // Connection interval with expected range
-            GUIStyle intervalStyle = new GUIStyle(GUI.skin.label);
-            intervalStyle.normal.textColor = intervalColor;
-            string expectedRange = "";
-            if (requestedConnectionPriority >= 0 && requestedConnectionPriority < expectedIntervals.Length)
-                expectedRange = " (Expected: " + expectedIntervals[requestedConnectionPriority] + ")";
-            GUILayout.Label("Connection Interval: " + connectionInterval + " ms" + expectedRange, intervalStyle);
+            DrawConnectionIntervalLabel();
 
             GUILayout.Label("Slave Latency: " + slaveLatency);
             GUILayout.Label("Supervision Timeout: " + supervisionTimeout + " ms");
 
             // RSSI with color and signal strength indicator
-            GUIStyle rssiStyle = new GUIStyle(GUI.skin.label);
-            rssiStyle.normal.textColor = rssiColor;
-            string signalStrength = "";
-            if (rssi != "--")
-            {
-                int rssiValue = int.Parse(rssi);
-                if (rssiValue > -60)
-                    signalStrength = " (Excellent)";
-                else if (rssiValue > -70)
-                    signalStrength = " (Good)";
-                else if (rssiValue > -80)
-                    signalStrength = " (Fair)";
-                else
-                    signalStrength = " (Poor)";
-            }
-
-            GUILayout.Label("RSSI: " + rssi + " dBm" + signalStrength, rssiStyle);
+            _connectionBridge.DrawRssiLabel();
 
             // MTU Size with requested value
             GUIStyle mtuStyle = new GUIStyle(GUI.skin.label);
@@ -309,6 +284,18 @@ namespace Inventonater.BleHid
             UIHelper.EndSection();
         }
 
+        public void DrawConnectionIntervalLabel()
+        {
+            GUIStyle intervalStyle = new GUIStyle(GUI.skin.label);
+            intervalStyle.normal.textColor = intervalColor;
+            string expectedRange = "";
+            if (requestedConnectionPriority >= 0 && requestedConnectionPriority < expectedIntervals.Length)
+            {
+                expectedRange = " (Expected: " + expectedIntervals[requestedConnectionPriority] + ")";
+            }
+            GUILayout.Label("Connection Interval: " + connectionInterval + " ms" + expectedRange, intervalStyle);
+        }
+
         private void SetStatus(string message, Color color)
         {
             statusMessage = message;
@@ -318,48 +305,46 @@ namespace Inventonater.BleHid
 
         private void UpdateValuesFromManager()
         {
-            if (!ConnectionBridge.IsConnected)
+            if (!_connectionBridge.IsConnected)
             {
                 // Clear all parameter values
                 connectionInterval = "--";
                 slaveLatency = "--";
                 supervisionTimeout = "--";
-                rssi = "--";
                 mtuSize = "--";
                 return;
             }
 
             // Update parameter values
-            connectionInterval = ConnectionBridge.ConnectionInterval.ToString();
-            slaveLatency = ConnectionBridge.SlaveLatency.ToString();
-            supervisionTimeout = ConnectionBridge.SupervisionTimeout.ToString();
-            rssi = ConnectionBridge.Rssi.ToString();
-            mtuSize = ConnectionBridge.MtuSize.ToString();
+            connectionInterval = _connectionBridge.ConnectionInterval.ToString();
+            slaveLatency = _connectionBridge.SlaveLatency.ToString();
+            supervisionTimeout = _connectionBridge.SupervisionTimeout.ToString();
+            mtuSize = _connectionBridge.MtuSize.ToString();
         }
 
         private void RequestConnectionPriority(int priority)
         {
-            ConnectionBridge.RequestConnectionPriority(priority);
+            _connectionBridge.RequestConnectionPriority(priority);
         }
 
         private void RequestMtu()
         {
-            ConnectionBridge.RequestMtu(requestedMtu);
+            _connectionBridge.RequestMtu(requestedMtu);
         }
 
         private void SetTransmitPowerLevel(int level)
         {
-            ConnectionBridge.SetTransmitPowerLevel(level);
+            _connectionBridge.SetTransmitPowerLevel(level);
         }
 
         private void ReadRssi()
         {
-            ConnectionBridge.ReadRssi();
+            _connectionBridge.ReadRssi();
         }
 
         private void RefreshParameters()
         {
-            Dictionary<string, string> parameters = ConnectionBridge.GetConnectionParameters();
+            Dictionary<string, string> parameters = _connectionBridge.GetConnectionParameters();
             if (parameters != null)
             {
                 SetStatus("Parameters refreshed", Color.green);
@@ -421,19 +406,6 @@ namespace Inventonater.BleHid
                 mtuColor = Color.red; // Got significantly less than requested MTU
 
             SetStatus("Parameters updated", Color.green);
-        }
-
-        private void HandleRssiRead(int rssiValue)
-        {
-            rssi = rssiValue.ToString();
-
-            // Color-code the RSSI value
-            if (rssiValue > -60)
-                rssiColor = Color.green;
-            else if (rssiValue > -80)
-                rssiColor = Color.yellow;
-            else
-                rssiColor = Color.red;
         }
 
         private void HandleConnectionParameterRequestComplete(string parameterName, bool success, string actualValue)

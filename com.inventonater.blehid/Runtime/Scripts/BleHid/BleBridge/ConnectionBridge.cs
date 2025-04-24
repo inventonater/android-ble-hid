@@ -18,6 +18,8 @@ namespace Inventonater.BleHid
         public ConnectionBridge(JavaBridge java) => _java = java;
 
         private bool _isConnected;
+        private int _rssi;
+
         public bool IsConnected
         {
             get => _isConnected || Application.isEditor;
@@ -32,7 +34,44 @@ namespace Inventonater.BleHid
         public int SlaveLatency { get; internal set; }
         public int SupervisionTimeout { get; internal set; }
         public int MtuSize { get; internal set; }
-        public int Rssi { get; internal set; }
+
+        public int Rssi
+        {
+            get => _rssi;
+            internal set => _rssi = value;
+        }
+
+        public Color rssiColor
+        {
+            get
+            {
+                if (_rssi > -60) return Color.green;
+                if (_rssi > -80) return Color.yellow;
+                return Color.red;
+            }
+        }
+
+        public void DrawRssiLabel()
+        {
+            GUIStyle rssiStyle = new GUIStyle(GUI.skin.label);
+            rssiStyle.normal.textColor = rssiColor;
+
+            string signalStrength = "";
+            var rssi = Rssi.ToString();
+            if (rssi != "--")
+            {
+                int rssiValue = int.Parse(rssi);
+                if (rssiValue > -60) signalStrength = " (Excellent)";
+                else if (rssiValue > -70) signalStrength = " (Good)";
+                else if (rssiValue > -80) signalStrength = " (Fair)";
+                else signalStrength = " (Poor)";
+            }
+
+            var rssiString = "RSSI: " + rssi + " dBm" + signalStrength;
+
+            GUILayout.Label(rssiString, rssiStyle);
+        }
+
         public int TxPowerLevel { get; internal set; }
 
         public bool StartAdvertising() => _java.Call<bool>("startAdvertising");
@@ -62,7 +101,7 @@ namespace Inventonater.BleHid
             string identityUuid = GetOrCreateDeviceUuid();
             string deviceName = GetDeviceName();
 
-            Debug.Log($"Initializing BLE identity: {identityUuid}, Name: {deviceName}");
+            LoggingManager.Instance.Log($"Initializing BLE identity: {identityUuid}, Name: {deviceName}");
             return SetBleIdentity(identityUuid, deviceName);
         }
 
@@ -75,7 +114,7 @@ namespace Inventonater.BleHid
             PlayerPrefs.SetString(IDENTITY_CREATED_KEY, DateTime.Now.ToString("o"));
             PlayerPrefs.Save();
 
-            Debug.Log($"Created new BLE device identity: {newUuid}");
+            LoggingManager.Instance.Log($"Created new BLE device identity: {newUuid}");
             return newUuid;
         }
 
@@ -93,7 +132,7 @@ namespace Inventonater.BleHid
             PlayerPrefs.SetString(IDENTITY_UUID_KEY, newUuid);
             PlayerPrefs.SetString(IDENTITY_CREATED_KEY, DateTime.Now.ToString("o"));
             PlayerPrefs.Save();
-            Debug.Log($"Reset BLE device identity to: {newUuid}");
+            LoggingManager.Instance.Log($"Reset BLE device identity to: {newUuid}");
             return SetBleIdentity(newUuid, GetDeviceName());
         }
 
