@@ -86,8 +86,33 @@ dependencies {
     
     // Unity engine stubs
     def unityDir = "../unity-test/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary"
-    if (file("$unityDir/libs/unity-classes.jar").exists()) {
-        compileOnly files("$unityDir/libs/unity-classes.jar")
+    def unityJarFile = file("$unityDir/libs/unity-classes.jar")
+    
+    if (unityJarFile.exists()) {
+        compileOnly files(unityJarFile)
+    } else {
+        // Create a more useful error message for when the Unity JAR is missing
+        project.gradle.taskGraph.whenReady { graph ->
+            if (graph.hasTask(':compileReleaseJavaWithJavac') || graph.hasTask(':compileDebugJavaWithJavac')) {
+                def errorMessage = """
+                    ERROR: Unity classes JAR file not found at: ${unityJarFile.absolutePath}
+                    
+                    This file is required to build the BLE HID plugin and is generated when you build an APK from Unity.
+                    
+                    To fix this issue:
+                    1. Open the Unity project in unity-test directory
+                    2. Build an Android APK (Build Settings > Android > Build)
+                    3. This will generate the required Unity classes JAR file
+                    4. Then run this build again
+                    
+                    Alternatively, you can copy a pre-built unity-classes.jar file to:
+                    ${unityJarFile.absolutePath}
+                """
+                
+                logger.error(errorMessage)
+                throw new RuntimeException(errorMessage)
+            }
+        }
     }
 }
 
@@ -163,8 +188,9 @@ tasks.register('stampAarFile') {
             tempFile.delete()
             logger.lifecycle("Consolidated AAR file stamped: ${consolidatedAarFile.name}")
         } else {
-            logger.error("Consolidated AAR file not found: ${consolidatedAarFile.name}")
-            throw new GradleException("Consolidated AAR file not found for stamping")
+            def errorMessage = "Consolidated AAR file not found: ${consolidatedAarFile.name}"
+            logger.error(errorMessage)
+            throw new RuntimeException(errorMessage)
         }
     }
 }
