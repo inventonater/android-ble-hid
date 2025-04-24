@@ -194,6 +194,51 @@ public class BleGattServerManager {
     }
     
     /**
+     * Sets up HID notifications for a connected device.
+     * This method force-enables notifications for critical HID characteristics
+     * to ensure HID functionality works properly on reconnection.
+     * 
+     * @param device The connected device
+     */
+    public void setupHidNotifications(BluetoothDevice device) {
+        if (hidService == null || device == null) {
+            Log.e(TAG, "Cannot setup HID notifications: HID service or device is null");
+            return;
+        }
+        
+        Log.i(TAG, "Setting up HID notifications for device: " + device.getAddress());
+        
+        // Get the report characteristic
+        BluetoothGattCharacteristic reportChar = hidService.getCharacteristic(HidConstants.Uuids.HID_REPORT);
+        if (reportChar == null) {
+            Log.e(TAG, "Cannot setup HID notifications: Report characteristic not found");
+            return;
+        }
+        
+        // Get the CCCD
+        BluetoothGattDescriptor descriptor = reportChar.getDescriptor(CLIENT_CONFIG_UUID);
+        if (descriptor == null) {
+            Log.e(TAG, "Cannot setup HID notifications: Client config descriptor not found");
+            return;
+        }
+        
+        // Force-enable notifications by setting the descriptor value
+        descriptor.setValue(BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE);
+        Log.d(TAG, "Forced notification enable for HID report characteristic");
+        
+        // Send an initial notification to kickstart the HID functionality
+        if (reportChar.getValue() != null) {
+            boolean result = sendNotification(reportChar.getUuid(), reportChar.getValue());
+            Log.d(TAG, "Sent initial notification to kickstart HID: " + result);
+        } else {
+            // If no value is set, send an empty report
+            byte[] emptyReport = new byte[12]; // 12-byte combined report format
+            boolean result = sendNotification(reportChar.getUuid(), emptyReport);
+            Log.d(TAG, "Sent empty initial notification to kickstart HID: " + result);
+        }
+    }
+    
+    /**
      * Creates a client-side GATT connection to the specified device.
      * This allows us to perform operations like reading RSSI and 
      * requesting connection parameter changes.

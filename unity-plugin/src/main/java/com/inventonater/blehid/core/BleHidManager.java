@@ -572,6 +572,28 @@ public class BleHidManager {
         
         // Notify connection manager
         connectionManager.onDeviceConnected(device);
+        
+        // Kickstart HID functionality to ensure it works on reconnection
+        kickstartHidFunctionality(device);
+    }
+    
+    /**
+     * Kickstarts HID functionality for a connected device.
+     * This ensures HID capabilities are properly initialized on both new connections and reconnections.
+     * 
+     * @param device The connected device
+     */
+    private void kickstartHidFunctionality(BluetoothDevice device) {
+        Log.i(TAG, "Kickstarting HID functionality for device: " + device.getAddress());
+        
+        // 1. Force notification setup for HID characteristics
+        gattServerManager.setupHidNotifications(device);
+        
+        // 2. Send empty reports to initialize HID state
+        if (hidMediaService != null) {
+            // Send empty/zero reports for each HID function to initialize the state
+            hidMediaService.sendInitialReports();
+        }
     }
 
     /**

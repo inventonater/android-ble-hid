@@ -520,6 +520,39 @@ public class HidMediaService {
         return HidConstants.Combined.REPORT_MAP;
     }
     
+    /**
+     * Sends initial empty reports to kickstart HID functionality.
+     * This ensures HID capabilities are properly initialized on both new connections and reconnections.
+     */
+    public void sendInitialReports() {
+        Log.i(TAG, "Sending initial HID reports to kickstart functionality");
+        
+        connectedDevice = bleHidManager.getConnectedDevice();
+        if (connectedDevice == null) {
+            Log.e(TAG, "No connected device for sending initial reports");
+            return;
+        }
+        
+        try {
+            // 1. Send empty media report (all buttons released)
+            sendMediaReport(0);
+            
+            // 2. Send empty mouse report (no buttons, no movement)
+            reportHandler.sendMouseButtons(connectedDevice, 0);
+            movePointer(0, 0);
+            
+            // 3. Send empty keyboard report (no keys pressed)
+            reportHandler.releaseKeys(connectedDevice);
+            
+            // 4. Send a combined report with all values zeroed
+            sendCombinedReport(0, 0, 0, 0);
+            
+            Log.i(TAG, "Initial HID reports sent successfully");
+        } catch (Exception e) {
+            Log.e(TAG, "Error sending initial HID reports: " + e.getMessage(), e);
+        }
+    }
+    
     // ==================== GATT Server Callbacks ====================
     
     /**

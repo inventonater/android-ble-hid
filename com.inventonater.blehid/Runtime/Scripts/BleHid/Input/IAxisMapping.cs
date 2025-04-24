@@ -7,5 +7,6 @@ namespace Inventonater.BleHid
         public void SetValue(Vector3 absolutePosition);
         void Update(float time);
         void ResetPosition();
+        public IInputFilter Filter { get; }
     }
 }

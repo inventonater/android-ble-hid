@@ -30,10 +30,10 @@ namespace Inventonater.BleHid
         public string ConnectedDeviceAddress { get; internal set; }
 
         public bool IsAdvertising { get; internal set; }
-        public int ConnectionInterval { get; internal set; }
-        public int SlaveLatency { get; internal set; }
-        public int SupervisionTimeout { get; internal set; }
-        public int MtuSize { get; internal set; }
+        public int ConnectionInterval { get; private set; }
+        public int SlaveLatency { get; private set; }
+        public int SupervisionTimeout { get; private set; }
+        public int MtuSize { get; private set; }
 
         public int Rssi
         {
@@ -41,20 +41,18 @@ namespace Inventonater.BleHid
             internal set => _rssi = value;
         }
 
-        public Color rssiColor
-        {
-            get
+        public Color RssiColor =>
+            _rssi switch
             {
-                if (_rssi > -60) return Color.green;
-                if (_rssi > -80) return Color.yellow;
-                return Color.red;
-            }
-        }
+                > -60 => Color.green,
+                > -80 => Color.yellow,
+                _ => Color.red
+            };
 
         public void DrawRssiLabel()
         {
             GUIStyle rssiStyle = new GUIStyle(GUI.skin.label);
-            rssiStyle.normal.textColor = rssiColor;
+            rssiStyle.normal.textColor = RssiColor;
 
             string signalStrength = "";
             var rssi = Rssi.ToString();

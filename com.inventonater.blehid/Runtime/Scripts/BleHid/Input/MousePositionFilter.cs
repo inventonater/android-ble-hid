@@ -87,7 +87,7 @@ namespace Inventonater.BleHid
             if (filter is DoubleExponentialFilter) return InputFilterFactory.FilterType.DoubleExponential;
             if (filter is PredictiveFilter) return InputFilterFactory.FilterType.Predictive;
             if (filter is MuteFilter) return InputFilterFactory.FilterType.Mute;
-            if (filter is RawPassthrough) return InputFilterFactory.FilterType.None;
+            if (filter is NoFilter) return InputFilterFactory.FilterType.None;
             
             return InputFilterFactory.FilterType.OneEuro; // Default
         }

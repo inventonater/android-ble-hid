@@ -75,7 +75,7 @@ namespace Inventonater.BleHid
             switch (type)
             {
                 case FilterType.None:
-                    return new RawPassthrough();
+                    return new NoFilter();
 
                 case FilterType.OneEuro:
                     return new OneEuroFilter();

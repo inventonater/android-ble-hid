@@ -33,7 +33,7 @@ namespace Inventonater.BleHid
             AccessibilityServiceBridge = new AccessibilityServiceBridge(JavaBridge);
 
             JavaBroadcaster = gameObject.AddComponent<JavaBroadcaster>();
-            Mapping = gameObject.AddComponent<InputDeviceMapping>();
+            Mapping = new InputDeviceMapping();
             InputRouter = gameObject.AddComponent<InputRouter>();
             InputRouter.SetMapping(Mapping);
 

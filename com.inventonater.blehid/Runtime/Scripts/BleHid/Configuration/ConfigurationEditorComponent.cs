@@ -350,14 +350,12 @@ namespace Inventonater.BleHid
         private void DrawIncrementalAxisMapping(AxisMappingEntry mapping)
         {
             // Ensure settings dictionary exists
-            if (mapping.Settings == null)
-                mapping.Settings = new Dictionary<string, object>();
+            mapping.Settings ??= new Dictionary<string, object>();
             
             // Get current values with defaults
             float interval = 0.02f;
             
-            if (mapping.Settings.TryGetValue("interval", out var intervalObj))
-                interval = ConvertToFloat(intervalObj);
+            if (mapping.Settings.TryGetValue("interval", out var intervalObj)) interval = ConvertToFloat(intervalObj);
             
             // Draw settings
             GUILayout.BeginHorizontal();
@@ -381,8 +379,7 @@ namespace Inventonater.BleHid
         
         private void GenerateSerializedFilter(AxisMappingEntry mapping)
         {
-            if (mapping.Settings.TryGetValue("filter", out var filterTypeObj) && 
-                filterTypeObj is string filterTypeStr)
+            if (mapping.Settings.TryGetValue("filter", out var filterTypeObj) && filterTypeObj is string filterTypeStr)
             {
                 if (System.Enum.TryParse<InputFilterFactory.FilterType>(filterTypeStr, true, out var filterType))
                 {
@@ -428,11 +425,9 @@ namespace Inventonater.BleHid
         
         private void SaveConfiguration()
         {
-            if (_currentConfig != null)
-            {
-                _configManager.SaveConfiguration(_currentConfig, _configPath);
-                Debug.Log($"Saved configuration to {_configPath}");
-            }
+            if (_currentConfig == null) return;
+            _configManager.SaveConfiguration(_currentConfig, _configPath);
+            Debug.Log($"Saved configuration to {_configPath}");
         }
         
         private void ApplyConfiguration()
@@ -441,7 +436,9 @@ namespace Inventonater.BleHid
             {
                 if (_bleHidManager.InputRouter.Mapping != null)
                 {
-                    _bleHidManager.InputRouter.Mapping.ApplyConfiguration(_currentConfig);
+                    var inputDeviceLoader = new InputDeviceLoader(_configManager, _bleHidManager.BleBridge);
+                    var mapping = inputDeviceLoader.LoadConfiguration(_currentConfig);
+                    _bleHidManager.InputRouter.SetMapping(mapping);
                     Debug.Log("Applied configuration to input router");
                 }
                 else

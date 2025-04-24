@@ -5,8 +5,9 @@ using Newtonsoft.Json;
 namespace Inventonater.BleHid
 {
     [JsonObject(MemberSerialization.OptIn)]
-    public class RawPassthrough : IInputFilter
+    public class NoFilter : IInputFilter
     {
+        public static readonly NoFilter Instance = new();
         public string Name => "No Filter";
         public string Description => "Direct input with no processing (lowest latency)";
         public void Reset() { }

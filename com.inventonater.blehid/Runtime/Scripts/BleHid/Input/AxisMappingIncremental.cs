@@ -1,4 +1,5 @@
 using System;
+using NUnit.Framework.Internal.Filters;
 using Unity.Profiling;
 using UnityEngine;
 
@@ -16,6 +17,8 @@ namespace Inventonater.BleHid
         float _lastIncrement;
         static readonly ProfilerMarker _profileMarker = new("BleHid.AxisMappingIncremental.Update");
         private bool _active;
+
+        public IInputFilter Filter => NoFilter.Instance;
 
         public AxisMappingIncremental(BleHidAxis axis, Action increment, Action decrement, float interval = 0.02f)
         {

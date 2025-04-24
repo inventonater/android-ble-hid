@@ -13,7 +13,7 @@ namespace Inventonater.BleHid
         private float _muteTime;
         
         [JsonIgnore]
-        private Vector2 _lastPosition;
+        private Vector2? _lastPosition;
         
         public string Name => "Mute";
         public string Description => "Mutes all input (returns zero)";
@@ -25,7 +25,7 @@ namespace Inventonater.BleHid
         
         public void Reset()
         {
-            _lastPosition = Vector2.zero;
+            _lastPosition = null;
         }
         
         public void DrawParameterControls()
@@ -35,7 +35,8 @@ namespace Inventonater.BleHid
         
         public Vector2 Filter(Vector2 point, float timestamp)
         {
-            return Vector2.zero;
+            _lastPosition ??= point;
+            return _lastPosition.Value;
         }
     }
 }
