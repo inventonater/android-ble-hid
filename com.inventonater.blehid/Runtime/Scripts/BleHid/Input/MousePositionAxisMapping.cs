@@ -5,7 +5,7 @@ using UnityEngine;
 namespace Inventonater.BleHid
 {
     [Serializable]
-    public class MousePositionFilter : IAxisMapping
+    public class MousePositionAxisMapping : IAxisMapping
     {
         public IInputFilter Filter { get; private set; }
         public InputFilterFactory.FilterType CurrentFilterType { get; private set; }
@@ -20,7 +20,7 @@ namespace Inventonater.BleHid
         [SerializeField] private MouseBridge _mouse;
         [SerializeField] private bool _flipY;
 
-        public MousePositionFilter(MouseBridge mouse, bool flipY = true)
+        public MousePositionAxisMapping(MouseBridge mouse, bool flipY = true)
         {
             _mouse = mouse;
             _flipY = flipY;
@@ -45,15 +45,7 @@ namespace Inventonater.BleHid
             Filter = InputFilterFactory.CreateFilter(CurrentFilterType);
             Filter.Reset();
             
-            // Update the filter in the input router if available
-            SetFilterToMapping();
             LoggingManager.Instance.Log($"Changed input filter to: {Filter.Name}");
-        }
-
-        private void SetFilterToMapping()
-        {
-            var mousePositionfilter = BleHidManager.Instance.InputRouter?.Mapping?.MousePositionFilter;
-            if(mousePositionfilter != null) mousePositionfilter.Filter = Filter;
         }
 
         /// <summary>
@@ -69,9 +61,6 @@ namespace Inventonater.BleHid
             // Set the filter
             Filter = filter;
             Filter.Reset();
-            
-            // Update the filter in the input router if available
-            SetFilterToMapping();
             
             LoggingManager.Instance.Log($"Applied custom filter: {Filter.Name}");
         }

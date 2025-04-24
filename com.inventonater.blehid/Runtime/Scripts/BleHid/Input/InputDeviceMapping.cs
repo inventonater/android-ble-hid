@@ -21,8 +21,6 @@ namespace Inventonater.BleHid
     [DefaultExecutionOrder(ExecutionOrder.InputMapping)]
     public class InputDeviceMapping
     {
-        public MousePositionFilter MousePositionFilter { get; private set; }
-
         private readonly Dictionary<BleHidButtonEvent, List<Action>> _buttonMapping = new();
         public IReadOnlyDictionary<BleHidButtonEvent, List<Action>> ButtonMapping => _buttonMapping;
 
@@ -47,9 +45,9 @@ namespace Inventonater.BleHid
             Add(BleHidDirection.Right, BleHidConstants.KEY_RIGHT);
             Add(BleHidDirection.Down, BleHidConstants.KEY_DOWN);
             Add(BleHidDirection.Left, BleHidConstants.KEY_LEFT);
-            Add(new MousePositionFilter(Mouse));
+            Add(new MousePositionAxisMapping(Mouse));
 
-            var volumeMapping = new AxisMappingIncremental(BleHidAxis.Z, () => Media.VolumeUp(), () => Media.VolumeDown());
+            var volumeMapping = new SingleIncrementalAxisMapping(BleHidAxis.Z, () => Media.VolumeUp(), () => Media.VolumeDown());
 
             Add(BleHidButtonEvent.Id.Primary, BleHidButtonEvent.Action.Press, () => volumeMapping.Active = true);
             Add(new BleHidButtonEvent(BleHidButtonEvent.Id.Primary, BleHidButtonEvent.Action.Release), () => volumeMapping.Active = false);
@@ -57,12 +55,7 @@ namespace Inventonater.BleHid
         }
 
         private void Add(BleHidButtonEvent.Id id, BleHidButtonEvent.Action buttonAction, Action action) => Add(new BleHidButtonEvent(id, buttonAction), action);
-        public void Add(IAxisMapping axisMapping)
-        {
-            _axisMappings.Add(axisMapping);
-            Debug.Log("TODO fix this");
-            if (axisMapping is MousePositionFilter mousePositionFilter) MousePositionFilter = mousePositionFilter;
-        }
+        public void Add(IAxisMapping axisMapping) => _axisMappings.Add(axisMapping);
         public void Add(BleHidButtonEvent buttonEvent, Action action) => _buttonMapping.AppendValue(buttonEvent, action);
 
         public void Add(BleHidDirection dir, byte hidConstant) => Add(dir, () => Keyboard.SendKey(hidConstant));

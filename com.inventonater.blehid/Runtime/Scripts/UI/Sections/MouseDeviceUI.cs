@@ -1,5 +1,7 @@
 using UnityEngine;
 using System;
+using System.Linq;
+using JetBrains.Annotations;
 
 namespace Inventonater.BleHid
 {
@@ -16,7 +18,8 @@ namespace Inventonater.BleHid
         private Rect touchpadRect = new(Screen.width / 2 - 150, Screen.height / 2 - 100, 300, 200);
 
         private readonly MouseBridge _mouse;
-        private MousePositionFilter _mousePositionFilter;
+        
+        [CanBeNull] private MousePositionAxisMapping _mousePositionAxisMapping;
         private readonly string[] _buttonLabels = { "Left Click", "Middle Click", "Right Click" };
         private readonly string[] _buttonMessages = { "Left click pressed", "Middle click pressed", "Right click pressed" };
         private readonly Action[] _buttonActions;
@@ -32,7 +35,11 @@ namespace Inventonater.BleHid
             BleHidManager.Instance.InputRouter.WhenMappingChanged += HandleMappingChanged;
         }
 
-        private void HandleMappingChanged(InputDeviceMapping mapping) => _mousePositionFilter = mapping.MousePositionFilter;
+        private void HandleMappingChanged(InputDeviceMapping mapping)
+        {
+            Debug.Log("TODO improve MouseDeviceUI HandleMappingChanged");
+            _mousePositionAxisMapping = mapping.AxisMappings.FirstOrDefault(m => m is MousePositionAxisMapping) as MousePositionAxisMapping;
+        }
 
         public override void Shown()
         {
@@ -77,7 +84,7 @@ namespace Inventonater.BleHid
         public override void DrawUI()
         {
             DrawTouchpad();
-            if (_mousePositionFilter != null) DrawFilterSection();
+            DrawFilterSection();
             DrawMouseButtons();
         }
 
@@ -109,18 +116,20 @@ namespace Inventonater.BleHid
 
         private void DrawFilterSection()
         {
+            if(_mousePositionAxisMapping == null) return;
+
             UIHelper.BeginSection("Mouse Tuning");
-            IInputFilter filter = _mousePositionFilter.Filter;
+            IInputFilter filter = _mousePositionAxisMapping.Filter;
 
             // --- GLOBAL SETTINGS SECTION ---
             GUILayout.Label("Global Speed: Adjusts overall mouse movement speed");
-            _mousePositionFilter.GlobalScale =
-                UIHelper.SliderWithLabels("Slow", _mousePositionFilter.GlobalScale, 0.25f, 10.0f, "Fast", "Global Speed: {0:F2}×", UIHelper.StandardSliderOptions);
+            _mousePositionAxisMapping.GlobalScale =
+                UIHelper.SliderWithLabels("Slow", _mousePositionAxisMapping.GlobalScale, 0.25f, 10.0f, "Fast", "Global Speed: {0:F2}×", UIHelper.StandardSliderOptions);
             GUILayout.Label("Horizontal Speed: Adjusts left-right sensitivity");
-            _mousePositionFilter.HorizontalSensitivity = UIHelper.SliderWithLabels("Low", _mousePositionFilter.HorizontalSensitivity, 1.0f, 10.0f, "High", "Horizontal Speed: {0:F1}",
+            _mousePositionAxisMapping.HorizontalSensitivity = UIHelper.SliderWithLabels("Low", _mousePositionAxisMapping.HorizontalSensitivity, 1.0f, 10.0f, "High", "Horizontal Speed: {0:F1}",
                 UIHelper.StandardSliderOptions);
             GUILayout.Label("Vertical Speed: Adjusts up-down sensitivity");
-            _mousePositionFilter.VerticalSensitivity = UIHelper.SliderWithLabels("Low", _mousePositionFilter.VerticalSensitivity, 1.0f, 10.0f, "High", "Vertical Speed: {0:F1}",
+            _mousePositionAxisMapping.VerticalSensitivity = UIHelper.SliderWithLabels("Low", _mousePositionAxisMapping.VerticalSensitivity, 1.0f, 10.0f, "High", "Vertical Speed: {0:F1}",
                 UIHelper.StandardSliderOptions);
 
             GUILayout.Space(10);
@@ -133,9 +142,9 @@ namespace Inventonater.BleHid
 
             foreach (var filterType in InputFilterFactory.GetAvailableFilterTypes())
             {
-                bool isSelected = filterType == _mousePositionFilter.CurrentFilterType;
+                bool isSelected = filterType == _mousePositionAxisMapping.CurrentFilterType;
                 GUI.enabled = !isSelected;
-                if (GUILayout.Button(InputFilterFactory.GetFilterName(filterType), isSelected ? GUI.skin.box : GUI.skin.button, GUILayout.Height(30))) _mousePositionFilter.SetInputFilter(filterType);
+                if (GUILayout.Button(InputFilterFactory.GetFilterName(filterType), isSelected ? GUI.skin.box : GUI.skin.button, GUILayout.Height(30))) _mousePositionAxisMapping.SetInputFilter(filterType);
                 GUI.enabled = true;
             }
 

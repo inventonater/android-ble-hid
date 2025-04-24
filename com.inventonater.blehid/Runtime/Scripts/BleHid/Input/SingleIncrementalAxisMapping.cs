@@ -1,11 +1,10 @@
 using System;
-using NUnit.Framework.Internal.Filters;
 using Unity.Profiling;
 using UnityEngine;
 
 namespace Inventonater.BleHid
 {
-    public class AxisMappingIncremental : IAxisMapping
+    public class SingleIncrementalAxisMapping : IAxisMapping
     {
         private readonly BleHidAxis _axis;
         private readonly Action _increment;
@@ -20,7 +19,7 @@ namespace Inventonater.BleHid
 
         public IInputFilter Filter => NoFilter.Instance;
 
-        public AxisMappingIncremental(BleHidAxis axis, Action increment, Action decrement, float interval = 0.02f)
+        public SingleIncrementalAxisMapping(BleHidAxis axis, Action increment, Action decrement, float interval = 0.02f)
         {
             _axis = axis;
             _increment = increment;

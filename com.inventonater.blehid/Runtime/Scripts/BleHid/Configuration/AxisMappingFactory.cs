@@ -29,7 +29,7 @@ namespace Inventonater.BleHid
             }
         }
         
-        private MousePositionFilter CreateMouseAxisMapping(AxisMappingEntry entry)
+        private MousePositionAxisMapping CreateMouseAxisMapping(AxisMappingEntry entry)
         {
             bool flipY = true;
             float horizontalSensitivity = 3.0f;
@@ -73,7 +73,7 @@ namespace Inventonater.BleHid
                 }
             }
             
-            var mouseFilter = new MousePositionFilter(_bleBridge.Mouse, flipY);
+            var mouseFilter = new MousePositionAxisMapping(_bleBridge.Mouse, flipY);
             mouseFilter.HorizontalSensitivity = horizontalSensitivity;
             mouseFilter.VerticalSensitivity = verticalSensitivity;
             
@@ -102,7 +102,7 @@ namespace Inventonater.BleHid
             return mouseFilter;
         }
         
-        private AxisMappingIncremental CreateIncrementalAxisMapping(AxisMappingEntry entry)
+        private SingleIncrementalAxisMapping CreateIncrementalAxisMapping(AxisMappingEntry entry)
         {
             BleHidAxis axis = BleHidAxis.Z;
             float interval = 0.02f;
@@ -140,10 +140,10 @@ namespace Inventonater.BleHid
                 decrementAction = _actionResolver.ResolveAction(entry.DecrementAction);
             }
             
-            return new AxisMappingIncremental(axis, incrementAction, decrementAction, interval);
+            return new SingleIncrementalAxisMapping(axis, incrementAction, decrementAction, interval);
         }
         
-        private void ApplyFilterTypeAndSettings(MousePositionFilter mouseFilter, string filterType, Dictionary<string, object> filterSettings)
+        private void ApplyFilterTypeAndSettings(MousePositionAxisMapping mouseAxisMapping, string filterType, Dictionary<string, object> filterSettings)
         {
             // Set filter type
             var filterTypeEnum = InputFilterFactory.FilterType.OneEuro;
@@ -152,12 +152,12 @@ namespace Inventonater.BleHid
                 filterTypeEnum = parsedFilterType;
             }
             
-            mouseFilter.SetInputFilter(filterTypeEnum);
+            mouseAxisMapping.SetInputFilter(filterTypeEnum);
             
             // Apply filter-specific settings
-            if (filterSettings != null && mouseFilter.Filter != null)
+            if (filterSettings != null && mouseAxisMapping.Filter != null)
             {
-                ApplyFilterSettings(mouseFilter.Filter, filterSettings);
+                ApplyFilterSettings(mouseAxisMapping.Filter, filterSettings);
             }
         }
         
