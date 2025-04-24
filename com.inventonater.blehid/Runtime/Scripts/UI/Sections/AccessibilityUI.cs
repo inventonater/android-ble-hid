@@ -1,5 +1,6 @@
 using System;
 using System.Collections;
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace Inventonater.BleHid
@@ -9,40 +10,88 @@ namespace Inventonater.BleHid
     /// </summary>
     public class AccessibilityUI : SectionUI
     {
+        private const float BUTTON_HEIGHT = 60f;
+
         public const string Name = "Local";
         public override string TabName => Name;
 
-        private bool localControlInitialized = false;
-        private bool hasCameraPermission = false;
-        private MonoBehaviour owner;
+        private readonly AccessibilityServiceBridge _bridge;
+        private readonly string[] _mediaRow1Labels;
+        private readonly Action[] _mediaRow1Actions;
+        private readonly string[] _mediaRow2Labels;
+        private readonly Action[] _mediaRow2Actions;
+        private readonly string[] _cameraButtonLabels;
+        private readonly Action[] _cameraButtonActions;
+        private readonly string[] _navRow1Labels;
+        private readonly Action[] _navRow1Actions;
+        private readonly string[] _navRow1EditorMessages;
+        private readonly string[] _navRow3Labels;
+        private readonly Action[] _navRow3Actions;
+        private readonly string[] _navRow3EditorMessages;
 
-        // Button height constant
-        private const float BUTTON_HEIGHT = 60f;
+        public AccessibilityUI(AccessibilityServiceBridge bridge)
+        {
+            _bridge = bridge;
 
-        public AccessibilityUI(MonoBehaviour owner) => this.owner = owner;
-        public override void Shown() { }
-        public override void Hidden() { }
-        public override void Update() { }
+            _mediaRow1Labels = new[] { "Previous", "Play/Pause", "Next" };
+            _mediaRow1Actions = new Action[]
+            {
+                () => ExecuteLocalControl(l => l.PreviousTrack(), "Local Previous track pressed"),
+                () => ExecuteLocalControl(l => l.PlayPause(), "Local Play/Pause pressed"),
+                () => ExecuteLocalControl(l => l.NextTrack(), "Local Next track pressed")
+            };
+
+            _mediaRow2Labels = new[] { "Vol -", "Mute", "Vol +" };
+            _mediaRow2Actions = new Action[]
+            {
+                () => ExecuteLocalControl(l => l.VolumeDown(), "Local Volume down pressed"),
+                () => ExecuteLocalControl(l => l.Mute(), "Local Mute pressed"),
+                () => ExecuteLocalControl(l => l.VolumeUp(), "Local Volume up pressed")
+            };
+
+            _cameraButtonLabels = new[] { "Launch Camera", "Launch Video" };
+            _cameraButtonActions = new Action[]
+            {
+                () => ExecuteLocalControl(l => l.LaunchCameraApp(), "Launch Camera pressed (not available in editor)"),
+                () => ExecuteLocalControl(l => l.LaunchVideoCapture(), "Launch Video pressed (not available in editor)")
+            };
+
+            // Navigation row 1 - Back, Home, Recents
+            _navRow1Labels = new[] { "Back", "Home", "Recents" };
+            _navRow1Actions = new Action[]
+            {
+                () => NavigateTo(AccessibilityServiceBridge.NavigationDirection.Back),
+                () => NavigateTo(AccessibilityServiceBridge.NavigationDirection.Home),
+                () => NavigateTo(AccessibilityServiceBridge.NavigationDirection.Recents)
+            };
+            _navRow1EditorMessages = new[] { "Local Back pressed", "Local Home pressed", "Local Recents pressed" };
+
+            _navRow3Labels = new[] { "Left", "Down", "Right" };
+            _navRow3Actions = new Action[]
+            {
+                () => NavigateTo(AccessibilityServiceBridge.NavigationDirection.Left),
+                () => NavigateTo(AccessibilityServiceBridge.NavigationDirection.Down),
+                () => NavigateTo(AccessibilityServiceBridge.NavigationDirection.Right)
+            };
+            _navRow3EditorMessages = new[] { "Local Left pressed", "Local Down pressed", "Local Right pressed" };
+        }
+
+        public override void Shown()
+        {
+        }
+
+        public override void Hidden()
+        {
+        }
+
+        public override void Update()
+        {
+        }
 
         public override void DrawUI()
         {
-            if (!localControlInitialized) owner.StartCoroutine(InitializeLocalControl());
-
-            // Check if we have an initialized instance
-            bool canUseLocalControls = CheckCanUseLocalControls();
-
-            if (!canUseLocalControls && !IsEditorMode)
-            {
-                ShowInitializingUI();
-                return;
-            }
-
-            // Always display the UI, even when accessibility service is not enabled
-            // If accessibility is not enabled, the parent UI manager will show an error dialog
-
             UIHelper.BeginSection("Local Device Control");
 
-            // Three main sections with consistent spacing
             DrawMediaControlsSection();
             GUILayout.Space(10);
 
@@ -50,7 +99,6 @@ namespace Inventonater.BleHid
             GUILayout.Space(10);
 
             DrawNavigationSection();
-
             UIHelper.EndSection();
         }
 
@@ -58,37 +106,8 @@ namespace Inventonater.BleHid
         private void DrawMediaControlsSection()
         {
             UIHelper.BeginSection("Media Controls");
-
-            // Media controls row 1 - Previous, Play/Pause, Next
-            string[] mediaRow1Labels = { "Previous", "Play/Pause", "Next" };
-            Action[] mediaRow1Actions =
-            {
-                () => ExecuteLocalControl(l => l.PreviousTrack(), "Local Previous track pressed"),
-                () => ExecuteLocalControl(l => l.PlayPause(), "Local Play/Pause pressed"),
-                () => ExecuteLocalControl(l => l.NextTrack(), "Local Next track pressed")
-            };
-
-            UIHelper.ActionButtonRow(
-                mediaRow1Labels,
-                mediaRow1Actions,
-                mediaRow1Labels,
-                UIHelper.StandardButtonOptions);
-
-            // Media controls row 2 - Vol-, Mute, Vol+
-            string[] mediaRow2Labels = { "Vol -", "Mute", "Vol +" };
-            Action[] mediaRow2Actions =
-            {
-                () => ExecuteLocalControl(l => l.VolumeDown(), "Local Volume down pressed"),
-                () => ExecuteLocalControl(l => l.Mute(), "Local Mute pressed"),
-                () => ExecuteLocalControl(l => l.VolumeUp(), "Local Volume up pressed")
-            };
-
-            UIHelper.ActionButtonRow(
-                mediaRow2Labels,
-                mediaRow2Actions,
-                mediaRow2Labels,
-                UIHelper.StandardButtonOptions);
-
+            UIHelper.ActionButtonRow(_mediaRow1Labels, _mediaRow1Actions, _mediaRow1Labels, UIHelper.StandardButtonOptions);
+            UIHelper.ActionButtonRow(_mediaRow2Labels, _mediaRow2Actions, _mediaRow2Labels, UIHelper.StandardButtonOptions);
             UIHelper.EndSection();
         }
 
@@ -99,21 +118,7 @@ namespace Inventonater.BleHid
             // Camera button position label
             GUILayout.Label("Camera Button Position");
             GUILayout.Space(5);
-
-            // Camera launch buttons
-            string[] cameraButtonLabels = { "Launch Camera", "Launch Video" };
-            Action[] cameraButtonActions =
-            {
-                () => ExecuteLocalControl(l => l.LaunchCameraApp(), "Launch Camera pressed (not available in editor)"),
-                () => ExecuteLocalControl(l => l.LaunchVideoCapture(), "Launch Video pressed (not available in editor)")
-            };
-
-            UIHelper.ActionButtonRow(
-                cameraButtonLabels,
-                cameraButtonActions,
-                cameraButtonLabels,
-                UIHelper.StandardButtonOptions);
-
+            UIHelper.ActionButtonRow(_cameraButtonLabels, _cameraButtonActions, _cameraButtonLabels, UIHelper.StandardButtonOptions);
             UIHelper.EndSection();
         }
 
@@ -122,28 +127,14 @@ namespace Inventonater.BleHid
             UIHelper.BeginSection("Navigation");
 
             GUILayout.Space(5);
-
-            // Navigation row 1 - Back, Home, Recents
-            string[] navRow1Labels = { "Back", "Home", "Recents" };
-            Action[] navRow1Actions =
-            {
-                () => NavigateTo(BleHidLocalControl.NavigationDirection.Back),
-                () => NavigateTo(BleHidLocalControl.NavigationDirection.Home),
-                () => NavigateTo(BleHidLocalControl.NavigationDirection.Recents)
-            };
-
-            UIHelper.ActionButtonRow(
-                navRow1Labels,
-                navRow1Actions,
-                new string[] { "Local Back pressed", "Local Home pressed", "Local Recents pressed" },
-                UIHelper.StandardButtonOptions);
+            UIHelper.ActionButtonRow(_navRow1Labels, _navRow1Actions, _navRow1EditorMessages, UIHelper.StandardButtonOptions);
 
             // Navigation row 2 - Up button centered
             GUILayout.BeginHorizontal();
             GUILayout.FlexibleSpace();
 
-            Action action = () => NavigateTo(BleHidLocalControl.NavigationDirection.Up);
-            GUILayoutOption[] options = new GUILayoutOption[] { GUILayout.Height(BUTTON_HEIGHT), GUILayout.Width(Screen.width / 3) };
+            Action action = () => NavigateTo(AccessibilityServiceBridge.NavigationDirection.Up);
+            GUILayoutOption[] options = { GUILayout.Height(BUTTON_HEIGHT), GUILayout.Width(Screen.width / 3) };
             if (UIHelper.Button("Up", action, "Local Up pressed", options))
             {
                 // Button action handled by ActionButton
@@ -151,140 +142,25 @@ namespace Inventonater.BleHid
 
             GUILayout.FlexibleSpace();
             GUILayout.EndHorizontal();
-
-            // Navigation row 3 - Left, Down, Right
-            string[] navRow3Labels = { "Left", "Down", "Right" };
-            Action[] navRow3Actions =
-            {
-                () => NavigateTo(BleHidLocalControl.NavigationDirection.Left),
-                () => NavigateTo(BleHidLocalControl.NavigationDirection.Down),
-                () => NavigateTo(BleHidLocalControl.NavigationDirection.Right)
-            };
-
-            UIHelper.ActionButtonRow(
-                navRow3Labels,
-                navRow3Actions,
-                new string[] { "Local Left pressed", "Local Down pressed", "Local Right pressed" },
-                UIHelper.StandardButtonOptions);
+            UIHelper.ActionButtonRow(_navRow3Labels, _navRow3Actions, _navRow3EditorMessages, UIHelper.StandardButtonOptions);
 
             UIHelper.EndSection();
         }
 
 
-        private void ExecuteLocalControl(Func<BleHidLocalControl, bool> action, string editorMessage)
+        private void ExecuteLocalControl(Func<AccessibilityServiceBridge, bool> action, string editorMessage)
         {
-            if (IsEditorMode)
-            {
-                LoggingManager.Instance.AddLogEntry(editorMessage);
-            }
+            if (IsEditorMode) { LoggingManager.Instance.AddLogEntry(editorMessage); }
             else
             {
-                try
-                {
-                    action(BleHidLocalControl.Instance);
-                }
-                catch (Exception ex)
-                {
-                    LoggingManager.Instance.AddLogEntry($"Error executing local control: {ex.Message}");
-                }
+                try { action(_bridge); }
+                catch (Exception ex) { LoggingManager.Instance.AddLogEntry($"Error executing local control: {ex.Message}"); }
             }
         }
 
-        private void NavigateTo(BleHidLocalControl.NavigationDirection direction)
+        private void NavigateTo(AccessibilityServiceBridge.NavigationDirection direction)
         {
             ExecuteLocalControl(l => l.Navigate(direction), $"Local {direction} pressed");
-        }
-
-        private bool CheckCanUseLocalControls()
-        {
-            if (IsEditorMode) return true;
-
-            try
-            {
-                var instance = BleHidLocalControl.Instance;
-                if (instance != null)
-                {
-                    try
-                    {
-                        return true;
-                    }
-                    catch (Exception)
-                    {
-                        return false;
-                    }
-                }
-            }
-            catch (Exception)
-            {
-                // Fall through to return false
-            }
-
-            return false;
-        }
-
-        private void ShowInitializingUI()
-        {
-            UIHelper.BeginSection("Local Device Control");
-
-            GUILayout.BeginVertical(GUI.skin.box);
-            GUILayout.Label("Initializing local control...", GUI.skin.box);
-            GUILayout.Space(10);
-            GUILayout.Label("Please wait while the local control features are being initialized...");
-            GUILayout.EndVertical();
-
-            UIHelper.EndSection();
-        }
-
-
-        /// <summary>
-        /// Initialize the local control component for Android or safely handle in Editor mode
-        /// </summary>
-        private IEnumerator InitializeLocalControl()
-        {
-            if (localControlInitialized)
-                yield break;
-
-            localControlInitialized = true;
-
-            LoggingManager.Instance.AddLogEntry("Initializing local control...");
-
-#if UNITY_ANDROID && !UNITY_EDITOR
-            // Android-specific initialization
-            BleHidLocalControl localControlInstance = null;
-
-            try
-            {
-                localControlInstance = BleHidLocalControl.Instance;
-                if (localControlInstance == null)
-                {
-                    Logger.AddLogEntry("Failed to create local control instance");
-                    yield break;
-                }
-            }
-            catch (System.Exception e)
-            {
-                Logger.AddLogEntry("Error creating local control instance: " + e.Message);
-                yield break;
-            }
-
-            // Now initialize with retries
-            yield return owner.StartCoroutine(localControlInstance.Initialize(5));
-
-            // Check if initialization was successful
-            if (localControlInstance == null || !localControlInstance.IsAccessibilityServiceEnabled())
-            {
-                Logger.AddLogEntry("Local control initialized, but accessibility service not enabled");
-            }
-            else
-            {
-                Logger.AddLogEntry("Local control fully initialized");
-            }
-#else
-            // Editor-mode initialization
-            LoggingManager.Instance.AddLogEntry("Editor mode: Local control simulated initialization");
-            yield return new WaitForSeconds(0.5f); // Simulate initialization delay
-            LoggingManager.Instance.AddLogEntry("Editor mode: Local control initialization complete");
-#endif
         }
     }
 }

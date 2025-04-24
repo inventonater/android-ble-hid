@@ -16,6 +16,8 @@ namespace Inventonater.BleHid
         public InputRouter InputRouter { get; private set; }
         public InputDeviceMapping Mapping { get; private set; }
         public BleBridge BleBridge { get; private set; }
+        public AccessibilityServiceBridge AccessibilityServiceBridge { get; private set; }
+        public BleHidPermissionHandler BleHidPermissionHandler { get; private set; }
 
         public static BleHidManager Instance => FindFirstObjectByType<BleHidManager>();
 
@@ -27,6 +29,8 @@ namespace Inventonater.BleHid
 
             JavaBridge = new JavaBridge();
             BleBridge = new BleBridge(JavaBridge);
+            BleHidPermissionHandler = new BleHidPermissionHandler();
+            AccessibilityServiceBridge = new AccessibilityServiceBridge(JavaBridge);
             JavaBroadcaster = gameObject.AddComponent<JavaBroadcaster>();
             Mapping = gameObject.AddComponent<InputDeviceMapping>();
             InputRouter = gameObject.AddComponent<InputRouter>();
@@ -43,6 +47,8 @@ namespace Inventonater.BleHid
 
             Debug.Log("BleHidManager initialized");
         }
+
+
 
         private void Start()
         {

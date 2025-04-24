@@ -11,7 +11,7 @@ namespace Inventonater.BleHid
     /// Specifically manages Bluetooth permissions needed for Android 12+ devices 
     /// and other runtime permissions required by the plugin.
     /// </summary>
-    public static class BleHidPermissionHandler
+    public class BleHidPermissionHandler
     {
         public class AndroidPermission
         {
@@ -32,18 +32,18 @@ namespace Inventonater.BleHid
             new() { Name = "Notifications", PermissionString = "android.permission.POST_NOTIFICATIONS", Description = "Required for sending notifications" }
         };
 
-        public static IEnumerable<AndroidPermission> GetMissingPermissions() => Permissions.Where(p => !HasUserAuthorizedPermission(p));
+        public IEnumerable<AndroidPermission> GetMissingPermissions() => Permissions.Where(p => !HasUserAuthorizedPermission(p));
 
         /// <summary>
         /// Request Bluetooth permissions required for Android 12+ (API level 31+)
         /// </summary>
-        public static void RequestAllPermissions()
+        public void RequestAllPermissions()
         {
             Debug.Log("Requesting Android Bluetooth permissions");
             foreach (AndroidPermission permission in Permissions) RequestPermission(permission);
         }
 
-        public static void OpenAppSettings()
+        public void OpenAppSettings()
         {
             try
             {
@@ -70,7 +70,7 @@ namespace Inventonater.BleHid
             catch (Exception e) { LoggingManager.Instance.AddLogEntry("Failed to open app settings: " + e.Message); }
         }
 
-        public static void RequestPermission(AndroidPermission permission)
+        public void RequestPermission(AndroidPermission permission)
         {
             if (HasUserAuthorizedPermission(permission)) return;
             RequestPermissionInternal(permission);
