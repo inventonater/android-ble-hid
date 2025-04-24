@@ -97,31 +97,21 @@ namespace Inventonater.BleHid
         {
             try
             {
-                if (File.Exists(logFilePath))
-                {
-                    string[] allLines = File.ReadAllLines(logFilePath);
-                    int linesToRead = Math.Min(maxLines, allLines.Length);
+                if (!File.Exists(logFilePath)) return "No log file entries found.";
 
-                    if (linesToRead > 0)
-                    {
-                        string[] selectedLines = new string[linesToRead];
-                        Array.Copy(allLines, allLines.Length - linesToRead, selectedLines, 0, linesToRead);
-                        return string.Join("\n", selectedLines);
-                    }
+                string[] allLines = File.ReadAllLines(logFilePath);
+                int linesToRead = Math.Min(maxLines, allLines.Length);
+
+                if (linesToRead > 0)
+                {
+                    string[] selectedLines = new string[linesToRead];
+                    Array.Copy(allLines, allLines.Length - linesToRead, selectedLines, 0, linesToRead);
+                    return string.Join("\n", selectedLines);
                 }
 
                 return "No log file entries found.";
             }
             catch (Exception ex) { return $"Error reading log file: {ex.Message}"; }
-        }
-
-        /// <summary>
-        /// Enable or disable logging to file
-        /// </summary>
-        public bool LogToFile
-        {
-            get => logToFile;
-            set => logToFile = value;
         }
     }
 }

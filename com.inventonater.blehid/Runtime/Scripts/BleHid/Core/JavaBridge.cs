@@ -8,7 +8,7 @@ namespace Inventonater.BleHid
     {
         private AndroidJavaObject JavaObject { get; }
         static readonly ProfilerMarker _marker = new("BleHid.BleBridgeCaller.Call");
-        private readonly bool _verbose = true;
+        private readonly bool _verbose = false;
 
         public JavaBridge()
         {
@@ -27,7 +27,8 @@ namespace Inventonater.BleHid
         public void Call(string methodName, params object[] args)
         {
             using var profilerMarker = _marker.Auto();
-            if (_verbose) LoggingManager.Instance.Log($" -- {methodName} {string.Join(", ", args)}");
+            Log($"JavaBridge.Call {methodName} {string.Join(", ", args)}");
+
             if (Application.platform != RuntimePlatform.Android) return;
 
             try { JavaObject?.Call(methodName, args); }
@@ -37,12 +38,24 @@ namespace Inventonater.BleHid
         public T Call<T>(string methodName, params object[] args)
         {
             using var profilerMarker = _marker.Auto();
-            if (_verbose) LoggingManager.Instance.Log($" -- {methodName} {string.Join(", ", args)}");
+            Log($"JavaBridge.Call {methodName} {string.Join(", ", args)}");
+
             if (Application.platform != RuntimePlatform.Android) return default;
 
-            try { return JavaObject.Call<T>(methodName, args); }
+            try
+            {
+                var result = JavaObject.Call<T>(methodName, args);
+                Log($"JavaBridge.Call.Result: {result}");
+                return result;
+            }
             catch (Exception e) { LoggingManager.Instance.AddLogException(e); }
             return default;
+        }
+
+        private void Log(string msg)
+        {
+            if (_verbose) LoggingManager.Instance.Log(msg);
+            else Debug.Log(msg);
         }
     }
 }

@@ -28,39 +28,56 @@ namespace Inventonater.BleHid
         {
             new() { Name = "Bluetooth Connect", PermissionString = "android.permission.BLUETOOTH_CONNECT", Description = "Required to connect to and control Bluetooth devices" },
             new() { Name = "Bluetooth Scan", PermissionString = "android.permission.BLUETOOTH_SCAN", Description = "Required to scan for nearby Bluetooth devices" },
-            new() { Name = "Bluetooth Advertise", PermissionString = "android.permission.BLUETOOTH_ADVERTISE", Description = "Required to advertise this device to other Bluetooth devices" },
+            new()
+            {
+                Name = "Bluetooth Advertise", PermissionString = "android.permission.BLUETOOTH_ADVERTISE",
+                Description = "Required to advertise this device to other Bluetooth devices"
+            },
             new() { Name = "Camera", PermissionString = "android.permission.CAMERA", Description = "Required for using the camera features" },
             new() { Name = "Notifications", PermissionString = "android.permission.POST_NOTIFICATIONS", Description = "Required for sending notifications" }
         };
 
+        private bool _isInitialized;
+
         public IEnumerable<AndroidPermission> MissingPermissions => Permissions.Where(p => !HasUserAuthorizedPermission(p));
-        private IEnumerable<string> MissingPermissionStrings => MissingPermissions.Select(p => p.PermissionString);
-        private bool HasMissingPermissions => MissingPermissions.Any();
+        public bool IsInitialized => _isInitialized;
 
         /// <summary>
         /// Request Bluetooth permissions required for Android 12+ (API level 31+)
         /// </summary>
-        public async UniTask RequestMissingPermissions()
+        public async UniTask Initialize()
         {
-            if (!HasMissingPermissions)
+            if (!MissingPermissions.Any())
             {
                 LoggingManager.Instance.Log("No missing permissions.");
+                _isInitialized = true;
                 return;
             }
 
             try
             {
-                LoggingManager.Instance.Log($"RequestMissingPermissions...");
-                var activity = new AndroidJavaClass("com.unity3d.player.UnityPlayer").GetStatic<AndroidJavaObject>("currentActivity");
-                activity.Call("requestPermissions", MissingPermissionStrings, 0);
-
-                while (HasMissingPermissions)
+                var missingPermissions = MissingPermissions;
+                foreach (var permission in missingPermissions)
                 {
-                    await UniTask.Delay(1000);
-                    LoggingManager.Instance.Log($"Waiting for permissions...");
+                    LoggingManager.Instance.Log($"RequestMissingPermissions: {permission.PermissionString}");
+
+                    var activity = new AndroidJavaClass("com.unity3d.player.UnityPlayer").GetStatic<AndroidJavaObject>("currentActivity");
+                    activity.Call("requestPermissions", new[] { permission.PermissionString }, 0);
+                    while (!HasUserAuthorizedPermission(permission))
+                    {
+                        await UniTask.Delay(500);
+                        LoggingManager.Instance.Log($"Waiting for permissions...");
+                    }
                 }
             }
-            catch (Exception e) { LoggingManager.Instance.Error($"Error requesting permissions {string.Join(", ", MissingPermissionStrings)}: {e.Message}"); }
+            catch (Exception e)
+            {
+                var missingPermissions = MissingPermissions.Select(p => p.PermissionString);
+                LoggingManager.Instance.Error($"Error requesting permissions {string.Join(", ", missingPermissions)}: {e.Message}");
+                return;
+            }
+
+            _isInitialized = true;
             LoggingManager.Instance.Log($"RequestPermission finished");
         }
 

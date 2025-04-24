@@ -58,7 +58,6 @@ namespace Inventonater.BleHid
 
         private void Update()
         {
-            _permissionsUI.Update();
             CurrentTab.Update();
         }
 

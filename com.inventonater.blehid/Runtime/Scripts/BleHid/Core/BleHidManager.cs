@@ -31,6 +31,7 @@ namespace Inventonater.BleHid
             BleBridge = new BleBridge(JavaBridge);
             PermissionsBridge = new PermissionsBridge();
             AccessibilityServiceBridge = new AccessibilityServiceBridge(JavaBridge);
+
             JavaBroadcaster = gameObject.AddComponent<JavaBroadcaster>();
             Mapping = gameObject.AddComponent<InputDeviceMapping>();
             InputRouter = gameObject.AddComponent<InputRouter>();
@@ -70,7 +71,8 @@ namespace Inventonater.BleHid
 
             try
             {
-                await PermissionsBridge.RequestMissingPermissions();
+                await PermissionsBridge.Initialize();
+                await AccessibilityServiceBridge.Initialize();
 
                 IsInitialized = JavaBridge.Call<bool>("initialize", gameObject.name);
 

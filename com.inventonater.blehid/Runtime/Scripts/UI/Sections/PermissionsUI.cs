@@ -6,14 +6,9 @@ namespace Inventonater.BleHid
 {
     public class PermissionsUI
     {
-        private const float PermissionCheckInterval = 0.5f; // Check every 3 seconds
-        private List<PermissionsBridge.AndroidPermission> _missingPermissions = new();
-        private bool _hasAccessibilityService;
-
         private static readonly Color permissionErrorColor = new Color(0.8f, 0.2f, 0.2f, 1.0f);
         private static readonly Color accessibilityErrorColor = new Color(0.8f, 0.4f, 0.0f, 1.0f);
         private static readonly Color notificationErrorColor = new Color(0.3f, 0.3f, 0.8f, 1.0f);
-        private float _lastCheckTime;
         private readonly AccessibilityServiceBridge _accessibilityServiceBridge;
         private readonly PermissionsBridge _permissionsBridge;
 
@@ -23,25 +18,14 @@ namespace Inventonater.BleHid
             _accessibilityServiceBridge = accessibilityServiceBridge;
         }
 
+
         private static GUIStyle AccessibilityError => UIHelper.CreateErrorStyle(accessibilityErrorColor);
         private static GUIStyle PermissionErrorStyle => UIHelper.CreateErrorStyle(permissionErrorColor);
 
-
-        public void Update()
-        {
-            if (_hasAccessibilityService && _missingPermissions.Count == 0) return;
-
-            if (Time.time > _lastCheckTime + PermissionCheckInterval) return;
-            _lastCheckTime = Time.time;
-
-            _hasAccessibilityService = _accessibilityServiceBridge.IsAccessibilityServiceEnabled();
-            _missingPermissions = _permissionsBridge.MissingPermissions.ToList();
-        }
-
         public void DrawIssues()
         {
-            if (_missingPermissions.Count > 0) DrawMissingPermissions();
-            if (!_hasAccessibilityService) DrawMissingAccessibilityService();
+            if (!_permissionsBridge.IsInitialized) DrawMissingPermissions();
+            if (!_accessibilityServiceBridge.IsInitialized) DrawMissingAccessibilityService();
         }
 
         private void DrawMissingPermissions()
@@ -50,7 +34,7 @@ namespace Inventonater.BleHid
 
             GUILayout.Label("Missing Permissions", GUIStyle.none);
             GUILayout.Space(5);
-            foreach (var permission in _missingPermissions)
+            foreach (var permission in _permissionsBridge.MissingPermissions)
             {
                 GUILayout.BeginHorizontal();
                 GUILayout.Label($"• {permission.Name}: {permission.Description}", GUIStyle.none, GUILayout.Width(Screen.width * 0.6f));

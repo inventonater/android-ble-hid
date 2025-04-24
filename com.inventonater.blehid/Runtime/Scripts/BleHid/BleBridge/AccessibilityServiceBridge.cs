@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using Cysharp.Threading.Tasks;
 using UnityEngine;
 
 namespace Inventonater.BleHid
@@ -18,51 +19,76 @@ namespace Inventonater.BleHid
             Recents
         }
 
-        private Dictionary<NavigationDirection, int> NavigationValues { get; } = new Dictionary<NavigationDirection, int>();
+        private Dictionary<NavigationDirection, int> NavigationValues { get; } = new();
 
         private readonly JavaBridge _java;
+        public AccessibilityServiceBridge(JavaBridge java) => _java = java;
 
-        public AccessibilityServiceBridge(JavaBridge java)
+        private bool _isInitialized;
+        public bool IsInitialized => _isInitialized;
+
+        public async UniTask<bool> Initialize()
         {
-            _java = java;
-            if (Application.isEditor) return;
-
-            var success = _java.Call<bool>("initializeLocalControl");
-            if (!success)
+            while (!_isInitialized)
             {
-                LoggingManager.Instance.Error($"AccessibilityServiceBridge: Initialization attempt failed");
-                return;
+                if (Application.isEditor) return true;
+                await UniTask.Delay(500);
+                _isInitialized = CheckAccessibilityService(direct: true);
             }
 
-            Debug.Log("AccessibilityServiceBridge: Initialized successfully");
+            var success = _java.Call<bool>("initializeLocalControl");
+            if (success) LoggingManager.Instance.Log("AccessibilityServiceBridge: Initialized successfully");
+            else LoggingManager.Instance.Error($"AccessibilityServiceBridge: Initialization attempt failed");
 
             try
             {
-                bool serviceEnabled = IsAccessibilityServiceEnabled();
-                if (!serviceEnabled) Debug.LogWarning("BleHidLocalControl: Accessibility service not enabled. Please enable it in settings.");
-
                 NavigationValues.Add(NavigationDirection.Up, _java.Call<int>("getNavUp"));
+                await UniTask.Delay(10);
                 NavigationValues.Add(NavigationDirection.Left, _java.Call<int>("getNavLeft"));
+                await UniTask.Delay(10);
                 NavigationValues.Add(NavigationDirection.Right, _java.Call<int>("getNavRight"));
+                await UniTask.Delay(10);
                 NavigationValues.Add(NavigationDirection.Down, _java.Call<int>("getNavDown"));
+                await UniTask.Delay(10);
                 NavigationValues.Add(NavigationDirection.Back, _java.Call<int>("getNavBack"));
+                await UniTask.Delay(10);
                 NavigationValues.Add(NavigationDirection.Home, _java.Call<int>("getNavHome"));
+                await UniTask.Delay(10);
                 NavigationValues.Add(NavigationDirection.Recents, _java.Call<int>("getNavRecents"));
             }
-            catch (Exception ex)
+            catch (Exception ex) { LoggingManager.Instance.Error("BleHidLocalControl: Unable to check accessibility status: " + ex.Message); }
+
+            return success;
+        }
+
+        private bool CheckAccessibilityService(bool direct = false)
+        {
+            if (Application.isEditor) return true;
+
+            if (!direct) return _java.Call<bool>("isAccessibilityServiceEnabled");
+            try
             {
-                // Don't fail initialization if checking accessibility fails
-                Debug.LogWarning("BleHidLocalControl: Unable to check accessibility status: " + ex.Message);
+                AndroidJavaClass unityPlayer = new AndroidJavaClass("com.unity3d.player.UnityPlayer");
+                AndroidJavaObject currentActivity = unityPlayer.GetStatic<AndroidJavaObject>("currentActivity");
+                AndroidJavaObject context = currentActivity.Call<AndroidJavaObject>("getApplicationContext");
+                AndroidJavaClass settingsSecure = new AndroidJavaClass("android.provider.Settings$Secure");
+                AndroidJavaObject contentResolver = context.Call<AndroidJavaObject>("getContentResolver");
+                string enabledServices = settingsSecure.CallStatic<string>("getString", contentResolver, "enabled_accessibility_services");
+                string packageName = context.Call<string>("getPackageName");
+                string serviceName = packageName + "/com.inventonater.blehid.core.LocalAccessibilityService";
+                bool isEnabled = enabledServices != null && enabledServices.Contains(serviceName);
+                LoggingManager.Instance.Log($"BleHidLocalControl: Direct accessibility check - Service {(isEnabled ? "IS" : "is NOT")} enabled");
+                return isEnabled;
+            }
+            catch (Exception e)
+            {
+                LoggingManager.Instance.Error("BleHidLocalControl: Error checking accessibility service status: " + e.Message);
+                return false;
             }
         }
 
-        public void OpenAccessibilitySettings() => _java.Call("openAccessibilitySettings");
 
-        public bool IsAccessibilityServiceEnabled()
-        {
-            if (Application.isEditor) return true;
-            return _java.Call<bool>("isAccessibilityServiceEnabled");
-        }
+        public void OpenAccessibilitySettings() => _java.Call("openAccessibilitySettings");
 
         public bool PlayPause() => _java.Call<bool>("localPlayPause");
         public bool NextTrack() => _java.Call<bool>("localNextTrack");
