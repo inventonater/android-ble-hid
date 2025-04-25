@@ -37,19 +37,11 @@ namespace Inventonater.BleHid
 
         public InputDeviceMapping LoadConfiguration(MappingConfiguration config)
         {
-            var newMapping = new InputDeviceMapping();
-
-            // Apply button mappings
+            var newMapping = new InputDeviceMapping(config.Name);
             foreach (var buttonMapping in config.ButtonMappings) ApplyButtonMapping(newMapping, buttonMapping);
-
-            // Apply direction mappings
             foreach (var directionMapping in config.DirectionMappings) ApplyDirectionMapping(newMapping, directionMapping);
-
-            // Apply axis mappings
             foreach (var axisMapping in config.AxisMappings) ApplyAxisMapping(newMapping, axisMapping);
-
             LoggingManager.Instance.Log($"Loaded input configuration: {config.Name}");
-
             return newMapping;
         }
 
@@ -66,7 +58,6 @@ namespace Inventonater.BleHid
 
             if (!string.IsNullOrEmpty(mapping.KeyCode)) parameters["keyCode"] = mapping.KeyCode;
 
-            // Resolve and register the action
             newMapping.Add(buttonEvent, _actionResolver.ResolveAction(mapping.Action, parameters));
         }
 

@@ -30,6 +30,9 @@ namespace Inventonater.BleHid
         private readonly List<IAxisMapping> _axisMappings = new();
         public IReadOnlyList<IAxisMapping> AxisMappings => _axisMappings;
 
+        public InputDeviceMapping(string name) => Name = name;
+        public string Name { get; }
+
         private void Add(BleHidButtonEvent.Id id, BleHidButtonEvent.Action buttonAction, Action action) => Add(new BleHidButtonEvent(id, buttonAction), action);
         public void Add(IAxisMapping axisMapping) => _axisMappings.Add(axisMapping);
         public void Add(BleHidButtonEvent buttonEvent, Action action) => _buttonMapping.AppendValue(buttonEvent, action);
@@ -53,7 +56,7 @@ namespace Inventonater.BleHid
             var media = bridge.Media;
             var keyboard = bridge.Keyboard;
 
-            var mapping = new InputDeviceMapping();
+            var mapping = new InputDeviceMapping("BleMapping");
             mapping.AddPressRelease(BleHidButtonEvent.Id.Primary, () => mouse.PressMouseButton(0), () => mouse.ReleaseMouseButton(0));
             mapping.AddPressRelease(BleHidButtonEvent.Id.Secondary, () => mouse.PressMouseButton(1), () => mouse.ReleaseMouseButton(1));
             mapping.Add(BleHidDirection.Up, () => keyboard.SendKey(BleHidConstants.KEY_UP));
@@ -70,9 +73,9 @@ namespace Inventonater.BleHid
         {
             var serviceBridge = bridge.AccessibilityServiceBridge;
 
-            var mapping = new InputDeviceMapping();
-            // mapping.AddPressRelease(BleHidButtonEvent.Id.Primary, () => mouse.PressMouseButton(0), () => mouse.ReleaseMouseButton(0));
-            // mapping.AddPressRelease(BleHidButtonEvent.Id.Secondary, () => mouse.PressMouseButton(1), () => mouse.ReleaseMouseButton(1));
+            var mapping = new InputDeviceMapping("PhoneMapping");
+
+            mapping.Add(BleHidButtonEvent.Id.Secondary, BleHidButtonEvent.Action.Tap, () => serviceBridge.Navigate(AccessibilityServiceBridge.NavigationDirection.Back));
             mapping.Add(BleHidDirection.Up, () => serviceBridge.Navigate(AccessibilityServiceBridge.NavigationDirection.Up));
             mapping.Add(BleHidDirection.Right, () => serviceBridge.Navigate(AccessibilityServiceBridge.NavigationDirection.Right));
             mapping.Add(BleHidDirection.Down, () => serviceBridge.Navigate(AccessibilityServiceBridge.NavigationDirection.Down));
@@ -84,8 +87,14 @@ namespace Inventonater.BleHid
                 serviceBridge.Swipe(position, position + deltaMove);
                 position += deltaMove;
             }
+            var mousePositionAxisMapping = new MousePositionAxisMapping(DeltaMoveAction);
+            mapping.Add(BleHidButtonEvent.Id.Primary, BleHidButtonEvent.Action.Press, () =>
+            {
+                position = default;
+                mousePositionAxisMapping.ResetPosition();
+            });
+            mapping.Add(mousePositionAxisMapping);
 
-            mapping.Add(new MousePositionAxisMapping(DeltaMoveAction));
             mapping.AddSingleAxisIncremental(() => serviceBridge.VolumeUp(), () => serviceBridge.VolumeDown(), BleHidAxis.Z);
             return mapping;
         }

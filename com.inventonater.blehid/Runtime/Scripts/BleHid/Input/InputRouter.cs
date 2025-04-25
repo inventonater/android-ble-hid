@@ -39,6 +39,7 @@ namespace Inventonater.BleHid
             _mapping = mapping;
             HandleResetPosition();
             WhenMappingChanged(_mapping);
+            LoggingManager.Instance.Log($"SetMapping: {mapping.Name}");
         }
 
         private void HandleSwitchMapping()
