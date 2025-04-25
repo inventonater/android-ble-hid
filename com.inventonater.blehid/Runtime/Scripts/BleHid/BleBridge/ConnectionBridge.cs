@@ -4,9 +4,7 @@ using UnityEngine;
 
 namespace Inventonater.BleHid
 {
-    /// <summary>
-    /// Manages BLE connection parameters and connection-related functionality.
-    /// </summary>
+    [Serializable]
     public class ConnectionBridge
     {
         private const string IDENTITY_UUID_KEY = "ble_peripheral_uuid";

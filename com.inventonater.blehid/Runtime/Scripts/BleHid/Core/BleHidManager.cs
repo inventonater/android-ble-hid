@@ -7,6 +7,9 @@ namespace Inventonater.BleHid
     [DefaultExecutionOrder(ExecutionOrder.Initialize)]
     public class BleHidManager : MonoBehaviour
     {
+        private InputDeviceMapping _bleMapping;
+        private InputDeviceMapping _phoneMapping;
+
         public bool IsInitialized { get; private set; }
         public bool IsInPipMode { get; internal set; }
         public PipBackgroundWorker PipWorker { get; private set; }
@@ -14,10 +17,7 @@ namespace Inventonater.BleHid
         public JavaBroadcaster JavaBroadcaster { get; private set; }
         public ConnectionBridge ConnectionBridge { get; private set; }
         public InputRouter InputRouter { get; private set; }
-        public InputDeviceMapping Mapping { get; private set; }
         public BleBridge BleBridge { get; private set; }
-        public AccessibilityServiceBridge AccessibilityServiceBridge { get; private set; }
-        public PermissionsBridge PermissionsBridge { get; private set; }
 
         public static BleHidManager Instance => FindFirstObjectByType<BleHidManager>();
 
@@ -29,13 +29,14 @@ namespace Inventonater.BleHid
 
             JavaBridge = new JavaBridge();
             BleBridge = new BleBridge(JavaBridge);
-            PermissionsBridge = new PermissionsBridge();
-            AccessibilityServiceBridge = new AccessibilityServiceBridge(JavaBridge);
 
             JavaBroadcaster = gameObject.AddComponent<JavaBroadcaster>();
-            Mapping = new InputDeviceMapping();
             InputRouter = gameObject.AddComponent<InputRouter>();
-            InputRouter.SetMapping(Mapping);
+
+            _bleMapping = InputDeviceMapping.Ble(BleBridge);
+            _phoneMapping = InputDeviceMapping.Phone(BleBridge);
+
+            InputRouter.SetMapping(_bleMapping);
 
             ConnectionBridge = new ConnectionBridge(JavaBridge);
             PipWorker = new PipBackgroundWorker();
@@ -71,8 +72,8 @@ namespace Inventonater.BleHid
 
             try
             {
-                await PermissionsBridge.Initialize();
-                await AccessibilityServiceBridge.Initialize();
+                await BleBridge.PermissionsBridge.Initialize();
+                await BleBridge.AccessibilityServiceBridge.Initialize();
 
                 IsInitialized = JavaBridge.Call<bool>("initialize", gameObject.name);
 
@@ -90,6 +91,7 @@ namespace Inventonater.BleHid
 
                 ConnectionBridge.InitializeIdentity();
             }
+
             catch (Exception e)
             {
                 string message = "Exception during initialization: " + e.Message;

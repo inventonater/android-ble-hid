@@ -6,6 +6,7 @@ using UnityEngine;
 
 namespace Inventonater.BleHid
 {
+    [Serializable]
     public class AccessibilityServiceBridge
     {
         public enum NavigationDirection

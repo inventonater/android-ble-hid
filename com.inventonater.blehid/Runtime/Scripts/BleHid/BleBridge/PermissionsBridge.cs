@@ -12,6 +12,7 @@ namespace Inventonater.BleHid
     /// Specifically manages Bluetooth permissions needed for Android 12+ devices 
     /// and other runtime permissions required by the plugin.
     /// </summary>
+    [Serializable]
     public class PermissionsBridge
     {
         public class AndroidPermission
