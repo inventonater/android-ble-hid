@@ -558,6 +558,25 @@ public class BleHidUnityPlugin {
         return localInputManager.navigate(direction);
     }
     
+    /**
+     * Performs the specified action on the currently focused accessibility node.
+     * @param action The accessibility action to perform (e.g., AccessibilityNodeInfo.ACTION_CLICK)
+     * @return true if the action was performed successfully, false otherwise
+     */
+    public boolean localPerformFocusedNodeAction(int action) {
+        if (localInputManager == null) return false;
+        return localInputManager.performFocusedNodeAction(action);
+    }
+    
+    /**
+     * Clicks on the currently focused accessibility node.
+     * @return true if the click was performed successfully, false otherwise
+     */
+    public boolean localClickFocusedNode() {
+        if (localInputManager == null) return false;
+        return localInputManager.clickFocusedNode();
+    }
+    
     // Camera control methods
     
     public boolean launchCameraApp() {

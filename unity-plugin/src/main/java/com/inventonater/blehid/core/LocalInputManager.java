@@ -133,6 +133,23 @@ public class LocalInputManager {
     }
     
     /**
+     * Performs the specified action on the currently focused accessibility node.
+     * @param action The accessibility action to perform (e.g., AccessibilityNodeInfo.ACTION_CLICK)
+     * @return true if the action was performed successfully, false otherwise
+     */
+    public boolean performFocusedNodeAction(int action) {
+        return inputController.performFocusedNodeAction(action);
+    }
+    
+    /**
+     * Clicks on the currently focused accessibility node.
+     * @return true if the click was performed successfully, false otherwise
+     */
+    public boolean clickFocusedNode() {
+        return inputController.clickFocusedNode();
+    }
+    
+    /**
      * Launch camera app directly.
      * This opens the default camera app without taking a picture.
      */

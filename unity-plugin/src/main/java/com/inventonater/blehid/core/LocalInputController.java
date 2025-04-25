@@ -8,6 +8,7 @@ import android.graphics.Path;
 import android.os.Build;
 import android.provider.Settings;
 import android.util.Log;
+import android.view.accessibility.AccessibilityNodeInfo;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
@@ -215,6 +216,42 @@ public class LocalInputController {
         boolean result = accessibilityService.performGlobalAction(keyCode);
         Log.d(TAG, "Key event sent: " + keyCode + ", result: " + result);
         return result;
+    }
+    
+    /**
+     * Performs the specified action on the currently focused accessibility node.
+     * @param action The accessibility action to perform (e.g., AccessibilityNodeInfo.ACTION_CLICK)
+     * @return true if the action was performed successfully, false otherwise
+     */
+    public boolean performFocusedNodeAction(int action) {
+        if (!isAccessibilityServiceAvailable()) return false;
+        
+        AccessibilityNodeInfo focusedNode = null;
+        try {
+            focusedNode = accessibilityService.findFocus(AccessibilityNodeInfo.FOCUS_ACCESSIBILITY);
+            if (focusedNode != null) {
+                Log.d(TAG, "Found focused node: " + focusedNode);
+                return focusedNode.performAction(action);
+            } else {
+                Log.w(TAG, "No accessibility focused node found");
+                return false;
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "Error performing action on focused node", e);
+            return false;
+        } finally {
+            if (focusedNode != null) {
+                focusedNode.recycle();
+            }
+        }
+    }
+
+    /**
+     * Clicks on the currently focused accessibility node.
+     * @return true if the click was performed successfully, false otherwise
+     */
+    public boolean clickFocusedNode() {
+        return performFocusedNodeAction(AccessibilityNodeInfo.ACTION_CLICK);
     }
     
     /**

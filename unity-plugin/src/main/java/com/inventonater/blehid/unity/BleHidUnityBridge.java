@@ -359,6 +359,23 @@ public class BleHidUnityBridge {
         return plugin.localNavigate(direction);
     }
     
+    /**
+     * Performs the specified action on the currently focused accessibility node.
+     * @param action The accessibility action to perform (e.g., AccessibilityNodeInfo.ACTION_CLICK)
+     * @return true if the action was performed successfully, false otherwise
+     */
+    public boolean localPerformFocusedNodeAction(int action) {
+        return plugin.localPerformFocusedNodeAction(action);
+    }
+    
+    /**
+     * Clicks on the currently focused accessibility node.
+     * @return true if the click was performed successfully, false otherwise
+     */
+    public boolean localClickFocusedNode() {
+        return plugin.localClickFocusedNode();
+    }
+    
     // Camera control methods
     
     public boolean launchCameraApp() {

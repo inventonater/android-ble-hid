@@ -144,6 +144,19 @@ namespace Inventonater.BleHid
 
         public bool LaunchCameraApp() => _java.Call<bool>("launchCameraApp");
         public bool LaunchVideoCapture() => _java.Call<bool>("launchVideoCapture");
+        
+        /// <summary>
+        /// Performs the specified action on the currently focused accessibility node.
+        /// </summary>
+        /// <param name="action">The accessibility action to perform</param>
+        /// <returns>True if the action was performed successfully, false otherwise</returns>
+        public bool PerformFocusedNodeAction(AccessibilityAction action) => _java.Call<bool>("localPerformFocusedNodeAction", (int)action);
+        
+        /// <summary>
+        /// Clicks on the currently focused accessibility node.
+        /// </summary>
+        /// <returns>True if the click was performed successfully, false otherwise</returns>
+        public bool ClickFocusedNode() => PerformFocusedNodeAction(AccessibilityAction.Click);
 
         /// <summary>
         /// Take a picture with the camera using specified options.
