@@ -60,22 +60,12 @@ namespace Inventonater.BleHid
             if (IsInitialized) return;
 
             Application.runInBackground = true;
-            if (Application.isEditor)
-            {
-                LoggingManager.Instance.Log("BLE HID is only supported on Android 1");
-                await UniTask.Delay(1000);
-                LoggingManager.Instance.Log("BLE HID is only supported on Android 2");
-                await UniTask.Delay(1000);
-                LoggingManager.Instance.Log("BLE HID is only supported on Android 3");
-                return;
-            }
-
             try
             {
                 await BleBridge.PermissionsBridge.Initialize();
                 await BleBridge.AccessibilityServiceBridge.Initialize();
 
-                IsInitialized = JavaBridge.Call<bool>("initialize", gameObject.name);
+                IsInitialized = StartInitialize();
 
                 // Initialize the foreground service manager
                 // manager.ForegroundServiceManager.Initialize(bridgeInstance);
@@ -99,6 +89,12 @@ namespace Inventonater.BleHid
                 JavaBroadcaster.OnError?.Invoke(BleHidConstants.ERROR_INITIALIZATION_FAILED, message);
                 JavaBroadcaster.OnInitializeComplete?.Invoke(false, message);
             }
+        }
+
+        private bool StartInitialize()
+        {
+            if(Application.isEditor) return true;
+            return JavaBridge.Call<bool>("initialize", gameObject.name);
         }
 
         public void Close()

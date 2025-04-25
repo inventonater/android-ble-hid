@@ -12,7 +12,7 @@ namespace Inventonater.BleHid
 
         public JavaBridge()
         {
-            if (Application.platform != RuntimePlatform.Android) return;
+            if (Application.isEditor) return;
             AndroidJavaClass bridgeClass = new AndroidJavaClass("com.inventonater.blehid.unity.BleHidUnityBridge");
             JavaObject = bridgeClass.CallStatic<AndroidJavaObject>("getInstance");
         }
@@ -29,7 +29,7 @@ namespace Inventonater.BleHid
             using var profilerMarker = _marker.Auto();
             Log($"JavaBridge.Call {methodName} {string.Join(", ", args)}");
 
-            if (Application.platform != RuntimePlatform.Android) return;
+            if (Application.isEditor) return;
 
             try { JavaObject?.Call(methodName, args); }
             catch (Exception e) { LoggingManager.Instance.AddLogException(e); }
@@ -40,7 +40,7 @@ namespace Inventonater.BleHid
             using var profilerMarker = _marker.Auto();
             Log($"JavaBridge.Call {methodName} {string.Join(", ", args)}");
 
-            if (Application.platform != RuntimePlatform.Android) return default;
+            if (Application.isEditor) return default;
 
             try
             {

@@ -45,6 +45,8 @@ namespace Inventonater.BleHid
             GUILayout.Space(10);
             GUILayout.Label("If permission requests don't work, try granting them manually:", GUIStyle.none);
             if (GUILayout.Button("Open App Settings", GUILayout.Height(50))) _permissionsBridge.OpenAppSettings();
+
+            GUILayout.EndVertical();
         }
 
         private void DrawMissingAccessibilityService()

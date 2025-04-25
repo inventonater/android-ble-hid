@@ -24,6 +24,7 @@ namespace Inventonater.BleHid
 
         [SerializeField] private BleHidButtonEvent _pendingButtonEvent;
         [SerializeField] private BleHidDirection _pendingDirection;
+        [SerializeField] private bool _active;
 
         public void AddMapping(InputDeviceMapping mapping)
         {
@@ -42,12 +43,19 @@ namespace Inventonater.BleHid
             LoggingManager.Instance.Log($"SetMapping: {mapping.Name}");
         }
 
-        private void HandleSwitchMapping()
+        private void SwitchMapping()
         {
             if (_mappings.Count <= 1) return;
             int currentIndex = _mappings.IndexOf(_mapping);
             int nextIndex = (currentIndex + 1) % _mappings.Count;
             SetMapping(_mappings[nextIndex]);
+        }
+
+
+        private void ToggleActive()
+        {
+            _active = !_active;
+            LoggingManager.Instance.Log($"Toggle active: {_active}");
         }
 
         public void SetSourceDevice(IInputSourceDevice inputSourceDevice)
@@ -60,7 +68,6 @@ namespace Inventonater.BleHid
                 prevSourceDevice.NotifyButtonEvent -= HandleButtonEvent;
                 prevSourceDevice.NotifyDirection -= HandleDirection;
                 prevSourceDevice.NotifyResetPosition -= HandleResetPosition;
-                prevSourceDevice.NotifySwitchMapping -= HandleSwitchMapping;
 
                 prevSourceDevice.InputDeviceDisabled();
             }
@@ -73,7 +80,6 @@ namespace Inventonater.BleHid
                 _sourceDevice.NotifyButtonEvent += HandleButtonEvent;
                 _sourceDevice.NotifyDirection += HandleDirection;
                 _sourceDevice.NotifyResetPosition += HandleResetPosition;
-                _sourceDevice.NotifySwitchMapping += HandleSwitchMapping;
 
                 _sourceDevice.InputDeviceEnabled();
             }
@@ -81,7 +87,19 @@ namespace Inventonater.BleHid
             WhenDeviceChanged(prevSourceDevice, _sourceDevice);
         }
 
-        private void HandleButtonEvent(BleHidButtonEvent buttonEvent) => _pendingButtonEvent = buttonEvent;
+        private void HandleButtonEvent(BleHidButtonEvent buttonEvent)
+        {
+            if (buttonEvent == new BleHidButtonEvent(BleHidButtonEvent.Id.Secondary, BleHidButtonEvent.Action.DoubleTap))
+            {
+                ToggleActive();
+            }
+            if (buttonEvent == new BleHidButtonEvent(BleHidButtonEvent.Id.Tertiary, BleHidButtonEvent.Action.DoubleTap))
+            {
+                SwitchMapping();
+            }
+            _pendingButtonEvent = buttonEvent;
+        }
+
         private void HandleDirection(BleHidDirection direction) => _pendingDirection = direction;
 
         private void HandlePositionEvent(Vector3 absolutePosition)
@@ -97,6 +115,8 @@ namespace Inventonater.BleHid
         // ExecutionOrder Process
         private void Update()
         {
+            if (!_active) return;
+
             using (_profileMarkerButtonEvent.Auto())
             {
                 if (_pendingButtonEvent != BleHidButtonEvent.None && _mapping.ButtonMapping.TryGetValue(_pendingButtonEvent, out var buttonActions))

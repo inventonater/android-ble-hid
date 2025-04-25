@@ -32,12 +32,11 @@ namespace Inventonater.BleHid
         {
             while (!_isInitialized)
             {
-                if (Application.isEditor) return true;
                 await UniTask.Delay(500);
                 _isInitialized = CheckAccessibilityService(direct: true);
             }
 
-            var success = _java.Call<bool>("initializeLocalControl");
+            var success = Application.isEditor || _java.Call<bool>("initializeLocalControl");
             if (success) LoggingManager.Instance.Log("AccessibilityServiceBridge: Initialized successfully");
             else LoggingManager.Instance.Error($"AccessibilityServiceBridge: Initialization attempt failed");
 
@@ -91,7 +90,7 @@ namespace Inventonater.BleHid
 
         public void OpenAccessibilitySettings(bool direct = false)
         {
-            if (Application.platform != RuntimePlatform.Android) return;
+            if (Application.isEditor) return;
 
             if (!direct)
             {
@@ -138,6 +137,7 @@ namespace Inventonater.BleHid
 
         public bool Navigate(NavigationDirection direction)
         {
+            Debug.Log($"BleHidLocalControl: Navigating to {direction}");
             int dirValue = NavigationValues[direction];
             return _java.Call<bool>("localNavigate", dirValue);
         }

@@ -111,7 +111,7 @@ namespace Inventonater.BleHid
 
         public bool HasUserAuthorizedPermission(AndroidPermission permission)
         {
-            if (Application.platform != RuntimePlatform.Android) return true;
+            if (Application.isEditor) return true;
 
             try
             {

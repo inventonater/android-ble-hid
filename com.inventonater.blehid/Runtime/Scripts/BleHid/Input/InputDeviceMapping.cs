@@ -75,6 +75,10 @@ namespace Inventonater.BleHid
 
             var mapping = new InputDeviceMapping("PhoneMapping");
 
+            mapping.Add(BleHidButtonEvent.Id.Primary, BleHidButtonEvent.Action.Press, () => serviceBridge.ClickFocusedNode());
+            mapping.Add(BleHidButtonEvent.Id.Secondary, BleHidButtonEvent.Action.Press, () => serviceBridge.Navigate(AccessibilityServiceBridge.NavigationDirection.Back));
+
+            mapping.Add(BleHidButtonEvent.Id.Primary, BleHidButtonEvent.Action.Tap, () => serviceBridge.ClickFocusedNode());
             mapping.Add(BleHidButtonEvent.Id.Secondary, BleHidButtonEvent.Action.Tap, () => serviceBridge.Navigate(AccessibilityServiceBridge.NavigationDirection.Back));
             mapping.Add(BleHidDirection.Up, () => serviceBridge.Navigate(AccessibilityServiceBridge.NavigationDirection.Up));
             mapping.Add(BleHidDirection.Right, () => serviceBridge.Navigate(AccessibilityServiceBridge.NavigationDirection.Right));
@@ -82,9 +86,10 @@ namespace Inventonater.BleHid
             mapping.Add(BleHidDirection.Left, () => serviceBridge.Navigate(AccessibilityServiceBridge.NavigationDirection.Left));
 
             Vector2 position = default;
+            bool isActive = false;
             void DeltaMoveAction(Vector2 deltaMove)
             {
-                serviceBridge.Swipe(position, position + deltaMove);
+                if(isActive) serviceBridge.Swipe(position, position + deltaMove);
                 position += deltaMove;
             }
             var mousePositionAxisMapping = new MousePositionAxisMapping(DeltaMoveAction);
@@ -92,6 +97,11 @@ namespace Inventonater.BleHid
             {
                 position = default;
                 mousePositionAxisMapping.ResetPosition();
+            });
+            mapping.Add(BleHidButtonEvent.Id.Primary, BleHidButtonEvent.Action.DoubleTap, () =>
+            {
+                isActive = !isActive;
+                LoggingManager.Instance.Log($"Setting ServiceBridge singleAxis active: {isActive}");
             });
             mapping.Add(mousePositionAxisMapping);
 

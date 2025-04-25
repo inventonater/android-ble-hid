@@ -95,6 +95,7 @@ namespace Inventonater.BleHid
             GUILayout.Label("Address:", GUILayout.Width(150));
             GUILayout.Label(_connectionBridge.ConnectedDeviceAddress);
             GUILayout.EndHorizontal();
+            
             GUILayout.EndVertical();
 
             GUILayout.Space(10);
