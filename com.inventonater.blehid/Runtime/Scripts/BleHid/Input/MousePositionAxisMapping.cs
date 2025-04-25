@@ -17,12 +17,13 @@ namespace Inventonater.BleHid
         public float VerticalSensitivity = 3.0f;
         [SerializeField] private Vector3 _pendingPosition;
         [SerializeField] private Vector3 _lastPosition;
-        [SerializeField] private MouseBridge _mouse;
         [SerializeField] private bool _flipY;
+        private readonly Action<Vector2> _deltaMoveAction;
 
-        public MousePositionAxisMapping(MouseBridge mouse, bool flipY = true)
+        public MousePositionAxisMapping(MouseBridge mouseBridge) :this (mouseBridge.MoveMouse) { }
+        public MousePositionAxisMapping(Action<Vector2> deltaMoveAction, bool flipY = true)
         {
-            _mouse = mouse;
+            _deltaMoveAction = deltaMoveAction;
             _flipY = flipY;
             CurrentFilterType = InputFilterFactory.FilterType.OneEuro;
             Filter = InputFilterFactory.CreateFilter(CurrentFilterType);
@@ -98,7 +99,7 @@ namespace Inventonater.BleHid
             delta.y *= VerticalSensitivity;
             delta *= GlobalScale;
 
-            _mouse.MoveMouse(delta.x, delta.y);
+            _deltaMoveAction(delta);
         }
     }
 }

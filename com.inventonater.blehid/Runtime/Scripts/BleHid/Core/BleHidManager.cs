@@ -18,7 +18,6 @@ namespace Inventonater.BleHid
         public ConnectionBridge ConnectionBridge { get; private set; }
         public InputRouter InputRouter { get; private set; }
         public BleBridge BleBridge { get; private set; }
-
         public static BleHidManager Instance => FindFirstObjectByType<BleHidManager>();
 
         private void Awake()
@@ -36,7 +35,8 @@ namespace Inventonater.BleHid
             _bleMapping = InputDeviceMapping.Ble(BleBridge);
             _phoneMapping = InputDeviceMapping.Phone(BleBridge);
 
-            InputRouter.SetMapping(_bleMapping);
+            InputRouter.AddMapping(_phoneMapping);
+            InputRouter.AddMapping(_bleMapping);
 
             ConnectionBridge = new ConnectionBridge(JavaBridge);
             PipWorker = new PipBackgroundWorker();

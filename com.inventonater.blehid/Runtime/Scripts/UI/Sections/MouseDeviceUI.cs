@@ -11,6 +11,7 @@ namespace Inventonater.BleHid
         public event Action<BleHidButtonEvent> NotifyButtonEvent = delegate { };
         public event Action<Vector3> NotifyPosition = delegate { };
         public event Action NotifyResetPosition = delegate { };
+        public event Action NotifySwitchMapping = delegate { };
 
         public event Action<BleHidDirection> NotifyDirection = delegate { };
         public override string TabName => Name;
@@ -111,6 +112,7 @@ namespace Inventonater.BleHid
             UIHelper.BeginSection("Mouse Buttons");
             GUILayout.Label("Click buttons to send mouse button actions to the connected device");
             UIHelper.ActionButtonRow(_buttonLabels, _buttonActions, _buttonMessages, UIHelper.LargeButtonOptions);
+            if (GUILayout.Button("Switch Mapping")) NotifySwitchMapping();
             UIHelper.EndSection();
         }
 

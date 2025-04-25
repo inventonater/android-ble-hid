@@ -68,19 +68,24 @@ namespace Inventonater.BleHid
 
         public static InputDeviceMapping Phone(BleBridge bridge)
         {
-            var mouse = bridge.Mouse;
-            var media = bridge.Media;
-            var keyboard = bridge.Keyboard;
             var serviceBridge = bridge.AccessibilityServiceBridge;
+
             var mapping = new InputDeviceMapping();
-            mapping.AddPressRelease(BleHidButtonEvent.Id.Primary, () => mouse.PressMouseButton(0), () => mouse.ReleaseMouseButton(0));
-            mapping.AddPressRelease(BleHidButtonEvent.Id.Secondary, () => mouse.PressMouseButton(1), () => mouse.ReleaseMouseButton(1));
+            // mapping.AddPressRelease(BleHidButtonEvent.Id.Primary, () => mouse.PressMouseButton(0), () => mouse.ReleaseMouseButton(0));
+            // mapping.AddPressRelease(BleHidButtonEvent.Id.Secondary, () => mouse.PressMouseButton(1), () => mouse.ReleaseMouseButton(1));
             mapping.Add(BleHidDirection.Up, () => serviceBridge.Navigate(AccessibilityServiceBridge.NavigationDirection.Up));
             mapping.Add(BleHidDirection.Right, () => serviceBridge.Navigate(AccessibilityServiceBridge.NavigationDirection.Right));
             mapping.Add(BleHidDirection.Down, () => serviceBridge.Navigate(AccessibilityServiceBridge.NavigationDirection.Down));
             mapping.Add(BleHidDirection.Left, () => serviceBridge.Navigate(AccessibilityServiceBridge.NavigationDirection.Left));
 
-            mapping.Add(new MousePositionAxisMapping(mouse));
+            Vector2 position = default;
+            void DeltaMoveAction(Vector2 deltaMove)
+            {
+                serviceBridge.Swipe(position, position + deltaMove);
+                position += deltaMove;
+            }
+
+            mapping.Add(new MousePositionAxisMapping(DeltaMoveAction));
             mapping.AddSingleAxisIncremental(() => serviceBridge.VolumeUp(), () => serviceBridge.VolumeDown(), BleHidAxis.Z);
             return mapping;
         }

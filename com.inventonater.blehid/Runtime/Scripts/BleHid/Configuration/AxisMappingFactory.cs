@@ -72,8 +72,10 @@ namespace Inventonater.BleHid
                     filterType = filterStr;
                 }
             }
-            
-            var mouseFilter = new MousePositionAxisMapping(_bleBridge.Mouse, flipY);
+
+
+            Action<Vector2> deltaMoveAction = _bleBridge.Mouse.MoveMouse;
+            var mouseFilter = new MousePositionAxisMapping(deltaMoveAction, flipY);
             mouseFilter.HorizontalSensitivity = horizontalSensitivity;
             mouseFilter.VerticalSensitivity = verticalSensitivity;
             

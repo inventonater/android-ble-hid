@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using JetBrains.Annotations;
 using Unity.Profiling;
 using UnityEngine;
@@ -8,13 +9,14 @@ namespace Inventonater.BleHid
     [DefaultExecutionOrder(ExecutionOrder.InputRouting)]
     public class InputRouter : MonoBehaviour
     {
-
         public delegate void InputDeviceChangedEvent(IInputSourceDevice prev, IInputSourceDevice next);
+
         public event InputDeviceChangedEvent WhenDeviceChanged = delegate { };
         public event Action<InputDeviceMapping> WhenMappingChanged = delegate { };
 
         private IInputSourceDevice _sourceDevice;
-        [SerializeField] private InputDeviceMapping _mapping;
+        private InputDeviceMapping _mapping;
+        private List<InputDeviceMapping> _mappings = new();
 
         public bool HasMapping => _mapping != null;
         public bool HasDevice => _sourceDevice != null;
@@ -23,11 +25,28 @@ namespace Inventonater.BleHid
         [SerializeField] private BleHidButtonEvent _pendingButtonEvent;
         [SerializeField] private BleHidDirection _pendingDirection;
 
+        public void AddMapping(InputDeviceMapping mapping)
+        {
+            _mappings.Add(mapping);
+            if (_mapping == null) SetMapping(mapping);
+        }
+
         public void SetMapping(InputDeviceMapping mapping)
         {
+            if (!_mappings.Contains(mapping)) AddMapping(mapping);
+            if (_mapping == mapping) return;
+
             _mapping = mapping;
             HandleResetPosition();
             WhenMappingChanged(_mapping);
+        }
+
+        private void HandleSwitchMapping()
+        {
+            if (_mappings.Count <= 1) return;
+            int currentIndex = _mappings.IndexOf(_mapping);
+            int nextIndex = (currentIndex + 1) % _mappings.Count;
+            SetMapping(_mappings[nextIndex]);
         }
 
         public void SetSourceDevice(IInputSourceDevice inputSourceDevice)
@@ -40,9 +59,11 @@ namespace Inventonater.BleHid
                 prevSourceDevice.NotifyButtonEvent -= HandleButtonEvent;
                 prevSourceDevice.NotifyDirection -= HandleDirection;
                 prevSourceDevice.NotifyResetPosition -= HandleResetPosition;
+                prevSourceDevice.NotifySwitchMapping -= HandleSwitchMapping;
 
                 prevSourceDevice.InputDeviceDisabled();
             }
+
             _sourceDevice = inputSourceDevice;
             if (_sourceDevice != null)
             {
@@ -51,6 +72,7 @@ namespace Inventonater.BleHid
                 _sourceDevice.NotifyButtonEvent += HandleButtonEvent;
                 _sourceDevice.NotifyDirection += HandleDirection;
                 _sourceDevice.NotifyResetPosition += HandleResetPosition;
+                _sourceDevice.NotifySwitchMapping += HandleSwitchMapping;
 
                 _sourceDevice.InputDeviceEnabled();
             }
@@ -60,9 +82,10 @@ namespace Inventonater.BleHid
 
         private void HandleButtonEvent(BleHidButtonEvent buttonEvent) => _pendingButtonEvent = buttonEvent;
         private void HandleDirection(BleHidDirection direction) => _pendingDirection = direction;
+
         private void HandlePositionEvent(Vector3 absolutePosition)
         {
-            foreach(var mapping in _mapping.AxisMappings) mapping.SetValue(absolutePosition);
+            foreach (var mapping in _mapping.AxisMappings) mapping.SetValue(absolutePosition);
         }
 
         private void HandleResetPosition()

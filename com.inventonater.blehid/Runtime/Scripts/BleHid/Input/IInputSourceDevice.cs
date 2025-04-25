@@ -65,6 +65,8 @@ namespace Inventonater.BleHid
         event Action<BleHidDirection> NotifyDirection;
         event Action<Vector3> NotifyPosition;
         event Action NotifyResetPosition;
+        event Action NotifySwitchMapping;
+
         void InputDeviceEnabled();
         void InputDeviceDisabled();
     }
