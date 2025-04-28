@@ -21,7 +21,6 @@ namespace Inventonater.BleHid
         [SerializeField] private bool _flipY;
         private readonly Action<Vector2> _deltaMoveAction;
 
-        public event Action WhenReset = delegate { };
         public MousePositionAxisMapping(MouseBridge mouseBridge) :this (mouseBridge.MoveMouse) { }
         public MousePositionAxisMapping(Action<Vector2> deltaMoveAction, bool requirePress = false, bool flipY = true, float timeInterval = 0.04f)
         {
@@ -41,14 +40,10 @@ namespace Inventonater.BleHid
         {
             ResetPosition();
 
-            if (_requirePress)
-            {
-                if (pendingButtonEvent.id == BleHidButtonEvent.Id.Primary)
-                {
-                    if(pendingButtonEvent.action == BleHidButtonEvent.Action.Press) Active = true;
-                    if(pendingButtonEvent.action == BleHidButtonEvent.Action.Release) Active = false;
-                }
-            }
+            if (!_requirePress) return;
+            if (pendingButtonEvent.id != BleHidButtonEvent.Id.Primary) return;
+            if(pendingButtonEvent.action == BleHidButtonEvent.Action.Press) Active = true;
+            if(pendingButtonEvent.action == BleHidButtonEvent.Action.Release) Active = false;
         }
 
         public void Handle(BleHidDirection pendingDirection) => ResetPosition();
@@ -73,7 +68,6 @@ namespace Inventonater.BleHid
             _accumulatedDeltas = Vector2.zero;
             _lastFilteredPosition = null;
             Filter.Reset();
-            WhenReset();
         }
 
         /// <summary>

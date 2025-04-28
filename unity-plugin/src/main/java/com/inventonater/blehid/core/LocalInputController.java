@@ -2,36 +2,42 @@ package com.inventonater.blehid.core;
 
 import android.accessibilityservice.AccessibilityService;
 import android.accessibilityservice.GestureDescription;
+import android.accessibilityservice.GestureDescription.StrokeDescription;
 import android.content.Context;
 import android.content.Intent;
 import android.graphics.Path;
 import android.provider.Settings;
 import android.util.Log;
 import android.view.accessibility.AccessibilityNodeInfo;
+
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
+
 
 /**
  * Controls input on the local device using Accessibility Services.
  */
 public class LocalInputController {
     private static final String TAG = "LocalInputController";
-    
+
     private final Context context;
     private LocalAccessibilityService accessibilityService;
-    
+    private ContinuousScroller continuousScroller;
+
     public LocalInputController(Context context) {
         this.context = context;
     }
-    
+
     /**
      * Registers the accessibility service.
      */
     public void registerAccessibilityService(LocalAccessibilityService service) {
         this.accessibilityService = service;
         Log.d(TAG, "Accessibility service registered");
+
+        continuousScroller = new ContinuousScroller(service);
     }
-    
+
     /**
      * Checks if accessibility service is enabled and registered.
      */
@@ -42,21 +48,21 @@ public class LocalInputController {
         }
         return true;
     }
-    
+
     /**
      * Checks if the accessibility service is enabled in settings.
      */
     public boolean isAccessibilityServiceEnabled() {
-        String serviceName = context.getPackageName() + "/" + 
-                             LocalAccessibilityService.class.getCanonicalName();
-        
+        String serviceName = context.getPackageName() + "/" +
+                LocalAccessibilityService.class.getCanonicalName();
+
         String enabledServices = Settings.Secure.getString(
                 context.getContentResolver(),
                 Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES);
-        
+
         return enabledServices != null && enabledServices.contains(serviceName);
     }
-    
+
     /**
      * Opens accessibility settings to enable the service.
      */
@@ -65,47 +71,47 @@ public class LocalInputController {
         intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
         context.startActivity(intent);
     }
-    
+
     /**
      * Performs a tap at the specified coordinates.
      */
     public boolean tap(int x, int y) {
         if (!isAccessibilityServiceAvailable()) return false;
-        
+
         Path path = new Path();
         path.moveTo(x, y);
-        
+
         GestureDescription.Builder builder = new GestureDescription.Builder();
-        builder.addStroke(new GestureDescription.StrokeDescription(path, 0, 100));
-        
+        builder.addStroke(new StrokeDescription(path, 0, 100));
+
         final CountDownLatch latch = new CountDownLatch(1);
         final boolean[] result = {false};
-        
-        accessibilityService.dispatchGesture(builder.build(), 
-            new AccessibilityService.GestureResultCallback() {
-                @Override
-                public void onCompleted(GestureDescription gestureDescription) {
-                    result[0] = true;
-                    latch.countDown();
-                }
-                
-                @Override
-                public void onCancelled(GestureDescription gestureDescription) {
-                    result[0] = false;
-                    latch.countDown();
-                }
-            }, null);
-        
+
+        accessibilityService.dispatchGesture(builder.build(),
+                new AccessibilityService.GestureResultCallback() {
+                    @Override
+                    public void onCompleted(GestureDescription gestureDescription) {
+                        result[0] = true;
+                        latch.countDown();
+                    }
+
+                    @Override
+                    public void onCancelled(GestureDescription gestureDescription) {
+                        result[0] = false;
+                        latch.countDown();
+                    }
+                }, null);
+
         try {
             latch.await(1, TimeUnit.SECONDS);
         } catch (InterruptedException e) {
             Log.e(TAG, "Tap gesture interrupted", e);
             return false;
         }
-        
+
         return result[0];
     }
-    
+
     /**
      * Performs a global tap using the accessibility service, even when app is not in foreground.
      * Used by the camera service to tap the camera button while the camera app is open.
@@ -116,42 +122,42 @@ public class LocalInputController {
             Log.e(TAG, "Accessibility service not running for global tap");
             return false;
         }
-        
+
         // Verify service is fully connected and ready
         if (!service.isReady()) {
             Log.e(TAG, "Accessibility service is not ready/connected");
             return false;
         }
-        
+
         Log.i(TAG, "Attempting global tap at (" + x + ", " + y + ")");
-        
+
         Path path = new Path();
         path.moveTo(x, y);
-        
+
         GestureDescription.Builder builder = new GestureDescription.Builder();
-        builder.addStroke(new GestureDescription.StrokeDescription(path, 0, 150)); // longer duration for more reliable tap
-        
+        builder.addStroke(new StrokeDescription(path, 0, 150)); // longer duration for more reliable tap
+
         final CountDownLatch latch = new CountDownLatch(1);
         final boolean[] result = {false};
-        
+
         try {
-            service.dispatchGesture(builder.build(), 
-                new AccessibilityService.GestureResultCallback() {
-                    @Override
-                    public void onCompleted(GestureDescription gestureDescription) {
-                        result[0] = true;
-                        Log.d(TAG, "Global tap completed successfully");
-                        latch.countDown();
-                    }
-                    
-                    @Override
-                    public void onCancelled(GestureDescription gestureDescription) {
-                        result[0] = false;
-                        Log.w(TAG, "Global tap was cancelled");
-                        latch.countDown();
-                    }
-                }, null);
-            
+            service.dispatchGesture(builder.build(),
+                    new AccessibilityService.GestureResultCallback() {
+                        @Override
+                        public void onCompleted(GestureDescription gestureDescription) {
+                            result[0] = true;
+                            Log.d(TAG, "Global tap completed successfully");
+                            latch.countDown();
+                        }
+
+                        @Override
+                        public void onCancelled(GestureDescription gestureDescription) {
+                            result[0] = false;
+                            Log.w(TAG, "Global tap was cancelled");
+                            latch.countDown();
+                        }
+                    }, null);
+
             // Wait for the tap to complete with a longer timeout
             if (!latch.await(1500, TimeUnit.MILLISECONDS)) {
                 Log.e(TAG, "Global tap timed out waiting for completion");
@@ -161,51 +167,28 @@ public class LocalInputController {
             Log.e(TAG, "Error during global tap: " + e.getMessage(), e);
             return false;
         }
-        
+
         return result[0];
     }
-    
-    /**
-     * Performs a swipe from (x1, y1) to (x2, y2).
-     */
-    public boolean swipe(int x1, int y1, int x2, int y2) {
-        if (!isAccessibilityServiceAvailable()) return false;
-        
-        Path path = new Path();
-        path.moveTo(x1, y1);
-        path.lineTo(x2, y2);
-        
-        GestureDescription.Builder builder = new GestureDescription.Builder();
-        builder.addStroke(new GestureDescription.StrokeDescription(path, 0, 300));
-        
-        final CountDownLatch latch = new CountDownLatch(1);
-        final boolean[] result = {false};
-        
-        accessibilityService.dispatchGesture(builder.build(), 
-            new AccessibilityService.GestureResultCallback() {
-                @Override
-                public void onCompleted(GestureDescription gestureDescription) {
-                    result[0] = true;
-                    latch.countDown();
-                }
-                
-                @Override
-                public void onCancelled(GestureDescription gestureDescription) {
-                    result[0] = false;
-                    latch.countDown();
-                }
-            }, null);
-        
-        try {
-            latch.await(1, TimeUnit.SECONDS);
-        } catch (InterruptedException e) {
-            Log.e(TAG, "Swipe gesture interrupted", e);
-            return false;
-        }
-        
-        return result[0];
+
+    public boolean swipeBegin(float startX, float startY) {
+        if (!isAccessibilityServiceAvailable() || continuousScroller == null) return false;
+        continuousScroller.begin(startX, startY);
+        return true;
     }
-    
+
+    public boolean swipeExtend(float deltaX, float deltaY) {
+        if (!isAccessibilityServiceAvailable() || continuousScroller == null) return false;
+        continuousScroller.extend(deltaX, deltaY);
+        return true;
+    }
+
+    public boolean swipeEnd() {
+        if (!isAccessibilityServiceAvailable() || continuousScroller == null) return false;
+        continuousScroller.end();
+        return true;
+    }
+
     /**
      * Sends a key event to the system.
      */
@@ -216,15 +199,16 @@ public class LocalInputController {
         Log.d(TAG, "Key event sent: " + globalAction + ", result: " + result);
         return result;
     }
-    
+
     /**
      * Performs the specified action on the currently focused accessibility node.
+     *
      * @param action The accessibility action to perform (e.g., AccessibilityNodeInfo.ACTION_CLICK)
      * @return true if the action was performed successfully, false otherwise
      */
     public boolean performFocusedNodeAction(int action) {
         if (!isAccessibilityServiceAvailable()) return false;
-        
+
         AccessibilityNodeInfo focusedNode = null;
         try {
             focusedNode = accessibilityService.findFocus(AccessibilityNodeInfo.FOCUS_ACCESSIBILITY);
@@ -247,6 +231,7 @@ public class LocalInputController {
 
     /**
      * Clicks on the currently focused accessibility node.
+     *
      * @return true if the click was performed successfully, false otherwise
      */
     public boolean clickFocusedNode() {

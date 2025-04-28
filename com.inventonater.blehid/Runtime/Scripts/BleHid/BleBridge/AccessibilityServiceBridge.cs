@@ -94,15 +94,9 @@ namespace Inventonater.BleHid
         public bool VolumeDown() => _java.Call<bool>("localVolumeDown");
         public bool Mute() => _java.Call<bool>("localMute");
         public bool Tap(int x, int y) => _java.Call<bool>("localTap", x, y);
-
-        public bool Swipe(Vector2 begin, Vector2 end)
-        {
-            Vector2Int beginInt = new Vector2Int(Mathf.RoundToInt(begin.x), Mathf.RoundToInt(begin.y));
-            Vector2Int endInt = new Vector2Int(Mathf.RoundToInt(end.x), Mathf.RoundToInt(end.y));
-            return Swipe(beginInt, endInt);
-        }
-
-        public bool Swipe(Vector2Int begin, Vector2Int end) => _java.Call<bool>("localSwipe", begin.x, begin.y, end.x, end.y);
+        public bool SwipeBegin(Vector2 begin) => _java.Call<bool>("localSwipeBegin", begin.x, begin.y);
+        public bool SwipeExtend(Vector2 delta) => _java.Call<bool>("localSwipeExtend", delta.x, delta.y);
+        public bool SwipeEnd() => _java.Call<bool>("localSwipeEnd");
 
         public bool DPadUp() => PerformGlobalAction(GlobalAction.Up);
         public bool DPadRight() => PerformGlobalAction(GlobalAction.Right);

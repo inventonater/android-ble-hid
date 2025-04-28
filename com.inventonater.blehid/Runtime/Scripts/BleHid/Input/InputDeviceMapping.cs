@@ -108,17 +108,10 @@ namespace Inventonater.BleHid
             mapping.Add(BleHidDirection.Down, () => serviceBridge.DPadDown());
             mapping.Add(BleHidDirection.Left, () => serviceBridge.DPadLeft());
 
-            Vector2 accumulatedPosition = ScreenCenter();
-            void DeltaMoveAction(Vector2 deltaMove)
-            {
-                var end = ClampToScreen(accumulatedPosition + deltaMove);
-                serviceBridge.Swipe(accumulatedPosition, end);
-                accumulatedPosition = end;
-            }
-            var mousePositionAxisMapping = new MousePositionAxisMapping(DeltaMoveAction, requirePress: true, flipY: false);
-            mousePositionAxisMapping.WhenReset += () => accumulatedPosition = ScreenCenter();
-
-            mapping.Add(mousePositionAxisMapping);
+            var swipeMapping = new MousePositionAxisMapping(deltaMove => serviceBridge.SwipeExtend(deltaMove), requirePress: true);
+            mapping.Add(BleHidButtonEvent.Id.Primary, BleHidButtonEvent.Action.Press, () => serviceBridge.SwipeBegin(ScreenCenter()));
+            mapping.Add(BleHidButtonEvent.Id.Primary, BleHidButtonEvent.Action.Release, () => serviceBridge.SwipeEnd());
+            mapping.Add(swipeMapping);
 
             mapping.Add(new SingleIncrementalAxisMapping(BleHidAxis.Z, () => serviceBridge.VolumeUp(), () => serviceBridge.VolumeDown()));
             return mapping;

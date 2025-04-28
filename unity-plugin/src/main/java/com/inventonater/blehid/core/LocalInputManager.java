@@ -121,10 +121,16 @@ public class LocalInputManager {
     /**
      * Input control: Swipe from point to point
      */
-    public boolean swipe(int x1, int y1, int x2, int y2) {
-        return inputController.swipe(x1, y1, x2, y2);
+    public boolean swipeBegin(float startX, float startY) {
+        return inputController.swipeBegin(startX, startY);
     }
-    
+    public boolean swipeExtend(float deltaX, float deltaY) {
+        return inputController.swipeExtend(deltaX, deltaY);
+    }
+    public boolean swipeEnd() {
+        return inputController.swipeEnd();
+    }
+
     /**
      * Input control: Directional navigation
      */

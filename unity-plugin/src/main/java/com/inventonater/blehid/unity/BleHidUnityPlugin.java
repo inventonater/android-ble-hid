@@ -549,9 +549,19 @@ public class BleHidUnityPlugin {
         return localInputManager.tap(x, y);
     }
 
-    public boolean localSwipe(int x1, int y1, int x2, int y2) {
+    public boolean localSwipeBegin(float startX, float startY) {
         if (localInputManager == null) return false;
-        return localInputManager.swipe(x1, y1, x2, y2);
+        return localInputManager.swipeBegin(startX, startY);
+    }
+
+    public boolean localSwipeExtend(float deltaX, float deltaY) {
+        if (localInputManager == null) return false;
+        return localInputManager.swipeExtend(deltaX, deltaY);
+    }
+
+    public boolean localSwipeEnd() {
+        if (localInputManager == null) return false;
+        return localInputManager.swipeEnd();
     }
 
     public boolean performGlobalAction(int globalAction) {
