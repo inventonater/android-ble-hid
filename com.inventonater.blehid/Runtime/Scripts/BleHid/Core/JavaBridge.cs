@@ -33,7 +33,7 @@ namespace Inventonater.BleHid
             if (Application.isEditor) return;
 
             try { JavaObject?.Call(methodName, args); }
-            catch (Exception e) { LoggingManager.Instance.AddLogException(e); }
+            catch (Exception e) { LoggingManager.Instance.Exception(e); }
             finally { Profiler.EndSample(); }
         }
 
@@ -50,7 +50,7 @@ namespace Inventonater.BleHid
                 Log($"JavaBridge.Call.Result: {result}");
                 return result;
             }
-            catch (Exception e) { LoggingManager.Instance.AddLogException(e); }
+            catch (Exception e) { LoggingManager.Instance.Exception(e); }
             finally { Profiler.EndSample(); }
 
             return default;

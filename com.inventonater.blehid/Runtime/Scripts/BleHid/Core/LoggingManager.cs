@@ -30,7 +30,7 @@ namespace Inventonater.BleHid
             }
         }
 
-        public void AddLogException(Exception exception) => Error(exception.Message);
+        public void Exception(Exception exception) => Error(exception.Message);
         public void Error(string message) => Log(message, true);
 
         /// <summary>

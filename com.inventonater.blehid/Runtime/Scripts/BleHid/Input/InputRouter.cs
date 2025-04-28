@@ -139,7 +139,7 @@ namespace Inventonater.BleHid
         private static void TryFireAction(Action action)
         {
             try { action(); }
-            catch (Exception e) { LoggingManager.Instance.AddLogException(e); }
+            catch (Exception e) { LoggingManager.Instance.Exception(e); }
         }
 
     }

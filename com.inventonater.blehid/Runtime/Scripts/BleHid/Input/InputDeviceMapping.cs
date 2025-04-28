@@ -115,7 +115,7 @@ namespace Inventonater.BleHid
                 serviceBridge.Swipe(accumulatedPosition, end);
                 accumulatedPosition = end;
             }
-            var mousePositionAxisMapping = new MousePositionAxisMapping(DeltaMoveAction, requirePress: true);
+            var mousePositionAxisMapping = new MousePositionAxisMapping(DeltaMoveAction, requirePress: true, flipY: false);
             mousePositionAxisMapping.WhenReset += () => accumulatedPosition = ScreenCenter();
 
             mapping.Add(mousePositionAxisMapping);

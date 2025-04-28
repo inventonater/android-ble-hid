@@ -16,8 +16,8 @@ namespace Inventonater.BleHid
         float _lastIncrement;
         static readonly ProfilerMarker _profileMarker = new("BleHid.AxisMappingIncremental.Update");
         private float _scale;
-        private BleHidButtonEvent _start = new BleHidButtonEvent(BleHidButtonEvent.Id.Primary, BleHidButtonEvent.Action.Press);
-        private BleHidButtonEvent _end = new BleHidButtonEvent(BleHidButtonEvent.Id.Primary, BleHidButtonEvent.Action.Release);
+        private readonly BleHidButtonEvent _start = new BleHidButtonEvent(BleHidButtonEvent.Id.Primary, BleHidButtonEvent.Action.Press);
+        private readonly BleHidButtonEvent _end = new BleHidButtonEvent(BleHidButtonEvent.Id.Primary, BleHidButtonEvent.Action.Release);
 
         public IInputFilter Filter => NoFilter.Instance;
 
@@ -32,7 +32,6 @@ namespace Inventonater.BleHid
 
         public void Handle(BleHidButtonEvent pendingButtonEvent)
         {
-            ResetPosition();
             if(pendingButtonEvent == _start) Active = true;
             if(pendingButtonEvent == _end) Active = false;
         }
@@ -48,6 +47,7 @@ namespace Inventonater.BleHid
                 if (_active == value) return;
                 ResetPosition();
                 _active = value;
+                LoggingManager.Instance.Log($"SingleIncrementalAxisMapping.Active: {_active}");
             }
         }
 
@@ -56,6 +56,7 @@ namespace Inventonater.BleHid
             _initialized = false;
             _pendingDelta = 0;
             _accumulatedDelta = 0;
+            LoggingManager.Instance.Log("SingleIncrementalAxisMapping.ResetPosition");
         }
 
         float _accumulatedDelta;
