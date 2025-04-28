@@ -4,9 +4,9 @@ namespace Inventonater.BleHid
 {
     public interface IAxisMapping
     {
-        public void SetValue(Vector3 absolutePosition);
+        public void SetPositionDelta(Vector3 delta);
         void Update(float time);
-        void ResetPosition();
-        public IInputFilter Filter { get; }
+        void Handle(BleHidButtonEvent pendingButtonEvent);
+        void Handle(BleHidDirection pendingDirection);
     }
 }

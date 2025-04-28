@@ -8,13 +8,13 @@ namespace Inventonater.BleHid
     {
         private readonly BleBridge _bleBridge;
         private readonly ActionResolver _actionResolver;
-        
+
         public AxisMappingFactory(BleBridge bleBridge, ActionResolver actionResolver)
         {
             _bleBridge = bleBridge;
             _actionResolver = actionResolver;
         }
-        
+
         public IAxisMapping CreateAxisMapping(AxisMappingEntry entry)
         {
             switch (entry.Type.ToLowerInvariant())
@@ -28,21 +28,28 @@ namespace Inventonater.BleHid
                     return null;
             }
         }
-        
+
         private MousePositionAxisMapping CreateMouseAxisMapping(AxisMappingEntry entry)
         {
+            bool requirePress = false;
             bool flipY = true;
+
             float horizontalSensitivity = 3.0f;
             float verticalSensitivity = 3.0f;
             string filterType = "OneEuro";
-            
+
             if (entry.Settings != null)
             {
+                if (entry.Settings.TryGetValue("requirePress", out var requirePressObj) && requirePressObj is bool requirePressValue)
+                {
+                    requirePress = requirePressValue;
+                }
+
                 if (entry.Settings.TryGetValue("flipY", out var flipYObj) && flipYObj is bool flipYValue)
                 {
                     flipY = flipYValue;
                 }
-                
+
                 if (entry.Settings.TryGetValue("horizontalSensitivity", out var hSensObj))
                 {
                     if (hSensObj is float hSensFloat)
@@ -54,7 +61,7 @@ namespace Inventonater.BleHid
                         horizontalSensitivity = (float)hSensDouble;
                     }
                 }
-                
+
                 if (entry.Settings.TryGetValue("verticalSensitivity", out var vSensObj))
                 {
                     if (vSensObj is float vSensFloat)
@@ -66,7 +73,7 @@ namespace Inventonater.BleHid
                         verticalSensitivity = (float)vSensDouble;
                     }
                 }
-                
+
                 if (entry.Settings.TryGetValue("filter", out var filterObj) && filterObj is string filterStr)
                 {
                     filterType = filterStr;
@@ -75,10 +82,10 @@ namespace Inventonater.BleHid
 
 
             Action<Vector2> deltaMoveAction = _bleBridge.Mouse.MoveMouse;
-            var mouseFilter = new MousePositionAxisMapping(deltaMoveAction, flipY);
+            var mouseFilter = new MousePositionAxisMapping(deltaMoveAction, requirePress: requirePress, flipY: flipY);
             mouseFilter.HorizontalSensitivity = horizontalSensitivity;
             mouseFilter.VerticalSensitivity = verticalSensitivity;
-            
+
             // Check if we have a serialized filter
             if (!string.IsNullOrEmpty(entry.SerializedFilter))
             {
@@ -100,15 +107,15 @@ namespace Inventonater.BleHid
                 // Use filter type and settings
                 ApplyFilterTypeAndSettings(mouseFilter, filterType, entry.FilterSettings);
             }
-            
+
             return mouseFilter;
         }
-        
+
         private SingleIncrementalAxisMapping CreateIncrementalAxisMapping(AxisMappingEntry entry)
         {
             BleHidAxis axis = BleHidAxis.Z;
             float interval = 0.02f;
-            
+
             if (!string.IsNullOrEmpty(entry.Axis))
             {
                 if (Enum.TryParse(entry.Axis, true, out BleHidAxis parsedAxis))
@@ -116,7 +123,7 @@ namespace Inventonater.BleHid
                     axis = parsedAxis;
                 }
             }
-            
+
             if (entry.Settings != null && entry.Settings.TryGetValue("interval", out var intervalObj))
             {
                 if (intervalObj is float intervalFloat)
@@ -128,23 +135,23 @@ namespace Inventonater.BleHid
                     interval = (float)intervalDouble;
                 }
             }
-            
+
             Action incrementAction = () => {};
             Action decrementAction = () => {};
-            
+
             if (!string.IsNullOrEmpty(entry.IncrementAction))
             {
                 incrementAction = _actionResolver.ResolveAction(entry.IncrementAction);
             }
-            
+
             if (!string.IsNullOrEmpty(entry.DecrementAction))
             {
                 decrementAction = _actionResolver.ResolveAction(entry.DecrementAction);
             }
-            
+
             return new SingleIncrementalAxisMapping(axis, incrementAction, decrementAction, interval);
         }
-        
+
         private void ApplyFilterTypeAndSettings(MousePositionAxisMapping mouseAxisMapping, string filterType, Dictionary<string, object> filterSettings)
         {
             // Set filter type
@@ -153,21 +160,21 @@ namespace Inventonater.BleHid
             {
                 filterTypeEnum = parsedFilterType;
             }
-            
+
             mouseAxisMapping.SetInputFilter(filterTypeEnum);
-            
+
             // Apply filter-specific settings
             if (filterSettings != null && mouseAxisMapping.Filter != null)
             {
                 ApplyFilterSettings(mouseAxisMapping.Filter, filterSettings);
             }
         }
-        
+
         private void ApplyFilterSettings(IInputFilter filter, Dictionary<string, object> settings)
         {
             if (filter == null || settings == null || settings.Count == 0)
                 return;
-                
+
             // Use the FilterSerializer to apply settings
             FilterSerializer.ApplySettings(filter, settings);
         }

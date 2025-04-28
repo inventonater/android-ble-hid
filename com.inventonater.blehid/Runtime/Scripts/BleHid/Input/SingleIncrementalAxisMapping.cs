@@ -15,12 +15,13 @@ namespace Inventonater.BleHid
         private readonly float _timeInterval;
         float _lastIncrement;
         static readonly ProfilerMarker _profileMarker = new("BleHid.AxisMappingIncremental.Update");
-        private bool _active;
         private float _scale;
+        private BleHidButtonEvent _start = new BleHidButtonEvent(BleHidButtonEvent.Id.Primary, BleHidButtonEvent.Action.Press);
+        private BleHidButtonEvent _end = new BleHidButtonEvent(BleHidButtonEvent.Id.Primary, BleHidButtonEvent.Action.Release);
 
         public IInputFilter Filter => NoFilter.Instance;
 
-        public SingleIncrementalAxisMapping(BleHidAxis axis, Action increment, Action decrement, float scale = 0.1f, float timeInterval = 0.02f)
+        public SingleIncrementalAxisMapping(BleHidAxis axis, Action increment, Action decrement, float scale = 0.1f, float timeInterval = 0.04f)
         {
             _axis = axis;
             _increment = increment;
@@ -29,10 +30,20 @@ namespace Inventonater.BleHid
             _timeInterval = timeInterval;
         }
 
+        public void Handle(BleHidButtonEvent pendingButtonEvent)
+        {
+            ResetPosition();
+            if(pendingButtonEvent == _start) Active = true;
+            if(pendingButtonEvent == _end) Active = false;
+        }
+
+        public void Handle(BleHidDirection pendingDirection) => ResetPosition();
+
+        private bool _active;
         public bool Active
         {
             get => _active;
-            set
+            private set
             {
                 if (_active == value) return;
                 ResetPosition();
@@ -44,14 +55,15 @@ namespace Inventonater.BleHid
         {
             _initialized = false;
             _pendingDelta = 0;
+            _accumulatedDelta = 0;
         }
 
-        public void SetValue(Vector3 absolutePosition)
+        float _accumulatedDelta;
+        public void SetPositionDelta(Vector3 delta)
         {
-            var absoluteValue = absolutePosition[(int)_axis];
-            absoluteValue *= _scale;
+            _accumulatedDelta += delta[(int)_axis] * _scale;
 
-            int incrementValue = Mathf.RoundToInt(absoluteValue);
+            int incrementValue = Mathf.RoundToInt(_accumulatedDelta);
             if (!_initialized)
             {
                 _initialized = true;

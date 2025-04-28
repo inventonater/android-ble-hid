@@ -38,19 +38,17 @@ namespace Inventonater.BleHid
             if (_mapping == mapping) return;
 
             _mapping = mapping;
-            HandleResetPosition();
             WhenMappingChanged(_mapping);
             LoggingManager.Instance.Log($"SetMapping: {mapping.Name}");
         }
 
-        private void SwitchMapping()
+        public void CycleMapping()
         {
             if (_mappings.Count <= 1) return;
             int currentIndex = _mappings.IndexOf(_mapping);
             int nextIndex = (currentIndex + 1) % _mappings.Count;
             SetMapping(_mappings[nextIndex]);
         }
-
 
         private void ToggleActive()
         {
@@ -64,10 +62,9 @@ namespace Inventonater.BleHid
             if (prevSourceDevice != null)
             {
                 LoggingManager.Instance.Log($"unregistered: {prevSourceDevice.Name}");
-                prevSourceDevice.NotifyPosition -= HandlePositionEvent;
-                prevSourceDevice.NotifyButtonEvent -= HandleButtonEvent;
-                prevSourceDevice.NotifyDirection -= HandleDirection;
-                prevSourceDevice.NotifyResetPosition -= HandleResetPosition;
+                prevSourceDevice.EmitPositionDelta -= HandlePositionDeltaEvent;
+                prevSourceDevice.EmitButtonEvent -= HandleButtonEvent;
+                prevSourceDevice.EmitDirection -= HandleDirection;
 
                 prevSourceDevice.InputDeviceDisabled();
             }
@@ -76,11 +73,9 @@ namespace Inventonater.BleHid
             if (_sourceDevice != null)
             {
                 LoggingManager.Instance.Log($"registered: {_sourceDevice.Name}");
-                _sourceDevice.NotifyPosition += HandlePositionEvent;
-                _sourceDevice.NotifyButtonEvent += HandleButtonEvent;
-                _sourceDevice.NotifyDirection += HandleDirection;
-                _sourceDevice.NotifyResetPosition += HandleResetPosition;
-
+                _sourceDevice.EmitPositionDelta += HandlePositionDeltaEvent;
+                _sourceDevice.EmitButtonEvent += HandleButtonEvent;
+                _sourceDevice.EmitDirection += HandleDirection;
                 _sourceDevice.InputDeviceEnabled();
             }
 
@@ -95,21 +90,16 @@ namespace Inventonater.BleHid
             }
             if (buttonEvent == new BleHidButtonEvent(BleHidButtonEvent.Id.Tertiary, BleHidButtonEvent.Action.DoubleTap))
             {
-                SwitchMapping();
+                CycleMapping();
             }
             _pendingButtonEvents.Add(buttonEvent);
         }
 
         private void HandleDirection(BleHidDirection direction) => _pendingDirection.Add(direction);
 
-        private void HandlePositionEvent(Vector3 absolutePosition)
+        private void HandlePositionDeltaEvent(Vector3 delta)
         {
-            foreach (var mapping in _mapping.AxisMappings) mapping.SetValue(absolutePosition);
-        }
-
-        private void HandleResetPosition()
-        {
-            foreach (var axisMapping in _mapping.AxisMappings) axisMapping.ResetPosition();
+            foreach (var mapping in _mapping.AxisMappings) mapping.SetPositionDelta(delta);
         }
 
         // ExecutionOrder Process
@@ -117,34 +107,33 @@ namespace Inventonater.BleHid
         {
             if (!_active) return;
 
-            using (_profileMarkerButtonEvent.Auto())
+            foreach (var pendingButtonEvent in _pendingButtonEvents) FireButtonEvent(pendingButtonEvent);
+            _pendingButtonEvents.Clear();
+
+            foreach (var pendingDirection in _pendingDirection) FireDirection(pendingDirection);
+            _pendingDirection.Clear();
+
+            foreach (var axisMapping in _mapping.AxisMappings) axisMapping.Update(Time.time);
+        }
+
+        private void FireDirection(BleHidDirection pendingDirection)
+        {
+            if (_mapping.DirectionMapping.TryGetValue(pendingDirection, out var directionActions))
             {
-                foreach (var pendingButtonEvent in _pendingButtonEvents)
-                {
-                    if (_mapping.ButtonMapping.TryGetValue(pendingButtonEvent, out var buttonActions))
-                    {
-                        foreach (var action in buttonActions) TryFireAction(action);
-                    }
-                }
-                _pendingButtonEvents.Clear();
+                foreach (var action in directionActions) TryFireAction(action);
             }
 
-            using (_profileMarkerDirection.Auto())
+            foreach (var axisMapping in _mapping.AxisMappings) TryFireAction(() => axisMapping.Handle(pendingDirection));
+        }
+
+        private void FireButtonEvent(BleHidButtonEvent pendingButtonEvent)
+        {
+            if (_mapping.ButtonMapping.TryGetValue(pendingButtonEvent, out var buttonActions))
             {
-                foreach (var pendingDirection in _pendingDirection)
-                {
-                    if (_mapping.DirectionMapping.TryGetValue(pendingDirection, out var directionActions))
-                    {
-                        foreach (var action in directionActions) TryFireAction(action);
-                    }
-                }
-                _pendingDirection.Clear();
+                foreach (var action in buttonActions) TryFireAction(action);
             }
 
-            using (_profileMarkerAxis.Auto())
-            {
-                foreach (var axisMapping in _mapping.AxisMappings) axisMapping.Update(Time.time);
-            }
+            foreach (var axisMapping in _mapping.AxisMappings) TryFireAction(() => axisMapping.Handle(pendingButtonEvent));
         }
 
         private static void TryFireAction(Action action)
@@ -153,8 +142,5 @@ namespace Inventonater.BleHid
             catch (Exception e) { LoggingManager.Instance.AddLogException(e); }
         }
 
-        static readonly ProfilerMarker _profileMarkerButtonEvent = new("BleHid.InputDeviceMapping.Update.ButtonEvent");
-        static readonly ProfilerMarker _profileMarkerDirection = new("BleHid.InputDeviceMapping.Update.DirectionMapping");
-        static readonly ProfilerMarker _profileMarkerAxis = new("BleHid.InputDeviceMapping.Update.AxisMapping");
     }
 }

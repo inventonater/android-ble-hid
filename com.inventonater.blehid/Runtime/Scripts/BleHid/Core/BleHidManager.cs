@@ -9,7 +9,8 @@ namespace Inventonater.BleHid
     {
         private InputDeviceMapping _localNavigation;
         private InputDeviceMapping _localMedia;
-        private InputDeviceMapping _bleMapping;
+        private InputDeviceMapping _bleMouse;
+        private InputDeviceMapping _bleMedia;
 
         public bool IsInitialized { get; private set; }
         public bool IsInPipMode { get; internal set; }
@@ -35,11 +36,13 @@ namespace Inventonater.BleHid
 
             _localMedia = InputDeviceMapping.LocalMedia(BleBridge);
             _localNavigation = InputDeviceMapping.LocalNavigation(BleBridge);
-            _bleMapping = InputDeviceMapping.Ble(BleBridge);
+            _bleMouse = InputDeviceMapping.BleMouse(BleBridge);
+            _bleMedia = InputDeviceMapping.BleMedia(BleBridge);
 
             InputRouter.AddMapping(_localMedia);
             InputRouter.AddMapping(_localNavigation);
-            InputRouter.AddMapping(_bleMapping);
+            InputRouter.AddMapping(_bleMouse);
+            InputRouter.AddMapping(_bleMedia);
 
             ConnectionBridge = new ConnectionBridge(JavaBridge);
             PipWorker = new PipBackgroundWorker();

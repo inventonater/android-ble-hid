@@ -8,12 +8,10 @@ namespace Inventonater.BleHid
     public class MouseDeviceUI : SectionUI, IInputSourceDevice
     {
         public string Name { get; } = "Mouse";
-        public event Action<BleHidButtonEvent> NotifyButtonEvent = delegate { };
-        public event Action<Vector3> NotifyPosition = delegate { };
-        public event Action NotifyResetPosition = delegate { };
-        public event Action NotifySwitchMapping = delegate { };
+        public event Action<BleHidButtonEvent> EmitButtonEvent = delegate { };
+        public event Action<Vector3> EmitPositionDelta = delegate { };
 
-        public event Action<BleHidDirection> NotifyDirection = delegate { };
+        public event Action<BleHidDirection> EmitDirection = delegate { };
         public override string TabName => Name;
 
         private Rect touchpadRect = new(Screen.width / 2 - 150, Screen.height / 2 - 100, 300, 200);
@@ -65,20 +63,21 @@ namespace Inventonater.BleHid
             return new Rect(touchpadRect.x, touchpadRectHeight, touchpadRect.width, touchpadRect.height);
         }
 
+        private Vector3 _lastPosition;
         public override void Update()
         {
             if (IsEditorMode)
             {
-                if (Input.GetMouseButtonDown(0)) NotifyResetPosition();
-                NotifyPosition(Input.mousePosition);
+                if (Input.GetMouseButtonDown(0)) _lastPosition = Input.mousePosition;
+                EmitPositionDelta(Input.mousePosition - _lastPosition);
                 return;
             }
 
             if (Input.touchCount > 0)
             {
                 var touch = Input.GetTouch(0);
-                if (touch.phase == TouchPhase.Began) NotifyResetPosition();
-                NotifyPosition(touch.position);
+                if (touch.phase == TouchPhase.Began) _lastPosition = touch.position;
+                EmitPositionDelta((Vector3)touch.position - _lastPosition);
             }
         }
 
@@ -112,7 +111,7 @@ namespace Inventonater.BleHid
             UIHelper.BeginSection("Mouse Buttons");
             GUILayout.Label("Click buttons to send mouse button actions to the connected device");
             UIHelper.ActionButtonRow(_buttonLabels, _buttonActions, _buttonMessages, UIHelper.LargeButtonOptions);
-            if (GUILayout.Button("Switch Mapping")) NotifySwitchMapping();
+            if (GUILayout.Button("Switch Mapping")) BleHidManager.Instance.InputRouter.CycleMapping();
             UIHelper.EndSection();
         }
 

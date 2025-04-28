@@ -61,10 +61,9 @@ namespace Inventonater.BleHid
     public interface IInputSourceDevice
     {
         string Name { get; }
-        event Action<BleHidButtonEvent> NotifyButtonEvent;
-        event Action<BleHidDirection> NotifyDirection;
-        event Action<Vector3> NotifyPosition;
-        event Action NotifyResetPosition;
+        event Action<BleHidButtonEvent> EmitButtonEvent;
+        event Action<BleHidDirection> EmitDirection;
+        event Action<Vector3> EmitPositionDelta;
 
         void InputDeviceEnabled();
         void InputDeviceDisabled();

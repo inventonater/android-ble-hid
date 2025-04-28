@@ -34,29 +34,24 @@ namespace Inventonater.BleHid
         public string Name { get; }
 
         private void Add(BleHidButtonEvent.Id id, BleHidButtonEvent.Action buttonAction, Action action) => Add(new BleHidButtonEvent(id, buttonAction), action);
-        public void Add(IAxisMapping axisMapping) => _axisMappings.Add(axisMapping);
         public void Add(BleHidButtonEvent buttonEvent, Action action) => _buttonMapping.AppendValue(buttonEvent, action);
         public void Add(BleHidDirection dir, Action action) => _directionMapping.AppendValue(dir, action);
+
         public void AddPressRelease(BleHidButtonEvent.Id button, Action press, Action release)
         {
             Add(button, BleHidButtonEvent.Action.Press, press);
             Add(button, BleHidButtonEvent.Action.Release, release);
         }
-        private void AddSingleAxisIncremental(Action increment, Action decrement, BleHidAxis bleHidAxis)
-        {
-            var axisMapping = new SingleIncrementalAxisMapping(bleHidAxis, increment, decrement);
-            Add(BleHidButtonEvent.Id.Primary, BleHidButtonEvent.Action.Press, () => axisMapping.Active = true);
-            Add(new BleHidButtonEvent(BleHidButtonEvent.Id.Primary, BleHidButtonEvent.Action.Release), () => axisMapping.Active = false);
-            Add(axisMapping);
-        }
 
-        public static InputDeviceMapping Ble(BleBridge bridge)
+        public void Add(IAxisMapping axisMapping) => _axisMappings.Add(axisMapping);
+
+        public static InputDeviceMapping BleMouse(BleBridge bridge)
         {
             var mouse = bridge.Mouse;
             var media = bridge.Media;
             var keyboard = bridge.Keyboard;
 
-            var mapping = new InputDeviceMapping("BleMapping");
+            var mapping = new InputDeviceMapping("BleMouse");
             mapping.AddPressRelease(BleHidButtonEvent.Id.Primary, () => mouse.PressMouseButton(0), () => mouse.ReleaseMouseButton(0));
             mapping.AddPressRelease(BleHidButtonEvent.Id.Secondary, () => mouse.PressMouseButton(1), () => mouse.ReleaseMouseButton(1));
             mapping.Add(BleHidDirection.Up, () => keyboard.SendKey(BleHidConstants.KEY_UP));
@@ -64,11 +59,23 @@ namespace Inventonater.BleHid
             mapping.Add(BleHidDirection.Down, () => keyboard.SendKey(BleHidConstants.KEY_DOWN));
             mapping.Add(BleHidDirection.Left, () => keyboard.SendKey(BleHidConstants.KEY_LEFT));
             mapping.Add(new MousePositionAxisMapping(mouse));
-
-            mapping.AddSingleAxisIncremental(() => media.VolumeUp(), () => media.VolumeDown(), BleHidAxis.Z);
+            mapping.Add(new SingleIncrementalAxisMapping(BleHidAxis.Z, () => media.VolumeUp(), () => media.VolumeDown()));
             return mapping;
         }
 
+        public static InputDeviceMapping BleMedia(BleBridge bridge)
+        {
+            var media = bridge.Media;
+            var mapping = new InputDeviceMapping("BleMedia");
+
+            mapping.Add(BleHidButtonEvent.Id.Primary, BleHidButtonEvent.Action.DoubleTap, () => media.PlayPause());
+            mapping.Add(BleHidDirection.Right, () => media.NextTrack());
+            mapping.Add(BleHidDirection.Left, () => media.PreviousTrack());
+            mapping.Add(BleHidDirection.Up, () => media.Mute());
+            mapping.Add(BleHidDirection.Down, () => media.Mute());
+            mapping.Add(new SingleIncrementalAxisMapping(BleHidAxis.Z, () => media.VolumeUp(), () => media.VolumeDown()));
+            return mapping;
+        }
 
         public static InputDeviceMapping LocalMedia(BleBridge bridge)
         {
@@ -82,17 +89,18 @@ namespace Inventonater.BleHid
             mapping.Add(BleHidDirection.Up, () => serviceBridge.Mute());
             mapping.Add(BleHidDirection.Down, () => serviceBridge.Mute());
 
-            mapping.AddSingleAxisIncremental(() => serviceBridge.VolumeUp(), () => serviceBridge.VolumeDown(), BleHidAxis.Z);
+            mapping.Add(new SingleIncrementalAxisMapping(BleHidAxis.Z, () => serviceBridge.VolumeUp(), () => serviceBridge.VolumeDown()));
             return mapping;
         }
 
+        private static Vector2 ClampToScreen(Vector2 vector2) => new(Mathf.Clamp(vector2.x, 0, Screen.width), Mathf.Clamp(vector2.y, 0, Screen.height));
+        private static Vector2 ScreenCenter() => new(Screen.width / 2, Screen.height / 2);
 
         public static InputDeviceMapping LocalNavigation(BleBridge bridge)
         {
             var serviceBridge = bridge.AccessibilityServiceBridge;
 
             var mapping = new InputDeviceMapping("LocalNavigationMapping");
-
             mapping.Add(BleHidButtonEvent.Id.Primary, BleHidButtonEvent.Action.Tap, () => serviceBridge.ClickFocusedNode());
             mapping.Add(BleHidButtonEvent.Id.Secondary, BleHidButtonEvent.Action.Tap, () => serviceBridge.Back());
             mapping.Add(BleHidDirection.Up, () => serviceBridge.DPadUp());
@@ -100,29 +108,20 @@ namespace Inventonater.BleHid
             mapping.Add(BleHidDirection.Down, () => serviceBridge.DPadDown());
             mapping.Add(BleHidDirection.Left, () => serviceBridge.DPadLeft());
 
-            Vector2 position = default;
-            bool isActive = false;
+            Vector2 accumulatedPosition = ScreenCenter();
             void DeltaMoveAction(Vector2 deltaMove)
             {
-                if(isActive) serviceBridge.Swipe(position, position + deltaMove);
-                position += deltaMove;
+                var end = ClampToScreen(accumulatedPosition + deltaMove);
+                serviceBridge.Swipe(accumulatedPosition, end);
+                accumulatedPosition = end;
             }
-            var mousePositionAxisMapping = new MousePositionAxisMapping(DeltaMoveAction);
-            mapping.Add(BleHidButtonEvent.Id.Primary, BleHidButtonEvent.Action.Press, () =>
-            {
-                position = default;
-                mousePositionAxisMapping.ResetPosition();
-            });
-            mapping.Add(BleHidButtonEvent.Id.Primary, BleHidButtonEvent.Action.DoubleTap, () =>
-            {
-                isActive = !isActive;
-                LoggingManager.Instance.Log($"Setting ServiceBridge singleAxis active: {isActive}");
-            });
+            var mousePositionAxisMapping = new MousePositionAxisMapping(DeltaMoveAction, requirePress: true);
+            mousePositionAxisMapping.WhenReset += () => accumulatedPosition = ScreenCenter();
+
             mapping.Add(mousePositionAxisMapping);
 
-            mapping.AddSingleAxisIncremental(() => serviceBridge.VolumeUp(), () => serviceBridge.VolumeDown(), BleHidAxis.Z);
+            mapping.Add(new SingleIncrementalAxisMapping(BleHidAxis.Z, () => serviceBridge.VolumeUp(), () => serviceBridge.VolumeDown()));
             return mapping;
         }
-
     }
 }

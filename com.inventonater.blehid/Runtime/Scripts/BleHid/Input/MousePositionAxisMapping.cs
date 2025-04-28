@@ -11,29 +11,69 @@ namespace Inventonater.BleHid
         public InputFilterFactory.FilterType CurrentFilterType { get; private set; }
         static readonly ProfilerMarker _profileMarker = new("BleHid.MousePositionFilter.Update");
 
+        private Vector3 _accumulatedDeltas;
         private Vector2? _lastFilteredPosition;
         public float GlobalScale = 1.0f;
         public float HorizontalSensitivity = 3.0f;
         public float VerticalSensitivity = 3.0f;
-        [SerializeField] private Vector3 _pendingPosition;
-        [SerializeField] private Vector3 _lastPosition;
+        float _lastIncrement;
+
         [SerializeField] private bool _flipY;
         private readonly Action<Vector2> _deltaMoveAction;
 
+        public event Action WhenReset = delegate { };
         public MousePositionAxisMapping(MouseBridge mouseBridge) :this (mouseBridge.MoveMouse) { }
-        public MousePositionAxisMapping(Action<Vector2> deltaMoveAction, bool flipY = true)
+        public MousePositionAxisMapping(Action<Vector2> deltaMoveAction, bool requirePress = false, bool flipY = true, float timeInterval = 0.04f)
         {
+            _timeInterval = timeInterval;
+            _requirePress = requirePress;
             _deltaMoveAction = deltaMoveAction;
+
             _flipY = flipY;
             CurrentFilterType = InputFilterFactory.FilterType.OneEuro;
             Filter = InputFilterFactory.CreateFilter(CurrentFilterType);
             Filter = Filter;
+
+            Active = !_requirePress;
+        }
+
+        public void Handle(BleHidButtonEvent pendingButtonEvent)
+        {
+            ResetPosition();
+
+            if (_requirePress)
+            {
+                if (pendingButtonEvent.id == BleHidButtonEvent.Id.Primary)
+                {
+                    if(pendingButtonEvent.action == BleHidButtonEvent.Action.Press) Active = true;
+                    if(pendingButtonEvent.action == BleHidButtonEvent.Action.Release) Active = false;
+                }
+            }
+        }
+
+        public void Handle(BleHidDirection pendingDirection) => ResetPosition();
+
+        private bool _active;
+        private bool _requirePress;
+        private float _timeInterval;
+
+        public bool Active
+        {
+            get => _active;
+            private set
+            {
+                if (_active == value) return;
+                ResetPosition();
+                _active = value;
+            }
         }
 
         public void ResetPosition()
         {
+            _accumulatedDeltas = Vector2.zero;
             _lastFilteredPosition = null;
             Filter.Reset();
+            WhenReset();
         }
 
         /// <summary>
@@ -82,24 +122,30 @@ namespace Inventonater.BleHid
             return InputFilterFactory.FilterType.OneEuro; // Default
         }
 
-        public void SetValue(Vector3 absolutePosition) => _pendingPosition = absolutePosition;
+        public void SetPositionDelta(Vector3 delta)
+        {
+            if (_flipY) delta.y = -delta.y;
+            delta.x *= HorizontalSensitivity;
+            delta.y *= VerticalSensitivity;
+            delta *= GlobalScale;
+            _accumulatedDeltas += delta;
+        }
 
         public void Update(float time)
         {
             using var profilerMarker = _profileMarker.Auto();
-            if (_flipY) _pendingPosition.y = -_pendingPosition.y;
 
-            Vector2 filteredPosition = Filter.Filter(_pendingPosition, time);
-            _lastFilteredPosition ??= filteredPosition;
+            if (!_active) return;
+            if (time < _lastIncrement + _timeInterval) return;
+            _lastIncrement = time;
 
-            var delta = filteredPosition - _lastFilteredPosition.Value;
-            _lastFilteredPosition = filteredPosition;
+            Vector2 filteredPositionAbsolute = Filter.Filter(_accumulatedDeltas, time);
 
-            delta.x *= HorizontalSensitivity;
-            delta.y *= VerticalSensitivity;
-            delta *= GlobalScale;
+            _lastFilteredPosition ??= filteredPositionAbsolute;
+            var filteredPositionDelta = filteredPositionAbsolute - _lastFilteredPosition.Value;
+            _deltaMoveAction(filteredPositionDelta);
 
-            _deltaMoveAction(delta);
+            _lastFilteredPosition = filteredPositionAbsolute;
         }
     }
 }

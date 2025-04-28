@@ -1,13 +1,13 @@
 using System;
 using Unity.Profiling;
 using UnityEngine;
+using UnityEngine.Profiling;
 
 namespace Inventonater.BleHid
 {
     public class JavaBridge
     {
         private AndroidJavaObject JavaObject { get; }
-        static readonly ProfilerMarker _marker = new("BleHid.BleBridgeCaller.Call");
         private readonly bool _verbose = false;
 
         public JavaBridge()
@@ -24,22 +24,24 @@ namespace Inventonater.BleHid
             catch (Exception e) { Debug.LogException(e); }
             JavaObject.Dispose();
         }
+
         public void Call(string methodName, params object[] args)
         {
-            using var profilerMarker = _marker.Auto();
-            Log($"JavaBridge.Call {methodName} {string.Join(", ", args)}");
-
+            var msg = $"JavaBridge.Call {methodName} {string.Join(", ", args)}";
+            Log(msg);
+            Profiler.BeginSample(msg);
             if (Application.isEditor) return;
 
             try { JavaObject?.Call(methodName, args); }
             catch (Exception e) { LoggingManager.Instance.AddLogException(e); }
+            finally { Profiler.EndSample(); }
         }
 
         public T Call<T>(string methodName, params object[] args)
         {
-            using var profilerMarker = _marker.Auto();
-            Log($"JavaBridge.Call {methodName} {string.Join(", ", args)}");
-
+            var msg = $"JavaBridge.Call {methodName} {string.Join(", ", args)}";
+            Log(msg);
+            Profiler.BeginSample(msg);
             if (Application.isEditor) return default;
 
             try
@@ -49,6 +51,8 @@ namespace Inventonater.BleHid
                 return result;
             }
             catch (Exception e) { LoggingManager.Instance.AddLogException(e); }
+            finally { Profiler.EndSample(); }
+
             return default;
         }
 

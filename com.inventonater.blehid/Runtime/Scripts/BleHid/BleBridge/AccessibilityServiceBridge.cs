@@ -123,7 +123,7 @@ namespace Inventonater.BleHid
             Right = 19
         }
 
-        private bool PerformGlobalAction(GlobalAction action) => _java.Call<bool>("performGlobalAction", action);
+        private bool PerformGlobalAction(GlobalAction action) => _java.Call<bool>("performGlobalAction", (int)action);
 
 
         public bool LaunchCameraApp() => _java.Call<bool>("launchCameraApp");
