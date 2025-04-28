@@ -93,28 +93,42 @@ namespace Inventonater.BleHid
             return mapping;
         }
 
-        private static Vector2 ClampToScreen(Vector2 vector2) => new(Mathf.Clamp(vector2.x, 0, Screen.width), Mathf.Clamp(vector2.y, 0, Screen.height));
-        private static Vector2 ScreenCenter() => new(Screen.width / 2, Screen.height / 2);
+        private static readonly Vector2 SamsungResolution = new Vector2(1440, 3088);
+        private static readonly Vector2 Pixel9XLResolution = new Vector2(1344, 2992);
 
-        public static InputDeviceMapping LocalNavigation(BleBridge bridge)
+        private static Vector2 Resolution => Pixel9XLResolution;
+        private static Vector2 ClampToScreen(Vector2 vector2) => new(Mathf.Clamp(vector2.x, 0, Resolution.x), Mathf.Clamp(vector2.y, 0, Resolution.y));
+        private static Vector2 ScreenCenter() => Resolution * 0.5f;
+
+        public static InputDeviceMapping LocalDPadNavigation(BleBridge bridge)
         {
             var serviceBridge = bridge.AccessibilityServiceBridge;
+            var mapping = new InputDeviceMapping("LocalDPadNavigation");
 
-            var mapping = new InputDeviceMapping("LocalNavigationMapping");
-            mapping.Add(BleHidButtonEvent.Id.Primary, BleHidButtonEvent.Action.Tap, () => serviceBridge.ClickFocusedNode());
+            mapping.Add(BleHidButtonEvent.Id.Primary, BleHidButtonEvent.Action.Tap, () => serviceBridge.DPadCenter());
             mapping.Add(BleHidButtonEvent.Id.Secondary, BleHidButtonEvent.Action.Tap, () => serviceBridge.Back());
+            mapping.Add(BleHidButtonEvent.Id.Secondary, BleHidButtonEvent.Action.DoubleTap, () => serviceBridge.Home());
+
             mapping.Add(BleHidDirection.Up, () => serviceBridge.DPadUp());
             mapping.Add(BleHidDirection.Right, () => serviceBridge.DPadRight());
             mapping.Add(BleHidDirection.Down, () => serviceBridge.DPadDown());
             mapping.Add(BleHidDirection.Left, () => serviceBridge.DPadLeft());
+            mapping.Add(new SingleIncrementalAxisMapping(BleHidAxis.Z, () => serviceBridge.VolumeUp(), () => serviceBridge.VolumeDown()));
+            return mapping;
+        }
+
+        public static InputDeviceMapping LocalDragNavigation(BleBridge bridge)
+        {
+            var serviceBridge = bridge.AccessibilityServiceBridge;
+            var mapping = new InputDeviceMapping("LocalDragNavigation");
 
             var swipeMapping = new MousePositionAxisMapping(deltaMove => serviceBridge.SwipeExtend(deltaMove), requirePress: true);
             mapping.Add(BleHidButtonEvent.Id.Primary, BleHidButtonEvent.Action.Press, () => serviceBridge.SwipeBegin(ScreenCenter()));
             mapping.Add(BleHidButtonEvent.Id.Primary, BleHidButtonEvent.Action.Release, () => serviceBridge.SwipeEnd());
             mapping.Add(swipeMapping);
 
-            mapping.Add(new SingleIncrementalAxisMapping(BleHidAxis.Z, () => serviceBridge.VolumeUp(), () => serviceBridge.VolumeDown()));
             return mapping;
         }
+
     }
 }

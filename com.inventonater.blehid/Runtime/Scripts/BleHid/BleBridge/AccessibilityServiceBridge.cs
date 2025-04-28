@@ -98,10 +98,12 @@ namespace Inventonater.BleHid
         public bool SwipeExtend(Vector2 delta) => _java.Call<bool>("localSwipeExtend", delta.x, delta.y);
         public bool SwipeEnd() => _java.Call<bool>("localSwipeEnd");
 
-        public bool DPadUp() => PerformGlobalAction(GlobalAction.Up);
-        public bool DPadRight() => PerformGlobalAction(GlobalAction.Right);
-        public bool DPadDown() => PerformGlobalAction(GlobalAction.Down);
-        public bool DPadLeft() => PerformGlobalAction(GlobalAction.Left);
+        public bool DPadUp() => PerformGlobalAction(GlobalAction.DPadUp);
+        public bool DPadRight() => PerformGlobalAction(GlobalAction.DPadRight);
+        public bool DPadDown() => PerformGlobalAction(GlobalAction.DPadDown);
+        public bool DPadLeft() => PerformGlobalAction(GlobalAction.DPadLeft);
+        public bool DPadCenter() => PerformGlobalAction(GlobalAction.DPadCenter);
+
         public bool Back() => PerformGlobalAction(GlobalAction.Back);
         public bool Home() => PerformGlobalAction(GlobalAction.Home);
         public bool Recents() => PerformGlobalAction(GlobalAction.Recents);
@@ -111,30 +113,20 @@ namespace Inventonater.BleHid
             Back = 1,
             Home = 2,
             Recents = 3,
-            Up = 16,
-            Down = 17,
-            Left = 18,
-            Right = 19
+            DPadUp = 16,
+            DPadDown = 17,
+            DPadLeft = 18,
+            DPadRight = 19,
+            DPadCenter = 20
         }
 
         private bool PerformGlobalAction(GlobalAction action) => _java.Call<bool>("performGlobalAction", (int)action);
 
-
         public bool LaunchCameraApp() => _java.Call<bool>("launchCameraApp");
         public bool LaunchVideoCapture() => _java.Call<bool>("launchVideoCapture");
 
-        /// <summary>
-        /// Performs the specified action on the currently focused accessibility node.
-        /// </summary>
-        /// <param name="action">The accessibility action to perform</param>
-        /// <returns>True if the action was performed successfully, false otherwise</returns>
-        public bool PerformFocusedNodeAction(AccessibilityAction action) => _java.Call<bool>("localPerformFocusedNodeAction", (int)action);
-
-        /// <summary>
-        /// Clicks on the currently focused accessibility node.
-        /// </summary>
-        /// <returns>True if the click was performed successfully, false otherwise</returns>
         public bool ClickFocusedNode() => PerformFocusedNodeAction(AccessibilityAction.Click);
+        public bool PerformFocusedNodeAction(AccessibilityAction action) => _java.Call<bool>("localPerformFocusedNodeAction", (int)action);
 
         /// <summary>
         /// Take a picture with the camera using specified options.

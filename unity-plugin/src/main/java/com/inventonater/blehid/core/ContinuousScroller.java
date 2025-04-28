@@ -3,8 +3,11 @@ package com.inventonater.blehid.core;
 import android.accessibilityservice.AccessibilityService;
 import android.accessibilityservice.GestureDescription;
 import android.graphics.Path;
+import android.util.Log;
 
 public final class ContinuousScroller {
+
+    private static final String TAG = "ContinuousScroller";
 
     private final AccessibilityService svc;
     private GestureDescription.StrokeDescription active;
@@ -17,7 +20,7 @@ public final class ContinuousScroller {
     public void begin(float x, float y) {
         Path p = new Path();
         p.moveTo(x, y);                     // Touch-down
-        active = new GestureDescription.StrokeDescription(p, 0, 1, /*willContinue=*/true);
+        active = new GestureDescription.StrokeDescription(p, 0, 5, /*willContinue=*/true);
         lastX = x; lastY = y;
         dispatch(active, /*nextWillContinue=*/true);
     }
@@ -28,7 +31,7 @@ public final class ContinuousScroller {
         Path p = new Path();
         p.moveTo(lastX, lastY);
         p.lineTo(lastX += dx, lastY += dy);
-        active = active.continueStroke(p, 0, 100, /*willContinue=*/true);
+        active = active.continueStroke(p, 0, 5, /*willContinue=*/true);
         dispatch(active, true);
     }
 
@@ -37,29 +40,34 @@ public final class ContinuousScroller {
         if (inFlight || active == null) return;
         Path p = new Path();
         p.moveTo(lastX, lastY);                  // No extra movement, just lift
-        active = active.continueStroke(p, 0, 1, /*willContinue=*/false);
+        active = active.continueStroke(p, 0, 5, /*willContinue=*/false);
         dispatch(active, false);
     }
 
     // ------------------------------------------------------------------------
 
-    private void dispatch(GestureDescription.StrokeDescription stroke,
-                          boolean nextWillContinue) {
-        GestureDescription g = new GestureDescription.Builder()
-                .addStroke(stroke).build();
+    private void dispatch(GestureDescription.StrokeDescription stroke, boolean nextWillContinue) {
+
+        GestureDescription gestureDescription = new GestureDescription.Builder().addStroke(stroke).build();
         inFlight = true;
-        svc.dispatchGesture(
-                g,
-                new AccessibilityService.GestureResultCallback() {
-                    @Override public void onCompleted(GestureDescription d) {
-                        inFlight = false;
-                        if (!nextWillContinue) active = null;       // finished
-                    }
-                    @Override public void onCancelled(GestureDescription d) {
-                        inFlight = false;
-                        active = null;
-                    }
-                },
-                null /*handler – use main looper*/);
+        AccessibilityService.GestureResultCallback callback = new AccessibilityService.GestureResultCallback() {
+            @Override
+            public void onCompleted(GestureDescription d) {
+                inFlight = false;
+                if (!nextWillContinue) {
+                    active = null;       // finished
+                    Log.d(TAG, String.format("dispatch onCompleted: %s, %s", lastX, lastY));
+                }
+            }
+
+            @Override
+            public void onCancelled(GestureDescription d) {
+                Log.d(TAG, "dispatch onCancelled");
+
+                inFlight = false;
+                active = null;
+            }
+        };
+        svc.dispatchGesture(gestureDescription, callback, null /*handler – use main looper*/);
     }
 }

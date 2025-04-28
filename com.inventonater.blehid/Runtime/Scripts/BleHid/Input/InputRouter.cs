@@ -105,7 +105,12 @@ namespace Inventonater.BleHid
         // ExecutionOrder Process
         private void Update()
         {
-            if (!_active) return;
+            if (!_active)
+            {
+                _pendingButtonEvents.Clear();
+                _pendingDirection.Clear();
+                return;
+            }
 
             foreach (var pendingButtonEvent in _pendingButtonEvents) FireButtonEvent(pendingButtonEvent);
             _pendingButtonEvents.Clear();

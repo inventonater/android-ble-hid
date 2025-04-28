@@ -32,11 +32,13 @@ namespace Inventonater.BleHid
 
         public void Handle(BleHidButtonEvent pendingButtonEvent)
         {
-            if(pendingButtonEvent == _start) Active = true;
-            if(pendingButtonEvent == _end) Active = false;
+            if (pendingButtonEvent == _start) Active = true;
+            if (pendingButtonEvent == _end) Active = false;
         }
 
-        public void Handle(BleHidDirection pendingDirection) => ResetPosition();
+        public void Handle(BleHidDirection pendingDirection)
+        {
+        }
 
         private bool _active;
         public bool Active
@@ -60,6 +62,7 @@ namespace Inventonater.BleHid
         }
 
         float _accumulatedDelta;
+
         public void SetPositionDelta(Vector3 delta)
         {
             _accumulatedDelta += delta[(int)_axis] * _scale;

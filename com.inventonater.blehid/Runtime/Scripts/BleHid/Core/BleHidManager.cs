@@ -7,10 +7,11 @@ namespace Inventonater.BleHid
     [DefaultExecutionOrder(ExecutionOrder.Initialize)]
     public class BleHidManager : MonoBehaviour
     {
-        private InputDeviceMapping _localNavigation;
+        private InputDeviceMapping _localDPadNavigation;
         private InputDeviceMapping _localMedia;
         private InputDeviceMapping _bleMouse;
         private InputDeviceMapping _bleMedia;
+        private InputDeviceMapping _localDragNavigation;
 
         public bool IsInitialized { get; private set; }
         public bool IsInPipMode { get; internal set; }
@@ -35,12 +36,12 @@ namespace Inventonater.BleHid
             InputRouter = gameObject.AddComponent<InputRouter>();
 
             _localMedia = InputDeviceMapping.LocalMedia(BleBridge);
-            _localNavigation = InputDeviceMapping.LocalNavigation(BleBridge);
+            _localDPadNavigation = InputDeviceMapping.LocalDPadNavigation(BleBridge);
             _bleMouse = InputDeviceMapping.BleMouse(BleBridge);
             _bleMedia = InputDeviceMapping.BleMedia(BleBridge);
 
             InputRouter.AddMapping(_localMedia);
-            InputRouter.AddMapping(_localNavigation);
+            InputRouter.AddMapping(_localDPadNavigation);
             InputRouter.AddMapping(_bleMouse);
             InputRouter.AddMapping(_bleMedia);
 

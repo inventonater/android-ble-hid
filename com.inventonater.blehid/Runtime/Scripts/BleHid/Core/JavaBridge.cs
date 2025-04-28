@@ -25,18 +25,7 @@ namespace Inventonater.BleHid
             JavaObject.Dispose();
         }
 
-        public void Call(string methodName, params object[] args)
-        {
-            var msg = $"JavaBridge.Call {methodName} {string.Join(", ", args)}";
-            Log(msg);
-            Profiler.BeginSample(msg);
-            if (Application.isEditor) return;
-
-            try { JavaObject?.Call(methodName, args); }
-            catch (Exception e) { LoggingManager.Instance.Exception(e); }
-            finally { Profiler.EndSample(); }
-        }
-
+        public void Call(string methodName, params object[] args) => Call<bool>(methodName, args);
         public T Call<T>(string methodName, params object[] args)
         {
             var msg = $"JavaBridge.Call {methodName} {string.Join(", ", args)}";
@@ -44,12 +33,7 @@ namespace Inventonater.BleHid
             Profiler.BeginSample(msg);
             if (Application.isEditor) return default;
 
-            try
-            {
-                var result = JavaObject.Call<T>(methodName, args);
-                Log($"JavaBridge.Call.Result: {result}");
-                return result;
-            }
+            try { return JavaObject.Call<T>(methodName, args); }
             catch (Exception e) { LoggingManager.Instance.Exception(e); }
             finally { Profiler.EndSample(); }
 
