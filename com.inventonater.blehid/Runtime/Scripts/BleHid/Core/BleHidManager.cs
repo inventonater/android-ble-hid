@@ -7,8 +7,9 @@ namespace Inventonater.BleHid
     [DefaultExecutionOrder(ExecutionOrder.Initialize)]
     public class BleHidManager : MonoBehaviour
     {
+        private InputDeviceMapping _localNavigation;
+        private InputDeviceMapping _localMedia;
         private InputDeviceMapping _bleMapping;
-        private InputDeviceMapping _phoneMapping;
 
         public bool IsInitialized { get; private set; }
         public bool IsInPipMode { get; internal set; }
@@ -32,10 +33,12 @@ namespace Inventonater.BleHid
             JavaBroadcaster = gameObject.AddComponent<JavaBroadcaster>();
             InputRouter = gameObject.AddComponent<InputRouter>();
 
+            _localMedia = InputDeviceMapping.LocalMedia(BleBridge);
+            _localNavigation = InputDeviceMapping.LocalNavigation(BleBridge);
             _bleMapping = InputDeviceMapping.Ble(BleBridge);
-            _phoneMapping = InputDeviceMapping.Phone(BleBridge);
 
-            InputRouter.AddMapping(_phoneMapping);
+            InputRouter.AddMapping(_localMedia);
+            InputRouter.AddMapping(_localNavigation);
             InputRouter.AddMapping(_bleMapping);
 
             ConnectionBridge = new ConnectionBridge(JavaBridge);

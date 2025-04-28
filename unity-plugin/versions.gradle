@@ -6,7 +6,7 @@
 ext {
     // SDK versions
     compileSdkVersion = 34
-    minSdkVersion = 31  // Updated to Android 12
+    minSdkVersion = 34
     targetSdkVersion = 34
     
     // App version

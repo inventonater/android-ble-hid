@@ -128,8 +128,8 @@ public class LocalInputManager {
     /**
      * Input control: Directional navigation
      */
-    public boolean navigate(int direction) {
-        return inputController.sendKey(direction);
+    public boolean performGlobalAction(int globalAction) {
+        return inputController.performGlobalAction(globalAction);
     }
     
     /**
@@ -402,15 +402,4 @@ public class LocalInputManager {
         options.setDuration(durationMs / 1000f);
         return recordVideo(options);
     }
-    
-    /**
-     * Adds navigation key constants for easier access
-     */
-    public static final int NAV_UP = LocalInputController.NAV_UP;
-    public static final int NAV_DOWN = LocalInputController.NAV_DOWN;
-    public static final int NAV_LEFT = LocalInputController.NAV_LEFT;
-    public static final int NAV_RIGHT = LocalInputController.NAV_RIGHT;
-    public static final int NAV_BACK = LocalInputController.NAV_BACK;
-    public static final int NAV_HOME = LocalInputController.NAV_HOME;
-    public static final int NAV_RECENTS = LocalInputController.NAV_RECENTS;
 }

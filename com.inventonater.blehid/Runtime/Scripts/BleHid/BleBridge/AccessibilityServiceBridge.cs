@@ -9,19 +9,6 @@ namespace Inventonater.BleHid
     [Serializable]
     public class AccessibilityServiceBridge
     {
-        public enum NavigationDirection
-        {
-            Up,
-            Down,
-            Left,
-            Right,
-            Back,
-            Home,
-            Recents
-        }
-
-        private Dictionary<NavigationDirection, int> NavigationValues { get; } = new();
-
         private readonly JavaBridge _java;
         public AccessibilityServiceBridge(JavaBridge java) => _java = java;
 
@@ -39,24 +26,6 @@ namespace Inventonater.BleHid
             var success = Application.isEditor || _java.Call<bool>("initializeLocalControl");
             if (success) LoggingManager.Instance.Log("AccessibilityServiceBridge: Initialized successfully");
             else LoggingManager.Instance.Error($"AccessibilityServiceBridge: Initialization attempt failed");
-
-            try
-            {
-                NavigationValues.Add(NavigationDirection.Up, _java.Call<int>("getNavUp"));
-                await UniTask.Delay(10);
-                NavigationValues.Add(NavigationDirection.Left, _java.Call<int>("getNavLeft"));
-                await UniTask.Delay(10);
-                NavigationValues.Add(NavigationDirection.Right, _java.Call<int>("getNavRight"));
-                await UniTask.Delay(10);
-                NavigationValues.Add(NavigationDirection.Down, _java.Call<int>("getNavDown"));
-                await UniTask.Delay(10);
-                NavigationValues.Add(NavigationDirection.Back, _java.Call<int>("getNavBack"));
-                await UniTask.Delay(10);
-                NavigationValues.Add(NavigationDirection.Home, _java.Call<int>("getNavHome"));
-                await UniTask.Delay(10);
-                NavigationValues.Add(NavigationDirection.Recents, _java.Call<int>("getNavRecents"));
-            }
-            catch (Exception ex) { LoggingManager.Instance.Error("BleHidLocalControl: Unable to check accessibility status: " + ex.Message); }
 
             return success;
         }
@@ -135,23 +104,38 @@ namespace Inventonater.BleHid
 
         public bool Swipe(Vector2Int begin, Vector2Int end) => _java.Call<bool>("localSwipe", begin.x, begin.y, end.x, end.y);
 
-        public bool Navigate(NavigationDirection direction)
+        public bool DPadUp() => PerformGlobalAction(GlobalAction.Up);
+        public bool DPadRight() => PerformGlobalAction(GlobalAction.Right);
+        public bool DPadDown() => PerformGlobalAction(GlobalAction.Down);
+        public bool DPadLeft() => PerformGlobalAction(GlobalAction.Left);
+        public bool Back() => PerformGlobalAction(GlobalAction.Back);
+        public bool Home() => PerformGlobalAction(GlobalAction.Home);
+        public bool Recents() => PerformGlobalAction(GlobalAction.Recents);
+
+        enum GlobalAction
         {
-            Debug.Log($"BleHidLocalControl: Navigating to {direction}");
-            int dirValue = NavigationValues[direction];
-            return _java.Call<bool>("localNavigate", dirValue);
+            Back = 1,
+            Home = 2,
+            Recents = 3,
+            Up = 16,
+            Down = 17,
+            Left = 18,
+            Right = 19
         }
+
+        private bool PerformGlobalAction(GlobalAction action) => _java.Call<bool>("performGlobalAction", action);
+
 
         public bool LaunchCameraApp() => _java.Call<bool>("launchCameraApp");
         public bool LaunchVideoCapture() => _java.Call<bool>("launchVideoCapture");
-        
+
         /// <summary>
         /// Performs the specified action on the currently focused accessibility node.
         /// </summary>
         /// <param name="action">The accessibility action to perform</param>
         /// <returns>True if the action was performed successfully, false otherwise</returns>
         public bool PerformFocusedNodeAction(AccessibilityAction action) => _java.Call<bool>("localPerformFocusedNodeAction", (int)action);
-        
+
         /// <summary>
         /// Clicks on the currently focused accessibility node.
         /// </summary>

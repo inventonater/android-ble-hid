@@ -69,21 +69,36 @@ namespace Inventonater.BleHid
             return mapping;
         }
 
-        public static InputDeviceMapping Phone(BleBridge bridge)
+
+        public static InputDeviceMapping LocalMedia(BleBridge bridge)
         {
             var serviceBridge = bridge.AccessibilityServiceBridge;
 
-            var mapping = new InputDeviceMapping("PhoneMapping");
+            var mapping = new InputDeviceMapping("LocalMediaMapping");
 
-            mapping.Add(BleHidButtonEvent.Id.Primary, BleHidButtonEvent.Action.Press, () => serviceBridge.ClickFocusedNode());
-            mapping.Add(BleHidButtonEvent.Id.Secondary, BleHidButtonEvent.Action.Press, () => serviceBridge.Navigate(AccessibilityServiceBridge.NavigationDirection.Back));
+            mapping.Add(BleHidButtonEvent.Id.Primary, BleHidButtonEvent.Action.DoubleTap, () => serviceBridge.PlayPause());
+            mapping.Add(BleHidDirection.Right, () => serviceBridge.NextTrack());
+            mapping.Add(BleHidDirection.Left, () => serviceBridge.PreviousTrack());
+            mapping.Add(BleHidDirection.Up, () => serviceBridge.Mute());
+            mapping.Add(BleHidDirection.Down, () => serviceBridge.Mute());
+
+            mapping.AddSingleAxisIncremental(() => serviceBridge.VolumeUp(), () => serviceBridge.VolumeDown(), BleHidAxis.Z);
+            return mapping;
+        }
+
+
+        public static InputDeviceMapping LocalNavigation(BleBridge bridge)
+        {
+            var serviceBridge = bridge.AccessibilityServiceBridge;
+
+            var mapping = new InputDeviceMapping("LocalNavigationMapping");
 
             mapping.Add(BleHidButtonEvent.Id.Primary, BleHidButtonEvent.Action.Tap, () => serviceBridge.ClickFocusedNode());
-            mapping.Add(BleHidButtonEvent.Id.Secondary, BleHidButtonEvent.Action.Tap, () => serviceBridge.Navigate(AccessibilityServiceBridge.NavigationDirection.Back));
-            mapping.Add(BleHidDirection.Up, () => serviceBridge.Navigate(AccessibilityServiceBridge.NavigationDirection.Up));
-            mapping.Add(BleHidDirection.Right, () => serviceBridge.Navigate(AccessibilityServiceBridge.NavigationDirection.Right));
-            mapping.Add(BleHidDirection.Down, () => serviceBridge.Navigate(AccessibilityServiceBridge.NavigationDirection.Down));
-            mapping.Add(BleHidDirection.Left, () => serviceBridge.Navigate(AccessibilityServiceBridge.NavigationDirection.Left));
+            mapping.Add(BleHidButtonEvent.Id.Secondary, BleHidButtonEvent.Action.Tap, () => serviceBridge.Back());
+            mapping.Add(BleHidDirection.Up, () => serviceBridge.DPadUp());
+            mapping.Add(BleHidDirection.Right, () => serviceBridge.DPadRight());
+            mapping.Add(BleHidDirection.Down, () => serviceBridge.DPadDown());
+            mapping.Add(BleHidDirection.Left, () => serviceBridge.DPadLeft());
 
             Vector2 position = default;
             bool isActive = false;

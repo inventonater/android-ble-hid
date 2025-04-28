@@ -22,8 +22,8 @@ namespace Inventonater.BleHid
         public bool HasDevice => _sourceDevice != null;
         [CanBeNull] public InputDeviceMapping Mapping => _mapping;
 
-        [SerializeField] private BleHidButtonEvent _pendingButtonEvent;
-        [SerializeField] private BleHidDirection _pendingDirection;
+        [SerializeField] private List<BleHidButtonEvent> _pendingButtonEvents = new();
+        [SerializeField] private List<BleHidDirection> _pendingDirection = new();
         [SerializeField] private bool _active;
 
         public void AddMapping(InputDeviceMapping mapping)
@@ -97,10 +97,10 @@ namespace Inventonater.BleHid
             {
                 SwitchMapping();
             }
-            _pendingButtonEvent = buttonEvent;
+            _pendingButtonEvents.Add(buttonEvent);
         }
 
-        private void HandleDirection(BleHidDirection direction) => _pendingDirection = direction;
+        private void HandleDirection(BleHidDirection direction) => _pendingDirection.Add(direction);
 
         private void HandlePositionEvent(Vector3 absolutePosition)
         {
@@ -119,20 +119,26 @@ namespace Inventonater.BleHid
 
             using (_profileMarkerButtonEvent.Auto())
             {
-                if (_pendingButtonEvent != BleHidButtonEvent.None && _mapping.ButtonMapping.TryGetValue(_pendingButtonEvent, out var buttonActions))
+                foreach (var pendingButtonEvent in _pendingButtonEvents)
                 {
-                    foreach (var action in buttonActions) TryFireAction(action);
-                    _pendingButtonEvent = BleHidButtonEvent.None;
+                    if (_mapping.ButtonMapping.TryGetValue(pendingButtonEvent, out var buttonActions))
+                    {
+                        foreach (var action in buttonActions) TryFireAction(action);
+                    }
                 }
+                _pendingButtonEvents.Clear();
             }
 
             using (_profileMarkerDirection.Auto())
             {
-                if (_pendingDirection != BleHidDirection.None && _mapping.DirectionMapping.TryGetValue(_pendingDirection, out var directionActions))
+                foreach (var pendingDirection in _pendingDirection)
                 {
-                    foreach (var action in directionActions) TryFireAction(action);
-                    _pendingDirection = BleHidDirection.None;
+                    if (_mapping.DirectionMapping.TryGetValue(pendingDirection, out var directionActions))
+                    {
+                        foreach (var action in directionActions) TryFireAction(action);
+                    }
                 }
+                _pendingDirection.Clear();
             }
 
             using (_profileMarkerAxis.Auto())

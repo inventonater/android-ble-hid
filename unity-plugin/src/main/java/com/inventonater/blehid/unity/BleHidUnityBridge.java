@@ -1,5 +1,6 @@
 package com.inventonater.blehid.unity;
 
+import android.accessibilityservice.AccessibilityService;
 import android.app.Activity;
 import android.util.Log;
 import com.unity3d.player.UnityPlayer;
@@ -355,10 +356,10 @@ public class BleHidUnityBridge {
         return plugin.localSwipe(x1, y1, x2, y2);
     }
 
-    public boolean localNavigate(int direction) {
-        return plugin.localNavigate(direction);
+    public boolean performGlobalAction(int globalAction) {
+        return plugin.performGlobalAction(globalAction);
     }
-    
+
     /**
      * Performs the specified action on the currently focused accessibility node.
      * @param action The accessibility action to perform (e.g., AccessibilityNodeInfo.ACTION_CLICK)
@@ -510,15 +511,6 @@ public class BleHidUnityBridge {
     public java.util.Map<String, String> getConnectionParameters() {
         return plugin.getConnectionParameters();
     }
-    
-    // Navigation constants for Unity
-    public int getNavUp() { return BleHidUnityPlugin.NAV_UP; }
-    public int getNavDown() { return BleHidUnityPlugin.NAV_DOWN; }
-    public int getNavLeft() { return BleHidUnityPlugin.NAV_LEFT; }
-    public int getNavRight() { return BleHidUnityPlugin.NAV_RIGHT; }
-    public int getNavBack() { return BleHidUnityPlugin.NAV_BACK; }
-    public int getNavHome() { return BleHidUnityPlugin.NAV_HOME; }
-    public int getNavRecents() { return BleHidUnityPlugin.NAV_RECENTS; }
     
     // Connection priority constants for Unity
     public int getConnectionPriorityHigh() { return BleConnectionManager.CONNECTION_PRIORITY_HIGH; }

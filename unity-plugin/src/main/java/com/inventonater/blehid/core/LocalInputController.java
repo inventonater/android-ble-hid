@@ -5,7 +5,6 @@ import android.accessibilityservice.GestureDescription;
 import android.content.Context;
 import android.content.Intent;
 import android.graphics.Path;
-import android.os.Build;
 import android.provider.Settings;
 import android.util.Log;
 import android.view.accessibility.AccessibilityNodeInfo;
@@ -210,11 +209,11 @@ public class LocalInputController {
     /**
      * Sends a key event to the system.
      */
-    public boolean sendKey(int keyCode) {
+    public boolean performGlobalAction(int globalAction) {
         if (!isAccessibilityServiceAvailable()) return false;
-        
-        boolean result = accessibilityService.performGlobalAction(keyCode);
-        Log.d(TAG, "Key event sent: " + keyCode + ", result: " + result);
+
+        boolean result = accessibilityService.performGlobalAction(globalAction);
+        Log.d(TAG, "Key event sent: " + globalAction + ", result: " + result);
         return result;
     }
     
@@ -253,15 +252,4 @@ public class LocalInputController {
     public boolean clickFocusedNode() {
         return performFocusedNodeAction(AccessibilityNodeInfo.ACTION_CLICK);
     }
-    
-    /**
-     * Navigation key constants
-     */
-    public static final int NAV_UP = 1;       // Custom action code
-    public static final int NAV_DOWN = 2;     // Custom action code
-    public static final int NAV_LEFT = 3;     // Custom action code
-    public static final int NAV_RIGHT = 4;    // Custom action code
-    public static final int NAV_BACK = AccessibilityService.GLOBAL_ACTION_BACK;
-    public static final int NAV_HOME = AccessibilityService.GLOBAL_ACTION_HOME;
-    public static final int NAV_RECENTS = AccessibilityService.GLOBAL_ACTION_RECENTS;
 }

@@ -56,18 +56,18 @@ namespace Inventonater.BleHid
             _navRow1Labels = new[] { "Back", "Home", "Recents" };
             _navRow1Actions = new Action[]
             {
-                () => NavigateTo(AccessibilityServiceBridge.NavigationDirection.Back),
-                () => NavigateTo(AccessibilityServiceBridge.NavigationDirection.Home),
-                () => NavigateTo(AccessibilityServiceBridge.NavigationDirection.Recents)
+                () => _bridge.Back(),
+                () => _bridge.Home(),
+                () => _bridge.Recents()
             };
             _navRow1EditorMessages = new[] { "Local Back pressed", "Local Home pressed", "Local Recents pressed" };
 
             _navRow3Labels = new[] { "Left", "Down", "Right" };
             _navRow3Actions = new Action[]
             {
-                () => NavigateTo(AccessibilityServiceBridge.NavigationDirection.Left),
-                () => NavigateTo(AccessibilityServiceBridge.NavigationDirection.Down),
-                () => NavigateTo(AccessibilityServiceBridge.NavigationDirection.Right)
+                () => _bridge.DPadLeft(),
+                () => _bridge.DPadDown(),
+                () => _bridge.DPadRight()
             };
             _navRow3EditorMessages = new[] { "Local Left pressed", "Local Down pressed", "Local Right pressed" };
         }
@@ -131,9 +131,8 @@ namespace Inventonater.BleHid
 
             const float BUTTON_HEIGHT = 60f;
 
-            void Action() => NavigateTo(AccessibilityServiceBridge.NavigationDirection.Up);
             GUILayoutOption[] options = { GUILayout.Height(BUTTON_HEIGHT), GUILayout.Width(Screen.width / 3) };
-            if (UIHelper.Button("Up", Action, "Local Up pressed", options))
+            if (UIHelper.Button("Up", () => _bridge.DPadUp(), "Local Up pressed", options))
             {
                 // Button action handled by ActionButton
             }
@@ -154,11 +153,6 @@ namespace Inventonater.BleHid
                 try { action(_bridge); }
                 catch (Exception ex) { LoggingManager.Instance.Log($"Error executing local control: {ex.Message}"); }
             }
-        }
-
-        private void NavigateTo(AccessibilityServiceBridge.NavigationDirection direction)
-        {
-            ExecuteLocalControl(l => l.Navigate(direction), $"Local {direction} pressed");
         }
     }
 }

@@ -1,5 +1,6 @@
 package com.inventonater.blehid.unity;
 
+import android.accessibilityservice.AccessibilityService;
 import android.app.Activity;
 import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothGatt;
@@ -553,11 +554,11 @@ public class BleHidUnityPlugin {
         return localInputManager.swipe(x1, y1, x2, y2);
     }
 
-    public boolean localNavigate(int direction) {
+    public boolean performGlobalAction(int globalAction) {
         if (localInputManager == null) return false;
-        return localInputManager.navigate(direction);
+        return localInputManager.performGlobalAction(globalAction);
     }
-    
+
     /**
      * Performs the specified action on the currently focused accessibility node.
      * @param action The accessibility action to perform (e.g., AccessibilityNodeInfo.ACTION_CLICK)
@@ -651,15 +652,6 @@ public class BleHidUnityPlugin {
         return localInputManager.recordVideo(options);
     }
 
-    // Navigation constants
-    public static final int NAV_UP = LocalInputManager.NAV_UP;
-    public static final int NAV_DOWN = LocalInputManager.NAV_DOWN;
-    public static final int NAV_LEFT = LocalInputManager.NAV_LEFT;
-    public static final int NAV_RIGHT = LocalInputManager.NAV_RIGHT;
-    public static final int NAV_BACK = LocalInputManager.NAV_BACK;
-    public static final int NAV_HOME = LocalInputManager.NAV_HOME;
-    public static final int NAV_RECENTS = LocalInputManager.NAV_RECENTS;
-    
     // ==================== Connection Parameter Methods ====================
     
     /**
