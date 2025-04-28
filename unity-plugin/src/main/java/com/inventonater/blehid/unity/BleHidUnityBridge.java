@@ -352,8 +352,16 @@ public class BleHidUnityBridge {
         return plugin.localTap(x, y);
     }
 
-    public boolean localSwipe(int x1, int y1, int x2, int y2) {
-        return plugin.localSwipe(x1, y1, x2, y2);
+    public boolean localSwipeBegin(float startX, float startY) {
+        return plugin.localSwipeBegin(startX, startY);
+    }
+
+    public boolean localSwipeExtend(float deltaX, float deltaY) {
+        return plugin.localSwipeExtend(deltaX, deltaY);
+    }
+
+    public boolean localSwipeEnd() {
+        return plugin.localSwipeEnd();
     }
 
     public boolean performGlobalAction(int globalAction) {
