@@ -26,7 +26,7 @@ import java.util.Map;
 public class BleHidUnityPlugin {
     private static final String TAG = "BleHidUnityPlugin";
     private static final boolean VERBOSE_LOGGING = true;
-    
+
     // Error codes
     public static final int ERROR_INITIALIZATION_FAILED = 1001;
     public static final int ERROR_NOT_INITIALIZED = 1002;
@@ -42,7 +42,7 @@ public class BleHidUnityPlugin {
     private BleHidUnityCallback callback;
     private boolean isInitialized = false;
     private LocalInputManager localInputManager;
-    
+
     /**
      * Get the singleton instance of the plugin.
      */
@@ -52,163 +52,154 @@ public class BleHidUnityPlugin {
         }
         return instance;
     }
-    
+
     private BleHidUnityPlugin() {
         // Private constructor to prevent direct instantiation
     }
-    
+
     /**
      * Initialize the plugin with the Unity activity context.
-     * 
+     *
      * @param activity The Unity activity
      * @param callback Callback interface for Unity events
      * @return true if initialization succeeded, false otherwise
      */
     public boolean initialize(Activity activity, BleHidUnityCallback callback) {
-        if (activity == null) {
-            Log.e(TAG, "Activity cannot be null");
-            return false;
-        }
-        
         this.unityActivity = activity;
         this.callback = callback;
-        
         bleHidManager = new BleHidManager(activity);
-        BlePairingManager blePairingManager = bleHidManager.getBlePairingManager();
 
-        blePairingManager.setPairingCallback(new BlePairingManager.PairingCallback() {
+        BlePairingManager blePairingManager = bleHidManager.getBlePairingManager();
+        BlePairingManager.PairingCallback pairingCallback = new BlePairingManager.PairingCallback() {
             @Override
             public void onPairingRequested(BluetoothDevice device, int variant) {
                 final String deviceInfo = getDeviceInfo(device);
                 final String message = "Pairing requested by " + deviceInfo + ", variant: " + variant;
                 Log.d(TAG, message);
-                
+
                 callback.onDebugLog(message);
                 callback.onPairingStateChanged("REQUESTED", device.getAddress());
                 blePairingManager.setPairingConfirmation(device, true);
             }
-            
+
             @Override
             public void onPairingComplete(BluetoothDevice device, boolean success) {
                 final String deviceInfo = getDeviceInfo(device);
                 final String result = success ? "SUCCESS" : "FAILED";
                 final String message = "Pairing " + result + " with " + deviceInfo;
                 Log.d(TAG, message);
-                
+
                 callback.onDebugLog(message);
                 callback.onPairingStateChanged(result, device.getAddress());
                 updateConnectionStatus();
             }
-        });
-        
-        // Initialize the BLE HID functionality
-        boolean initialized = bleHidManager.initialize();
-        isInitialized = initialized;
-        
-        if (initialized) {
-            Log.d(TAG, "BLE HID initialized successfully");
-            
-            // Set up connection parameter listener
-            if (bleHidManager.getConnectionManager() != null) {
-                bleHidManager.getConnectionManager().setConnectionParameterListener(
-                        new BleConnectionManager.ConnectionParameterListener() {
-                    @Override
-                    public void onConnectionParametersChanged(int interval, int latency, int timeout, int mtu) {
-                        if (callback != null) {
-                            Log.d(TAG, "Connection parameters changed: interval=" + interval + 
-                                   "ms, latency=" + latency + ", timeout=" + timeout + "ms, MTU=" + mtu);
-                            callback.onConnectionParametersChanged(interval, latency, timeout, mtu);
-                        }
-                    }
-                    
-                    @Override
-                    public void onRssiRead(int rssi) {
-                        if (callback != null) {
-                            Log.d(TAG, "RSSI: " + rssi + " dBm");
-                            callback.onRssiRead(rssi);
-                        }
-                    }
-                    
-                    @Override
-                    public void onRequestComplete(String parameterName, boolean success, String actualValue) {
-                        if (callback != null) {
-                            Log.d(TAG, "Parameter request complete: " + parameterName + 
-                                   " success=" + success + " actual=" + actualValue);
-                            callback.onConnectionParameterRequestComplete(parameterName, success, actualValue);
-                        }
-                    }
-                });
-            }
-            
-            if (callback != null) {
-                callback.onInitializeComplete(true, "BLE HID initialized successfully");
-            }
-        } else {
+        };
+        blePairingManager.setPairingCallback(pairingCallback);
+
+        isInitialized = bleHidManager.initialize();
+        if (!isInitialized) {
             String error = "BLE HID initialization failed";
             Log.e(TAG, error);
-            if (callback != null) {
-                callback.onError(ERROR_INITIALIZATION_FAILED, error);
-                callback.onInitializeComplete(false, error);
-            }
+            callback.onError(ERROR_INITIALIZATION_FAILED, error);
+            callback.onInitializeComplete(false, error);
+            return false;
         }
-        
-        return initialized;
+
+        Log.d(TAG, "BLE HID initialized successfully");
+
+        // Set up connection parameter listener
+        BleConnectionManager connectionManager = bleHidManager.getConnectionManager();
+        BleConnectionManager.ConnectionParameterListener connectionListener = new BleConnectionManager.ConnectionParameterListener() {
+            @Override
+            public void onConnectionParametersChanged(int interval, int latency, int timeout, int mtu) {
+                Log.d(TAG, "Connection parameters changed: interval=" + interval + "ms, latency=" + latency + ", timeout=" + timeout + "ms, MTU=" + mtu);
+                callback.onConnectionParametersChanged(interval, latency, timeout, mtu);
+            }
+
+            @Override
+            public void onRssiRead(int rssi) {
+                // Log.d(TAG, "RSSI: " + rssi + " dBm");
+                callback.onRssiRead(rssi);
+            }
+
+            @Override
+            public void onRequestComplete(String parameterName, boolean success, String actualValue) {
+                Log.d(TAG, "Parameter request complete: " + parameterName + " success=" + success + " actual=" + actualValue);
+                callback.onConnectionParameterRequestComplete(parameterName, success, actualValue);
+            }
+        };
+        connectionManager.setConnectionParameterListener(connectionListener);
+
+        callback.onInitializeComplete(true, "BLE HID initialized successfully");
+        return isInitialized;
     }
-    
+
     /**
      * Press a mouse button without releasing it.
-     * 
+     *
      * @param button The button to press (0=left, 1=right, 2=middle)
      * @return true if the press was sent successfully, false otherwise
      */
     public boolean pressMouseButton(int button) {
         if (!checkConnected()) return false;
-        
+
         // Convert button index to button flag
         int buttonFlag = 0;
         switch (button) {
-            case 0: buttonFlag = HidConstants.Mouse.BUTTON_LEFT; break;
-            case 1: buttonFlag = HidConstants.Mouse.BUTTON_RIGHT; break;
-            case 2: buttonFlag = HidConstants.Mouse.BUTTON_MIDDLE; break;
+            case 0:
+                buttonFlag = HidConstants.Mouse.BUTTON_LEFT;
+                break;
+            case 1:
+                buttonFlag = HidConstants.Mouse.BUTTON_RIGHT;
+                break;
+            case 2:
+                buttonFlag = HidConstants.Mouse.BUTTON_MIDDLE;
+                break;
             default:
                 Log.e(TAG, "Invalid button index: " + button);
                 return false;
         }
-        
+
         return bleHidManager.pressMouseButton(buttonFlag);
     }
-    
+
     /**
      * Release a specific mouse button.
-     * 
+     *
      * @param button The button to release (0=left, 1=right, 2=middle)
      * @return true if the release was sent successfully, false otherwise
      */
     public boolean releaseMouseButton(int button) {
         if (!checkConnected()) return false;
-        
+
         // Convert button index to button flag
         int buttonFlag = 0;
         switch (button) {
-            case 0: buttonFlag = HidConstants.Mouse.BUTTON_LEFT; break;
-            case 1: buttonFlag = HidConstants.Mouse.BUTTON_RIGHT; break;
-            case 2: buttonFlag = HidConstants.Mouse.BUTTON_MIDDLE; break;
+            case 0:
+                buttonFlag = HidConstants.Mouse.BUTTON_LEFT;
+                break;
+            case 1:
+                buttonFlag = HidConstants.Mouse.BUTTON_RIGHT;
+                break;
+            case 2:
+                buttonFlag = HidConstants.Mouse.BUTTON_MIDDLE;
+                break;
             default:
                 Log.e(TAG, "Invalid button index: " + button);
                 return false;
         }
-        
+
         return bleHidManager.releaseMouseButton(buttonFlag);
     }
-    
+
     /**
      * Start BLE advertising.
-     * 
+     *
      * @return true if advertising started successfully, false otherwise
      */
     public boolean startAdvertising() {
         if (!checkInitialized()) return false;
-        
+
         boolean result = bleHidManager.startAdvertising();
         if (result) {
             Log.d(TAG, "Advertising started");
@@ -221,22 +212,22 @@ public class BleHidUnityPlugin {
             callback.onAdvertisingStateChanged(false, error);
             callback.onDebugLog(error);
         }
-        
+
         return result;
     }
-    
+
     /**
      * Stop BLE advertising.
      */
     public void stopAdvertising() {
         if (!checkInitialized()) return;
-        
+
         bleHidManager.stopAdvertising();
         Log.d(TAG, "Advertising stopped");
         callback.onAdvertisingStateChanged(false, "Advertising stopped");
         callback.onDebugLog("Advertising stopped");
     }
-    
+
     /**
      * Check if BLE advertising is active.
      */
@@ -244,7 +235,7 @@ public class BleHidUnityPlugin {
         if (!checkInitialized()) return false;
         return bleHidManager.isAdvertising();
     }
-    
+
     /**
      * Check if a device is connected.
      */
@@ -252,11 +243,11 @@ public class BleHidUnityPlugin {
         if (!checkInitialized()) return false;
         return bleHidManager.isConnected();
     }
-    
+
     /**
      * Disconnect from the currently connected device.
      * This explicitly closes the GATT connection.
-     * 
+     *
      * @return true if disconnect was successful or already disconnected, false otherwise
      */
     public boolean disconnect() {
@@ -278,38 +269,38 @@ public class BleHidUnityPlugin {
 
         return true;
     }
-    
+
     /**
      * Get information about the connected device.
-     * 
+     *
      * @return A string array with [deviceName, deviceAddress] or null if not connected
      */
     public String[] getConnectedDeviceInfo() {
         if (!checkInitialized() || !bleHidManager.isConnected()) {
             return null;
         }
-        
+
         BluetoothDevice device = bleHidManager.getConnectedDevice();
         if (device == null) return null;
-        
+
         String deviceName = device.getName();
         if (deviceName == null || deviceName.isEmpty()) {
             deviceName = "Unknown Device";
         }
-        
-        return new String[] { deviceName, device.getAddress() };
+
+        return new String[]{deviceName, device.getAddress()};
     }
-    
+
     /**
      * Send a keyboard key with optional modifier keys.
-     * 
-     * @param keyCode The HID key code
+     *
+     * @param keyCode   The HID key code
      * @param modifiers Modifier keys (bit flags), use 0 for no modifiers
      * @return true if the key was sent successfully, false otherwise
      */
     public boolean sendKey(byte keyCode, byte modifiers) {
         if (!checkConnected()) return false;
-        
+
         boolean result = bleHidManager.sendKey(keyCode, modifiers);
         if (result) {
             // Release key after a short delay
@@ -325,126 +316,132 @@ public class BleHidUnityPlugin {
                 }
             }).start();
         }
-        
+
         return result;
     }
-    
+
     /**
      * Type a string of text.
-     * 
+     *
      * @param text The text to type
      * @return true if the text was sent successfully, false otherwise
      */
     public boolean typeText(String text) {
         if (!checkConnected()) return false;
-        
+
         return bleHidManager.typeText(text);
     }
-    
+
     /**
      * Send a mouse movement.
-     * 
+     *
      * @param deltaX X-axis movement (-127 to 127)
      * @param deltaY Y-axis movement (-127 to 127)
      * @return true if the movement was sent successfully, false otherwise
      */
     public boolean moveMouse(int deltaX, int deltaY) {
         if (!checkConnected()) return false;
-        
+
         // Clamp values to valid range
         deltaX = Math.max(-127, Math.min(127, deltaX));
         deltaY = Math.max(-127, Math.min(127, deltaY));
-        
+
         return bleHidManager.moveMouse(deltaX, deltaY);
     }
-    
+
     /**
      * Send a mouse button click.
-     * 
+     *
      * @param button The button to click (0=left, 1=right, 2=middle)
      * @return true if the click was sent successfully, false otherwise
      */
     public boolean clickMouseButton(int button) {
         if (!checkConnected()) return false;
-        
+
         // Convert button index to button flag
         int buttonFlag = 0;
         switch (button) {
-            case 0: buttonFlag = HidConstants.Mouse.BUTTON_LEFT; break;
-            case 1: buttonFlag = HidConstants.Mouse.BUTTON_RIGHT; break;
-            case 2: buttonFlag = HidConstants.Mouse.BUTTON_MIDDLE; break;
+            case 0:
+                buttonFlag = HidConstants.Mouse.BUTTON_LEFT;
+                break;
+            case 1:
+                buttonFlag = HidConstants.Mouse.BUTTON_RIGHT;
+                break;
+            case 2:
+                buttonFlag = HidConstants.Mouse.BUTTON_MIDDLE;
+                break;
             default:
                 Log.e(TAG, "Invalid button index: " + button);
                 return false;
         }
-        
+
         return bleHidManager.clickMouseButton(buttonFlag);
     }
-    
+
     /**
      * Send a media play/pause command.
-     * 
+     *
      * @return true if the command was sent successfully, false otherwise
      */
     public boolean playPause() {
         if (!checkConnected()) return false;
         return bleHidManager.playPause();
     }
-    
+
     /**
      * Send a media next track command.
-     * 
+     *
      * @return true if the command was sent successfully, false otherwise
      */
     public boolean nextTrack() {
         if (!checkConnected()) return false;
         return bleHidManager.nextTrack();
     }
-    
+
     /**
      * Send a media previous track command.
-     * 
+     *
      * @return true if the command was sent successfully, false otherwise
      */
     public boolean previousTrack() {
         if (!checkConnected()) return false;
         return bleHidManager.previousTrack();
     }
-    
+
     /**
      * Send a media volume up command.
-     * 
+     *
      * @return true if the command was sent successfully, false otherwise
      */
     public boolean volumeUp() {
         if (!checkConnected()) return false;
         return bleHidManager.volumeUp();
     }
-    
+
     /**
      * Send a media volume down command.
-     * 
+     *
      * @return true if the command was sent successfully, false otherwise
      */
     public boolean volumeDown() {
         if (!checkConnected()) return false;
         return bleHidManager.volumeDown();
     }
-    
+
     /**
      * Send a media mute command.
-     * 
+     *
      * @return true if the command was sent successfully, false otherwise
      */
     public boolean mute() {
         if (!checkConnected()) return false;
         return bleHidManager.mute();
     }
-    
+
     /**
      * Update the Unity Activity reference.
      * This allows refreshing the activity reference when needed.
-     * 
+     *
      * @param activity The updated Unity activity
      */
     public void updateUnityActivity(Activity activity) {
@@ -455,7 +452,7 @@ public class BleHidUnityPlugin {
             Log.e(TAG, "Attempted to update with null activity");
         }
     }
-    
+
     /**
      * Initialize local input control.
      */
@@ -465,12 +462,12 @@ public class BleHidUnityPlugin {
             Log.e(TAG, "Activity not available");
             return false;
         }
-        
+
         try {
             // Initialize the LocalInputManager with the current activity
             localInputManager = LocalInputManager.initialize(unityActivity);
             Log.d(TAG, "Local input manager initialized");
-            
+
             // Check accessibility service
             boolean serviceEnabled = localInputManager.isAccessibilityServiceEnabled();
             if (!serviceEnabled) {
@@ -479,7 +476,7 @@ public class BleHidUnityPlugin {
                     callback.onDebugLog("Accessibility service not enabled. Please enable it in Settings.");
                 }
             }
-            
+
             return true;
         } catch (Exception e) {
             Log.e(TAG, "Failed to initialize local control", e);
@@ -571,6 +568,7 @@ public class BleHidUnityPlugin {
 
     /**
      * Performs the specified action on the currently focused accessibility node.
+     *
      * @param action The accessibility action to perform (e.g., AccessibilityNodeInfo.ACTION_CLICK)
      * @return true if the action was performed successfully, false otherwise
      */
@@ -578,81 +576,82 @@ public class BleHidUnityPlugin {
         if (localInputManager == null) return false;
         return localInputManager.performFocusedNodeAction(action);
     }
-    
+
     /**
      * Clicks on the currently focused accessibility node.
+     *
      * @return true if the click was performed successfully, false otherwise
      */
     public boolean localClickFocusedNode() {
         if (localInputManager == null) return false;
         return localInputManager.clickFocusedNode();
     }
-    
+
     // Camera control methods
-    
+
     public boolean launchCameraApp() {
         if (localInputManager == null) return false;
         return localInputManager.launchCameraApp();
     }
-    
+
     public boolean launchPhotoCapture() {
         if (localInputManager == null) return false;
         return localInputManager.launchPhotoCapture();
     }
-    
+
     public boolean launchVideoCapture() {
         if (localInputManager == null) return false;
         return localInputManager.launchVideoCapture();
     }
-    
+
     /**
      * Take a picture with the camera using the specified options bundle.
-     * 
+     *
      * @param optionsBundle Bundle with camera options parameters
      * @return true if camera was launched successfully
      */
     public boolean takePicture(android.os.Bundle optionsBundle) {
         if (localInputManager == null) return false;
-        
+
         com.inventonater.blehid.core.CameraOptions coreOptions = null;
         if (optionsBundle != null) {
             coreOptions = new com.inventonater.blehid.core.CameraOptions(optionsBundle);
         }
-        
+
         return localInputManager.takePictureWithCamera(coreOptions);
     }
-    
+
     /**
      * Take a picture with the camera using default options.
      * This is a convenience method that uses the default options.
-     * 
+     *
      * @return true if camera was launched successfully
      */
     public boolean takePicture() {
-        return takePicture((android.os.Bundle)null);
+        return takePicture((android.os.Bundle) null);
     }
-    
+
     /**
      * Record a video with the specified options bundle.
-     * 
+     *
      * @param optionsBundle Bundle with video options parameters
      * @return true if video recording was launched successfully
      */
     public boolean recordVideo(android.os.Bundle optionsBundle) {
         if (localInputManager == null) return false;
-        
+
         com.inventonater.blehid.core.VideoOptions coreOptions = null;
         if (optionsBundle != null) {
             coreOptions = new com.inventonater.blehid.core.VideoOptions(optionsBundle);
         }
-        
+
         return localInputManager.recordVideo(coreOptions);
     }
-    
+
     /**
      * Record a video with default options and specified duration.
      * This is a convenience method for simple recording.
-     * 
+     *
      * @param durationMs Duration in milliseconds to record
      * @return true if video recording was launched successfully
      */
@@ -663,16 +662,16 @@ public class BleHidUnityPlugin {
     }
 
     // ==================== Connection Parameter Methods ====================
-    
+
     /**
      * Request a change in connection priority.
-     * 
+     *
      * @param priority The connection priority: 0=HIGH, 1=BALANCED, 2=LOW_POWER
      * @return true if the request was sent, false otherwise
      */
     public boolean requestConnectionPriority(int priority) {
         if (!checkConnected()) return false;
-        
+
         if (priority < 0 || priority > 2) {
             Log.e(TAG, "Invalid connection priority: " + priority);
             if (callback != null) {
@@ -680,19 +679,19 @@ public class BleHidUnityPlugin {
             }
             return false;
         }
-        
+
         return bleHidManager.getConnectionManager().requestConnectionPriority(priority);
     }
-    
+
     /**
      * Request a change in MTU size.
-     * 
+     *
      * @param mtu The MTU size (23-517)
      * @return true if the request was sent, false otherwise
      */
     public boolean requestMtu(int mtu) {
         if (!checkConnected()) return false;
-        
+
         if (mtu < 23 || mtu > 517) {
             Log.e(TAG, "Invalid MTU size: " + mtu);
             if (callback != null) {
@@ -700,19 +699,19 @@ public class BleHidUnityPlugin {
             }
             return false;
         }
-        
+
         return bleHidManager.getConnectionManager().requestMtu(mtu);
     }
-    
+
     /**
      * Set the transmit power level for advertising.
-     * 
+     *
      * @param level The power level: 0=LOW, 1=MEDIUM, 2=HIGH
      * @return true if successful, false otherwise
      */
     public boolean setTransmitPowerLevel(int level) {
         if (!checkInitialized()) return false;
-        
+
         if (level < 0 || level > 2) {
             Log.e(TAG, "Invalid TX power level: " + level);
             if (callback != null) {
@@ -720,51 +719,51 @@ public class BleHidUnityPlugin {
             }
             return false;
         }
-        
+
         return bleHidManager.getConnectionManager().setTransmitPowerLevel(level);
     }
-    
+
     /**
      * Read the current RSSI value.
-     * 
+     *
      * @return true if the read request was sent, false otherwise
      */
     public boolean readRssi() {
         if (!checkConnected()) return false;
-        
+
         return bleHidManager.getConnectionManager().readRssi();
     }
-    
+
     /**
      * Get all connection parameters as a string map.
-     * 
+     *
      * @return Map of parameter names to values, or null if not connected
      */
     public Map<String, String> getConnectionParameters() {
         if (!checkConnected()) return null;
-        
+
         return bleHidManager.getConnectionManager().getAllConnectionParameters();
     }
-    
+
     /**
      * Get diagnostic information about the BLE HID state.
-     * 
+     *
      * @return A string with diagnostic information
      */
     public String getDiagnosticInfo() {
         if (!checkInitialized()) return "Not initialized";
-        
+
         StringBuilder info = new StringBuilder();
         info.append("Initialized: ").append(isInitialized).append("\n");
         info.append("Advertising: ").append(bleHidManager.isAdvertising()).append("\n");
         info.append("Connected: ").append(bleHidManager.isConnected()).append("\n");
-        
+
         if (bleHidManager.isConnected()) {
             BluetoothDevice device = bleHidManager.getConnectedDevice();
             if (device != null) {
                 info.append("Device: ").append(getDeviceInfo(device)).append("\n");
                 info.append("Bond State: ").append(bondStateToString(device.getBondState())).append("\n");
-                
+
                 // Add connection parameters
                 if (bleHidManager.getConnectionManager() != null) {
                     Map<String, String> params = bleHidManager.getConnectionManager().getAllConnectionParameters();
@@ -777,10 +776,10 @@ public class BleHidUnityPlugin {
                 }
             }
         }
-        
+
         return info.toString();
     }
-    
+
     /**
      * Release all resources and close the plugin.
      */
@@ -788,17 +787,17 @@ public class BleHidUnityPlugin {
         if (bleHidManager != null) {
             bleHidManager.close();
         }
-        
+
         isInitialized = false;
         Log.d(TAG, "Plugin closed");
     }
-    
+
     /**
      * Update the connection status and notify Unity.
      */
     private void updateConnectionStatus() {
         if (callback == null || !isInitialized) return;
-        
+
         if (bleHidManager.isConnected()) {
             BluetoothDevice device = bleHidManager.getConnectedDevice();
             if (device != null) {
@@ -812,21 +811,21 @@ public class BleHidUnityPlugin {
             callback.onConnectionStateChanged(false, null, null);
         }
     }
-    
+
     /**
      * Get a formatted string with device information.
      */
     private String getDeviceInfo(BluetoothDevice device) {
         if (device == null) return "null";
-        
+
         String deviceName = device.getName();
         if (deviceName == null || deviceName.isEmpty()) {
             deviceName = "Unknown Device";
         }
-        
+
         return deviceName + " (" + device.getAddress() + ")";
     }
-    
+
     /**
      * Convert a Bluetooth bond state to a readable string.
      */
@@ -842,7 +841,7 @@ public class BleHidUnityPlugin {
                 return "UNKNOWN(" + bondState + ")";
         }
     }
-    
+
     /**
      * Check if the plugin is initialized and log an error if not.
      */
@@ -856,13 +855,13 @@ public class BleHidUnityPlugin {
         }
         return true;
     }
-    
+
     /**
      * Check if a device is connected and log an error if not.
      */
     private boolean checkConnected() {
         if (!checkInitialized()) return false;
-        
+
         if (!bleHidManager.isConnected()) {
             Log.e(TAG, "No device connected");
             if (callback != null) {
@@ -872,86 +871,86 @@ public class BleHidUnityPlugin {
         }
         return true;
     }
-    
+
     /**
      * Gets the BleHidManager instance.
      * This provides direct access to core functionality.
-     * 
+     *
      * @return The BleHidManager instance
      */
     public BleHidManager getBleHidManager() {
         return bleHidManager;
     }
-    
+
     // ==================== Identity Management Methods ====================
-    
+
     /**
      * Sets the BLE peripheral identity (UUID and device name).
      * This helps maintain a consistent identity across app restarts
      * for persistent device recognition and pairing.
-     * 
+     *
      * @param identityUuid The UUID string to use as the device's unique identifier
-     * @param deviceName Optional custom device name (can be null for default)
+     * @param deviceName   Optional custom device name (can be null for default)
      * @return true if identity was set successfully
      */
     public boolean setBleIdentity(String identityUuid, String deviceName) {
         if (!checkInitialized()) return false;
-        
+
         Log.i(TAG, "Setting BLE identity: UUID=" + identityUuid + ", Name=" + deviceName);
         return bleHidManager.setBleIdentity(identityUuid, deviceName);
     }
-    
+
     /**
      * Gets detailed information about all devices currently bonded to this peripheral.
-     * 
+     *
      * @return List of maps containing device information
      */
     public List<Map<String, String>> getBondedDevicesInfo() {
         if (!checkInitialized()) return new ArrayList<>();
-        
+
         return bleHidManager.getBondedDevicesInfo();
     }
-    
+
     /**
      * Checks if a specific device is bonded to this peripheral.
-     * 
+     *
      * @param address The MAC address of the device to check
      * @return true if the device is bonded
      */
     public boolean isDeviceBonded(String address) {
         if (!checkInitialized()) return false;
-        
+
         if (address == null || address.isEmpty()) {
             Log.e(TAG, "Invalid device address");
             return false;
         }
-        
+
         return bleHidManager.isDeviceBonded(address);
     }
-    
+
     /**
      * Removes a bond with a specific device.
-     * 
+     *
      * @param address The MAC address of the device to forget
      * @return true if the device was forgotten or already not bonded
      */
     public boolean removeBond(String address) {
         if (!checkInitialized()) return false;
-        
+
         if (address == null || address.isEmpty()) {
             Log.e(TAG, "Invalid device address");
             return false;
         }
-        
+
         return bleHidManager.removeBond(address);
     }
-    
+
     /**
      * The Unity player activity class name used in this project
      * This is the specific activity class used by this Unity project
      */
     private static final String UNITY_PLAYER_ACTIVITY_CLASS = "com.unity3d.player.UnityPlayerGameActivity";
-    
+
     /**
      * Get the current context from the Unity player.
      * This method attempts multiple strategies to get a valid context.
@@ -960,7 +959,7 @@ public class BleHidUnityPlugin {
      */
     private static Context getCurrentContext() {
         Log.e(TAG, "Attempting to get current context for service");
-        
+
         // Try approach #1: Direct access through Unity's UnityPlayer class
         try {
             Class<?> unityPlayerClass = Class.forName("com.unity3d.player.UnityPlayer");
@@ -974,12 +973,12 @@ public class BleHidUnityPlugin {
         } catch (Exception e) {
             Log.e(TAG, "Failed to get context through UnityPlayer: " + e.getMessage());
         }
-        
+
         // Try approach #2: Try to load the specific activity class
         try {
             Class<?> activityClass = Class.forName(UNITY_PLAYER_ACTIVITY_CLASS);
             Log.e(TAG, "Found activity class: " + activityClass.getName());
-            
+
             // The class exists, but we can't get an instance directly
             // Let's try to get the application context
             try {
@@ -987,7 +986,7 @@ public class BleHidUnityPlugin {
                 java.lang.reflect.Method currentActivityThreadMethod = activityThreadClass.getDeclaredMethod("currentActivityThread");
                 currentActivityThreadMethod.setAccessible(true);
                 Object activityThread = currentActivityThreadMethod.invoke(null);
-                
+
                 java.lang.reflect.Method getApplicationMethod = activityThreadClass.getDeclaredMethod("getApplication");
                 Context context = (Context) getApplicationMethod.invoke(activityThread);
                 if (context != null) {
@@ -1000,7 +999,7 @@ public class BleHidUnityPlugin {
         } catch (Exception e) {
             Log.e(TAG, "Failed to load activity class: " + e.getMessage());
         }
-        
+
         // Final fallback
         try {
             // This is deprecated but still works in many cases
@@ -1010,17 +1009,17 @@ public class BleHidUnityPlugin {
             return null;
         }
     }
-    
+
     /**
      * Start the foreground service to keep accessibility service alive.
      * This should be called when your app needs to ensure the service
      * continues to run in the background.
-     * 
+     *
      * @return true if the service start request was sent
      */
     public static boolean startForegroundService() {
         Log.e(TAG, "startForegroundService called from Unity - CRITICAL SERVICE STARTUP LOG");
-        
+
         try {
             // Get the current context - directly attempt to use the known activity class
             Context context = getCurrentContext();
@@ -1028,24 +1027,24 @@ public class BleHidUnityPlugin {
                 Log.e(TAG, "Unable to start foreground service: context is null");
                 return false;
             }
-            
+
             Log.e(TAG, "Application context package: " + context.getPackageName());
             Log.e(TAG, "Current context class: " + context.getClass().getName());
-            
+
             // Create intent with explicit component name to avoid package confusion
             Intent serviceIntent = new Intent();
-            
+
             // Set component with explicit package
             serviceIntent.setClassName(
-                context.getPackageName(), 
-                "com.inventonater.blehid.core.BleHidForegroundService"
+                    context.getPackageName(),
+                    "com.inventonater.blehid.core.BleHidForegroundService"
             );
             serviceIntent.setAction("START_FOREGROUND");
-            
+
             // For debugging
             Log.e(TAG, "Starting service with: " + serviceIntent.toString());
             Log.e(TAG, "Component: " + serviceIntent.getComponent());
-            
+
             // Try to start the service with the most direct method using explicit intent
             if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
                 Log.e(TAG, "Using startForegroundService (Android 8+)");
@@ -1064,7 +1063,7 @@ public class BleHidUnityPlugin {
                 context.startService(serviceIntent);
                 Log.e(TAG, "startService called successfully");
             }
-            
+
             // Verify service running
             boolean isServiceRunning = false;
             try {
@@ -1075,7 +1074,7 @@ public class BleHidUnityPlugin {
             } catch (Exception e) {
                 Log.e(TAG, "Failed to check if service is running", e);
             }
-            
+
             Log.e(TAG, "Foreground service start request process completed");
             return true;
         } catch (Exception e) {
@@ -1083,31 +1082,31 @@ public class BleHidUnityPlugin {
             return false;
         }
     }
-    
+
     /**
      * Stop the foreground service when it's no longer needed.
-     * 
+     *
      * @return true if the service stop request was sent
      */
     public static boolean stopForegroundService() {
         Log.d(TAG, "stopForegroundService called from Unity");
-        
+
         try {
             Context context = getCurrentContext();
             if (context == null) {
                 Log.e(TAG, "Unable to stop foreground service: context is null");
                 return false;
             }
-            
+
             Intent serviceIntent = new Intent();
             serviceIntent.setClassName(
-                context.getPackageName(),
-                "com.inventonater.blehid.core.BleHidForegroundService"
+                    context.getPackageName(),
+                    "com.inventonater.blehid.core.BleHidForegroundService"
             );
             serviceIntent.setAction("STOP_FOREGROUND");
-            
+
             Log.d(TAG, "Calling startService with stop action: " + serviceIntent);
-            
+
             context.startService(serviceIntent);
             Log.d(TAG, "Foreground service stop requested successfully");
             return true;

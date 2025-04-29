@@ -10,8 +10,6 @@ import android.util.Log;
  */
 public class BleInitializationCoordinator {
     private static final String TAG = "BleInitCoordinator";
-    
-    private final Context context;
     private final BluetoothEnvironmentValidator environmentValidator;
     private final BleGattServerManager gattServerManager;
     private final HidMediaService hidMediaService;
@@ -28,7 +26,6 @@ public class BleInitializationCoordinator {
     public BleInitializationCoordinator(Context context, 
                                         BleGattServerManager gattServerManager,
                                         HidMediaService hidMediaService) {
-        this.context = context.getApplicationContext();
         this.environmentValidator = new BluetoothEnvironmentValidator(context);
         this.gattServerManager = gattServerManager;
         this.hidMediaService = hidMediaService;
@@ -40,25 +37,18 @@ public class BleInitializationCoordinator {
      * @return true if initialization was successful, false otherwise
      */
     public boolean initialize() {
-        if (isInitialized) {
-            Log.w(TAG, "Already initialized");
-            return true;
-        }
-        
-        // Step 1: Check prerequisites
+
         if (!checkPrerequisites()) {
             Log.e(TAG, "Failed to meet initialization prerequisites");
             return false;
         }
         
-        // Step 2: Initialize GATT server
         if (!initializeGattServer()) {
             Log.e(TAG, "Failed to initialize GATT server");
             cleanupOnFailure();
             return false;
         }
         
-        // Step 3: Initialize HID service
         if (!initializeHidService()) {
             Log.e(TAG, "Failed to initialize HID service");
             cleanupOnFailure();

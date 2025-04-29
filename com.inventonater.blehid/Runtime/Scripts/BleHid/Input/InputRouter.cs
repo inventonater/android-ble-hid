@@ -22,7 +22,6 @@ namespace Inventonater.BleHid
         [CanBeNull] public InputDeviceMapping Mapping => _mapping;
 
         [SerializeField] private List<InputEvent> _pendingButtonEvents = new();
-        [SerializeField] private bool _active;
 
         public void AddMapping(InputDeviceMapping mapping)
         {
@@ -46,12 +45,6 @@ namespace Inventonater.BleHid
             int currentIndex = _mappings.IndexOf(_mapping);
             int nextIndex = (currentIndex + 1) % _mappings.Count;
             SetMapping(_mappings[nextIndex]);
-        }
-
-        private void ToggleActive()
-        {
-            _active = !_active;
-            LoggingManager.Instance.Log($"Toggle active: {_active}");
         }
 
         public void SetSourceDevice(IInputSourceDevice inputSourceDevice)
@@ -80,14 +73,7 @@ namespace Inventonater.BleHid
 
         private void HandleInputEvent(InputEvent buttonEvent)
         {
-            if (buttonEvent == new InputEvent(InputEvent.Id.Secondary, InputEvent.Phase.DoubleTap))
-            {
-                ToggleActive();
-            }
-            if (buttonEvent == new InputEvent(InputEvent.Id.Tertiary, InputEvent.Phase.DoubleTap))
-            {
-                CycleMapping();
-            }
+            if (buttonEvent == new InputEvent(InputEvent.Id.Tertiary, InputEvent.Phase.DoubleTap)) CycleMapping();
             _pendingButtonEvents.Add(buttonEvent);
         }
 
@@ -99,12 +85,6 @@ namespace Inventonater.BleHid
         // ExecutionOrder Process
         private void Update()
         {
-            if (!_active)
-            {
-                _pendingButtonEvents.Clear();
-                return;
-            }
-
             foreach (var pendingButtonEvent in _pendingButtonEvents)
             {
                 if (_mapping.ButtonMapping.TryGetValue(pendingButtonEvent, out var buttonActions))

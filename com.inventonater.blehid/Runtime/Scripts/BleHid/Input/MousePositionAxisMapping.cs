@@ -32,31 +32,40 @@ namespace Inventonater.BleHid
             Filter = InputFilterFactory.CreateFilter(CurrentFilterType);
             Filter = Filter;
 
-            Active = !_requirePress;
+            IsPressing = !_requirePress;
         }
 
         public void Handle(InputEvent pendingButtonEvent)
         {
             ResetPosition();
 
+            if (pendingButtonEvent == InputEvent.SecondaryDoubleTap) ToggleMouseSleep();
+
             if (!_requirePress) return;
             if (pendingButtonEvent.id != InputEvent.Id.Primary) return;
-            if(pendingButtonEvent.phase == InputEvent.Phase.Press) Active = true;
-            if(pendingButtonEvent.phase == InputEvent.Phase.Release) Active = false;
+            if(pendingButtonEvent.phase == InputEvent.Phase.Press) IsPressing = true;
+            if(pendingButtonEvent.phase == InputEvent.Phase.Release) IsPressing = false;
         }
 
-        private bool _active;
+        private void ToggleMouseSleep()
+        {
+            _sleep = !_sleep;
+            LoggingManager.Instance.Log($"Toggle sleep: {_sleep}");
+        }
+
+        private bool _isPressing;
         private bool _requirePress;
         private float _timeInterval;
+        private bool _sleep;
 
-        public bool Active
+        private bool IsPressing
         {
-            get => _active;
-            private set
+            get => _isPressing;
+            set
             {
-                if (_active == value) return;
+                if (_isPressing == value) return;
                 ResetPosition();
-                _active = value;
+                _isPressing = value;
             }
         }
 
@@ -126,7 +135,8 @@ namespace Inventonater.BleHid
         {
             using var profilerMarker = _profileMarker.Auto();
 
-            if (!_active) return;
+            if (_sleep) return;
+            if (!_isPressing) return;
             if (time < _lastIncrement + _timeInterval) return;
             _lastIncrement = time;
 

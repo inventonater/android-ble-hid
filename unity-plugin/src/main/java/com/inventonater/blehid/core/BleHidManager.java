@@ -68,11 +68,6 @@ public class BleHidManager {
      * @return true if initialization was successful, false otherwise
      */
     public boolean initialize() {
-        if (isInitialized) {
-            Log.w(TAG, "Already initialized");
-            return true;
-        }
-        
         boolean success = initializationCoordinator.initialize();
         if (success) {
             isInitialized = true;

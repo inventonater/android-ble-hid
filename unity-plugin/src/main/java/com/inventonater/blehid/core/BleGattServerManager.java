@@ -1,5 +1,6 @@
 package com.inventonater.blehid.core;
 
+import android.annotation.SuppressLint;
 import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothGatt;
 import android.bluetooth.BluetoothGattCallback;
@@ -24,8 +25,7 @@ import java.util.UUID;
  */
 public class BleGattServerManager {
     private static final String TAG = "BleGattServerManager";
-    private static final boolean VERBOSE_LOGGING = false; // Disable verbose logging by default
-    
+
     // Standard UUIDs for HID service required characteristics
     private static final UUID HID_SERVICE_UUID = UUID.fromString("00001812-0000-1000-8000-00805f9b34fb");
     private static final UUID HID_INFO_UUID = UUID.fromString("00002a4a-0000-1000-8000-00805f9b34fb");
@@ -295,6 +295,7 @@ public class BleGattServerManager {
      */
     private final BluetoothGattCallback gattClientCallback = new BluetoothGattCallback() {
         @Override
+        @SuppressLint("MissingPermission")
         public void onConnectionStateChange(BluetoothGatt gatt, int status, int newState) {
             if (gatt == null) {
                 Log.e(TAG, "onConnectionStateChange: gatt is null");
@@ -345,11 +346,11 @@ public class BleGattServerManager {
             }
         }
         
+        @SuppressLint("MissingPermission")
         @Override
         public void onServicesDiscovered(BluetoothGatt gatt, int status) {
             if (status == BluetoothGatt.GATT_SUCCESS) {
                 Log.i(TAG, "GATT services discovered on " + gatt.getDevice().getAddress());
-                
                 // Request max MTU for better throughput (standard for API 23+)
                 gatt.requestMtu(512);
             } else {
@@ -361,11 +362,7 @@ public class BleGattServerManager {
         public void onMtuChanged(BluetoothGatt gatt, int mtu, int status) {
             if (status == BluetoothGatt.GATT_SUCCESS) {
                 Log.i(TAG, "MTU changed to " + mtu);
-                
-                // Notify the connection manager
-                if (bleHidManager.getConnectionManager() != null) {
-                    bleHidManager.getConnectionManager().onMtuChanged(mtu);
-                }
+                bleHidManager.getConnectionManager().onMtuChanged(mtu);
             } else {
                 Log.e(TAG, "MTU change failed: " + status);
             }
@@ -374,15 +371,8 @@ public class BleGattServerManager {
         @Override
         public void onReadRemoteRssi(BluetoothGatt gatt, int rssi, int status) {
             if (status == BluetoothGatt.GATT_SUCCESS) {
-                // Only log RSSI values if verbose logging is enabled
-                if (VERBOSE_LOGGING) {
-                    Log.d(TAG, "RSSI: " + rssi + " dBm");
-                }
-                
-                // Notify the connection manager
-                if (bleHidManager.getConnectionManager() != null) {
-                    bleHidManager.getConnectionManager().onRssiRead(rssi);
-                }
+//                Log.d(TAG, "RSSI: " + rssi + " dBm");
+                bleHidManager.getConnectionManager().onRssiRead(rssi);
             } else {
                 Log.e(TAG, "RSSI read failed: " + status);
             }
@@ -397,8 +387,7 @@ public class BleGattServerManager {
                 // Convert from units (10ms) to milliseconds
                 int timeoutMs = timeout * 10;
                 
-                Log.i(TAG, "Connection parameters updated - interval: " + intervalMs + 
-                        "ms, latency: " + latency + ", timeout: " + timeoutMs + "ms");
+                Log.i(TAG, "Connection parameters updated - interval: " + intervalMs + "ms, latency: " + latency + ", timeout: " + timeoutMs + "ms");
                 
                 // Notify the connection manager
                 if (bleHidManager.getConnectionManager() != null) {
@@ -460,6 +449,7 @@ public class BleGattServerManager {
             }
         }
 
+        @SuppressLint("MissingPermission")
         @Override
         public void onCharacteristicReadRequest(BluetoothDevice device, int requestId, int offset,
                                                 BluetoothGattCharacteristic characteristic) {
@@ -478,8 +468,7 @@ public class BleGattServerManager {
                     0x03          // Flags (Remote wake + Normally connectable) - Changed from 0x01 to 0x03
                 };
                 
-                gattServer.sendResponse(device, requestId, BluetoothGatt.GATT_SUCCESS, 
-                        offset, hidInfo);
+                gattServer.sendResponse(device, requestId, BluetoothGatt.GATT_SUCCESS, offset, hidInfo);
                 success = true;
             } 
             else if (charUuid.equals(HID_REPORT_MAP_UUID)) {
@@ -537,8 +526,7 @@ public class BleGattServerManager {
                                                 BluetoothGattCharacteristic characteristic,
                                                 boolean preparedWrite, boolean responseNeeded,
                                                 int offset, byte[] value) {
-            Log.d(TAG, "Write request for characteristic: " + characteristic.getUuid() +
-                    " from device: " + device.getAddress());
+            Log.d(TAG, "Write request for characteristic: " + characteristic.getUuid() + " from device: " + device.getAddress());
             
             UUID charUuid = characteristic.getUuid();
             boolean success = false;
@@ -569,6 +557,7 @@ public class BleGattServerManager {
             }
         }
 
+        @SuppressLint("MissingPermission")
         @Override
         public void onDescriptorReadRequest(BluetoothDevice device, int requestId, int offset,
                                            BluetoothGattDescriptor descriptor) {
@@ -582,24 +571,21 @@ public class BleGattServerManager {
                 // Check the current configuration for this descriptor
                 // This would need to be stored per-device and per-characteristic
                 
-                gattServer.sendResponse(device, requestId, BluetoothGatt.GATT_SUCCESS, 
-                        0, value);
+                gattServer.sendResponse(device, requestId, BluetoothGatt.GATT_SUCCESS, 0, value);
             } else {
                 // Get descriptor value from mouse service handler
-                byte[] response = bleHidManager.getHidMediaService()
-                        .handleDescriptorRead(descriptor.getUuid(), descriptor.getCharacteristic().getUuid());
+                byte[] response = bleHidManager.getHidMediaService().handleDescriptorRead(descriptor.getUuid(), descriptor.getCharacteristic().getUuid());
                 
                 if (response != null) {
-                    gattServer.sendResponse(device, requestId, BluetoothGatt.GATT_SUCCESS, 
-                            offset, response);
+                    gattServer.sendResponse(device, requestId, BluetoothGatt.GATT_SUCCESS, offset, response);
                 } else {
                     Log.e(TAG, "Unhandled descriptor read: " + descriptor.getUuid());
-                    gattServer.sendResponse(device, requestId, BluetoothGatt.GATT_FAILURE, 
-                            0, null);
+                    gattServer.sendResponse(device, requestId, BluetoothGatt.GATT_FAILURE, 0, null);
                 }
             }
         }
 
+        @SuppressLint("MissingPermission")
         @Override
         public void onDescriptorWriteRequest(BluetoothDevice device, int requestId,
                                             BluetoothGattDescriptor descriptor,

@@ -85,7 +85,6 @@ namespace Inventonater.BleHid
             return Create("BleMedia", registry, buttons, axisMappings);
         }
 
-
         public static InputDeviceMapping LocalMedia(ActionRegistry registry)
         {
             var buttons = new List<(EInputEvent, EInputAction)>
