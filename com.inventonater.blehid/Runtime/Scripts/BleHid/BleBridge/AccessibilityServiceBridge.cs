@@ -1,15 +1,27 @@
 using System;
 using System.Collections;
-using System.Collections.Generic;
 using Cysharp.Threading.Tasks;
 using UnityEngine;
-using Inventonater.BleHid;
 
 namespace Inventonater.BleHid
 {
     [Serializable]
     public class AccessibilityServiceBridge
     {
+        enum GlobalAction
+        {
+            Back = 1,
+            Home = 2,
+            Recents = 3,
+            DPadUp = 16,
+            DPadDown = 17,
+            DPadLeft = 18,
+            DPadRight = 19,
+            DPadCenter = 20
+        }
+
+        private void PerformGlobalAction(GlobalAction action) => _java.Call("performGlobalAction", (int)action);
+
         private readonly JavaBridge _java;
         public AccessibilityServiceBridge(JavaBridge java) => _java = java;
 
@@ -88,46 +100,22 @@ namespace Inventonater.BleHid
             }
         }
 
-        [MappableAction(
-            id: "play_pause",
-            displayName: "Play/Pause",
-            category: "Media",
-            description: "Toggle media playback between play and pause states")]
+        [MappableAction(id: EInputAction.LocalPlayPause, displayName: "Play/Pause", description: "Toggle media playback between play and pause states")]
         public void PlayPause() => _java.Call("localPlayPause");
 
-        [MappableAction(
-            id: "next_track",
-            displayName: "Next Track",
-            category: "Media",
-            description: "Skip to the next track")]
+        [MappableAction(id: EInputAction.LocalNextTrack, displayName: "Next Track", description: "Skip to the next track")]
         public void NextTrack() => _java.Call("localNextTrack");
 
-        [MappableAction(
-            id: "previous_track",
-            displayName: "Previous Track",
-            category: "Media",
-            description: "Go back to the previous track")]
+        [MappableAction(id: EInputAction.LocalPreviousTrack, displayName: "Previous Track", description: "Go back to the previous track")]
         public void PreviousTrack() => _java.Call("localPreviousTrack");
 
-        [MappableAction(
-            id: "volume_up",
-            displayName: "Volume Up",
-            category: "Media",
-            description: "Increase the volume")]
+        [MappableAction(id: EInputAction.LocalVolumeUp, displayName: "Volume Up", description: "Increase the volume")]
         public void VolumeUp() => _java.Call("localVolumeUp");
 
-        [MappableAction(
-            id: "volume_down",
-            displayName: "Volume Down",
-            category: "Media",
-            description: "Decrease the volume")]
+        [MappableAction(id: EInputAction.LocalVolumeDown, displayName: "Volume Down", description: "Decrease the volume")]
         public void VolumeDown() => _java.Call("localVolumeDown");
 
-        [MappableAction(
-            id: "mute",
-            displayName: "Mute",
-            category: "Media",
-            description: "Mute or unmute the audio")]
+        [MappableAction(id: EInputAction.LocalMute, displayName: "Mute", description: "Mute or unmute the audio")]
         public void Mute() => _java.Call("localMute");
 
         public void Tap(int x, int y) => _java.Call("localTap", x, y);
@@ -135,95 +123,37 @@ namespace Inventonater.BleHid
         public void SwipeExtend(Vector2 delta) => _java.Call("localSwipeExtend", delta.x, delta.y);
         public void SwipeEnd() => _java.Call("localSwipeEnd");
 
-        [MappableAction(
-            id: "dpad_up",
-            displayName: "D-Pad Up",
-            category: "Navigation",
-            description: "Navigate up")]
+        [MappableAction(id: EInputAction.LocalDPadUp, displayName: "D-Pad Up", description: "Navigate up")]
         public void DPadUp() => PerformGlobalAction(GlobalAction.DPadUp);
 
-        [MappableAction(
-            id: "dpad_right",
-            displayName: "D-Pad Right",
-            category: "Navigation",
-            description: "Navigate right")]
+        [MappableAction(id: EInputAction.LocalDPadRight, displayName: "D-Pad Right", description: "Navigate right")]
         public void DPadRight() => PerformGlobalAction(GlobalAction.DPadRight);
 
-        [MappableAction(
-            id: "dpad_down",
-            displayName: "D-Pad Down",
-            category: "Navigation",
-            description: "Navigate down")]
+        [MappableAction(id: EInputAction.LocalDPadDown, displayName: "D-Pad Down", description: "Navigate down")]
         public void DPadDown() => PerformGlobalAction(GlobalAction.DPadDown);
 
-        [MappableAction(
-            id: "dpad_left",
-            displayName: "D-Pad Left",
-            category: "Navigation",
-            description: "Navigate left")]
+        [MappableAction(id: EInputAction.LocalDPadLeft, displayName: "D-Pad Left", description: "Navigate left")]
         public void DPadLeft() => PerformGlobalAction(GlobalAction.DPadLeft);
 
-        [MappableAction(
-            id: "dpad_center",
-            displayName: "D-Pad Center",
-            category: "Navigation",
-            description: "Select the focused item")]
+        [MappableAction(id: EInputAction.LocalDPadCenter, displayName: "D-Pad Center", description: "Select the focused item")]
         public void DPadCenter() => PerformGlobalAction(GlobalAction.DPadCenter);
 
-        [MappableAction(
-            id: "back",
-            displayName: "Back",
-            category: "System",
-            description: "Go back to the previous screen")]
+        [MappableAction(id: EInputAction.LocalBack, displayName: "Back", description: "Go back to the previous screen")]
         public void Back() => PerformGlobalAction(GlobalAction.Back);
 
-        [MappableAction(
-            id: "home",
-            displayName: "Home",
-            category: "System",
-            description: "Go to the home screen")]
+        [MappableAction(id: EInputAction.LocalHome, displayName: "Home", description: "Go to the home screen")]
         public void Home() => PerformGlobalAction(GlobalAction.Home);
 
-        [MappableAction(
-            id: "recents",
-            displayName: "Recents",
-            category: "System",
-            description: "Show recent apps")]
+        [MappableAction(id: EInputAction.LocalRecents, displayName: "Recents", description: "Show recent apps")]
         public void Recents() => PerformGlobalAction(GlobalAction.Recents);
 
-        enum GlobalAction
-        {
-            Back = 1,
-            Home = 2,
-            Recents = 3,
-            DPadUp = 16,
-            DPadDown = 17,
-            DPadLeft = 18,
-            DPadRight = 19,
-            DPadCenter = 20
-        }
-
-        private void PerformGlobalAction(GlobalAction action) => _java.Call("performGlobalAction", (int)action);
-
-        [MappableAction(
-            id: "launch_camera",
-            displayName: "Launch Camera",
-            category: "Apps",
-            description: "Open the camera app")]
+        [MappableAction(id: EInputAction.LocalLaunchCamera, displayName: "Launch Camera", description: "Open the camera app")]
         public void LaunchCameraApp() => _java.Call("launchCameraApp");
 
-        [MappableAction(
-            id: "launch_video",
-            displayName: "Launch Video",
-            category: "Apps",
-            description: "Open the video capture app")]
+        [MappableAction(id: EInputAction.LocalLaunchVideo, displayName: "Launch Video", description: "Open the video capture app")]
         public void LaunchVideoCapture() => _java.Call("launchVideoCapture");
 
-        [MappableAction(
-            id: "click_focused",
-            displayName: "Click Focused Element",
-            category: "Accessibility",
-            description: "Click on the currently focused element")]
+        [MappableAction(id: EInputAction.LocalClickFocused, displayName: "Click Focused Element", description: "Click on the currently focused element")]
         public void ClickFocusedNode() => PerformFocusedNodeAction(AccessibilityAction.Click);
 
         public void PerformFocusedNodeAction(AccessibilityAction action) => _java.Call("localPerformFocusedNodeAction", (int)action);

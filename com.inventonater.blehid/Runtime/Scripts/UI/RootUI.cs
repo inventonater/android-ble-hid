@@ -34,8 +34,8 @@ namespace Inventonater.BleHid
             _bleHidManager = BleHidManager.Instance;
             var connectionBridge = _bleHidManager.ConnectionBridge;
             var mouseBridge = _bleHidManager.BleBridge.Mouse;
-            var bleHidPermissionHandler = _bleHidManager.BleBridge.PermissionsBridge;
-            var accessibilityServiceBridge = _bleHidManager.BleBridge.AccessibilityServiceBridge;
+            var bleHidPermissionHandler = _bleHidManager.BleBridge.Permissions;
+            var accessibilityServiceBridge = _bleHidManager.BleBridge.AccessibilityService;
 
             var javaBroadcaster = FindFirstObjectByType<JavaBroadcaster>();
             javaBroadcaster.OnInitializeComplete += OnInitializeComplete;

@@ -12,6 +12,7 @@ namespace Inventonater.BleHid
         private InputDeviceMapping _bleMouse;
         private InputDeviceMapping _bleMedia;
         private InputDeviceMapping _localDragNavigation;
+        private ActionRegistry _actionRegistry;
 
         public bool IsInitialized { get; private set; }
         public bool IsInPipMode { get; internal set; }
@@ -31,6 +32,8 @@ namespace Inventonater.BleHid
 
             JavaBridge = new JavaBridge();
             BleBridge = new BleBridge(JavaBridge);
+
+            _actionRegistry = new ActionRegistry(BleBridge);
 
             JavaBroadcaster = gameObject.AddComponent<JavaBroadcaster>();
             InputRouter = gameObject.AddComponent<InputRouter>();
@@ -69,8 +72,8 @@ namespace Inventonater.BleHid
             Application.runInBackground = true;
             try
             {
-                await BleBridge.PermissionsBridge.Initialize();
-                await BleBridge.AccessibilityServiceBridge.Initialize();
+                await BleBridge.Permissions.Initialize();
+                await BleBridge.AccessibilityService.Initialize();
 
                 IsInitialized = StartInitialize();
 

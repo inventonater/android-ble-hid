@@ -21,7 +21,6 @@ namespace Inventonater.BleHid
         [SerializeField] private bool _flipY;
         private readonly Action<Vector2> _deltaMoveAction;
 
-        public MousePositionAxisMapping(MouseBridge mouseBridge) :this (mouseBridge.MoveMouse) { }
         public MousePositionAxisMapping(Action<Vector2> deltaMoveAction, bool requirePress = false, bool flipY = true, float timeInterval = 0.04f)
         {
             _timeInterval = timeInterval;
