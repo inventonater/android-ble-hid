@@ -30,21 +30,14 @@ namespace Inventonater.BleHid
                 () => _mouse.ClickMouseButton(BleHidConstants.BUTTON_RIGHT)
             };
             BleHidManager.Instance.InputRouter.WhenMappingChanged += HandleMappingChanged;
+
+            if (!BleHidManager.Instance.InputRouter.HasDevice) BleHidManager.Instance.InputRouter.SetSourceDevice(this);
         }
 
         private void HandleMappingChanged(InputDeviceMapping mapping)
         {
             Debug.Log("TODO improve MouseDeviceUI HandleMappingChanged");
             _mousePositionAxisMapping = mapping.AxisMappings.FirstOrDefault(m => m is MousePositionAxisMapping) as MousePositionAxisMapping;
-        }
-
-        public override void Shown()
-        {
-            if (!BleHidManager.Instance.InputRouter.HasDevice) BleHidManager.Instance.InputRouter.SetSourceDevice(this);
-        }
-
-        public override void Hidden()
-        {
         }
 
         public void InputDeviceEnabled()

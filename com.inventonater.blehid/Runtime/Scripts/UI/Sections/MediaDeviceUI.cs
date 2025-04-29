@@ -13,8 +13,6 @@ namespace Inventonater.BleHid
         public override string TabName => Name;
         private MediaBridge Media => BleHidManager.Instance.BleBridge.Media;
 
-        public override void Shown() { }
-        public override void Hidden() { }
         public override void Update(){}
 
         public override void DrawUI()

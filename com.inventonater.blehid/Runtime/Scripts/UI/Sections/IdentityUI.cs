@@ -31,16 +31,6 @@ namespace Inventonater.BleHid
             RefreshPairedDevices();
         }
 
-        public override void Shown()
-        {
-            RefreshIdentityDisplay();
-            RefreshPairedDevices();
-        }
-
-        public override void Hidden()
-        {
-        }
-
         public override void Update()
         {
         }

@@ -48,14 +48,6 @@ namespace Inventonater.BleHid
             _navRow3EditorMessages = new[] { "Local Left pressed", "Local Down pressed", "Local Right pressed" };
         }
 
-        public override void Shown()
-        {
-        }
-
-        public override void Hidden()
-        {
-        }
-
         public override void Update()
         {
         }

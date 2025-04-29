@@ -14,7 +14,5 @@ namespace Inventonater.BleHid
         public abstract string TabName { get; }
         public abstract void Update();
         public abstract void DrawUI();
-        public abstract void Shown();
-        public abstract void Hidden();
     }
 }

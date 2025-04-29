@@ -72,8 +72,6 @@ namespace Inventonater.BleHid
             // Initialize with current values if connected
             UpdateValuesFromManager();
         }
-        public override void Shown() { }
-        public override void Hidden() { }
         public override void Update()
         {
             // Update FPS counter
