@@ -90,5 +90,20 @@ namespace Inventonater.BleHid
         public override int GetHashCode() => HashCode.Combine((int)id, (int)phase, (int)direction);
         public static bool operator ==(InputEvent left, InputEvent right) => left.Equals(right);
         public static bool operator !=(InputEvent left, InputEvent right) => !left.Equals(right);
+        
+        public override string ToString()
+        {
+            if (direction != Direction.None)
+            {
+                return $"Direction.{direction}";
+            }
+            
+            if (phase == Phase.None)
+            {
+                return "None";
+            }
+            
+            return $"{id}.{phase}";
+        }
     }
 }
