@@ -36,17 +36,15 @@ namespace Inventonater.BleHid
             Active = !_requirePress;
         }
 
-        public void Handle(BleHidButtonEvent pendingButtonEvent)
+        public void Handle(InputEvent pendingButtonEvent)
         {
             ResetPosition();
 
             if (!_requirePress) return;
-            if (pendingButtonEvent.id != BleHidButtonEvent.Id.Primary) return;
-            if(pendingButtonEvent.action == BleHidButtonEvent.Action.Press) Active = true;
-            if(pendingButtonEvent.action == BleHidButtonEvent.Action.Release) Active = false;
+            if (pendingButtonEvent.id != InputEvent.Id.Primary) return;
+            if(pendingButtonEvent.temporal == InputEvent.Temporal.Press) Active = true;
+            if(pendingButtonEvent.temporal == InputEvent.Temporal.Release) Active = false;
         }
-
-        public void Handle(BleHidDirection pendingDirection) => ResetPosition();
 
         private bool _active;
         private bool _requirePress;

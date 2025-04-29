@@ -6,7 +6,7 @@ namespace Inventonater.BleHid
 {
     public class SingleIncrementalAxisMapping : IAxisMapping
     {
-        private readonly BleHidAxis _axis;
+        private readonly Axis _axis;
         private readonly Action _increment;
         private readonly Action _decrement;
         private bool _initialized;
@@ -16,12 +16,12 @@ namespace Inventonater.BleHid
         float _lastIncrement;
         static readonly ProfilerMarker _profileMarker = new("BleHid.AxisMappingIncremental.Update");
         private float _scale;
-        private readonly BleHidButtonEvent _start = new BleHidButtonEvent(BleHidButtonEvent.Id.Primary, BleHidButtonEvent.Action.Press);
-        private readonly BleHidButtonEvent _end = new BleHidButtonEvent(BleHidButtonEvent.Id.Primary, BleHidButtonEvent.Action.Release);
+        private readonly InputEvent _start = new InputEvent(InputEvent.Id.Primary, InputEvent.Temporal.Press);
+        private readonly InputEvent _end = new InputEvent(InputEvent.Id.Primary, InputEvent.Temporal.Release);
 
         public IInputFilter Filter => NoFilter.Instance;
 
-        public SingleIncrementalAxisMapping(BleHidAxis axis, Action increment, Action decrement, float scale = 0.1f, float timeInterval = 0.04f)
+        public SingleIncrementalAxisMapping(Axis axis, Action increment, Action decrement, float scale = 0.1f, float timeInterval = 0.04f)
         {
             _axis = axis;
             _increment = increment;
@@ -30,14 +30,10 @@ namespace Inventonater.BleHid
             _timeInterval = timeInterval;
         }
 
-        public void Handle(BleHidButtonEvent pendingButtonEvent)
+        public void Handle(InputEvent pendingButtonEvent)
         {
             if (pendingButtonEvent == _start) Active = true;
             if (pendingButtonEvent == _end) Active = false;
-        }
-
-        public void Handle(BleHidDirection pendingDirection)
-        {
         }
 
         private bool _active;

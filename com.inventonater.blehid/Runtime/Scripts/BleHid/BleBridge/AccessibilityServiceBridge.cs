@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using Cysharp.Threading.Tasks;
 using UnityEngine;
+using Inventonater.BleHid;
 
 namespace Inventonater.BleHid
 {
@@ -87,26 +88,107 @@ namespace Inventonater.BleHid
             }
         }
 
-        public bool PlayPause() => _java.Call<bool>("localPlayPause");
-        public bool NextTrack() => _java.Call<bool>("localNextTrack");
-        public bool PreviousTrack() => _java.Call<bool>("localPreviousTrack");
-        public bool VolumeUp() => _java.Call<bool>("localVolumeUp");
-        public bool VolumeDown() => _java.Call<bool>("localVolumeDown");
-        public bool Mute() => _java.Call<bool>("localMute");
+[MappableAction(
+    id: "play_pause", 
+    displayName: "Play/Pause", 
+    category: "Media", 
+    description: "Toggle media playback between play and pause states")]
+public bool PlayPause() => _java.Call<bool>("localPlayPause");
+
+[MappableAction(
+    id: "next_track", 
+    displayName: "Next Track", 
+    category: "Media", 
+    description: "Skip to the next track")]
+public bool NextTrack() => _java.Call<bool>("localNextTrack");
+
+[MappableAction(
+    id: "previous_track", 
+    displayName: "Previous Track", 
+    category: "Media", 
+    description: "Go back to the previous track")]
+public bool PreviousTrack() => _java.Call<bool>("localPreviousTrack");
+
+[MappableAction(
+    id: "volume_up", 
+    displayName: "Volume Up", 
+    category: "Media", 
+    description: "Increase the volume")]
+public bool VolumeUp() => _java.Call<bool>("localVolumeUp");
+
+[MappableAction(
+    id: "volume_down", 
+    displayName: "Volume Down", 
+    category: "Media", 
+    description: "Decrease the volume")]
+public bool VolumeDown() => _java.Call<bool>("localVolumeDown");
+
+[MappableAction(
+    id: "mute", 
+    displayName: "Mute", 
+    category: "Media", 
+    description: "Mute or unmute the audio")]
+public bool Mute() => _java.Call<bool>("localMute");
         public bool Tap(int x, int y) => _java.Call<bool>("localTap", x, y);
         public bool SwipeBegin(Vector2 begin) => _java.Call<bool>("localSwipeBegin", begin.x, begin.y);
         public bool SwipeExtend(Vector2 delta) => _java.Call<bool>("localSwipeExtend", delta.x, delta.y);
         public bool SwipeEnd() => _java.Call<bool>("localSwipeEnd");
 
-        public bool DPadUp() => PerformGlobalAction(GlobalAction.DPadUp);
-        public bool DPadRight() => PerformGlobalAction(GlobalAction.DPadRight);
-        public bool DPadDown() => PerformGlobalAction(GlobalAction.DPadDown);
-        public bool DPadLeft() => PerformGlobalAction(GlobalAction.DPadLeft);
-        public bool DPadCenter() => PerformGlobalAction(GlobalAction.DPadCenter);
+[MappableAction(
+    id: "dpad_up", 
+    displayName: "D-Pad Up", 
+    category: "Navigation", 
+    description: "Navigate up")]
+public bool DPadUp() => PerformGlobalAction(GlobalAction.DPadUp);
 
-        public bool Back() => PerformGlobalAction(GlobalAction.Back);
-        public bool Home() => PerformGlobalAction(GlobalAction.Home);
-        public bool Recents() => PerformGlobalAction(GlobalAction.Recents);
+[MappableAction(
+    id: "dpad_right", 
+    displayName: "D-Pad Right", 
+    category: "Navigation", 
+    description: "Navigate right")]
+public bool DPadRight() => PerformGlobalAction(GlobalAction.DPadRight);
+
+[MappableAction(
+    id: "dpad_down", 
+    displayName: "D-Pad Down", 
+    category: "Navigation", 
+    description: "Navigate down")]
+public bool DPadDown() => PerformGlobalAction(GlobalAction.DPadDown);
+
+[MappableAction(
+    id: "dpad_left", 
+    displayName: "D-Pad Left", 
+    category: "Navigation", 
+    description: "Navigate left")]
+public bool DPadLeft() => PerformGlobalAction(GlobalAction.DPadLeft);
+
+[MappableAction(
+    id: "dpad_center", 
+    displayName: "D-Pad Center", 
+    category: "Navigation", 
+    description: "Select the focused item")]
+public bool DPadCenter() => PerformGlobalAction(GlobalAction.DPadCenter);
+
+[MappableAction(
+    id: "back", 
+    displayName: "Back", 
+    category: "System", 
+    description: "Go back to the previous screen")]
+public bool Back() => PerformGlobalAction(GlobalAction.Back);
+
+[MappableAction(
+    id: "home", 
+    displayName: "Home", 
+    category: "System", 
+    description: "Go to the home screen")]
+public bool Home() => PerformGlobalAction(GlobalAction.Home);
+
+[MappableAction(
+    id: "recents", 
+    displayName: "Recents", 
+    category: "System", 
+    description: "Show recent apps")]
+public bool Recents() => PerformGlobalAction(GlobalAction.Recents);
 
         enum GlobalAction
         {
@@ -122,10 +204,26 @@ namespace Inventonater.BleHid
 
         private bool PerformGlobalAction(GlobalAction action) => _java.Call<bool>("performGlobalAction", (int)action);
 
-        public bool LaunchCameraApp() => _java.Call<bool>("launchCameraApp");
-        public bool LaunchVideoCapture() => _java.Call<bool>("launchVideoCapture");
+[MappableAction(
+    id: "launch_camera", 
+    displayName: "Launch Camera", 
+    category: "Apps", 
+    description: "Open the camera app")]
+public bool LaunchCameraApp() => _java.Call<bool>("launchCameraApp");
 
-        public bool ClickFocusedNode() => PerformFocusedNodeAction(AccessibilityAction.Click);
+[MappableAction(
+    id: "launch_video", 
+    displayName: "Launch Video", 
+    category: "Apps", 
+    description: "Open the video capture app")]
+public bool LaunchVideoCapture() => _java.Call<bool>("launchVideoCapture");
+
+        [MappableAction(
+    id: "click_focused", 
+    displayName: "Click Focused Element", 
+    category: "Accessibility", 
+    description: "Click on the currently focused element")]
+public bool ClickFocusedNode() => PerformFocusedNodeAction(AccessibilityAction.Click);
         public bool PerformFocusedNodeAction(AccessibilityAction action) => _java.Call<bool>("localPerformFocusedNodeAction", (int)action);
 
         /// <summary>

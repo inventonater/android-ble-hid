@@ -8,10 +8,8 @@ namespace Inventonater.BleHid
     public class MouseDeviceUI : SectionUI, IInputSourceDevice
     {
         public string Name { get; } = "Mouse";
-        public event Action<BleHidButtonEvent> EmitButtonEvent = delegate { };
+        public event Action<InputEvent> EmitInputEvent = delegate { };
         public event Action<Vector3> EmitPositionDelta = delegate { };
-
-        public event Action<BleHidDirection> EmitDirection = delegate { };
         public override string TabName => Name;
 
         private Rect touchpadRect = new(Screen.width / 2 - 150, Screen.height / 2 - 100, 300, 200);

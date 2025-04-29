@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using JetBrains.Annotations;
-using Unity.Profiling;
 using UnityEngine;
 
 namespace Inventonater.BleHid
@@ -22,8 +21,7 @@ namespace Inventonater.BleHid
         public bool HasDevice => _sourceDevice != null;
         [CanBeNull] public InputDeviceMapping Mapping => _mapping;
 
-        [SerializeField] private List<BleHidButtonEvent> _pendingButtonEvents = new();
-        [SerializeField] private List<BleHidDirection> _pendingDirection = new();
+        [SerializeField] private List<InputEvent> _pendingButtonEvents = new();
         [SerializeField] private bool _active;
 
         public void AddMapping(InputDeviceMapping mapping)
@@ -63,8 +61,7 @@ namespace Inventonater.BleHid
             {
                 LoggingManager.Instance.Log($"unregistered: {prevSourceDevice.Name}");
                 prevSourceDevice.EmitPositionDelta -= HandlePositionDeltaEvent;
-                prevSourceDevice.EmitButtonEvent -= HandleButtonEvent;
-                prevSourceDevice.EmitDirection -= HandleDirection;
+                prevSourceDevice.EmitInputEvent -= HandleInputEvent;
 
                 prevSourceDevice.InputDeviceDisabled();
             }
@@ -74,28 +71,25 @@ namespace Inventonater.BleHid
             {
                 LoggingManager.Instance.Log($"registered: {_sourceDevice.Name}");
                 _sourceDevice.EmitPositionDelta += HandlePositionDeltaEvent;
-                _sourceDevice.EmitButtonEvent += HandleButtonEvent;
-                _sourceDevice.EmitDirection += HandleDirection;
+                _sourceDevice.EmitInputEvent += HandleInputEvent;
                 _sourceDevice.InputDeviceEnabled();
             }
 
             WhenDeviceChanged(prevSourceDevice, _sourceDevice);
         }
 
-        private void HandleButtonEvent(BleHidButtonEvent buttonEvent)
+        private void HandleInputEvent(InputEvent buttonEvent)
         {
-            if (buttonEvent == new BleHidButtonEvent(BleHidButtonEvent.Id.Secondary, BleHidButtonEvent.Action.DoubleTap))
+            if (buttonEvent == new InputEvent(InputEvent.Id.Secondary, InputEvent.Temporal.DoubleTap))
             {
                 ToggleActive();
             }
-            if (buttonEvent == new BleHidButtonEvent(BleHidButtonEvent.Id.Tertiary, BleHidButtonEvent.Action.DoubleTap))
+            if (buttonEvent == new InputEvent(InputEvent.Id.Tertiary, InputEvent.Temporal.DoubleTap))
             {
                 CycleMapping();
             }
             _pendingButtonEvents.Add(buttonEvent);
         }
-
-        private void HandleDirection(BleHidDirection direction) => _pendingDirection.Add(direction);
 
         private void HandlePositionDeltaEvent(Vector3 delta)
         {
@@ -108,44 +102,32 @@ namespace Inventonater.BleHid
             if (!_active)
             {
                 _pendingButtonEvents.Clear();
-                _pendingDirection.Clear();
                 return;
             }
 
-            foreach (var pendingButtonEvent in _pendingButtonEvents) FireButtonEvent(pendingButtonEvent);
+            foreach (var pendingButtonEvent in _pendingButtonEvents)
+            {
+                if (_mapping.ButtonMapping.TryGetValue(pendingButtonEvent, out var buttonActions))
+                {
+                    foreach (var action in buttonActions)
+                    {
+                        try { action(); }
+                        catch (Exception e) { LoggingManager.Instance.Exception(e); }
+                    }
+                }
+
+                foreach (var axisMapping in _mapping.AxisMappings)
+                {
+                    try { axisMapping.Handle(pendingButtonEvent); }
+                    catch (Exception e) { LoggingManager.Instance.Exception(e); }
+                }
+            }
             _pendingButtonEvents.Clear();
 
-            foreach (var pendingDirection in _pendingDirection) FireDirection(pendingDirection);
-            _pendingDirection.Clear();
-
-            foreach (var axisMapping in _mapping.AxisMappings) axisMapping.Update(Time.time);
-        }
-
-        private void FireDirection(BleHidDirection pendingDirection)
-        {
-            if (_mapping.DirectionMapping.TryGetValue(pendingDirection, out var directionActions))
+            foreach (var axisMapping in _mapping.AxisMappings)
             {
-                foreach (var action in directionActions) TryFireAction(action);
+                axisMapping.Update(Time.time);
             }
-
-            foreach (var axisMapping in _mapping.AxisMappings) TryFireAction(() => axisMapping.Handle(pendingDirection));
         }
-
-        private void FireButtonEvent(BleHidButtonEvent pendingButtonEvent)
-        {
-            if (_mapping.ButtonMapping.TryGetValue(pendingButtonEvent, out var buttonActions))
-            {
-                foreach (var action in buttonActions) TryFireAction(action);
-            }
-
-            foreach (var axisMapping in _mapping.AxisMappings) TryFireAction(() => axisMapping.Handle(pendingButtonEvent));
-        }
-
-        private static void TryFireAction(Action action)
-        {
-            try { action(); }
-            catch (Exception e) { LoggingManager.Instance.Exception(e); }
-        }
-
     }
 }
