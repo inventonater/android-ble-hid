@@ -5,7 +5,6 @@ import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.app.Service;
-import android.content.Context;
 import android.content.Intent;
 import android.content.pm.ServiceInfo;
 import android.os.Handler;
@@ -14,45 +13,23 @@ import android.os.Looper;
 import android.provider.Settings;
 import android.util.Log;
 
-// Removed AndroidX dependency
-
-/**
- * Foreground service that ensures the LocalAccessibilityService remains running.
- * 
- * This service displays a simple persistent notification as required by Android
- * to keep the app running in the background. This ensures our accessibility
- * service doesn't get killed when the app is not in focus.
- */
 public class BleHidForegroundService extends Service {
     private static final String CHANNEL_ID = "BleHidForegroundServiceChannel";
     private static final int NOTIFICATION_ID = 1001;
     private static final String TAG = "BleHidForegroundSvc";
     
-    // Service state
     private boolean isRunning = false;
     private Handler handler;
     private NotificationManager notificationManager;
     
-    /**
-     * Static flag to track if service is running
-     */
     private static boolean isServiceRunning = false;
     
-    /**
-     * Static instance for singleton access
-     */
     private static BleHidForegroundService instance;
     
-    /**
-     * Check if service is running
-     */
     public static boolean isRunning() {
         return isServiceRunning;
     }
     
-    /**
-     * Get the single instance of the service
-     */
     public static BleHidForegroundService getInstance() {
         return instance;
     }
@@ -129,9 +106,6 @@ public class BleHidForegroundService extends Service {
         Log.d(TAG, "Foreground service destroyed");
     }
     
-    /**
-     * Creates the notification channel required for Android 8.0+
-     */
     private void createNotificationChannel() {
         // Use IMPORTANCE_LOW for a more subtle notification
         NotificationChannel channel = new NotificationChannel(
@@ -148,9 +122,6 @@ public class BleHidForegroundService extends Service {
         notificationManager.createNotificationChannel(channel);
     }
     
-    /**
-     * Starts the foreground service with a persistent notification
-     */
     private void startForegroundService() {
         try {
             // Create notification
@@ -158,14 +129,9 @@ public class BleHidForegroundService extends Service {
             
             try {
                 // Handle different Android versions for starting foreground service
-                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
-                    Log.d(TAG, "Using startForeground with FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE for Android 10+");
-                    // On Android 10+, specify the foreground service type
-                    startForeground(NOTIFICATION_ID, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE);
-                } else {
-                    // For older Android versions
-                    startForeground(NOTIFICATION_ID, notification);
-                }
+                Log.d(TAG, "Using startForeground with FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE for Android 10+");
+                // On Android 10+, specify the foreground service type
+                startForeground(NOTIFICATION_ID, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE);
                 Log.d(TAG, "Foreground service started successfully");
             } catch (Exception e) {
                 Log.e(TAG, "Failed to start foreground service", e);
@@ -188,9 +154,6 @@ public class BleHidForegroundService extends Service {
         }
     }
     
-    /**
-     * Builds the persistent notification for the foreground service
-     */
     private Notification buildNotification() {
         // Create a pending intent to open the main Unity activity when notification is tapped
         Intent notificationIntent;
@@ -231,9 +194,6 @@ public class BleHidForegroundService extends Service {
         return builder.build();
     }
     
-    /**
-     * Sets up periodic monitoring of the accessibility service
-     */
     private void establishAccessibilityServiceConnection() {
         // Set up monitoring of the accessibility service
         // Check every 15 seconds that the service is still running
@@ -259,10 +219,6 @@ public class BleHidForegroundService extends Service {
         }, 15000);
     }
     
-    /**
-     * Creates a notification prompting the user to enable the accessibility service
-     * if it's not running
-     */
     private void promptForAccessibilityService() {
         // Create a notification to direct users to enable the accessibility service
         NotificationManager notificationManager = getSystemService(NotificationManager.class);

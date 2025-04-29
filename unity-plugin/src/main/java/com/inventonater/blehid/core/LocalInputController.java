@@ -13,10 +13,6 @@ import android.view.accessibility.AccessibilityNodeInfo;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
-
-/**
- * Controls input on the local device using Accessibility Services.
- */
 public class LocalInputController {
     private static final String TAG = "LocalInputController";
 
@@ -28,9 +24,6 @@ public class LocalInputController {
         this.context = context;
     }
 
-    /**
-     * Registers the accessibility service.
-     */
     public void registerAccessibilityService(LocalAccessibilityService service) {
         this.accessibilityService = service;
         Log.d(TAG, "Accessibility service registered");
@@ -38,9 +31,6 @@ public class LocalInputController {
         continuousScroller = new ContinuousScroller(service);
     }
 
-    /**
-     * Checks if accessibility service is enabled and registered.
-     */
     public boolean isAccessibilityServiceAvailable() {
         if (accessibilityService == null) {
             Log.e(TAG, "Accessibility service not registered");
@@ -49,9 +39,6 @@ public class LocalInputController {
         return true;
     }
 
-    /**
-     * Checks if the accessibility service is enabled in settings.
-     */
     public boolean isAccessibilityServiceEnabled() {
         String serviceName = context.getPackageName() + "/" +
                 LocalAccessibilityService.class.getCanonicalName();
@@ -63,18 +50,12 @@ public class LocalInputController {
         return enabledServices != null && enabledServices.contains(serviceName);
     }
 
-    /**
-     * Opens accessibility settings to enable the service.
-     */
     public void openAccessibilitySettings() {
         Intent intent = new Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS);
         intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
         context.startActivity(intent);
     }
 
-    /**
-     * Performs a tap at the specified coordinates.
-     */
     public boolean tap(int x, int y) {
         if (!isAccessibilityServiceAvailable()) return false;
 
@@ -112,10 +93,6 @@ public class LocalInputController {
         return result[0];
     }
 
-    /**
-     * Performs a global tap using the accessibility service, even when app is not in foreground.
-     * Used by the camera service to tap the camera button while the camera app is open.
-     */
     public static boolean performGlobalTap(int x, int y) {
         LocalAccessibilityService service = LocalAccessibilityService.getInstance();
         if (service == null) {
@@ -189,9 +166,6 @@ public class LocalInputController {
         return true;
     }
 
-    /**
-     * Sends a key event to the system.
-     */
     public boolean performGlobalAction(int globalAction) {
         if (!isAccessibilityServiceAvailable()) return false;
 
@@ -200,12 +174,6 @@ public class LocalInputController {
         return result;
     }
 
-    /**
-     * Performs the specified action on the currently focused accessibility node.
-     *
-     * @param action The accessibility action to perform (e.g., AccessibilityNodeInfo.ACTION_CLICK)
-     * @return true if the action was performed successfully, false otherwise
-     */
     public boolean performFocusedNodeAction(int action) {
         if (!isAccessibilityServiceAvailable()) return false;
 
@@ -229,11 +197,6 @@ public class LocalInputController {
         }
     }
 
-    /**
-     * Clicks on the currently focused accessibility node.
-     *
-     * @return true if the click was performed successfully, false otherwise
-     */
     public boolean clickFocusedNode() {
         return performFocusedNodeAction(AccessibilityNodeInfo.ACTION_CLICK);
     }

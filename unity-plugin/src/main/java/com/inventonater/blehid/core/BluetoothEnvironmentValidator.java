@@ -5,11 +5,6 @@ import android.bluetooth.BluetoothManager;
 import android.content.Context;
 import android.util.Log;
 
-/**
- * Utility class for validating Bluetooth environment prerequisites.
- * This class provides methods to check if Bluetooth is available,
- * enabled, and supports features required for BLE HID functionality.
- */
 public class BluetoothEnvironmentValidator {
     private static final String TAG = "BluetoothEnvValidator";
     
@@ -17,22 +12,12 @@ public class BluetoothEnvironmentValidator {
     private final BluetoothManager bluetoothManager;
     private final BluetoothAdapter bluetoothAdapter;
     
-    /**
-     * Creates a new BluetoothEnvironmentValidator instance.
-     * 
-     * @param context The application context
-     */
     public BluetoothEnvironmentValidator(Context context) {
         this.context = context.getApplicationContext();
         this.bluetoothManager = (BluetoothManager) context.getSystemService(Context.BLUETOOTH_SERVICE);
         this.bluetoothAdapter = bluetoothManager != null ? bluetoothManager.getAdapter() : null;
     }
     
-    /**
-     * Checks if Bluetooth is available on this device.
-     * 
-     * @return true if Bluetooth is available, false otherwise
-     */
     public boolean isBluetoothAvailable() {
         if (bluetoothManager == null || bluetoothAdapter == null) {
             Log.e(TAG, "Bluetooth not available on this device");
@@ -41,11 +26,6 @@ public class BluetoothEnvironmentValidator {
         return true;
     }
     
-    /**
-     * Checks if Bluetooth is enabled.
-     * 
-     * @return true if Bluetooth is enabled, false otherwise
-     */
     public boolean isBluetoothEnabled() {
         if (!isBluetoothAvailable()) {
             return false;
@@ -59,11 +39,6 @@ public class BluetoothEnvironmentValidator {
         return true;
     }
     
-    /**
-     * Checks if this device supports BLE peripheral mode.
-     * 
-     * @return true if peripheral mode is supported, false otherwise
-     */
     public boolean isPeripheralModeSupported() {
         if (!isBluetoothAvailable()) {
             return false;
@@ -75,12 +50,7 @@ public class BluetoothEnvironmentValidator {
         }
         return supported;
     }
-    
-    /**
-     * Performs all validation checks required for BLE HID functionality.
-     * 
-     * @return true if all checks pass, false otherwise
-     */
+
     public boolean validateAll() {
         if (!isBluetoothAvailable()) {
             Log.e(TAG, "Bluetooth not available");
@@ -100,11 +70,6 @@ public class BluetoothEnvironmentValidator {
         return true;
     }
     
-    /**
-     * Gets the Bluetooth adapter.
-     * 
-     * @return The BluetoothAdapter, or null if not available
-     */
     public BluetoothAdapter getBluetoothAdapter() {
         return bluetoothAdapter;
     }

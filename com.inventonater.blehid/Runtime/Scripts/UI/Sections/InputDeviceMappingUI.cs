@@ -16,7 +16,7 @@ namespace Inventonater.BleHid
         private int _selectedActionIndex = 0;
         private string[] _eventOptions;
         private string[] _actionOptions;
-        private EInputEvent[] _eventValues;
+        private InputEvent[] _eventValues;
         private EInputAction[] _actionValues;
         
         // For dropdown UI
@@ -37,7 +37,7 @@ namespace Inventonater.BleHid
         private void InitializeDropdownOptions()
         {
             // Get all input events
-            _eventValues = Enum.GetValues(typeof(EInputEvent)).Cast<EInputEvent>().ToArray();
+            _eventValues = InputEvent.GetAll().ToArray();
             _eventOptions = _eventValues.Select(e => e.ToString()).ToArray();
             
             // Get all input actions
@@ -125,14 +125,11 @@ namespace Inventonater.BleHid
             
             if (GUILayout.Button("Add Mapping"))
             {
-                EInputEvent selectedEvent = _eventValues[_selectedEventIndex];
+                InputEvent selectedEvent = _eventValues[_selectedEventIndex];
                 EInputAction selectedAction = _actionValues[_selectedActionIndex];
                 
-                // Convert EInputEvent to InputEvent
-                InputEvent inputEvent = selectedEvent.ToInputEvent();
-                
                 // Add the new mapping
-                _mapping.AddAction(inputEvent, selectedAction);
+                _mapping.AddAction(selectedEvent, selectedAction);
             }
         }
     }

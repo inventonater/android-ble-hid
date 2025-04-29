@@ -2,14 +2,10 @@ package com.inventonater.blehid.core;
 
 import android.content.Context;
 import android.media.AudioManager;
-import android.os.Build;
 import android.view.KeyEvent;
 import android.util.Log;
 
-/**
- * Controls media playback on the local device.
- * Uses MediaSession and AudioManager APIs.
- */
+
 public class LocalMediaController {
     private static final String TAG = "LocalMediaController";
     
@@ -20,12 +16,7 @@ public class LocalMediaController {
         this.context = context;
         this.audioManager = (AudioManager) context.getSystemService(Context.AUDIO_SERVICE);
     }
-    
-    /**
-     * Sends a media control event.
-     * @param keyCode The key code for the media action
-     * @return true if successful, false otherwise
-     */
+
     public boolean sendMediaControlEvent(int keyCode) {
         if (audioManager == null) {
             Log.e(TAG, "AudioManager not available");

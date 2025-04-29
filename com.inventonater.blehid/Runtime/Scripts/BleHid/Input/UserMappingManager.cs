@@ -5,17 +5,17 @@ namespace Inventonater.BleHid
 {
     public static class UserMappingManager
     {
-        private static readonly Dictionary<EInputEvent, EInputAction> _buttonToActionMap = new();
+        private static readonly Dictionary<InputEvent, EInputAction> _buttonToActionMap = new();
         
-        public static void SetMapping(EInputEvent buttonId, EInputAction actionId)
+        public static void SetMapping(InputEvent buttonId, EInputAction actionId)
         {
             _buttonToActionMap[buttonId] = actionId;
             LoggingManager.Instance.Log($"UserMappingManager: Mapped button {buttonId} to action {actionId}");
         }
 
-        public static bool TryGetActionForButton(EInputEvent buttonId, out EInputAction actionId) => _buttonToActionMap.TryGetValue(buttonId, out actionId);
+        public static bool TryGetActionForButton(InputEvent buttonId, out EInputAction actionId) => _buttonToActionMap.TryGetValue(buttonId, out actionId);
 
-        public static bool RemoveMapping(EInputEvent buttonId)
+        public static bool RemoveMapping(InputEvent buttonId)
         {
             if (!_buttonToActionMap.Remove(buttonId)) return false;
             LoggingManager.Instance.Log($"UserMappingManager: Removed mapping for button {buttonId}");
@@ -63,7 +63,7 @@ namespace Inventonater.BleHid
             
             public SerializableMappings() { }
             
-            public SerializableMappings(Dictionary<EInputEvent, EInputAction> mappings)
+            public SerializableMappings(Dictionary<InputEvent, EInputAction> mappings)
             {
                 foreach (var kvp in mappings)
                 {
@@ -75,7 +75,7 @@ namespace Inventonater.BleHid
         [System.Serializable]
         private class SerializableMapping
         {
-            public EInputEvent ButtonId;
+            public InputEvent ButtonId;
             public EInputAction ActionId;
         }
     }

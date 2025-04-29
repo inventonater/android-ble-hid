@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 
 namespace Inventonater.BleHid
 {
@@ -85,6 +86,37 @@ namespace Inventonater.BleHid
         public static InputEvent Get(Id id, Phase phase) => new(id, phase);
 
         public static readonly InputEvent None = default;
+        
+        public static IEnumerable<InputEvent> GetAll()
+        {
+            // Return all predefined constants
+            yield return None;
+            
+            // Button events
+            yield return PrimaryPress;
+            yield return PrimaryRelease;
+            yield return PrimaryTap;
+            yield return PrimaryDoubleTap;
+            yield return PrimaryLongPress;
+            
+            yield return SecondaryPress;
+            yield return SecondaryRelease;
+            yield return SecondaryTap;
+            yield return SecondaryDoubleTap;
+            yield return SecondaryLongPress;
+            
+            yield return TertiaryPress;
+            yield return TertiaryRelease;
+            yield return TertiaryTap;
+            yield return TertiaryDoubleTap;
+            yield return TertiaryLongPress;
+            
+            // Direction events
+            yield return Up;
+            yield return Right;
+            yield return Down;
+            yield return Left;
+        }
         public bool Equals(InputEvent other) => id == other.id && phase == other.phase && direction == other.direction;
         public override bool Equals(object obj) => obj is InputEvent other && Equals(other);
         public override int GetHashCode() => HashCode.Combine((int)id, (int)phase, (int)direction);

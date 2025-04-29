@@ -6,7 +6,6 @@ import android.bluetooth.le.AdvertiseCallback;
 import android.bluetooth.le.AdvertiseData;
 import android.bluetooth.le.AdvertiseSettings;
 import android.bluetooth.le.BluetoothLeAdvertiser;
-import android.os.Build;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.ParcelUuid;
@@ -16,13 +15,6 @@ import android.widget.Toast;
 import java.nio.ByteBuffer;
 import java.util.UUID;
 
-/**
- * Handles BLE advertising of the HID peripheral device.
- * This class manages the Bluetooth LE advertising process for advertising 
- * the device as a HID peripheral.
- * 
- * IDENTITY SUPPORT: Enhanced to support persistent device identity
- */
 public class BleAdvertiser {
     private static final String TAG = "BleAdvertiser";
     
@@ -63,9 +55,6 @@ public class BleAdvertiser {
     // New options
     private boolean forceAdvertising = true; // Override capability check
     
-    /**
-     * Callback for BLE advertising operations.
-     */
     private final AdvertiseCallback advertiseCallback = new AdvertiseCallback() {
         @Override
         public void onStartSuccess(AdvertiseSettings settingsInEffect) {
@@ -96,9 +85,6 @@ public class BleAdvertiser {
         }
     };
     
-    /**
-     * Converts advertising mode to string.
-     */
     private String modeToString(int mode) {
         switch (mode) {
             case AdvertiseSettings.ADVERTISE_MODE_LOW_LATENCY:
@@ -112,9 +98,6 @@ public class BleAdvertiser {
         }
     }
     
-    /**
-     * Converts power level to string.
-     */
     private String powerToString(int power) {
         switch (power) {
             case AdvertiseSettings.ADVERTISE_TX_POWER_HIGH:
@@ -130,11 +113,6 @@ public class BleAdvertiser {
         }
     }
     
-    /**
-     * Creates a new BLE advertiser.
-     * 
-     * @param bleHidManager The parent BLE HID manager
-     */
     public BleAdvertiser(BleHidManager bleHidManager) {
         this.bleHidManager = bleHidManager;
         this.bluetoothAdapter = bleHidManager.getBluetoothAdapter();
@@ -143,11 +121,6 @@ public class BleAdvertiser {
         Log.i(TAG, "📱 BleAdvertiser initialized with forceAdvertising=" + forceAdvertising);
     }
     
-    /**
-     * Starts advertising the BLE HID service.
-     * 
-     * @return true if advertising started successfully, false otherwise
-     */
     public boolean startAdvertising() {
         advertisingAttempts++;
         lastAdvertisingStartTime = System.currentTimeMillis();
@@ -251,9 +224,6 @@ public class BleAdvertiser {
         }
     }
     
-    /**
-     * Log device capabilities to help with debugging.
-     */
     private void logDeviceCapabilities() {
         Log.i(TAG, "=== 📱 DEVICE CAPABILITIES ===");
         Log.i(TAG, "Device name: " + bluetoothAdapter.getName());
@@ -271,9 +241,7 @@ public class BleAdvertiser {
         Log.i(TAG, "================================");
     }
 
-    /**
-     * Helper to convert AdvertiseData to a readable string for debugging.
-     */
+
     private String advertiseDataToString(AdvertiseData data) {
         StringBuilder sb = new StringBuilder("AdvertiseData{");
         sb.append("includeTxPower=").append(data.getIncludeTxPowerLevel());
@@ -285,9 +253,6 @@ public class BleAdvertiser {
         return sb.toString();
     }
 
-    /**
-     * Display a toast message on the UI thread.
-     */
     private void showToast(final String message) {
         try {
             new Handler(Looper.getMainLooper()).post(new Runnable() {
@@ -301,11 +266,6 @@ public class BleAdvertiser {
         }
     }
 
-    /**
-     * Builds the advertising settings for the BLE peripheral.
-     * 
-     * @return The configured AdvertiseSettings
-     */
     private AdvertiseSettings buildAdvertiseSettings() {
         // Build settings using the configured TX power level
         AdvertiseSettings settings = new AdvertiseSettings.Builder()
@@ -319,12 +279,6 @@ public class BleAdvertiser {
         return settings;
     }
 
-    /**
-     * Builds a minimal advertising data payload that's guaranteed to fit within BLE size limits.
-     * Now includes manufacturer data with device identity when available.
-     * 
-     * @return The configured AdvertiseData
-     */
     private AdvertiseData buildSimplifiedAdvertiseData() {
         // Create the absolute minimal advertising data to avoid size issues
         // We'll use just the 16-bit HID service UUID instead of the full 128-bit one
@@ -353,11 +307,7 @@ public class BleAdvertiser {
         
         return dataBuilder.build();
     }
-    
-    /**
-     * Converts a UUID to a byte array for use in manufacturer data.
-     * Limits to the first 16 bytes to keep the advertisement packet small.
-     */
+
     private byte[] convertUuidToBytes(UUID uuid) {
         ByteBuffer buffer = ByteBuffer.allocate(16);
         buffer.putLong(uuid.getMostSignificantBits());
@@ -365,11 +315,6 @@ public class BleAdvertiser {
         return buffer.array();
     }
 
-    /**
-     * Builds a minimal scan response data payload.
-     * 
-     * @return The configured AdvertiseData for scan response
-     */
     private AdvertiseData buildSimplifiedScanResponseData() {
         // Minimal scan response - just include device name, no additional data
         AdvertiseData.Builder responseBuilder = new AdvertiseData.Builder()
@@ -380,16 +325,7 @@ public class BleAdvertiser {
               (customDeviceName != null ? customDeviceName : "Default"));
         return responseBuilder.build();
     }
-    
-    /**
-     * Sets the device identity for advertising.
-     * This identity will be included in manufacturer data to help central devices
-     * recognize this peripheral across app restarts.
-     * 
-     * @param identityUuid The UUID string representing device identity
-     * @param deviceName Optional custom device name (can be null for default)
-     * @return true if identity was set successfully
-     */
+
     public boolean setDeviceIdentity(String identityUuid, String deviceName) {
         try {
             if (identityUuid != null && !identityUuid.isEmpty()) {
@@ -417,19 +353,7 @@ public class BleAdvertiser {
             return false;
         }
     }
-    
-    /**
-     * Gets the last error message from an advertising attempt.
-     * 
-     * @return The last error message, or null if no error occurred
-     */
-    public String getLastErrorMessage() {
-        return lastErrorMessage;
-    }
-    
-    /**
-     * Stops advertising if currently advertising.
-     */
+
     public void stopAdvertising() {
         if (!isAdvertising || bluetoothLeAdvertiser == null) {
             return;
@@ -444,13 +368,7 @@ public class BleAdvertiser {
             Log.e(TAG, "❌ Failed to stop advertising", e);
         }
     }
-    
-    /**
-     * Converts an advertising error code to a human-readable message.
-     * 
-     * @param errorCode The error code from AdvertiseCallback
-     * @return A human-readable error message
-     */
+
     private String getAdvertiseErrorMessage(int errorCode) {
         switch (errorCode) {
             case AdvertiseCallback.ADVERTISE_FAILED_ALREADY_STARTED:
@@ -467,32 +385,17 @@ public class BleAdvertiser {
                 return "Unknown error: " + errorCode;
         }
     }
-    
-    /**
-     * Checks if currently advertising.
-     * 
-     * @return true if advertising, false otherwise
-     */
+
     public boolean isAdvertising() {
         return isAdvertising;
     }
-    
-    /**
-     * Get device reports of peripheral mode support
-     */
+
     public boolean getDeviceReportedPeripheralSupport() {
         return bluetoothAdapter != null && 
                bluetoothAdapter.isMultipleAdvertisementSupported() && 
                bluetoothAdapter.getBluetoothLeAdvertiser() != null;
     }
     
-    /**
-     * Sets the transmit power level to use for advertising.
-     * This will take effect on the next startAdvertising() call.
-     * 
-     * @param level The power level to use (ADVERTISE_TX_POWER_*)
-     * @return true if successful, false otherwise
-     */
     public boolean setTxPowerLevel(int level) {
         if (level < AdvertiseSettings.ADVERTISE_TX_POWER_ULTRA_LOW || 
             level > AdvertiseSettings.ADVERTISE_TX_POWER_HIGH) {
@@ -512,10 +415,7 @@ public class BleAdvertiser {
         
         return true;
     }
-    
-    /**
-     * Returns diagnostic information about advertising attempts.
-     */
+
     public String getDiagnosticInfo() {
         StringBuilder info = new StringBuilder();
         info.append("ADVERTISING DIAGNOSTICS:\n");
