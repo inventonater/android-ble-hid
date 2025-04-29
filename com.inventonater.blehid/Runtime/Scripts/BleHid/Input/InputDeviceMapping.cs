@@ -34,6 +34,24 @@ namespace Inventonater.BleHid
 
         public void Add(EInputEvent e, EInputAction a) => _buttonMapping.AppendValue(e.ToInputEvent(), a);
         public void Add(IAxisMapping axisMapping) => _axisMappings.Add(axisMapping);
+        
+        public void AddAction(InputEvent inputEvent, EInputAction action)
+        {
+            _buttonMapping.AppendValue(inputEvent, action);
+        }
+        
+        public void RemoveAction(InputEvent inputEvent, EInputAction action)
+        {
+            if (_buttonMapping.TryGetValue(inputEvent, out var actions))
+            {
+                actions.Remove(action);
+                // Remove the key if no actions remain
+                if (actions.Count == 0)
+                {
+                    _buttonMapping.Remove(inputEvent);
+                }
+            }
+        }
 
         public static InputDeviceMapping Create(string name, List<(EInputEvent, EInputAction)> map, List<IAxisMapping> axisMappings)
         {
