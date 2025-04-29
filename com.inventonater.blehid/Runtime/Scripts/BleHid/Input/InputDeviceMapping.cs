@@ -22,90 +22,88 @@ namespace Inventonater.BleHid
     [DefaultExecutionOrder(ExecutionOrder.InputMapping)]
     public class InputDeviceMapping
     {
+        private readonly ActionRegistry _actionRegistry;
         private readonly Dictionary<InputEvent, List<Action>> _buttonMapping = new();
         public IReadOnlyDictionary<InputEvent, List<Action>> ButtonMapping => _buttonMapping;
 
         private readonly List<IAxisMapping> _axisMappings = new();
         public IReadOnlyList<IAxisMapping> AxisMappings => _axisMappings;
 
-        public InputDeviceMapping(string name) => Name = name;
+        public InputDeviceMapping(string name, ActionRegistry actionRegistry)
+        {
+            Name = name;
+            _actionRegistry = actionRegistry;
+        }
+
         public string Name { get; }
 
         public void Add(InputEvent.Id id, InputEvent.Phase buttonPhase, Action action) => Add(new InputEvent(id, buttonPhase), action);
         public void Add(InputEvent buttonEvent, Action action) => _buttonMapping.AppendValue(buttonEvent, action);
         public void Add(EInputEvent buttonEvent, Action action) => _buttonMapping.AppendValue(buttonEvent.ToInputEvent(), action);
-
-        public void AddPressRelease(InputEvent.Id button, Action press, Action release)
+        public void Add(EInputEvent e, EInputAction a) => Add(e, _actionRegistry.GetAction(a));
+        public void AddPressRelease(InputEvent.Id button, EInputAction press, EInputAction release)
         {
-            Add(button, InputEvent.Phase.Press, press);
-            Add(button, InputEvent.Phase.Release, release);
+            Add(button, InputEvent.Phase.Press, _actionRegistry.GetAction(press));
+            Add(button, InputEvent.Phase.Release, _actionRegistry.GetAction(release));
         }
-
         public void Add(IAxisMapping axisMapping) => _axisMappings.Add(axisMapping);
 
-        public static InputDeviceMapping BleMouse(BleBridge bridge)
+        public static InputDeviceMapping BleMouse(ActionRegistry registry)
         {
-            var mouse = bridge.Mouse;
-            var media = bridge.Media;
-            var keyboard = bridge.Keyboard;
+            var mapping = new InputDeviceMapping("BleMouse", registry);
+            mapping.AddPressRelease(InputEvent.Id.Primary, EInputAction.MouseLeftPress, EInputAction.MouseLeftRelease);
+            mapping.AddPressRelease(InputEvent.Id.Secondary, EInputAction.MouseRightPress, EInputAction.MouseRightRelease);
+            mapping.Add(Up, EInputAction.KeyboardArrowUp);
+            mapping.Add(Right, EInputAction.KeyboardArrowRight);
+            mapping.Add(Down, EInputAction.KeyboardArrowDown);
+            mapping.Add(Left, EInputAction.KeyboardArrowLeft);
 
-            var mapping = new InputDeviceMapping("BleMouse");
-            mapping.AddPressRelease(InputEvent.Id.Primary, () => mouse.PressMouseButton(0), () => mouse.ReleaseMouseButton(0));
-            mapping.AddPressRelease(InputEvent.Id.Secondary, () => mouse.PressMouseButton(1), () => mouse.ReleaseMouseButton(1));
-            mapping.Add(Up, () => keyboard.SendKey(BleHidConstants.KEY_UP));
-            mapping.Add(Right, () => keyboard.SendKey(BleHidConstants.KEY_RIGHT));
-            mapping.Add(Down, () => keyboard.SendKey(BleHidConstants.KEY_DOWN));
-            mapping.Add(Left, () => keyboard.SendKey(BleHidConstants.KEY_LEFT));
-
-            mapping.Add(new MousePositionAxisMapping(mouse.MoveMouse));
-            mapping.Add(new SingleIncrementalAxisMapping(Axis.Z, media.VolumeUp, media.VolumeDown));
+            mapping.Add(new MousePositionAxisMapping(registry.GetMouseMoveAction()));
+            mapping.Add(new SingleIncrementalAxisMapping(Axis.Z, registry.GetAction(EInputAction.MediaVolumeUp), registry.GetAction(EInputAction.MediaVolumeDown)));
             return mapping;
         }
 
-        public static InputDeviceMapping BleMedia(BleBridge bridge)
+        public static InputDeviceMapping BleMedia(ActionRegistry registry)
         {
-            var media = bridge.Media;
-            var mapping = new InputDeviceMapping("BleMedia");
+            var mapping = new InputDeviceMapping("BleMedia", registry);
 
-            mapping.Add(PrimaryDoubleTap, media.PlayPause);
-            mapping.Add(Right, media.NextTrack);
-            mapping.Add(Left, media.PreviousTrack);
-            mapping.Add(Up, media.Mute);
-            mapping.Add(Down, media.Mute);
+            mapping.Add(PrimaryDoubleTap, EInputAction.MediaPlayPause);
+            mapping.Add(Right, EInputAction.MediaNextTrack);
+            mapping.Add(Left, EInputAction.MediaPreviousTrack);
+            mapping.Add(Up, EInputAction.MediaMute);
+            mapping.Add(Down, EInputAction.MediaMute);
 
-            mapping.Add(new SingleIncrementalAxisMapping(Axis.Z, media.VolumeUp, media.VolumeDown));
+            mapping.Add(new SingleIncrementalAxisMapping(Axis.Z, registry.GetAction(EInputAction.MediaVolumeUp), registry.GetAction(EInputAction.MediaVolumeDown)));
             return mapping;
         }
 
-        public static InputDeviceMapping LocalMedia(BleBridge bridge)
+        public static InputDeviceMapping LocalMedia(ActionRegistry registry)
         {
-            var serviceBridge = bridge.AccessibilityService;
-            var mapping = new InputDeviceMapping("LocalMediaMapping");
+            var mapping = new InputDeviceMapping("LocalMedia", registry);
 
-            mapping.Add(PrimaryDoubleTap, serviceBridge.PlayPause);
-            mapping.Add(Right, serviceBridge.NextTrack);
-            mapping.Add(Left, serviceBridge.PreviousTrack);
-            mapping.Add(Up, serviceBridge.Mute);
-            mapping.Add(Down, serviceBridge.Mute);
+            mapping.Add(PrimaryDoubleTap, EInputAction.LocalPlayPause);
+            mapping.Add(Right, EInputAction.LocalNextTrack);
+            mapping.Add(Left, EInputAction.LocalPreviousTrack);
+            mapping.Add(Up, EInputAction.LocalMute);
+            mapping.Add(Down, EInputAction.LocalMute);
 
-            mapping.Add(new SingleIncrementalAxisMapping(Axis.Z, serviceBridge.VolumeUp, serviceBridge.VolumeDown));
+            mapping.Add(new SingleIncrementalAxisMapping(Axis.Z, registry.GetAction(EInputAction.LocalVolumeUp), registry.GetAction(EInputAction.LocalVolumeDown)));
             return mapping;
         }
 
-        public static InputDeviceMapping LocalDPadNavigation(BleBridge bridge)
+        public static InputDeviceMapping LocalDPad(ActionRegistry registry)
         {
-            var serviceBridge = bridge.AccessibilityService;
-            var mapping = new InputDeviceMapping("LocalDPadNavigation");
+            var mapping = new InputDeviceMapping("LocalDPad", registry);
 
-            mapping.Add(PrimaryTap, serviceBridge.DPadCenter);
-            mapping.Add(SecondaryTap, serviceBridge.Back);
-            mapping.Add(SecondaryDoubleTap, serviceBridge.Home);
-            mapping.Add(Up, serviceBridge.DPadUp);
-            mapping.Add(Right, serviceBridge.DPadRight);
-            mapping.Add(Down, serviceBridge.DPadDown);
-            mapping.Add(Left, serviceBridge.DPadLeft);
+            mapping.Add(PrimaryTap, EInputAction.LocalDPadCenter);
+            mapping.Add(SecondaryTap, EInputAction.LocalBack);
+            mapping.Add(SecondaryDoubleTap, EInputAction.LocalHome);
+            mapping.Add(Up, EInputAction.LocalDPadUp);
+            mapping.Add(Right, EInputAction.LocalDPadRight);
+            mapping.Add(Down, EInputAction.LocalDPadDown);
+            mapping.Add(Left, EInputAction.LocalDPadLeft);
 
-            mapping.Add(new SingleIncrementalAxisMapping(Axis.Z, serviceBridge.VolumeUp, serviceBridge.VolumeDown));
+            mapping.Add(new SingleIncrementalAxisMapping(Axis.Z, registry.GetAction(EInputAction.LocalVolumeUp), registry.GetAction(EInputAction.LocalVolumeDown)));
             return mapping;
         }
 
@@ -114,11 +112,10 @@ namespace Inventonater.BleHid
         private static Vector2 Resolution => Pixel9XLResolution;
         private static Vector2 ClampToScreen(Vector2 vector2) => new(Mathf.Clamp(vector2.x, 0, Resolution.x), Mathf.Clamp(vector2.y, 0, Resolution.y));
         private static Vector2 ScreenCenter() => Resolution * 0.5f;
-
-        public static InputDeviceMapping LocalDragNavigation(BleBridge bridge)
+        public static InputDeviceMapping LocalDrag(BleBridge bridge)
         {
             var serviceBridge = bridge.AccessibilityService;
-            var mapping = new InputDeviceMapping("LocalDragNavigation");
+            var mapping = new InputDeviceMapping("LocalDrag", bridge.ActionRegistry);
 
             var swipeMapping = new MousePositionAxisMapping(serviceBridge.SwipeExtend, requirePress: true);
             mapping.Add(PrimaryPress, () => serviceBridge.SwipeBegin(ScreenCenter()));

@@ -8,7 +8,7 @@ namespace Inventonater.BleHid
         private JavaBridge _java;
         public KeyboardBridge(JavaBridge java) => _java = java;
 
-        public void SendKey(int keyCode) => _java.Call("sendKey", keyCode);
+        public void SendKey(/* BleHidConstants */int keyCode) => _java.Call("sendKey", keyCode);
         public void SendKey(HidKeyCode keyCode) => SendKey((int)keyCode);
         public void SendKeyWithModifiers(HidKeyCode keyCode, HidKeyModifier modifiers) => _java.Call("sendKeyWithModifiers", (int)keyCode, (int)modifiers);
         public void TypeText(string text) => _java.Call("typeText", text);

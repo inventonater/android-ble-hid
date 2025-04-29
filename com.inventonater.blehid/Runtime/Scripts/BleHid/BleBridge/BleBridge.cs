@@ -12,6 +12,7 @@ namespace Inventonater.BleHid
         [SerializeField] private ConnectionBridge _connection;
         [SerializeField] private AccessibilityServiceBridge accessibilityService;
         [SerializeField] private PermissionsBridge permissions;
+        private readonly ActionRegistry _actionRegistry;
 
         public KeyboardBridge Keyboard => _keyboard;
         public MouseBridge Mouse => _mouse;
@@ -19,6 +20,7 @@ namespace Inventonater.BleHid
         public AccessibilityServiceBridge AccessibilityService => accessibilityService;
         public PermissionsBridge Permissions => permissions;
         public ConnectionBridge Connection => _connection;
+        public ActionRegistry ActionRegistry => _actionRegistry;
 
         public BleBridge(JavaBridge java)
         {
@@ -28,6 +30,7 @@ namespace Inventonater.BleHid
             accessibilityService = new AccessibilityServiceBridge(java);
             permissions = new PermissionsBridge();
             _connection = new ConnectionBridge(java);
+            _actionRegistry = new ActionRegistry(this);
         }
     }
 }

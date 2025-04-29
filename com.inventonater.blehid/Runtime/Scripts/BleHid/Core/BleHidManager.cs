@@ -7,12 +7,11 @@ namespace Inventonater.BleHid
     [DefaultExecutionOrder(ExecutionOrder.Initialize)]
     public class BleHidManager : MonoBehaviour
     {
-        private InputDeviceMapping _localDPadNavigation;
+        private InputDeviceMapping _localDPad;
         private InputDeviceMapping _localMedia;
         private InputDeviceMapping _bleMouse;
         private InputDeviceMapping _bleMedia;
         private InputDeviceMapping _localDragNavigation;
-        private ActionRegistry _actionRegistry;
 
         public bool IsInitialized { get; private set; }
         public bool IsInPipMode { get; internal set; }
@@ -33,18 +32,17 @@ namespace Inventonater.BleHid
             JavaBridge = new JavaBridge();
             BleBridge = new BleBridge(JavaBridge);
 
-            _actionRegistry = new ActionRegistry(BleBridge);
-
             JavaBroadcaster = gameObject.AddComponent<JavaBroadcaster>();
             InputRouter = gameObject.AddComponent<InputRouter>();
 
-            _localMedia = InputDeviceMapping.LocalMedia(BleBridge);
-            _localDPadNavigation = InputDeviceMapping.LocalDPadNavigation(BleBridge);
-            _bleMouse = InputDeviceMapping.BleMouse(BleBridge);
-            _bleMedia = InputDeviceMapping.BleMedia(BleBridge);
+            var actionRegistry = BleBridge.ActionRegistry;
+            _localMedia = InputDeviceMapping.LocalMedia(actionRegistry);
+            _localDPad = InputDeviceMapping.LocalDPad(actionRegistry);
+            _bleMouse = InputDeviceMapping.BleMouse(actionRegistry);
+            _bleMedia = InputDeviceMapping.BleMedia(actionRegistry);
 
             InputRouter.AddMapping(_localMedia);
-            InputRouter.AddMapping(_localDPadNavigation);
+            InputRouter.AddMapping(_localDPad);
             InputRouter.AddMapping(_bleMouse);
             InputRouter.AddMapping(_bleMedia);
 
