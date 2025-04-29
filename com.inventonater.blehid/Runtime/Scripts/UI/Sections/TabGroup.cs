@@ -4,23 +4,47 @@ using UnityEngine;
 
 namespace Inventonater.BleHid
 {
-    public class SectionGroup : SectionUI
+    public class TabGroup : SectionUI
     {
         public override string TabName { get; }
 
-        private readonly List<SectionUI> _tabComponents;
-        private readonly string[] _activeTabNames;
+        private List<SectionUI> _tabComponents;
+        private string[] _activeTabNames;
 
         private int _currentTabIndex = 0;
         private Vector2 _localTabScrollPosition = Vector2.zero;
         private static float ViewHeight => Screen.height * 0.45f; // // Maintain consistent view height
 
         private readonly List<SectionUI> _sections;
-        public SectionGroup(string name, List<SectionUI> sections)
+        public TabGroup(string name, List<SectionUI> sections)
         {
             TabName = name;
+            UpdateTabs(sections);
+        }
+
+        public void SetCurrentTab(string tabName)
+        {
+            var index = _activeTabNames.ToList().IndexOf(tabName);
+            if (index != -1) _currentTabIndex = index;
+        }
+
+        public void AddTab(SectionUI section)
+        {
+            _tabComponents.Add(section);
+            UpdateTabs(_tabComponents);
+        }
+
+        public void RemoveTab(SectionUI section)
+        {
+            _tabComponents.Remove(section);
+            UpdateTabs(_tabComponents);
+        }
+
+        private void UpdateTabs(List<SectionUI> sections)
+        {
             _tabComponents = sections.ToList();
             _activeTabNames = _tabComponents.Select(t => t.TabName).ToArray();
+            _currentTabIndex = Mathf.Clamp(_currentTabIndex, 0, _activeTabNames.Length - 1);
         }
 
         public override void DrawUI()

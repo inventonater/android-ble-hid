@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 
 namespace Inventonater.BleHid
@@ -10,7 +11,7 @@ namespace Inventonater.BleHid
         private StatusUI _statusUI;
         private PermissionsUI _permissionsUI;
         private BleHidManager _bleHidManager;
-        private SectionGroup _sectionGroup;
+        private TabGroup _tabGroup;
 
         private void Start()
         {
@@ -45,7 +46,7 @@ namespace Inventonater.BleHid
             _statusUI = new StatusUI(connectionBridge);
             _permissionsUI = new PermissionsUI(bleHidPermissionHandler, accessibilityServiceBridge);
 
-            var debug = new SectionGroup("Debug", new List<SectionUI>()
+            var debug = new TabGroup("Debug", new List<SectionUI>()
             {
                 new MediaDeviceUI(),
                 new MouseDeviceUI(mouseBridge),
@@ -53,23 +54,25 @@ namespace Inventonater.BleHid
                 new AccessibilityUI(accessibilityServiceBridge),
             });
 
-            var connectivity = new SectionGroup("Connectivity", new List<SectionUI>()
+            var connectivity = new TabGroup("Connectivity", new List<SectionUI>()
             {
                 new ConnectionUI(connectionBridge, javaBroadcaster),
                 new IdentityUI(connectionBridge)
             });
 
-            var sections = new List<SectionUI>
+            var mappingSections = _bleHidManager.InputRouter.Mappings.Select(mapping => new InputDeviceMappingUI(mapping)).ToList<SectionUI>();
+            
+            _tabGroup = new TabGroup("Main", new List<SectionUI>
             {
+                new TabGroup("Mappings", mappingSections),
                 debug,
                 connectivity,
-            };
-            _sectionGroup = new SectionGroup("Main", sections);
+            });
         }
 
         private void Update()
         {
-            _sectionGroup.Update();
+            _tabGroup.Update();
         }
 
         private void OnGUI()
@@ -90,7 +93,7 @@ namespace Inventonater.BleHid
                 GUILayout.Label("BleHidManager Not Initialized");
                 GUILayout.Space(5);
             }
-            else { _sectionGroup.DrawUI(); }
+            else { _tabGroup.DrawUI(); }
 
             Logger.DrawLogUI();
             GUILayout.EndArea();

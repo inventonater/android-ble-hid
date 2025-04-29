@@ -11,27 +11,35 @@ namespace Inventonater.BleHid
         public delegate void InputDeviceChangedEvent(IInputSourceDevice prev, IInputSourceDevice next);
 
         public event InputDeviceChangedEvent WhenDeviceChanged = delegate { };
+        public event Action<InputDeviceMapping> WhenMappingAdded = delegate { };
         public event Action<InputDeviceMapping> WhenMappingChanged = delegate { };
 
         private IInputSourceDevice _sourceDevice;
         private InputDeviceMapping _mapping;
-        private List<InputDeviceMapping> _mappings = new();
+        public List<InputDeviceMapping> Mappings { get; } = new();
 
         public bool HasMapping => _mapping != null;
         public bool HasDevice => _sourceDevice != null;
         [CanBeNull] public InputDeviceMapping Mapping => _mapping;
 
         [SerializeField] private List<InputEvent> _pendingButtonEvents = new();
+        private ActionRegistry _registry;
+
+        private void Awake()
+        {
+            _registry = BleHidManager.Instance.BleBridge.ActionRegistry;
+        }
 
         public void AddMapping(InputDeviceMapping mapping)
         {
-            _mappings.Add(mapping);
+            Mappings.Add(mapping);
+            WhenMappingAdded(mapping);
             if (_mapping == null) SetMapping(mapping);
         }
 
         public void SetMapping(InputDeviceMapping mapping)
         {
-            if (!_mappings.Contains(mapping)) AddMapping(mapping);
+            if (!Mappings.Contains(mapping)) AddMapping(mapping);
             if (_mapping == mapping) return;
 
             _mapping = mapping;
@@ -41,10 +49,10 @@ namespace Inventonater.BleHid
 
         public void CycleMapping()
         {
-            if (_mappings.Count <= 1) return;
-            int currentIndex = _mappings.IndexOf(_mapping);
-            int nextIndex = (currentIndex + 1) % _mappings.Count;
-            SetMapping(_mappings[nextIndex]);
+            if (Mappings.Count <= 1) return;
+            int currentIndex = Mappings.IndexOf(_mapping);
+            int nextIndex = (currentIndex + 1) % Mappings.Count;
+            SetMapping(Mappings[nextIndex]);
         }
 
         public void SetSourceDevice(IInputSourceDevice inputSourceDevice)
@@ -89,9 +97,13 @@ namespace Inventonater.BleHid
             {
                 if (_mapping.ButtonMapping.TryGetValue(pendingButtonEvent, out var buttonActions))
                 {
-                    foreach (var action in buttonActions)
+                    foreach (var inputAction in buttonActions)
                     {
-                        try { action(); }
+                        try
+                        {
+                            var action = _registry.GetAction(inputAction);
+                            action();
+                        }
                         catch (Exception e) { LoggingManager.Instance.Exception(e); }
                     }
                 }

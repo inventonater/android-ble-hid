@@ -7,8 +7,7 @@ namespace Inventonater.BleHid
 {
     public class ActionRegistry
     {
-        private BleBridge _bleBridge;
-
+        private readonly BleBridge _bleBridge;
         public ActionRegistry(BleBridge bleBridge)
         {
             _bleBridge = bleBridge;
@@ -18,7 +17,13 @@ namespace Inventonater.BleHid
             DiscoverActions(bleBridge.AccessibilityService);
         }
 
-        private readonly Dictionary<EInputAction, MappableActionInfo> _actions = new();
+        private readonly Dictionary<EInputAction, MappableActionInfo> _actionInfo = new();
+        public Action<Vector2> GetMouseMoveAction() => _bleBridge.Mouse.MoveMouse;
+
+        public bool TryGetInfo(EInputAction id, out MappableActionInfo info) => _actionInfo.TryGetValue(id, out info);
+        public Action GetAction(EInputAction id) => TryGetInfo(id, out var info) ? info.Invoke : EmptyAction;
+
+        private static Action EmptyAction { get; } = () => { };
 
         public void DiscoverActions(object target)
         {
@@ -51,19 +56,10 @@ namespace Inventonater.BleHid
                     target
                 );
 
-                _actions[attribute.Id] = actionInfo;
+                _actionInfo[attribute.Id] = actionInfo;
                 LoggingManager.Instance.Log($"ActionRegistry: Registered mappable action: {attribute.Id} ({attribute.DisplayName})");
             }
         }
-
-        public Action<Vector2> GetMouseMoveAction() => _bleBridge.Mouse.MoveMouse;
-        public Action GetAction(EInputAction id)
-        {
-            if (TryGetInfo(id, out var info)) return info.Invoke;
-            return () => { };
-        }
-
-        public bool TryGetInfo(EInputAction id, out MappableActionInfo info) => _actions.TryGetValue(id, out info);
 
     }
 }

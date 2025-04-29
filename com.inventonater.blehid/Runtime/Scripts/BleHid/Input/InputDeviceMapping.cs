@@ -22,27 +22,22 @@ namespace Inventonater.BleHid
     [DefaultExecutionOrder(ExecutionOrder.InputMapping)]
     public class InputDeviceMapping
     {
-        private readonly ActionRegistry _actionRegistry;
-        private readonly Dictionary<InputEvent, List<Action>> _buttonMapping = new();
-        public IReadOnlyDictionary<InputEvent, List<Action>> ButtonMapping => _buttonMapping;
+        private readonly Dictionary<InputEvent, List<EInputAction>> _buttonMapping = new();
+        public IReadOnlyDictionary<InputEvent, List<EInputAction>> ButtonMapping => _buttonMapping;
 
         private readonly List<IAxisMapping> _axisMappings = new();
         public IReadOnlyList<IAxisMapping> AxisMappings => _axisMappings;
 
-        public InputDeviceMapping(string name, ActionRegistry actionRegistry)
-        {
-            Name = name;
-            _actionRegistry = actionRegistry;
-        }
+        public InputDeviceMapping(string name) => Name = name;
 
         public string Name { get; }
 
-        public void Add(EInputEvent e, EInputAction a) => _buttonMapping.AppendValue(e.ToInputEvent(), _actionRegistry.GetAction(a));
+        public void Add(EInputEvent e, EInputAction a) => _buttonMapping.AppendValue(e.ToInputEvent(), a);
         public void Add(IAxisMapping axisMapping) => _axisMappings.Add(axisMapping);
 
-        public static InputDeviceMapping Create(string name, ActionRegistry registry, List<(EInputEvent, EInputAction)> map, List<IAxisMapping> axisMappings)
+        public static InputDeviceMapping Create(string name, List<(EInputEvent, EInputAction)> map, List<IAxisMapping> axisMappings)
         {
-            var inputDeviceMapping = new InputDeviceMapping(name, registry);
+            var inputDeviceMapping = new InputDeviceMapping(name);
             foreach (var entry in map) inputDeviceMapping.Add(entry.Item1, entry.Item2);
             foreach (var entry in axisMappings) inputDeviceMapping.Add(entry);
             return inputDeviceMapping;
@@ -67,7 +62,7 @@ namespace Inventonater.BleHid
                 new SingleIncrementalAxisMapping(Axis.Z, registry.GetAction(EInputAction.MediaVolumeUp), registry.GetAction(EInputAction.MediaVolumeDown)),
             };
 
-            return Create("BleMouse", registry, buttons, axisMappings);
+            return Create("BleMouse", buttons, axisMappings);
         }
 
         public static InputDeviceMapping BleMedia(ActionRegistry registry)
@@ -82,7 +77,7 @@ namespace Inventonater.BleHid
             };
             var axisMappings = new List<IAxisMapping> { new SingleIncrementalAxisMapping(Axis.Z, registry.GetAction(EInputAction.MediaVolumeUp), registry.GetAction(EInputAction.MediaVolumeDown)) };
 
-            return Create("BleMedia", registry, buttons, axisMappings);
+            return Create("BleMedia", buttons, axisMappings);
         }
 
         public static InputDeviceMapping LocalMedia(ActionRegistry registry)
@@ -97,7 +92,7 @@ namespace Inventonater.BleHid
             };
             var axisMappings = new List<IAxisMapping> { new SingleIncrementalAxisMapping(Axis.Z, registry.GetAction(EInputAction.LocalVolumeUp), registry.GetAction(EInputAction.LocalVolumeDown)) };
 
-            return Create("LocalMedia", registry, buttons, axisMappings);
+            return Create("LocalMedia", buttons, axisMappings);
         }
 
         public static InputDeviceMapping LocalDPad(ActionRegistry registry)
@@ -113,7 +108,7 @@ namespace Inventonater.BleHid
                 (Left, EInputAction.LocalDPadLeft),
             };
             var axisMappings = new List<IAxisMapping> { new SingleIncrementalAxisMapping(Axis.Z, registry.GetAction(EInputAction.LocalVolumeUp), registry.GetAction(EInputAction.LocalVolumeDown)) };
-            return Create("LocalDPad", registry, buttons, axisMappings);
+            return Create("LocalDPad", buttons, axisMappings);
         }
 
         private static readonly Vector2 SamsungResolution = new Vector2(1440, 3088);
