@@ -88,107 +88,108 @@ namespace Inventonater.BleHid
             }
         }
 
-[MappableAction(
-    id: "play_pause", 
-    displayName: "Play/Pause", 
-    category: "Media", 
-    description: "Toggle media playback between play and pause states")]
-public bool PlayPause() => _java.Call<bool>("localPlayPause");
+        [MappableAction(
+            id: "play_pause",
+            displayName: "Play/Pause",
+            category: "Media",
+            description: "Toggle media playback between play and pause states")]
+        public void PlayPause() => _java.Call("localPlayPause");
 
-[MappableAction(
-    id: "next_track", 
-    displayName: "Next Track", 
-    category: "Media", 
-    description: "Skip to the next track")]
-public bool NextTrack() => _java.Call<bool>("localNextTrack");
+        [MappableAction(
+            id: "next_track",
+            displayName: "Next Track",
+            category: "Media",
+            description: "Skip to the next track")]
+        public void NextTrack() => _java.Call("localNextTrack");
 
-[MappableAction(
-    id: "previous_track", 
-    displayName: "Previous Track", 
-    category: "Media", 
-    description: "Go back to the previous track")]
-public bool PreviousTrack() => _java.Call<bool>("localPreviousTrack");
+        [MappableAction(
+            id: "previous_track",
+            displayName: "Previous Track",
+            category: "Media",
+            description: "Go back to the previous track")]
+        public void PreviousTrack() => _java.Call("localPreviousTrack");
 
-[MappableAction(
-    id: "volume_up", 
-    displayName: "Volume Up", 
-    category: "Media", 
-    description: "Increase the volume")]
-public bool VolumeUp() => _java.Call<bool>("localVolumeUp");
+        [MappableAction(
+            id: "volume_up",
+            displayName: "Volume Up",
+            category: "Media",
+            description: "Increase the volume")]
+        public void VolumeUp() => _java.Call("localVolumeUp");
 
-[MappableAction(
-    id: "volume_down", 
-    displayName: "Volume Down", 
-    category: "Media", 
-    description: "Decrease the volume")]
-public bool VolumeDown() => _java.Call<bool>("localVolumeDown");
+        [MappableAction(
+            id: "volume_down",
+            displayName: "Volume Down",
+            category: "Media",
+            description: "Decrease the volume")]
+        public void VolumeDown() => _java.Call("localVolumeDown");
 
-[MappableAction(
-    id: "mute", 
-    displayName: "Mute", 
-    category: "Media", 
-    description: "Mute or unmute the audio")]
-public bool Mute() => _java.Call<bool>("localMute");
-        public bool Tap(int x, int y) => _java.Call<bool>("localTap", x, y);
-        public bool SwipeBegin(Vector2 begin) => _java.Call<bool>("localSwipeBegin", begin.x, begin.y);
-        public bool SwipeExtend(Vector2 delta) => _java.Call<bool>("localSwipeExtend", delta.x, delta.y);
-        public bool SwipeEnd() => _java.Call<bool>("localSwipeEnd");
+        [MappableAction(
+            id: "mute",
+            displayName: "Mute",
+            category: "Media",
+            description: "Mute or unmute the audio")]
+        public void Mute() => _java.Call("localMute");
 
-[MappableAction(
-    id: "dpad_up", 
-    displayName: "D-Pad Up", 
-    category: "Navigation", 
-    description: "Navigate up")]
-public bool DPadUp() => PerformGlobalAction(GlobalAction.DPadUp);
+        public void Tap(int x, int y) => _java.Call("localTap", x, y);
+        public void SwipeBegin(Vector2 begin) => _java.Call("localSwipeBegin", begin.x, begin.y);
+        public void SwipeExtend(Vector2 delta) => _java.Call("localSwipeExtend", delta.x, delta.y);
+        public void SwipeEnd() => _java.Call("localSwipeEnd");
 
-[MappableAction(
-    id: "dpad_right", 
-    displayName: "D-Pad Right", 
-    category: "Navigation", 
-    description: "Navigate right")]
-public bool DPadRight() => PerformGlobalAction(GlobalAction.DPadRight);
+        [MappableAction(
+            id: "dpad_up",
+            displayName: "D-Pad Up",
+            category: "Navigation",
+            description: "Navigate up")]
+        public void DPadUp() => PerformGlobalAction(GlobalAction.DPadUp);
 
-[MappableAction(
-    id: "dpad_down", 
-    displayName: "D-Pad Down", 
-    category: "Navigation", 
-    description: "Navigate down")]
-public bool DPadDown() => PerformGlobalAction(GlobalAction.DPadDown);
+        [MappableAction(
+            id: "dpad_right",
+            displayName: "D-Pad Right",
+            category: "Navigation",
+            description: "Navigate right")]
+        public void DPadRight() => PerformGlobalAction(GlobalAction.DPadRight);
 
-[MappableAction(
-    id: "dpad_left", 
-    displayName: "D-Pad Left", 
-    category: "Navigation", 
-    description: "Navigate left")]
-public bool DPadLeft() => PerformGlobalAction(GlobalAction.DPadLeft);
+        [MappableAction(
+            id: "dpad_down",
+            displayName: "D-Pad Down",
+            category: "Navigation",
+            description: "Navigate down")]
+        public void DPadDown() => PerformGlobalAction(GlobalAction.DPadDown);
 
-[MappableAction(
-    id: "dpad_center", 
-    displayName: "D-Pad Center", 
-    category: "Navigation", 
-    description: "Select the focused item")]
-public bool DPadCenter() => PerformGlobalAction(GlobalAction.DPadCenter);
+        [MappableAction(
+            id: "dpad_left",
+            displayName: "D-Pad Left",
+            category: "Navigation",
+            description: "Navigate left")]
+        public void DPadLeft() => PerformGlobalAction(GlobalAction.DPadLeft);
 
-[MappableAction(
-    id: "back", 
-    displayName: "Back", 
-    category: "System", 
-    description: "Go back to the previous screen")]
-public bool Back() => PerformGlobalAction(GlobalAction.Back);
+        [MappableAction(
+            id: "dpad_center",
+            displayName: "D-Pad Center",
+            category: "Navigation",
+            description: "Select the focused item")]
+        public void DPadCenter() => PerformGlobalAction(GlobalAction.DPadCenter);
 
-[MappableAction(
-    id: "home", 
-    displayName: "Home", 
-    category: "System", 
-    description: "Go to the home screen")]
-public bool Home() => PerformGlobalAction(GlobalAction.Home);
+        [MappableAction(
+            id: "back",
+            displayName: "Back",
+            category: "System",
+            description: "Go back to the previous screen")]
+        public void Back() => PerformGlobalAction(GlobalAction.Back);
 
-[MappableAction(
-    id: "recents", 
-    displayName: "Recents", 
-    category: "System", 
-    description: "Show recent apps")]
-public bool Recents() => PerformGlobalAction(GlobalAction.Recents);
+        [MappableAction(
+            id: "home",
+            displayName: "Home",
+            category: "System",
+            description: "Go to the home screen")]
+        public void Home() => PerformGlobalAction(GlobalAction.Home);
+
+        [MappableAction(
+            id: "recents",
+            displayName: "Recents",
+            category: "System",
+            description: "Show recent apps")]
+        public void Recents() => PerformGlobalAction(GlobalAction.Recents);
 
         enum GlobalAction
         {
@@ -202,29 +203,30 @@ public bool Recents() => PerformGlobalAction(GlobalAction.Recents);
             DPadCenter = 20
         }
 
-        private bool PerformGlobalAction(GlobalAction action) => _java.Call<bool>("performGlobalAction", (int)action);
-
-[MappableAction(
-    id: "launch_camera", 
-    displayName: "Launch Camera", 
-    category: "Apps", 
-    description: "Open the camera app")]
-public bool LaunchCameraApp() => _java.Call<bool>("launchCameraApp");
-
-[MappableAction(
-    id: "launch_video", 
-    displayName: "Launch Video", 
-    category: "Apps", 
-    description: "Open the video capture app")]
-public bool LaunchVideoCapture() => _java.Call<bool>("launchVideoCapture");
+        private void PerformGlobalAction(GlobalAction action) => _java.Call("performGlobalAction", (int)action);
 
         [MappableAction(
-    id: "click_focused", 
-    displayName: "Click Focused Element", 
-    category: "Accessibility", 
-    description: "Click on the currently focused element")]
-public bool ClickFocusedNode() => PerformFocusedNodeAction(AccessibilityAction.Click);
-        public bool PerformFocusedNodeAction(AccessibilityAction action) => _java.Call<bool>("localPerformFocusedNodeAction", (int)action);
+            id: "launch_camera",
+            displayName: "Launch Camera",
+            category: "Apps",
+            description: "Open the camera app")]
+        public void LaunchCameraApp() => _java.Call("launchCameraApp");
+
+        [MappableAction(
+            id: "launch_video",
+            displayName: "Launch Video",
+            category: "Apps",
+            description: "Open the video capture app")]
+        public void LaunchVideoCapture() => _java.Call("launchVideoCapture");
+
+        [MappableAction(
+            id: "click_focused",
+            displayName: "Click Focused Element",
+            category: "Accessibility",
+            description: "Click on the currently focused element")]
+        public void ClickFocusedNode() => PerformFocusedNodeAction(AccessibilityAction.Click);
+
+        public void PerformFocusedNodeAction(AccessibilityAction action) => _java.Call("localPerformFocusedNodeAction", (int)action);
 
         /// <summary>
         /// Take a picture with the camera using specified options.

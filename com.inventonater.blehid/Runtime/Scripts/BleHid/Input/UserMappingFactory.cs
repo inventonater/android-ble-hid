@@ -15,21 +15,21 @@ namespace Inventonater.BleHid
             var mapping = new InputDeviceMapping("UserMapping");
             
             // Map Primary button actions
-            MapButtonAction(mapping, "primary_tap", new (InputEvent.Id.Primary, InputEvent.Temporal.Tap));
+            MapButtonAction(mapping, "primary_tap", new (InputEvent.Id.Primary, InputEvent.Phase.Tap));
             
-            MapButtonAction(mapping, "primary_double_tap", new (InputEvent.Id.Primary, InputEvent.Temporal.DoubleTap));
+            MapButtonAction(mapping, "primary_double_tap", new (InputEvent.Id.Primary, InputEvent.Phase.DoubleTap));
             
-            MapButtonAction(mapping, "primary_press", new (InputEvent.Id.Primary, InputEvent.Temporal.Press)); // Screen center
+            MapButtonAction(mapping, "primary_press", new (InputEvent.Id.Primary, InputEvent.Phase.Press)); // Screen center
             
-            MapButtonAction(mapping, "primary_release", new (InputEvent.Id.Primary, InputEvent.Temporal.Release));
+            MapButtonAction(mapping, "primary_release", new (InputEvent.Id.Primary, InputEvent.Phase.Release));
             
             // Map Secondary button actions
-            MapButtonAction(mapping, "secondary_tap", new (InputEvent.Id.Secondary, InputEvent.Temporal.Tap));
+            MapButtonAction(mapping, "secondary_tap", new (InputEvent.Id.Secondary, InputEvent.Phase.Tap));
             
-            MapButtonAction(mapping, "secondary_double_tap", new (InputEvent.Id.Secondary, InputEvent.Temporal.DoubleTap));
+            MapButtonAction(mapping, "secondary_double_tap", new (InputEvent.Id.Secondary, InputEvent.Phase.DoubleTap));
             
             // Map Tertiary button actions
-            MapButtonAction(mapping, "tertiary_tap", new (InputEvent.Id.Tertiary, InputEvent.Temporal.Tap));
+            MapButtonAction(mapping, "tertiary_tap", new (InputEvent.Id.Tertiary, InputEvent.Phase.Tap));
             
             // Map direction actions
             MapButtonAction(mapping, "direction_up", new (InputEvent.Direction.Up));

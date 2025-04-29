@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 using UnityEngine;
-using static Inventonater.BleHid.InputEvent.Direction;
+using static Inventonater.BleHid.InputEvent;
 
 namespace Inventonater.BleHid
 {
@@ -31,14 +31,13 @@ namespace Inventonater.BleHid
         public InputDeviceMapping(string name) => Name = name;
         public string Name { get; }
 
-        public void Add(InputEvent.Id id, InputEvent.Temporal buttonTemporal, Action action) => Add(new InputEvent(id, buttonTemporal), action);
-        public void Add(InputEvent.Direction direction, Action action) => _buttonMapping.AppendValue(new InputEvent(direction), action);
+        public void Add(Id id, Phase buttonPhase, Action action) => Add(new InputEvent(id, buttonPhase), action);
         public void Add(InputEvent buttonEvent, Action action) => _buttonMapping.AppendValue(buttonEvent, action);
 
-        public void AddPressRelease(InputEvent.Id button, Action press, Action release)
+        public void AddPressRelease(Id button, Action press, Action release)
         {
-            Add(button, InputEvent.Temporal.Press, press);
-            Add(button, InputEvent.Temporal.Release, release);
+            Add(button, Phase.Press, press);
+            Add(button, Phase.Release, release);
         }
 
         public void Add(IAxisMapping axisMapping) => _axisMappings.Add(axisMapping);
@@ -50,12 +49,13 @@ namespace Inventonater.BleHid
             var keyboard = bridge.Keyboard;
 
             var mapping = new InputDeviceMapping("BleMouse");
-            mapping.AddPressRelease(InputEvent.Id.Primary, () => mouse.PressMouseButton(0), () => mouse.ReleaseMouseButton(0));
-            mapping.AddPressRelease(InputEvent.Id.Secondary, () => mouse.PressMouseButton(1), () => mouse.ReleaseMouseButton(1));
+            mapping.AddPressRelease(Id.Primary, () => mouse.PressMouseButton(0), () => mouse.ReleaseMouseButton(0));
+            mapping.AddPressRelease(Id.Secondary, () => mouse.PressMouseButton(1), () => mouse.ReleaseMouseButton(1));
             mapping.Add(Up, () => keyboard.SendKey(BleHidConstants.KEY_UP));
             mapping.Add(Right, () => keyboard.SendKey(BleHidConstants.KEY_RIGHT));
             mapping.Add(Down, () => keyboard.SendKey(BleHidConstants.KEY_DOWN));
             mapping.Add(Left, () => keyboard.SendKey(BleHidConstants.KEY_LEFT));
+
             mapping.Add(new MousePositionAxisMapping(mouse));
             mapping.Add(new SingleIncrementalAxisMapping(Axis.Z, () => media.VolumeUp(), () => media.VolumeDown()));
             return mapping;
@@ -66,11 +66,12 @@ namespace Inventonater.BleHid
             var media = bridge.Media;
             var mapping = new InputDeviceMapping("BleMedia");
 
-            mapping.Add(InputEvent.Id.Primary, InputEvent.Temporal.DoubleTap, () => media.PlayPause());
-            mapping.Add(Right, () => media.NextTrack());
-            mapping.Add(Left, () => media.PreviousTrack());
-            mapping.Add(Up, () => media.Mute());
-            mapping.Add(Down, () => media.Mute());
+            mapping.Add(Id.Primary, Phase.DoubleTap, media.PlayPause);
+            mapping.Add(Right, media.NextTrack);
+            mapping.Add(Left, media.PreviousTrack);
+            mapping.Add(Up, media.Mute);
+            mapping.Add(Down, media.Mute);
+
             mapping.Add(new SingleIncrementalAxisMapping(Axis.Z, () => media.VolumeUp(), () => media.VolumeDown()));
             return mapping;
         }
@@ -80,11 +81,11 @@ namespace Inventonater.BleHid
             var serviceBridge = bridge.AccessibilityServiceBridge;
             var mapping = new InputDeviceMapping("LocalMediaMapping");
 
-            mapping.Add(InputEvent.Id.Primary, InputEvent.Temporal.DoubleTap, () => serviceBridge.PlayPause());
-            mapping.Add(Right, () => serviceBridge.NextTrack());
-            mapping.Add(Left, () => serviceBridge.PreviousTrack());
-            mapping.Add(Up, () => serviceBridge.Mute());
-            mapping.Add(Down, () => serviceBridge.Mute());
+            mapping.Add(PrimaryDoubleTap, serviceBridge.PlayPause);
+            mapping.Add(Right, serviceBridge.NextTrack);
+            mapping.Add(Left, serviceBridge.PreviousTrack);
+            mapping.Add(Up, serviceBridge.Mute);
+            mapping.Add(Down, serviceBridge.Mute);
 
             mapping.Add(new SingleIncrementalAxisMapping(Axis.Z, () => serviceBridge.VolumeUp(), () => serviceBridge.VolumeDown()));
             return mapping;
@@ -95,14 +96,14 @@ namespace Inventonater.BleHid
             var serviceBridge = bridge.AccessibilityServiceBridge;
             var mapping = new InputDeviceMapping("LocalDPadNavigation");
 
-            mapping.Add(InputEvent.Id.Primary, InputEvent.Temporal.Tap, () => serviceBridge.DPadCenter());
-            mapping.Add(InputEvent.Id.Secondary, InputEvent.Temporal.Tap, () => serviceBridge.Back());
-            mapping.Add(InputEvent.Id.Secondary, InputEvent.Temporal.DoubleTap, () => serviceBridge.Home());
-
+            mapping.Add(PrimaryTap, () => serviceBridge.DPadCenter());
+            mapping.Add(SecondaryTap, () => serviceBridge.Back());
+            mapping.Add(SecondaryDoubleTap, () => serviceBridge.Home());
             mapping.Add(Up, () => serviceBridge.DPadUp());
             mapping.Add(Right, () => serviceBridge.DPadRight());
             mapping.Add(Down, () => serviceBridge.DPadDown());
             mapping.Add(Left, () => serviceBridge.DPadLeft());
+
             mapping.Add(new SingleIncrementalAxisMapping(Axis.Z, () => serviceBridge.VolumeUp(), () => serviceBridge.VolumeDown()));
             return mapping;
         }
@@ -119,8 +120,8 @@ namespace Inventonater.BleHid
             var mapping = new InputDeviceMapping("LocalDragNavigation");
 
             var swipeMapping = new MousePositionAxisMapping(deltaMove => serviceBridge.SwipeExtend(deltaMove), requirePress: true);
-            mapping.Add(InputEvent.Id.Primary, InputEvent.Temporal.Press, () => serviceBridge.SwipeBegin(ScreenCenter()));
-            mapping.Add(InputEvent.Id.Primary, InputEvent.Temporal.Release, () => serviceBridge.SwipeEnd());
+            mapping.Add(PrimaryPress, () => serviceBridge.SwipeBegin(ScreenCenter()));
+            mapping.Add(PrimaryRelease, () => serviceBridge.SwipeEnd());
             mapping.Add(swipeMapping);
 
             return mapping;

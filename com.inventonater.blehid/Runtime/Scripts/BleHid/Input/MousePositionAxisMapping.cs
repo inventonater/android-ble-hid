@@ -42,8 +42,8 @@ namespace Inventonater.BleHid
 
             if (!_requirePress) return;
             if (pendingButtonEvent.id != InputEvent.Id.Primary) return;
-            if(pendingButtonEvent.temporal == InputEvent.Temporal.Press) Active = true;
-            if(pendingButtonEvent.temporal == InputEvent.Temporal.Release) Active = false;
+            if(pendingButtonEvent.phase == InputEvent.Phase.Press) Active = true;
+            if(pendingButtonEvent.phase == InputEvent.Phase.Release) Active = false;
         }
 
         private bool _active;

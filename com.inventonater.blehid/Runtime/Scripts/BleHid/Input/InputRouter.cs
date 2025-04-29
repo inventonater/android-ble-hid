@@ -80,11 +80,11 @@ namespace Inventonater.BleHid
 
         private void HandleInputEvent(InputEvent buttonEvent)
         {
-            if (buttonEvent == new InputEvent(InputEvent.Id.Secondary, InputEvent.Temporal.DoubleTap))
+            if (buttonEvent == new InputEvent(InputEvent.Id.Secondary, InputEvent.Phase.DoubleTap))
             {
                 ToggleActive();
             }
-            if (buttonEvent == new InputEvent(InputEvent.Id.Tertiary, InputEvent.Temporal.DoubleTap))
+            if (buttonEvent == new InputEvent(InputEvent.Id.Tertiary, InputEvent.Phase.DoubleTap))
             {
                 CycleMapping();
             }

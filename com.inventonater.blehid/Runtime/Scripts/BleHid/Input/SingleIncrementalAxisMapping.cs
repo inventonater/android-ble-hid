@@ -16,8 +16,8 @@ namespace Inventonater.BleHid
         float _lastIncrement;
         static readonly ProfilerMarker _profileMarker = new("BleHid.AxisMappingIncremental.Update");
         private float _scale;
-        private readonly InputEvent _start = new InputEvent(InputEvent.Id.Primary, InputEvent.Temporal.Press);
-        private readonly InputEvent _end = new InputEvent(InputEvent.Id.Primary, InputEvent.Temporal.Release);
+        private readonly InputEvent _start = new InputEvent(InputEvent.Id.Primary, InputEvent.Phase.Press);
+        private readonly InputEvent _end = new InputEvent(InputEvent.Id.Primary, InputEvent.Phase.Release);
 
         public IInputFilter Filter => NoFilter.Instance;
 

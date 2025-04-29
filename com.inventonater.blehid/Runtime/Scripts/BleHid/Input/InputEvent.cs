@@ -6,20 +6,20 @@ namespace Inventonater.BleHid
     public readonly struct InputEvent : IEquatable<InputEvent>
     {
         public readonly Id id;
-        public readonly Temporal temporal;
+        public readonly Phase phase;
         public readonly Direction direction;
 
-        public InputEvent(Id id, Temporal temporal)
+        public InputEvent(Id id, Phase phase)
         {
             this.id = id;
-            this.temporal = temporal;
+            this.phase = phase;
             this.direction = Direction.None;
         }
 
         public InputEvent(Direction direction)
         {
             this.id = Id.Primary;
-            this.temporal = Temporal.None;
+            this.phase = Phase.None;
             this.direction = direction;
         }
 
@@ -30,7 +30,7 @@ namespace Inventonater.BleHid
             Tertiary = 2 // Middle mouse button
         }
 
-        public enum Temporal
+        public enum Phase
         {
             None,
             Press,
@@ -51,43 +51,43 @@ namespace Inventonater.BleHid
             Left
         }
 
-        public bool IsPress => temporal == Temporal.Press;
-        public bool IsRelease => temporal == Temporal.Release;
-        public bool IsHoldBegin => temporal == Temporal.HoldBegin;
-        public bool IsHoldEnd => temporal == Temporal.HoldEnd;
-        public bool IsTap => temporal == Temporal.Tap;
-        public bool IsDoubleTap => temporal == Temporal.DoubleTap;
-        public bool IsLongPress => temporal == Temporal.LongPress;
+        public bool IsPress => phase == Phase.Press;
+        public bool IsRelease => phase == Phase.Release;
+        public bool IsHoldBegin => phase == Phase.HoldBegin;
+        public bool IsHoldEnd => phase == Phase.HoldEnd;
+        public bool IsTap => phase == Phase.Tap;
+        public bool IsDoubleTap => phase == Phase.DoubleTap;
+        public bool IsLongPress => phase == Phase.LongPress;
 
-        public static readonly InputEvent PrimaryPress = new (Id.Primary, Temporal.Press);
-        public static readonly InputEvent PrimaryRelease = new (Id.Primary, Temporal.Release);
-        public static readonly InputEvent PrimaryTap = new (Id.Primary, Temporal.Tap);
-        public static readonly InputEvent PrimaryDoubleTap = new (Id.Primary, Temporal.DoubleTap);
-        public static readonly InputEvent PrimaryLongPress = new (Id.Primary, Temporal.LongPress);
+        public static readonly InputEvent PrimaryPress = new (Id.Primary, Phase.Press);
+        public static readonly InputEvent PrimaryRelease = new (Id.Primary, Phase.Release);
+        public static readonly InputEvent PrimaryTap = new (Id.Primary, Phase.Tap);
+        public static readonly InputEvent PrimaryDoubleTap = new (Id.Primary, Phase.DoubleTap);
+        public static readonly InputEvent PrimaryLongPress = new (Id.Primary, Phase.LongPress);
 
-        public static readonly InputEvent SecondaryPress = new (Id.Secondary, Temporal.Press);
-        public static readonly InputEvent SecondaryRelease = new (Id.Secondary, Temporal.Release);
-        public static readonly InputEvent SecondaryTap = new (Id.Secondary, Temporal.Tap);
-        public static readonly InputEvent SecondaryDoubleTap = new (Id.Secondary, Temporal.DoubleTap);
-        public static readonly InputEvent SecondaryLongPress = new (Id.Secondary, Temporal.LongPress);
+        public static readonly InputEvent SecondaryPress = new (Id.Secondary, Phase.Press);
+        public static readonly InputEvent SecondaryRelease = new (Id.Secondary, Phase.Release);
+        public static readonly InputEvent SecondaryTap = new (Id.Secondary, Phase.Tap);
+        public static readonly InputEvent SecondaryDoubleTap = new (Id.Secondary, Phase.DoubleTap);
+        public static readonly InputEvent SecondaryLongPress = new (Id.Secondary, Phase.LongPress);
 
-        public static readonly InputEvent TertiaryPress = new (Id.Tertiary, Temporal.Press);
-        public static readonly InputEvent TertiaryRelease = new (Id.Tertiary, Temporal.Release);
-        public static readonly InputEvent TertiaryTap = new (Id.Tertiary, Temporal.Tap);
-        public static readonly InputEvent TertiaryDoubleTap = new (Id.Tertiary, Temporal.DoubleTap);
-        public static readonly InputEvent TertiaryLongPress = new (Id.Tertiary, Temporal.LongPress);
+        public static readonly InputEvent TertiaryPress = new (Id.Tertiary, Phase.Press);
+        public static readonly InputEvent TertiaryRelease = new (Id.Tertiary, Phase.Release);
+        public static readonly InputEvent TertiaryTap = new (Id.Tertiary, Phase.Tap);
+        public static readonly InputEvent TertiaryDoubleTap = new (Id.Tertiary, Phase.DoubleTap);
+        public static readonly InputEvent TertiaryLongPress = new (Id.Tertiary, Phase.LongPress);
 
         public static readonly InputEvent Up = new(Direction.Up);
         public static readonly InputEvent Right = new(Direction.Right);
         public static readonly InputEvent Down = new(Direction.Down);
         public static readonly InputEvent Left = new(Direction.Left);
 
-        public static InputEvent Get(Id id, Temporal temporal) => new(id, temporal);
+        public static InputEvent Get(Id id, Phase phase) => new(id, phase);
 
         public static InputEvent None { get; } = default;
-        public bool Equals(InputEvent other) => id == other.id && temporal == other.temporal && direction == other.direction;
+        public bool Equals(InputEvent other) => id == other.id && phase == other.phase && direction == other.direction;
         public override bool Equals(object obj) => obj is InputEvent other && Equals(other);
-        public override int GetHashCode() => HashCode.Combine((int)id, (int)temporal, (int)direction);
+        public override int GetHashCode() => HashCode.Combine((int)id, (int)phase, (int)direction);
         public static bool operator ==(InputEvent left, InputEvent right) => left.Equals(right);
         public static bool operator !=(InputEvent left, InputEvent right) => !left.Equals(right);
     }

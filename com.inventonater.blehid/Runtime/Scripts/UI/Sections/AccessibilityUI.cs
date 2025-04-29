@@ -30,45 +30,21 @@ namespace Inventonater.BleHid
             _bridge = bridge;
 
             _mediaRow1Labels = new[] { "Previous", "Play/Pause", "Next" };
-            _mediaRow1Actions = new Action[]
-            {
-                () => ExecuteLocalControl(l => l.PreviousTrack(), "Local Previous track pressed"),
-                () => ExecuteLocalControl(l => l.PlayPause(), "Local Play/Pause pressed"),
-                () => ExecuteLocalControl(l => l.NextTrack(), "Local Next track pressed")
-            };
+            _mediaRow1Actions = new Action[] { _bridge.PreviousTrack, _bridge.PlayPause, _bridge.NextTrack };
 
             _mediaRow2Labels = new[] { "Vol -", "Mute", "Vol +" };
-            _mediaRow2Actions = new Action[]
-            {
-                () => ExecuteLocalControl(l => l.VolumeDown(), "Local Volume down pressed"),
-                () => ExecuteLocalControl(l => l.Mute(), "Local Mute pressed"),
-                () => ExecuteLocalControl(l => l.VolumeUp(), "Local Volume up pressed")
-            };
+            _mediaRow2Actions = new Action[] { _bridge.VolumeDown, _bridge.Mute, _bridge.VolumeUp };
 
             _cameraButtonLabels = new[] { "Launch Camera", "Launch Video" };
-            _cameraButtonActions = new Action[]
-            {
-                () => ExecuteLocalControl(l => l.LaunchCameraApp(), "Launch Camera pressed (not available in editor)"),
-                () => ExecuteLocalControl(l => l.LaunchVideoCapture(), "Launch Video pressed (not available in editor)")
-            };
+            _cameraButtonActions = new Action[] { _bridge.LaunchCameraApp, _bridge.LaunchVideoCapture };
 
             // Navigation row 1 - Back, Home, Recents
             _navRow1Labels = new[] { "Back", "Home", "Recents" };
-            _navRow1Actions = new Action[]
-            {
-                () => _bridge.Back(),
-                () => _bridge.Home(),
-                () => _bridge.Recents()
-            };
+            _navRow1Actions = new Action[] { _bridge.Back, _bridge.Home, _bridge.Recents };
             _navRow1EditorMessages = new[] { "Local Back pressed", "Local Home pressed", "Local Recents pressed" };
 
             _navRow3Labels = new[] { "Left", "Down", "Right" };
-            _navRow3Actions = new Action[]
-            {
-                () => _bridge.DPadLeft(),
-                () => _bridge.DPadDown(),
-                () => _bridge.DPadRight()
-            };
+            _navRow3Actions = new Action[] { _bridge.DPadLeft, _bridge.DPadDown, _bridge.DPadRight };
             _navRow3EditorMessages = new[] { "Local Left pressed", "Local Down pressed", "Local Right pressed" };
         }
 
@@ -142,17 +118,6 @@ namespace Inventonater.BleHid
             UIHelper.ActionButtonRow(_navRow3Labels, _navRow3Actions, _navRow3EditorMessages, UIHelper.StandardButtonOptions);
 
             UIHelper.EndSection();
-        }
-
-
-        private void ExecuteLocalControl(Func<AccessibilityServiceBridge, bool> action, string editorMessage)
-        {
-            if (IsEditorMode) { LoggingManager.Instance.Log(editorMessage); }
-            else
-            {
-                try { action(_bridge); }
-                catch (Exception ex) { LoggingManager.Instance.Log($"Error executing local control: {ex.Message}"); }
-            }
         }
     }
 }
