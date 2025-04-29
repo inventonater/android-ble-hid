@@ -32,10 +32,10 @@ namespace Inventonater.BleHid
                 var attribute = method.GetCustomAttribute<MappableActionAttribute>();
                 if (attribute == null) continue;
                 
-                // Only support methods with no parameters that return bool
-                if (method.GetParameters().Length > 0 || method.ReturnType != typeof(bool))
+                // Only support methods with no parameters
+                if (method.GetParameters().Length > 0)
                 {
-                    LoggingManager.Instance.Warning($"ActionRegistry: Method {method.Name} has MappableAction attribute but has parameters or doesn't return bool");
+                    LoggingManager.Instance.Warning($"ActionRegistry: Method {method.Name} has MappableAction attribute but has parameters");
                     continue;
                 }
                 

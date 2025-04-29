@@ -27,6 +27,24 @@ namespace Inventonater.BleHid
         LocalRecents,
         LocalLaunchCamera,
         LocalLaunchVideo,
-        LocalClickFocused
+        LocalClickFocused,
+        
+        MouseLeftClick,
+        MouseRightClick,
+        MouseMiddleClick,
+        
+        KeyboardEnter,
+        KeyboardEscape,
+        KeyboardSpace,
+        KeyboardTab,
+        KeyboardBackspace,
+        KeyboardCopy,
+        KeyboardPaste,
+        KeyboardCut,
+        KeyboardSelectAll,
+        KeyboardArrowUp,
+        KeyboardArrowDown,
+        KeyboardArrowLeft,
+        KeyboardArrowRight
     }
 }

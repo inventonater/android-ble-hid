@@ -20,8 +20,18 @@ namespace Inventonater.BleHid
             _java.Call("moveMouse", deltaX, deltaY);
         }
         public void MoveMouse(Vector2 delta) => MoveMouse(Mathf.RoundToInt(delta.x), Mathf.RoundToInt(delta.y));
+
         public void PressMouseButton(int button) => _java.Call("pressMouseButton", button);
         public void ReleaseMouseButton(int button) => _java.Call("releaseMouseButton", button);
         public void ClickMouseButton(int button) => _java.Call("clickMouseButton", button);
+        
+        [MappableAction(id: EInputAction.MouseLeftClick, displayName: "Left Click", description: "Perform a left mouse button click")]
+        public void LeftClick() => ClickMouseButton(0);
+
+        [MappableAction(id: EInputAction.MouseRightClick, displayName: "Right Click", description: "Perform a right mouse button click")]
+        public void RightClick() => ClickMouseButton(1);
+
+        [MappableAction(id: EInputAction.MouseMiddleClick, displayName: "Middle Click", description: "Perform a middle mouse button click")]
+        public void MiddleClick() => ClickMouseButton(2);
     }
 }

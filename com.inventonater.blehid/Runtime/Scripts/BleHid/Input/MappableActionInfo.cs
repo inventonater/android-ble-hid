@@ -22,8 +22,14 @@ namespace Inventonater.BleHid
         
         public void Invoke()
         {
-            try { Method.Invoke(Target, null); }
-            catch (Exception e) { LoggingManager.Instance.Exception(e); }
+            try 
+            { 
+                Method.Invoke(Target, null);
+            }
+            catch (Exception e) 
+            { 
+                LoggingManager.Instance.Exception(e); 
+            }
         }
     }
 }
