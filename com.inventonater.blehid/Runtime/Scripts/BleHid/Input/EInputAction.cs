@@ -32,6 +32,12 @@ namespace Inventonater.BleHid
         MouseLeftClick,
         MouseRightClick,
         MouseMiddleClick,
+        MouseLeftPress,
+        MouseLeftRelease,
+        MouseRightPress,
+        MouseRightRelease,
+        MouseMiddlePress,
+        MouseMiddleRelease,
         
         KeyboardEnter,
         KeyboardEscape,

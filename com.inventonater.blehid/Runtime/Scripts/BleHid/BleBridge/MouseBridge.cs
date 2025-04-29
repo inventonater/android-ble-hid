@@ -33,5 +33,23 @@ namespace Inventonater.BleHid
 
         [MappableAction(id: EInputAction.MouseMiddleClick, displayName: "Middle Click", description: "Perform a middle mouse button click")]
         public void MiddleClick() => ClickMouseButton(2);
+
+        [MappableAction(id: EInputAction.MouseLeftPress, displayName: "Left Press", description: "Press the left mouse button")]
+        public void LeftPress() => PressMouseButton(0);
+
+        [MappableAction(id: EInputAction.MouseLeftRelease, displayName: "Left Release", description: "Release the left mouse button")]
+        public void LeftRelease() => ReleaseMouseButton(0);
+
+        [MappableAction(id: EInputAction.MouseRightPress, displayName: "Right Press", description: "Press the right mouse button")]
+        public void RightPress() => PressMouseButton(1);
+
+        [MappableAction(id: EInputAction.MouseRightRelease, displayName: "Right Release", description: "Release the right mouse button")]
+        public void RightRelease() => ReleaseMouseButton(1);
+
+        [MappableAction(id: EInputAction.MouseMiddlePress, displayName: "Middle Press", description: "Press the middle mouse button")]
+        public void MiddlePress() => PressMouseButton(2);
+
+        [MappableAction(id: EInputAction.MouseMiddleRelease, displayName: "Middle Release", description: "Release the middle mouse button")]
+        public void MiddleRelease() => ReleaseMouseButton(2);
     }
 }
