@@ -80,7 +80,6 @@ namespace Inventonater.BleHid
         public static InputDeviceMapping LocalMedia(BleBridge bridge)
         {
             var serviceBridge = bridge.AccessibilityServiceBridge;
-
             var mapping = new InputDeviceMapping("LocalMediaMapping");
 
             mapping.Add(BleHidButtonEvent.Id.Primary, BleHidButtonEvent.Action.DoubleTap, () => serviceBridge.PlayPause());
@@ -92,13 +91,6 @@ namespace Inventonater.BleHid
             mapping.Add(new SingleIncrementalAxisMapping(BleHidAxis.Z, () => serviceBridge.VolumeUp(), () => serviceBridge.VolumeDown()));
             return mapping;
         }
-
-        private static readonly Vector2 SamsungResolution = new Vector2(1440, 3088);
-        private static readonly Vector2 Pixel9XLResolution = new Vector2(1344, 2992);
-
-        private static Vector2 Resolution => Pixel9XLResolution;
-        private static Vector2 ClampToScreen(Vector2 vector2) => new(Mathf.Clamp(vector2.x, 0, Resolution.x), Mathf.Clamp(vector2.y, 0, Resolution.y));
-        private static Vector2 ScreenCenter() => Resolution * 0.5f;
 
         public static InputDeviceMapping LocalDPadNavigation(BleBridge bridge)
         {
@@ -117,6 +109,12 @@ namespace Inventonater.BleHid
             return mapping;
         }
 
+        private static readonly Vector2 SamsungResolution = new Vector2(1440, 3088);
+        private static readonly Vector2 Pixel9XLResolution = new Vector2(1344, 2992);
+        private static Vector2 Resolution => Pixel9XLResolution;
+        private static Vector2 ClampToScreen(Vector2 vector2) => new(Mathf.Clamp(vector2.x, 0, Resolution.x), Mathf.Clamp(vector2.y, 0, Resolution.y));
+        private static Vector2 ScreenCenter() => Resolution * 0.5f;
+
         public static InputDeviceMapping LocalDragNavigation(BleBridge bridge)
         {
             var serviceBridge = bridge.AccessibilityServiceBridge;
@@ -129,6 +127,5 @@ namespace Inventonater.BleHid
 
             return mapping;
         }
-
     }
 }
