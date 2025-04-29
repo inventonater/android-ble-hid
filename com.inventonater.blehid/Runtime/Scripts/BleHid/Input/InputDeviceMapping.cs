@@ -40,16 +40,17 @@ namespace Inventonater.BleHid
         public void Add(EInputEvent e, EInputAction a) => _buttonMapping.AppendValue(e.ToInputEvent(), _actionRegistry.GetAction(a));
         public void Add(IAxisMapping axisMapping) => _axisMappings.Add(axisMapping);
 
-        public static InputDeviceMapping Create(string name, ActionRegistry registry, List<(EInputEvent, EInputAction)> map)
+        public static InputDeviceMapping Create(string name, ActionRegistry registry, List<(EInputEvent, EInputAction)> map, List<IAxisMapping> axisMappings)
         {
             var inputDeviceMapping = new InputDeviceMapping(name, registry);
             foreach (var entry in map) inputDeviceMapping.Add(entry.Item1, entry.Item2);
+            foreach (var entry in axisMappings) inputDeviceMapping.Add(entry);
             return inputDeviceMapping;
         }
 
         public static InputDeviceMapping BleMouse(ActionRegistry registry)
         {
-            var map = new List<(EInputEvent, EInputAction)>
+            var buttons = new List<(EInputEvent, EInputAction)>
             {
                 (PrimaryPress, EInputAction.MouseLeftPress),
                 (PrimaryRelease, EInputAction.MouseLeftRelease),
@@ -60,16 +61,18 @@ namespace Inventonater.BleHid
                 (Down, EInputAction.KeyboardArrowDown),
                 (Left, EInputAction.KeyboardArrowLeft),
             };
+            var axisMappings = new List<IAxisMapping>
+            {
+                new MousePositionAxisMapping(registry.GetMouseMoveAction()),
+                new SingleIncrementalAxisMapping(Axis.Z, registry.GetAction(EInputAction.MediaVolumeUp), registry.GetAction(EInputAction.MediaVolumeDown)),
+            };
 
-            var mapping = Create("BleMouse", registry, map);
-            mapping.Add(new MousePositionAxisMapping(registry.GetMouseMoveAction()));
-            mapping.Add(new SingleIncrementalAxisMapping(Axis.Z, registry.GetAction(EInputAction.MediaVolumeUp), registry.GetAction(EInputAction.MediaVolumeDown)));
-            return mapping;
+            return Create("BleMouse", registry, buttons, axisMappings);
         }
 
         public static InputDeviceMapping BleMedia(ActionRegistry registry)
         {
-            var map = new List<(EInputEvent, EInputAction)>
+            var buttons = new List<(EInputEvent, EInputAction)>
             {
                 (PrimaryDoubleTap, EInputAction.MediaPlayPause),
                 (Right, EInputAction.MediaNextTrack),
@@ -77,16 +80,15 @@ namespace Inventonater.BleHid
                 (Up, EInputAction.MediaMute),
                 (Down, EInputAction.MediaMute),
             };
+            var axisMappings = new List<IAxisMapping> { new SingleIncrementalAxisMapping(Axis.Z, registry.GetAction(EInputAction.MediaVolumeUp), registry.GetAction(EInputAction.MediaVolumeDown)) };
 
-            var mapping = Create("BleMedia", registry, map);
-            mapping.Add(new SingleIncrementalAxisMapping(Axis.Z, registry.GetAction(EInputAction.MediaVolumeUp), registry.GetAction(EInputAction.MediaVolumeDown)));
-            return mapping;
+            return Create("BleMedia", registry, buttons, axisMappings);
         }
 
 
         public static InputDeviceMapping LocalMedia(ActionRegistry registry)
         {
-            var map = new List<(EInputEvent, EInputAction)>
+            var buttons = new List<(EInputEvent, EInputAction)>
             {
                 (PrimaryDoubleTap, EInputAction.LocalPlayPause),
                 (Right, EInputAction.LocalNextTrack),
@@ -94,15 +96,14 @@ namespace Inventonater.BleHid
                 (Up, EInputAction.LocalMute),
                 (Down, EInputAction.LocalMute),
             };
+            var axisMappings = new List<IAxisMapping> { new SingleIncrementalAxisMapping(Axis.Z, registry.GetAction(EInputAction.LocalVolumeUp), registry.GetAction(EInputAction.LocalVolumeDown)) };
 
-            var mapping = Create("LocalMedia", registry, map);
-            mapping.Add(new SingleIncrementalAxisMapping(Axis.Z, registry.GetAction(EInputAction.LocalVolumeUp), registry.GetAction(EInputAction.LocalVolumeDown)));
-            return mapping;
+            return Create("LocalMedia", registry, buttons, axisMappings);
         }
 
         public static InputDeviceMapping LocalDPad(ActionRegistry registry)
         {
-            var map = new List<(EInputEvent, EInputAction)>
+            var buttons = new List<(EInputEvent, EInputAction)>
             {
                 (PrimaryTap, EInputAction.LocalDPadCenter),
                 (SecondaryTap, EInputAction.LocalBack),
@@ -112,10 +113,8 @@ namespace Inventonater.BleHid
                 (Down, EInputAction.LocalDPadDown),
                 (Left, EInputAction.LocalDPadLeft),
             };
-
-            var mapping = Create("LocalDPad", registry, map);
-            mapping.Add(new SingleIncrementalAxisMapping(Axis.Z, registry.GetAction(EInputAction.LocalVolumeUp), registry.GetAction(EInputAction.LocalVolumeDown)));
-            return mapping;
+            var axisMappings = new List<IAxisMapping> { new SingleIncrementalAxisMapping(Axis.Z, registry.GetAction(EInputAction.LocalVolumeUp), registry.GetAction(EInputAction.LocalVolumeDown)) };
+            return Create("LocalDPad", registry, buttons, axisMappings);
         }
 
         private static readonly Vector2 SamsungResolution = new Vector2(1440, 3088);
