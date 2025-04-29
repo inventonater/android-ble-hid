@@ -1,15 +1,25 @@
 package com.inventonater.blehid.unity;
 
+import android.util.Log;
+
+import com.unity3d.player.UnityPlayer;
+
 public class BleHidUnityCallback {
 
-    private final UnityMessenger unityMessenger;
+    private static final String TAG = "BleHidUnityCallback";
 
-    public BleHidUnityCallback(UnityMessenger unityMessenger) {
-        this.unityMessenger = unityMessenger;
+    private final String unityGameObjectName;
+
+    public BleHidUnityCallback(String gameObjectName) {
+        unityGameObjectName = gameObjectName;
     }
 
-    private void sendMessageToUnity(String methodName, String message) {
-        this.unityMessenger.sendMessageToUnity(methodName, message);
+    public void sendMessageToUnity(String methodName, String message) {
+        if (unityGameObjectName != null && !unityGameObjectName.isEmpty()) {
+            UnityPlayer.UnitySendMessage(unityGameObjectName, methodName, message);
+        } else {
+            Log.e(TAG, "Cannot send message to Unity: GameObject name is not set");
+        }
     }
 
     public void onInitializeComplete(boolean success, String message) {

@@ -9,7 +9,6 @@ public class BleHidUnityBridge {
     private static final String TAG = "BleHidUnityBridge";
     private static BleHidUnityBridge instance;
     private BleHidUnityPlugin plugin;
-    private UnityMessenger unityMessenger;
 
     // called from Unity
     public static synchronized BleHidUnityBridge getInstance() {
@@ -34,10 +33,9 @@ public class BleHidUnityBridge {
             Log.e(TAG, "Failed to start foreground service");
         }
 
-        unityMessenger = new UnityMessenger(gameObjectName);
-        BleHidUnityCallback callback = new BleHidUnityCallback(unityMessenger);
+        BleHidUnityCallback callback = new BleHidUnityCallback(gameObjectName);
 
-        return plugin.initialize(UnityPlayer.currentActivity, callback);
+        return plugin.initialize(callback);
     }
 
     public boolean startAdvertising() {

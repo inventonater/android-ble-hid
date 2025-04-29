@@ -37,10 +37,10 @@ public class BleHidUnityPlugin {
     private boolean isInitialized = false;
     private LocalInputManager localInputManager;
 
-    public boolean initialize(Activity activity, BleHidUnityCallback callback) {
-        this.unityActivity = activity;
+    public boolean initialize(BleHidUnityCallback callback) {
+        unityActivity = UnityPlayer.currentActivity;
         this.callback = callback;
-        bleHidManager = new BleHidManager(activity);
+        bleHidManager = new BleHidManager(unityActivity);
 
         BlePairingManager blePairingManager = bleHidManager.getBlePairingManager();
         BlePairingManager.PairingCallback pairingCallback = new BlePairingManager.PairingCallback() {
@@ -321,44 +321,29 @@ public class BleHidUnityPlugin {
         return bleHidManager.mute();
     }
 
-    public void updateUnityActivity(Activity activity) {
-        if (activity != null) {
-            this.unityActivity = activity;
+    public boolean initializeLocalControl() {
+        Activity currentActivity = UnityPlayer.currentActivity;
+        if (currentActivity != null) {
+            this.unityActivity = currentActivity;
             Log.d(TAG, "Unity activity reference updated");
         } else {
             Log.e(TAG, "Attempted to update with null activity");
         }
-    }
-
-    public boolean initializeLocalControl() {
-        updateUnityActivity(UnityPlayer.currentActivity);
-
-        // Check if we have a valid activity reference
-        if (unityActivity == null) {
-            Log.e(TAG, "Activity not available");
-            return false;
-        }
 
         try {
-            // Initialize the LocalInputManager with the current activity
             localInputManager = LocalInputManager.initialize(unityActivity);
             Log.d(TAG, "Local input manager initialized");
 
-            // Check accessibility service
             boolean serviceEnabled = localInputManager.isAccessibilityServiceEnabled();
             if (!serviceEnabled) {
                 Log.w(TAG, "Accessibility service not enabled");
-                if (callback != null) {
-                    callback.onDebugLog("Accessibility service not enabled. Please enable it in Settings.");
-                }
+                callback.onDebugLog("Accessibility service not enabled. Please enable it in Settings.");
             }
 
             return true;
         } catch (Exception e) {
             Log.e(TAG, "Failed to initialize local control", e);
-            if (callback != null) {
-                callback.onError(ERROR_INITIALIZATION_FAILED, "Failed to initialize local control: " + e.getMessage());
-            }
+            callback.onError(ERROR_INITIALIZATION_FAILED, "Failed to initialize local control: " + e.getMessage());
             return false;
         }
     }
@@ -543,6 +528,7 @@ public class BleHidUnityPlugin {
         return bleHidManager.getConnectionManager().getAllConnectionParameters();
     }
 
+    @SuppressLint("MissingPermission")
     public String getDiagnosticInfo() {
         if (!checkInitialized()) return "Not initialized";
 
@@ -582,6 +568,7 @@ public class BleHidUnityPlugin {
         Log.d(TAG, "Plugin closed");
     }
 
+    @SuppressLint("MissingPermission")
     private void updateConnectionStatus() {
         if (callback == null || !isInitialized) return;
 
@@ -599,6 +586,7 @@ public class BleHidUnityPlugin {
         }
     }
 
+    @SuppressLint("MissingPermission")
     private String getDeviceInfo(BluetoothDevice device) {
         if (device == null) return "null";
 
