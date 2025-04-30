@@ -3,10 +3,6 @@ using UnityEngine;
 
 namespace Inventonater.BleHid
 {
-    /// <summary>
-    /// UI component for managing BLE peripheral device identity.
-    /// Allows viewing and changing the device name and resetting the identity UUID.
-    /// </summary>
     public class IdentityUI : SectionUI
     {
         public ConnectionBridge ConnectionBridge { get; }
@@ -19,20 +15,33 @@ namespace Inventonater.BleHid
         private string _newDeviceName = string.Empty;
         private List<Dictionary<string, string>> _pairedDevices = new();
         private Vector2 _deviceListScrollPosition = Vector2.zero;
-        private Color _statusColor = Color.white;
         private string _deviceToForget = string.Empty;
-        private string _deviceToForgetName = string.Empty;
-        private void RefreshPairedDevices() => _pairedDevices = ConnectionBridge.GetBondedDevices();
 
-        public IdentityUI(ConnectionBridge connectionBridge)
-        {
-            ConnectionBridge = connectionBridge;
-            RefreshIdentityDisplay();
-            RefreshPairedDevices();
-        }
+        public IdentityUI(ConnectionBridge connectionBridge) => ConnectionBridge = connectionBridge;
 
+        private float _lastRefresh;
         public override void Update()
         {
+            if (Time.time < _lastRefresh + 3) return;
+            _lastRefresh = Time.time;
+
+            _pairedDevices = ConnectionBridge.GetBondedDevices();
+            _deviceUuid = ConnectionBridge.GetOrCreateDeviceUuid();
+
+            string creationDate = ConnectionBridge.GetIdentityCreationDate();
+            if (creationDate == "Unknown") _creationDate = "Creation date: Unknown";
+            else
+            {
+                try
+                {
+                    System.DateTime dt = System.DateTime.Parse(creationDate);
+                    _creationDate = "Created: " + dt.ToString("g");
+                }
+                catch { _creationDate = "Created: " + creationDate; }
+            }
+
+            _deviceName = ConnectionBridge.GetDeviceName();
+            _newDeviceName = _deviceName;
         }
 
         public override void DrawUI()
@@ -92,16 +101,8 @@ namespace Inventonater.BleHid
         {
             GUILayout.BeginVertical(GUI.skin.box);
             GUILayout.Label("Reset Device Identity:", UIHelper.BoldStyle);
-            GUILayout.Label("This will generate a new UUID and require re-pairing with all devices.",
-                new GUIStyle(GUI.skin.label) { wordWrap = true });
-
-            if (GUILayout.Button("Reset Identity", GUILayout.Height(50)))
-            {
-                bool success = ConnectionBridge.ResetIdentity();
-                RefreshIdentityDisplay();
-                RefreshPairedDevices(); // Pairs are likely invalidated
-            }
-
+            GUILayout.Label("This will generate a new UUID and require re-pairing with all devices.", new GUIStyle(GUI.skin.label) { wordWrap = true });
+            if (GUILayout.Button("Reset Identity", GUILayout.Height(50))) ConnectionBridge.ResetIdentity();
             GUILayout.EndVertical();
         }
 
@@ -113,11 +114,6 @@ namespace Inventonater.BleHid
             if (_pairedDevices.Count == 0) { GUILayout.Label("No paired devices found."); }
             else
             {
-                GUILayout.BeginHorizontal();
-                if (GUILayout.Button("Refresh", GUILayout.Width(100), GUILayout.Height(30))) { RefreshPairedDevices(); }
-
-                GUILayout.EndHorizontal();
-
                 // Calculate a better height for the scroll view - make it proportional to screen height
                 float scrollViewHeight = Mathf.Max(Screen.height * 0.3f, 300);
 
@@ -150,11 +146,10 @@ namespace Inventonater.BleHid
 
                 foreach (var device in _pairedDevices)
                 {
-                    if (!device.TryGetValue("address", out string address) ||
-                        !device.TryGetValue("name", out string name))
-                        continue;
+                    if (!device.TryGetValue("address", out var address)) continue;
+                    if (!device.TryGetValue("name", out var name)) continue;
 
-                    device.TryGetValue("type", out string type);
+                    device.TryGetValue("type", out var type);
 
                     GUILayout.BeginVertical(GUI.skin.box);
                     GUILayout.Label(name, UIHelper.BoldStyle);
@@ -164,9 +159,7 @@ namespace Inventonater.BleHid
                     if (GUILayout.Button("Forget Device", GUILayout.Height(30)))
                     {
                         _deviceToForget = address;
-                        _deviceToForgetName = name;
-                        bool success = ConnectionBridge.RemoveBond(_deviceToForget);
-                        RefreshPairedDevices();
+                        ConnectionBridge.RemoveBond(_deviceToForget);
                     }
 
                     GUILayout.EndVertical();
@@ -179,30 +172,6 @@ namespace Inventonater.BleHid
             }
 
             GUILayout.EndVertical();
-        }
-
-        private void RefreshIdentityDisplay()
-        {
-            // Get the UUID
-            _deviceUuid = ConnectionBridge.GetOrCreateDeviceUuid();
-
-            // Format creation date
-            string creationDate = ConnectionBridge.GetIdentityCreationDate();
-            if (creationDate == "Unknown")
-                _creationDate = "Creation date: Unknown";
-            else
-            {
-                try
-                {
-                    System.DateTime dt = System.DateTime.Parse(creationDate);
-                    _creationDate = "Created: " + dt.ToString("g");
-                }
-                catch { _creationDate = "Created: " + creationDate; }
-            }
-
-            // Get current device name
-            _deviceName = ConnectionBridge.GetDeviceName();
-            _newDeviceName = _deviceName;
         }
     }
 }

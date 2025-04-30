@@ -34,7 +34,8 @@ public class BleHidUnityPlayerActivity extends UnityPlayerActivity {
         Log.d("BleHid", "PiP mode changed: " + isInPictureInPictureMode);
 
         mUnityPlayer.resume();
-        BleHidUnityBridge.getInstance().notifyPipModeChanged(isInPictureInPictureMode);
+        BleHidUnityBridge bridge = BleHidUnityBridge.getInstance();
+        if(bridge != null) bridge.notifyPipModeChanged(isInPictureInPictureMode);
     }
 
     @Override

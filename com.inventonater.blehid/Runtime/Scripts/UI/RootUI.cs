@@ -25,21 +25,11 @@ namespace Inventonater.BleHid
             javaBroadcaster.OnInitializeComplete += (success, message) =>
             {
                 _statusUI.SetInitialized(success);
-                if (success) Logger.Log("BLE HID initialized successfully: " + message);
-                else Logger.Error("BLE HID initialization failed: " + message);
+                Logger.Log($"BLE HID initialized {success}: {message}", isError: !success);
             };
-            javaBroadcaster.OnAdvertisingStateChanged += (advertising, message) =>
-            {
-                if (advertising) Logger.Log("BLE advertising started: " + message);
-                else Logger.Log("BLE advertising stopped: " + message);
-            };
-            javaBroadcaster.OnConnectionStateChanged += (connected, deviceName, deviceAddress) =>
-            {
-                if (connected) Logger.Log("Device connected: " + deviceName + " (" + deviceAddress + ")");
-                else Logger.Log("Device disconnected");
-            };
-            javaBroadcaster.OnPairingStateChanged += (status, deviceAddress) =>
-                Logger.Log("Pairing state changed: " + status + (deviceAddress != null ? " (" + deviceAddress + ")" : ""));
+            javaBroadcaster.OnAdvertisingStateChanged += (advertising, message) => Logger.Log($"BLE advertising {advertising}: " + message);
+            javaBroadcaster.OnConnectionStateChanged += (connected, deviceName, deviceAddress) => Logger.Log($"Device connected {connected}: {deviceName} ({deviceAddress})");
+            javaBroadcaster.OnPairingStateChanged += (status, deviceAddress) => Logger.Log($"Pairing state changed: {status} ({deviceAddress ?? ""})");
             javaBroadcaster.OnError += (errorCode, errorMessage) => Logger.Log("Error " + errorCode + ": " + errorMessage);
             javaBroadcaster.OnDebugLog += message => Logger.Log("Debug: " + message);
 

@@ -369,11 +369,8 @@ public class HidReportHandler {
      * @param y Y movement (-127 to 127)
      * @return true if the report was sent successfully, false otherwise
      */
-    public boolean sendCombinedReport(BluetoothDevice device, int mediaButtons, 
-                                     int mouseButtons, int x, int y) {
-        // Keep existing keyboard values
-        return sendFullReport(device, mediaButtons, mouseButtons, x, y, 
-                            combinedReport[4], extractKeyboardKeys());
+    public boolean sendCombinedReport(BluetoothDevice device, int mediaButtons, int mouseButtons, int x, int y) {
+        return sendFullReport(device, mediaButtons, mouseButtons, x, y, combinedReport[4], extractKeyboardKeys());
     }
     
     // ==================== Helper Methods ====================

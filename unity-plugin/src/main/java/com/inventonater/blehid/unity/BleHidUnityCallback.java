@@ -52,7 +52,7 @@ public class BleHidUnityCallback {
     }
 
     public void onPipModeChanged(boolean isInPipMode) {
-        sendMessageToUnity("HandlePipModeChanged", isInPipMode + ":");
+        sendMessageToUnity("HandlePipModeChanged", String.format("%s", isInPipMode));
     }
 
     public void onError(int errorCode, String errorMessage) {

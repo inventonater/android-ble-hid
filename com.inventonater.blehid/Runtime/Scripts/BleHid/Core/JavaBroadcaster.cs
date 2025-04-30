@@ -19,16 +19,16 @@ namespace Inventonater.BleHid
         public delegate void DebugLogHandler(string message);
         public delegate void PipModeChangedHandler(bool isInPipMode);
 
-        public InitializeCompleteHandler OnInitializeComplete = delegate { };
-        public AdvertisingStateChangedHandler OnAdvertisingStateChanged = delegate { };
-        public ConnectionStateChangedHandler OnConnectionStateChanged = delegate { };
-        public PairingStateChangedHandler OnPairingStateChanged = delegate { };
-        public ConnectionParametersChangedHandler OnConnectionParametersChanged = delegate { };
-        public RssiReadHandler OnRssiRead = delegate { };
-        public ConnectionParameterRequestCompleteHandler OnConnectionParameterRequestComplete = delegate { };
-        public ErrorHandler OnError = delegate { };
-        public DebugLogHandler OnDebugLog = delegate { };
-        public PipModeChangedHandler OnPipModeChanged = delegate { };
+        public event InitializeCompleteHandler OnInitializeComplete = delegate { };
+        public event AdvertisingStateChangedHandler OnAdvertisingStateChanged = delegate { };
+        public event ConnectionStateChangedHandler OnConnectionStateChanged = delegate { };
+        public event PairingStateChangedHandler OnPairingStateChanged = delegate { };
+        public event ConnectionParametersChangedHandler OnConnectionParametersChanged = delegate { };
+        public event RssiReadHandler OnRssiRead = delegate { };
+        public event ConnectionParameterRequestCompleteHandler OnConnectionParameterRequestComplete = delegate { };
+        public event ErrorHandler OnError = delegate { };
+        public event DebugLogHandler OnDebugLog = delegate { };
+        public event PipModeChangedHandler OnPipModeChanged = delegate { };
 
         [Preserve]
         public void HandleInitializeComplete(string message)

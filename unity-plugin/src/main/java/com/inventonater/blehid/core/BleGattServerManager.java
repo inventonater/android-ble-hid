@@ -62,6 +62,7 @@ public class BleGattServerManager {
      * 
      * @return true if initialization was successful, false otherwise
      */
+    @SuppressLint("MissingPermission")
     public boolean initialize() {
         try {
             gattServer = bluetoothManager.openGattServer(context, gattServerCallback);
@@ -85,6 +86,7 @@ public class BleGattServerManager {
      * @param service The HID service to add
      * @return true if the service was added, false otherwise
      */
+    @SuppressLint("MissingPermission")
     public boolean addHidService(BluetoothGattService service) {
         if (gattServer == null) {
             Log.e(TAG, "GATT server not initialized");
@@ -116,6 +118,7 @@ public class BleGattServerManager {
      * @param value The value to send
      * @return true if the notification was sent, false otherwise
      */
+    @SuppressLint("MissingPermission")
     public boolean sendNotification(UUID charUuid, byte[] value) {
         if (gattServer == null || hidService == null) {
             Log.e(TAG, "GATT server not initialized or HID service not added");
@@ -453,8 +456,7 @@ public class BleGattServerManager {
         @Override
         public void onCharacteristicReadRequest(BluetoothDevice device, int requestId, int offset,
                                                 BluetoothGattCharacteristic characteristic) {
-            Log.d(TAG, "Read request for characteristic: " + characteristic.getUuid() +
-                    " from device: " + device.getAddress());
+            Log.d(TAG, "Read request for characteristic: " + characteristic.getUuid() + " from device: " + device.getAddress());
             
             UUID charUuid = characteristic.getUuid();
             boolean success = false;

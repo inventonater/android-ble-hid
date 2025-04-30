@@ -52,10 +52,6 @@ public class HidMediaService {
     }
 
     public boolean initialize() {
-        if (isInitialized) {
-            Log.w(TAG, "HID media service already initialized");
-            return true;
-        }
 
         if (gattServerManager == null) {
             Log.e(TAG, "GATT server manager not available");
@@ -63,9 +59,7 @@ public class HidMediaService {
         }
 
         // Create HID service
-        hidService = new BluetoothGattService(
-                HidConstants.Uuids.HID_SERVICE,
-                BluetoothGattService.SERVICE_TYPE_PRIMARY);
+        hidService = new BluetoothGattService(HidConstants.Uuids.HID_SERVICE, BluetoothGattService.SERVICE_TYPE_PRIMARY);
 
         setupCharacteristics();
 
@@ -74,10 +68,7 @@ public class HidMediaService {
 
         if (success) {
             // Create the report handler
-            reportHandler = new HidReportHandler(
-                    gattServerManager,
-                    reportCharacteristic);
-
+            reportHandler = new HidReportHandler(gattServerManager, reportCharacteristic);
             isInitialized = true;
             Log.i(TAG, "HID media service initialized with standard HID descriptor");
         } else {
@@ -160,146 +151,46 @@ public class HidMediaService {
     }
 
     public boolean sendCombinedReport(int mediaButtons, int mouseButtons, int x, int y) {
-        if (!isInitialized) {
-            Log.e(TAG, "HID service not initialized");
-            return false;
-        }
-
-        connectedDevice = bleHidManager.getConnectedDevice();
-        if (connectedDevice == null) {
-            Log.e(TAG, "No connected device");
-            return false;
-        }
-
         return reportHandler.sendCombinedReport(connectedDevice, mediaButtons, mouseButtons, x, y);
     }
 
     public boolean sendMediaReport(int buttons) {
-        if (!isInitialized) {
-            Log.e(TAG, "HID service not initialized");
-            return false;
-        }
-
-        connectedDevice = bleHidManager.getConnectedDevice();
-        if (connectedDevice == null) {
-            Log.e(TAG, "No connected device");
-            return false;
-        }
-
         return reportHandler.sendMediaReport(connectedDevice, buttons);
     }
 
     public boolean movePointer(int x, int y) {
-        Log.d(TAG, "HID movePointer ENTRY - x: " + x + ", y: " + y);
-
-        connectedDevice = bleHidManager.getConnectedDevice();
-        if (connectedDevice == null) {
-            Log.e(TAG, "No connected device");
-            return false;
-        }
-
-        boolean result = reportHandler.movePointer(connectedDevice, x, y);
-        Log.d(TAG, "HID movePointer EXIT - result: " + result);
-        return result;
+        return reportHandler.movePointer(connectedDevice, x, y);
     }
 
     public boolean pressButton(int button) {
-        connectedDevice = bleHidManager.getConnectedDevice();
-        if (connectedDevice == null) {
-            Log.e(TAG, "No connected device");
-            return false;
-        }
-
         return reportHandler.sendMouseButtons(connectedDevice, button);
     }
 
     public boolean releaseButtons() {
-        connectedDevice = bleHidManager.getConnectedDevice();
-        if (connectedDevice == null) {
-            Log.e(TAG, "No connected device");
-            return false;
-        }
-
         return reportHandler.sendMouseButtons(connectedDevice, 0);
     }
 
     public boolean releaseButton(int button) {
-        connectedDevice = bleHidManager.getConnectedDevice();
-        if (connectedDevice == null) {
-            Log.e(TAG, "No connected device");
-            return false;
-        }
-
         return reportHandler.releaseMouseButton(connectedDevice, button);
     }
 
     public boolean click(int button) {
-        connectedDevice = bleHidManager.getConnectedDevice();
-        if (connectedDevice == null) {
-            Log.e(TAG, "No connected device");
-            return false;
-        }
-
         return reportHandler.click(connectedDevice, button);
     }
 
     public boolean sendKey(byte keyCode, int modifiers) {
-        if (!isInitialized) {
-            Log.e(TAG, "HID service not initialized");
-            return false;
-        }
-
-        connectedDevice = bleHidManager.getConnectedDevice();
-        if (connectedDevice == null) {
-            Log.e(TAG, "No connected device");
-            return false;
-        }
-
         return reportHandler.sendKey(connectedDevice, keyCode, modifiers);
     }
 
     public boolean releaseAllKeys() {
-        if (!isInitialized) {
-            Log.e(TAG, "HID service not initialized");
-            return false;
-        }
-
-        connectedDevice = bleHidManager.getConnectedDevice();
-        if (connectedDevice == null) {
-            Log.e(TAG, "No connected device");
-            return false;
-        }
-
         return reportHandler.releaseKeys(connectedDevice);
     }
 
     public boolean sendKeys(byte[] keyCodes, int modifiers) {
-        if (!isInitialized) {
-            Log.e(TAG, "HID service not initialized");
-            return false;
-        }
-
-        connectedDevice = bleHidManager.getConnectedDevice();
-        if (connectedDevice == null) {
-            Log.e(TAG, "No connected device");
-            return false;
-        }
-
         return reportHandler.sendKeyboardReport(connectedDevice, modifiers, keyCodes);
     }
 
     public boolean typeKey(byte keyCode, int modifiers) {
-        if (!isInitialized) {
-            Log.e(TAG, "HID service not initialized");
-            return false;
-        }
-
-        connectedDevice = bleHidManager.getConnectedDevice();
-        if (connectedDevice == null) {
-            Log.e(TAG, "No connected device");
-            return false;
-        }
-
         return reportHandler.typeKey(connectedDevice, keyCode, modifiers);
     }
 

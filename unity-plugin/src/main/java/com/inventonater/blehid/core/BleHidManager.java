@@ -1,60 +1,81 @@
 package com.inventonater.blehid.core;
 
+import android.annotation.SuppressLint;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothManager;
 import android.content.Context;
 import android.util.Log;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import com.inventonater.blehid.unity.BleHidUnityCallback;
+
 
 public class BleHidManager {
     private static final String TAG = "BleHidManager";
 
     private final Context context;
-    private final BluetoothEnvironmentValidator environmentValidator;
+    private final BluetoothControl bluetoothControl;
     private final BluetoothAdapter bluetoothAdapter;
     private final BleAdvertiser advertiser;
     private final BleGattServerManager gattServerManager;
     private final BlePairingManager pairingManager;
     private final BleConnectionManager connectionManager;
-    // Using media service for HID functionality
     private final HidMediaService hidMediaService;
-
-    // Initialization coordinator
-    private final BleInitializationCoordinator initializationCoordinator;
-
     private boolean isInitialized = false;
     private BluetoothDevice connectedDevice = null;
+    BleHidUnityCallback callback;
 
-    public BleHidManager(Context context) {
+    public boolean isConnected() {
+        return connectedDevice != null;
+    }
+
+    public BluetoothDevice getConnectedDevice() {
+        return connectedDevice;
+    }
+
+    public BlePairingManager getBlePairingManager() {
+        return pairingManager;
+    }
+
+    public BleAdvertiser getAdvertiser() {
+        return advertiser;
+    }
+
+    public BluetoothControl getBluetoothControl() {
+        return bluetoothControl;
+    }
+
+    public BleHidManager(Context context, BleHidUnityCallback callback) {
         this.context = context.getApplicationContext();
-        this.environmentValidator = new BluetoothEnvironmentValidator(context);
-        this.bluetoothAdapter = environmentValidator.getBluetoothAdapter();
-
-        this.advertiser = new BleAdvertiser(this);
+        this.callback = callback;
+        this.bluetoothControl = new BluetoothControl(context);
+        this.bluetoothAdapter = bluetoothControl.getBluetoothAdapter();
+        this.advertiser = new BleAdvertiser(callback, this.context, this.bluetoothAdapter);
         this.gattServerManager = new BleGattServerManager(this);
         this.pairingManager = new BlePairingManager(this);
         this.connectionManager = new BleConnectionManager(this);
         this.hidMediaService = new HidMediaService(this);
-
-        this.initializationCoordinator = new BleInitializationCoordinator(context, gattServerManager, hidMediaService);
     }
 
     public boolean initialize() {
-        boolean success = initializationCoordinator.initialize();
-        if (success) {
-            isInitialized = true;
-            Log.i(TAG, "BLE HID Manager initialized successfully");
-        } else {
-            Log.e(TAG, "Initialization failed");
+        if (!bluetoothControl.validateAll()) {
+            Log.e(TAG, "Failed to meet initialization prerequisites");
+            return false;
         }
 
-        return success;
+        if (!gattServerManager.initialize()) {
+            Log.e(TAG, "Failed to initialize GATT server");
+            return false;
+        }
+
+        if (!hidMediaService.initialize()) {
+            Log.e(TAG, "Failed to initialize HID service");
+            return false;
+        }
+
+        isInitialized = true;
+        Log.i(TAG, "BLE HID Manager initialized successfully");
+        return isInitialized;
     }
 
     public boolean startAdvertising() {
@@ -81,39 +102,7 @@ public class BleHidManager {
         return advertiser.setDeviceIdentity(identityUuid, deviceName);
     }
 
-    public List<BluetoothDevice> getBondedDevices() {
-        if (bluetoothAdapter == null) {
-            Log.e(TAG, "Cannot get bonded devices: No Bluetooth adapter");
-            return new ArrayList<>();
-        }
-
-        Set<BluetoothDevice> bondedSet = bluetoothAdapter.getBondedDevices();
-        return new ArrayList<>(bondedSet);
-    }
-
-    public List<Map<String, String>> getBondedDevicesInfo() {
-        List<Map<String, String>> deviceInfoList = new ArrayList<>();
-
-        if (bluetoothAdapter == null) {
-            Log.e(TAG, "Cannot get bonded devices info: No Bluetooth adapter");
-            return deviceInfoList;
-        }
-
-        Set<BluetoothDevice> bondedDevices = bluetoothAdapter.getBondedDevices();
-        for (BluetoothDevice device : bondedDevices) {
-            Map<String, String> deviceInfo = new HashMap<>();
-            deviceInfo.put("name", BluetoothDeviceHelper.getDeviceName(device));
-            deviceInfo.put("address", device.getAddress());
-            deviceInfo.put("type", BluetoothDeviceHelper.getDeviceTypeString(device.getType()));
-            deviceInfo.put("bondState", BluetoothDeviceHelper.getBondStateString(device.getBondState()));
-            deviceInfo.put("uuids", BluetoothDeviceHelper.getDeviceUuidsString(device));
-
-            deviceInfoList.add(deviceInfo);
-        }
-
-        return deviceInfoList;
-    }
-
+    @SuppressLint("MissingPermission")
     public boolean isDeviceBonded(String address) {
         if (bluetoothAdapter == null || address == null || address.isEmpty()) {
             return false;
@@ -123,6 +112,7 @@ public class BleHidManager {
         return device != null && device.getBondState() == BluetoothDevice.BOND_BONDED;
     }
 
+    @SuppressLint("MissingPermission")
     public boolean removeBond(String address) {
         if (bluetoothAdapter == null || address == null || address.isEmpty()) {
             Log.e(TAG, "Cannot remove bond: Invalid parameters");
@@ -160,10 +150,6 @@ public class BleHidManager {
         }
 
         return true;
-    }
-
-    public boolean isBlePeripheralSupported() {
-        return environmentValidator.isPeripheralModeSupported();
     }
 
     public void close() {
@@ -352,7 +338,7 @@ public class BleHidManager {
 
     void onDeviceConnected(BluetoothDevice device) {
         connectedDevice = device;
-        Log.i(TAG, "Device connected: " + BluetoothDeviceHelper.getDeviceInfo(device));
+        Log.i(TAG, "Device connected: " + BluetoothControl.getDeviceInfo(device));
 
         // Stop advertising once connected
         stopAdvertising();
@@ -383,23 +369,9 @@ public class BleHidManager {
     }
 
     void onDeviceDisconnected(BluetoothDevice device) {
-        Log.i(TAG, "Device disconnected: " + BluetoothDeviceHelper.getDeviceInfo(device));
-
-        // Notify connection manager
+        Log.i(TAG, "Device disconnected: " + BluetoothControl.getDeviceInfo(device));
         connectionManager.onDeviceDisconnected();
-
         connectedDevice = null;
-
-        // Restart advertising after disconnect
-        startAdvertising();
-    }
-
-    public boolean isConnected() {
-        return connectedDevice != null;
-    }
-
-    public BluetoothDevice getConnectedDevice() {
-        return connectedDevice;
     }
 
     public void clearConnectedDevice() {
@@ -407,14 +379,6 @@ public class BleHidManager {
         BluetoothDevice device = connectedDevice;
         connectedDevice = null;
         if (device != null) connectionManager.onDeviceDisconnected();
-    }
-
-    public BlePairingManager getBlePairingManager() {
-        return pairingManager;
-    }
-
-    public BleAdvertiser getAdvertiser() {
-        return advertiser;
     }
 
     public boolean isAdvertising() {

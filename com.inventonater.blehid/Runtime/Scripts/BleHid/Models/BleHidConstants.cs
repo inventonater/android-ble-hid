@@ -123,14 +123,5 @@ namespace Inventonater.BleHid
         public const byte KEY_LEFT = 0x50;
         public const byte KEY_DOWN = 0x51;
         public const byte KEY_UP = 0x52;
-
-        // Error codes
-        public const int ERROR_INITIALIZATION_FAILED = 1001;
-        public const int ERROR_NOT_INITIALIZED = 1002;
-        public const int ERROR_NOT_CONNECTED = 1003;
-        public const int ERROR_BLUETOOTH_DISABLED = 1004;
-        public const int ERROR_PERIPHERAL_NOT_SUPPORTED = 1005;
-        public const int ERROR_ADVERTISING_FAILED = 1006;
-        public const int ERROR_INVALID_PARAMETER = 1007;
     }
 }
