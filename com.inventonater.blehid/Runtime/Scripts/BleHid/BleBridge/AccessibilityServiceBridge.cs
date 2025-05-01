@@ -150,9 +150,7 @@ namespace Inventonater.BleHid
         [MappableAction(id: EInputAction.Video, displayName: "Launch Video", description: "Open the video capture app")]
         public void LaunchVideoCapture() => _java.Call("launchVideoCapture");
 
-        [MappableAction(id: EInputAction.Select, displayName: "Click Focused Element", description: "Click on the currently focused element")]
-        public void ClickFocusedNode() => PerformFocusedNodeAction(AccessibilityAction.Click);
-
+        public void ClickFocusedNode() => PerformFocusedNodeAction(AccessibilityAction.Click); // not working
         public void PerformFocusedNodeAction(AccessibilityAction action) => _java.Call("localPerformFocusedNodeAction", (int)action);
 
         /// <summary>
