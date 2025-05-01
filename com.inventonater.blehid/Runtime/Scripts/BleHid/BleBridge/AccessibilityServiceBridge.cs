@@ -100,22 +100,22 @@ namespace Inventonater.BleHid
             }
         }
 
-        [MappableAction(id: EInputAction.LocalPlayPause, displayName: "Play/Pause", description: "Toggle media playback between play and pause states")]
+        [MappableAction(id: EInputAction.PlayPause, displayName: "Play/Pause", description: "Toggle media playback between play and pause states")]
         public void PlayPause() => _java.Call("localPlayPause");
 
-        [MappableAction(id: EInputAction.LocalNextTrack, displayName: "Next Track", description: "Skip to the next track")]
+        [MappableAction(id: EInputAction.NextTrack, displayName: "Next Track", description: "Skip to the next track")]
         public void NextTrack() => _java.Call("localNextTrack");
 
-        [MappableAction(id: EInputAction.LocalPreviousTrack, displayName: "Previous Track", description: "Go back to the previous track")]
+        [MappableAction(id: EInputAction.PreviousTrack, displayName: "Previous Track", description: "Go back to the previous track")]
         public void PreviousTrack() => _java.Call("localPreviousTrack");
 
-        [MappableAction(id: EInputAction.LocalVolumeUp, displayName: "Volume Up", description: "Increase the volume")]
+        [MappableAction(id: EInputAction.VolumeUp, displayName: "Volume Up", description: "Increase the volume")]
         public void VolumeUp() => _java.Call("localVolumeUp");
 
-        [MappableAction(id: EInputAction.LocalVolumeDown, displayName: "Volume Down", description: "Decrease the volume")]
+        [MappableAction(id: EInputAction.VolumeDown, displayName: "Volume Down", description: "Decrease the volume")]
         public void VolumeDown() => _java.Call("localVolumeDown");
 
-        [MappableAction(id: EInputAction.LocalMute, displayName: "Mute", description: "Mute or unmute the audio")]
+        [MappableAction(id: EInputAction.Mute, displayName: "Mute", description: "Mute or unmute the audio")]
         public void Mute() => _java.Call("localMute");
 
         public void Tap(int x, int y) => _java.Call("localTap", x, y);
@@ -123,37 +123,34 @@ namespace Inventonater.BleHid
         public void SwipeExtend(Vector2 delta) => _java.Call("localSwipeExtend", delta.x, delta.y);
         public void SwipeEnd() => _java.Call("localSwipeEnd");
 
-        [MappableAction(id: EInputAction.LocalDPadUp, displayName: "D-Pad Up", description: "Navigate up")]
+        [MappableAction(id: EInputAction.Up, displayName: "D-Pad Up", description: "Navigate up")]
         public void DPadUp() => PerformGlobalAction(GlobalAction.DPadUp);
 
-        [MappableAction(id: EInputAction.LocalDPadRight, displayName: "D-Pad Right", description: "Navigate right")]
+        [MappableAction(id: EInputAction.Right, displayName: "D-Pad Right", description: "Navigate right")]
         public void DPadRight() => PerformGlobalAction(GlobalAction.DPadRight);
 
-        [MappableAction(id: EInputAction.LocalDPadDown, displayName: "D-Pad Down", description: "Navigate down")]
+        [MappableAction(id: EInputAction.Down, displayName: "D-Pad Down", description: "Navigate down")]
         public void DPadDown() => PerformGlobalAction(GlobalAction.DPadDown);
 
-        [MappableAction(id: EInputAction.LocalDPadLeft, displayName: "D-Pad Left", description: "Navigate left")]
+        [MappableAction(id: EInputAction.Left, displayName: "D-Pad Left", description: "Navigate left")]
         public void DPadLeft() => PerformGlobalAction(GlobalAction.DPadLeft);
 
-        [MappableAction(id: EInputAction.LocalDPadCenter, displayName: "D-Pad Center", description: "Select the focused item")]
+        [MappableAction(id: EInputAction.Select, displayName: "D-Pad Center", description: "Select the focused item")]
         public void DPadCenter() => PerformGlobalAction(GlobalAction.DPadCenter);
 
-        [MappableAction(id: EInputAction.LocalBack, displayName: "Back", description: "Go back to the previous screen")]
+        [MappableAction(id: EInputAction.Back, displayName: "Back", description: "Go back to the previous screen")]
         public void Back() => PerformGlobalAction(GlobalAction.Back);
 
-        [MappableAction(id: EInputAction.LocalHome, displayName: "Home", description: "Go to the home screen")]
+        [MappableAction(id: EInputAction.Home, displayName: "Home", description: "Go to the home screen")]
         public void Home() => PerformGlobalAction(GlobalAction.Home);
 
-        [MappableAction(id: EInputAction.LocalRecents, displayName: "Recents", description: "Show recent apps")]
-        public void Recents() => PerformGlobalAction(GlobalAction.Recents);
-
-        [MappableAction(id: EInputAction.LocalLaunchCamera, displayName: "Launch Camera", description: "Open the camera app")]
+        [MappableAction(id: EInputAction.Camera, displayName: "Launch Camera", description: "Open the camera app")]
         public void LaunchCameraApp() => _java.Call("launchCameraApp");
 
-        [MappableAction(id: EInputAction.LocalLaunchVideo, displayName: "Launch Video", description: "Open the video capture app")]
+        [MappableAction(id: EInputAction.Video, displayName: "Launch Video", description: "Open the video capture app")]
         public void LaunchVideoCapture() => _java.Call("launchVideoCapture");
 
-        [MappableAction(id: EInputAction.LocalClickFocused, displayName: "Click Focused Element", description: "Click on the currently focused element")]
+        [MappableAction(id: EInputAction.Select, displayName: "Click Focused Element", description: "Click on the currently focused element")]
         public void ClickFocusedNode() => PerformFocusedNodeAction(AccessibilityAction.Click);
 
         public void PerformFocusedNodeAction(AccessibilityAction action) => _java.Call("localPerformFocusedNodeAction", (int)action);

@@ -9,8 +9,7 @@ namespace Inventonater.BleHid
     {
         private readonly InputDeviceMapping _mapping;
         public override string TabName { get; }
-        private readonly ActionRegistry _registry;
-        
+
         // For adding new mappings
         private int _selectedEventIndex = 0;
         private int _selectedActionIndex = 0;
@@ -28,8 +27,6 @@ namespace Inventonater.BleHid
             TabName = mapping.Name;
             _mapping = mapping;
 
-            _registry = BleHidManager.Instance.BleBridge.ActionRegistry;
-            
             // Initialize dropdown options
             InitializeDropdownOptions();
         }
@@ -90,7 +87,7 @@ namespace Inventonater.BleHid
                 foreach (var action in actions)
                 {
                     GUILayout.BeginHorizontal();
-                    if (_registry.TryGetInfo(action, out var info))
+                    if (_mapping.Registry.TryGetInfo(action, out var info))
                     {
                         GUILayout.Label($"{info.DisplayName} - {info.Description}");
                     }

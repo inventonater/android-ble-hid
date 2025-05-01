@@ -22,13 +22,7 @@ namespace Inventonater.BleHid
         public bool HasDevice => _sourceDevice != null;
         [CanBeNull] public InputDeviceMapping Mapping => _mapping;
 
-        [SerializeField] private List<InputEvent> _pendingButtonEvents = new();
-        private ActionRegistry _registry;
-
-        private void Awake()
-        {
-            _registry = BleHidManager.Instance.BleBridge.ActionRegistry;
-        }
+        [SerializeField] private List<InputEvent> pendingButtonEvents = new();
 
         public void AddMapping(InputDeviceMapping mapping)
         {
@@ -82,7 +76,7 @@ namespace Inventonater.BleHid
         private void HandleInputEvent(InputEvent buttonEvent)
         {
             if (buttonEvent == new InputEvent(InputEvent.Id.Tertiary, InputEvent.Phase.DoubleTap)) CycleMapping();
-            _pendingButtonEvents.Add(buttonEvent);
+            pendingButtonEvents.Add(buttonEvent);
         }
 
         private void HandlePositionDeltaEvent(Vector3 delta)
@@ -93,7 +87,7 @@ namespace Inventonater.BleHid
         // ExecutionOrder Process
         private void Update()
         {
-            foreach (var pendingButtonEvent in _pendingButtonEvents)
+            foreach (var pendingButtonEvent in pendingButtonEvents)
             {
                 if (_mapping.ButtonMapping.TryGetValue(pendingButtonEvent, out var buttonActions))
                 {
@@ -101,7 +95,7 @@ namespace Inventonater.BleHid
                     {
                         try
                         {
-                            var action = _registry.GetAction(inputAction);
+                            var action = _mapping.GetAction(inputAction);
                             action();
                         }
                         catch (Exception e) { LoggingManager.Instance.Exception(e); }
@@ -114,7 +108,7 @@ namespace Inventonater.BleHid
                     catch (Exception e) { LoggingManager.Instance.Exception(e); }
                 }
             }
-            _pendingButtonEvents.Clear();
+            pendingButtonEvents.Clear();
 
             foreach (var axisMapping in _mapping.AxisMappings)
             {

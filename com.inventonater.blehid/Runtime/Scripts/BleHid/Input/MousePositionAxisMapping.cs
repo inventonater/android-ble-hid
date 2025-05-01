@@ -19,9 +19,9 @@ namespace Inventonater.BleHid
         float _lastIncrement;
 
         [SerializeField] private bool _flipY;
-        private readonly Action<Vector2> _deltaMoveAction;
+        private readonly MouseMoveActionDelegate _deltaMoveAction;
 
-        public MousePositionAxisMapping(Action<Vector2> deltaMoveAction, bool requirePress = false, bool flipY = true, float timeInterval = 0.04f)
+        public MousePositionAxisMapping(MouseMoveActionDelegate deltaMoveAction, bool requirePress = false, bool flipY = true, float timeInterval = 0.04f)
         {
             _timeInterval = timeInterval;
             _requirePress = requirePress;

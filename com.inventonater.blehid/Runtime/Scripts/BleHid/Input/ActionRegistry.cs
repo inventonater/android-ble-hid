@@ -5,34 +5,26 @@ using UnityEngine;
 
 namespace Inventonater.BleHid
 {
+    public delegate void MouseMoveActionDelegate(Vector2 delta);
+
     public class ActionRegistry
     {
-        private readonly BleBridge _bleBridge;
-        public ActionRegistry(BleBridge bleBridge)
-        {
-            _bleBridge = bleBridge;
-            DiscoverActions(bleBridge.Mouse);
-            DiscoverActions(bleBridge.Keyboard);
-            DiscoverActions(bleBridge.Media);
-            DiscoverActions(bleBridge.AccessibilityService);
-        }
+        private static readonly Action EmptyAction = () => { };
 
+        public MouseMoveActionDelegate MouseMoveAction { get; }
         private readonly Dictionary<EInputAction, MappableActionInfo> _actionInfo = new();
-        public Action<Vector2> GetMouseMoveAction() => _bleBridge.Mouse.MoveMouse;
-
         public bool TryGetInfo(EInputAction id, out MappableActionInfo info) => _actionInfo.TryGetValue(id, out info);
         public Action GetAction(EInputAction id) => TryGetInfo(id, out var info) ? info.Invoke : EmptyAction;
 
-        private static Action EmptyAction { get; } = () => { };
-
-        public void DiscoverActions(object target)
+        public ActionRegistry(params object[] bridges) : this(_ => { }, bridges) { }
+        public ActionRegistry(MouseMoveActionDelegate mouseMoveAction, params object[] bridges)
         {
-            if (target == null)
-            {
-                LoggingManager.Instance.Warning("ActionRegistry: Cannot discover actions on null target");
-                return;
-            }
+            MouseMoveAction = mouseMoveAction;
+            foreach (var bridge in bridges) DiscoverActions(bridge);
+        }
 
+        private void DiscoverActions(object target)
+        {
             var type = target.GetType();
             LoggingManager.Instance.Log($"ActionRegistry: Discovering actions on {type.Name}");
 
@@ -41,25 +33,17 @@ namespace Inventonater.BleHid
                 var attribute = method.GetCustomAttribute<MappableActionAttribute>();
                 if (attribute == null) continue;
 
-                // Only support methods with no parameters
                 if (method.GetParameters().Length > 0)
                 {
                     LoggingManager.Instance.Warning($"ActionRegistry: Method {method.Name} has MappableAction attribute but has parameters");
                     continue;
                 }
 
-                var actionInfo = new MappableActionInfo(
-                    attribute.Id,
-                    attribute.DisplayName,
-                    attribute.Description,
-                    method,
-                    target
-                );
+                var actionInfo = new MappableActionInfo(attribute, method, target);
 
                 _actionInfo[attribute.Id] = actionInfo;
                 LoggingManager.Instance.Log($"ActionRegistry: Registered mappable action: {attribute.Id} ({attribute.DisplayName})");
             }
         }
-
     }
 }

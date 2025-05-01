@@ -25,11 +25,18 @@ namespace Inventonater.BleHid
         public IReadOnlyDictionary<InputEvent, List<EInputAction>> ButtonMapping => _buttonMapping;
 
         private readonly List<IAxisMapping> _axisMappings = new();
+
         public IReadOnlyList<IAxisMapping> AxisMappings => _axisMappings;
 
-        public InputDeviceMapping(string name) => Name = name;
+        public InputDeviceMapping(string name, ActionRegistry actionRegistry)
+        {
+            Name = name;
+            Registry = actionRegistry;
+        }
 
         public string Name { get; }
+        public ActionRegistry Registry { get; }
+        public Action GetAction(EInputAction id) => Registry.GetAction(id);
 
         public void Add(InputEvent e, EInputAction a) => _buttonMapping.AppendValue(e, a);
         public void Add(IAxisMapping axisMapping) => _axisMappings.Add(axisMapping);
@@ -52,9 +59,9 @@ namespace Inventonater.BleHid
             }
         }
 
-        public static InputDeviceMapping Create(string name, List<(InputEvent, EInputAction)> map, List<IAxisMapping> axisMappings)
+        public static InputDeviceMapping Create(string name, List<(InputEvent, EInputAction)> map, List<IAxisMapping> axisMappings, ActionRegistry actionRegistry)
         {
-            var inputDeviceMapping = new InputDeviceMapping(name);
+            var inputDeviceMapping = new InputDeviceMapping(name, actionRegistry);
             foreach (var entry in map) inputDeviceMapping.Add(entry.Item1, entry.Item2);
             foreach (var entry in axisMappings) inputDeviceMapping.Add(entry);
             return inputDeviceMapping;
@@ -64,68 +71,68 @@ namespace Inventonater.BleHid
         {
             var buttons = new List<(InputEvent, EInputAction)>
             {
-                (InputEvent.PrimaryPress, EInputAction.MouseLeftPress),
-                (InputEvent.PrimaryRelease, EInputAction.MouseLeftRelease),
-                (InputEvent.SecondaryPress, EInputAction.MouseRightPress),
-                (InputEvent.SecondaryRelease, EInputAction.MouseRightRelease),
-                (InputEvent.Up, EInputAction.KeyboardArrowUp),
-                (InputEvent.Right, EInputAction.KeyboardArrowRight),
-                (InputEvent.Down, EInputAction.KeyboardArrowDown),
-                (InputEvent.Left, EInputAction.KeyboardArrowLeft),
+                (InputEvent.PrimaryPress, EInputAction.PrimaryPress),
+                (InputEvent.PrimaryRelease, EInputAction.PrimaryRelease),
+                (InputEvent.SecondaryPress, EInputAction.SecondaryPress),
+                (InputEvent.SecondaryRelease, EInputAction.SecondaryRelease),
+                (InputEvent.Up, EInputAction.Up),
+                (InputEvent.Right, EInputAction.Right),
+                (InputEvent.Down, EInputAction.Down),
+                (InputEvent.Left, EInputAction.Left),
             };
             var axisMappings = new List<IAxisMapping>
             {
-                new MousePositionAxisMapping(registry.GetMouseMoveAction()),
-                new SingleIncrementalAxisMapping(Axis.Z, registry.GetAction(EInputAction.MediaVolumeUp), registry.GetAction(EInputAction.MediaVolumeDown)),
+                new MousePositionAxisMapping(registry.MouseMoveAction),
+                new SingleIncrementalAxisMapping(Axis.Z, registry.GetAction(EInputAction.VolumeUp), registry.GetAction(EInputAction.VolumeDown)),
             };
 
-            return Create("BleMouse", buttons, axisMappings);
+            return Create("BleMouse", buttons, axisMappings, registry);
         }
 
         public static InputDeviceMapping BleMedia(ActionRegistry registry)
         {
             var buttons = new List<(InputEvent, EInputAction)>
             {
-                (InputEvent.PrimaryDoubleTap, EInputAction.MediaPlayPause),
-                (InputEvent.Right, EInputAction.MediaNextTrack),
-                (InputEvent.Left, EInputAction.MediaPreviousTrack),
-                (InputEvent.Up, EInputAction.MediaMute),
-                (InputEvent.Down, EInputAction.MediaMute),
+                (InputEvent.PrimaryDoubleTap, EInputAction.PlayPause),
+                (InputEvent.Right, EInputAction.NextTrack),
+                (InputEvent.Left, EInputAction.PreviousTrack),
+                (InputEvent.Up, EInputAction.Mute),
+                (InputEvent.Down, EInputAction.Mute),
             };
-            var axisMappings = new List<IAxisMapping> { new SingleIncrementalAxisMapping(Axis.Z, registry.GetAction(EInputAction.MediaVolumeUp), registry.GetAction(EInputAction.MediaVolumeDown)) };
+            var axisMappings = new List<IAxisMapping> { new SingleIncrementalAxisMapping(Axis.Z, registry.GetAction(EInputAction.VolumeUp), registry.GetAction(EInputAction.VolumeDown)) };
 
-            return Create("BleMedia", buttons, axisMappings);
+            return Create("BleMedia", buttons, axisMappings, registry);
         }
 
         public static InputDeviceMapping LocalMedia(ActionRegistry registry)
         {
             var buttons = new List<(InputEvent, EInputAction)>
             {
-                (InputEvent.PrimaryDoubleTap, EInputAction.LocalPlayPause),
-                (InputEvent.Right, EInputAction.LocalNextTrack),
-                (InputEvent.Left, EInputAction.LocalPreviousTrack),
-                (InputEvent.Up, EInputAction.LocalMute),
-                (InputEvent.Down, EInputAction.LocalMute),
+                (InputEvent.PrimaryDoubleTap, EInputAction.PlayPause),
+                (InputEvent.Right, EInputAction.NextTrack),
+                (InputEvent.Left, EInputAction.PreviousTrack),
+                (InputEvent.Up, EInputAction.Mute),
+                (InputEvent.Down, EInputAction.Mute),
             };
-            var axisMappings = new List<IAxisMapping> { new SingleIncrementalAxisMapping(Axis.Z, registry.GetAction(EInputAction.LocalVolumeUp), registry.GetAction(EInputAction.LocalVolumeDown)) };
+            var axisMappings = new List<IAxisMapping> { new SingleIncrementalAxisMapping(Axis.Z, registry.GetAction(EInputAction.VolumeUp), registry.GetAction(EInputAction.VolumeDown)) };
 
-            return Create("LocalMedia", buttons, axisMappings);
+            return Create("LocalMedia", buttons, axisMappings, registry);
         }
 
         public static InputDeviceMapping LocalDPad(ActionRegistry registry)
         {
             var buttons = new List<(InputEvent, EInputAction)>
             {
-                (InputEvent.PrimaryTap, EInputAction.LocalDPadCenter),
-                (InputEvent.SecondaryTap, EInputAction.LocalBack),
-                (InputEvent.SecondaryDoubleTap, EInputAction.LocalHome),
-                (InputEvent.Up, EInputAction.LocalDPadUp),
-                (InputEvent.Right, EInputAction.LocalDPadRight),
-                (InputEvent.Down, EInputAction.LocalDPadDown),
-                (InputEvent.Left, EInputAction.LocalDPadLeft),
+                (InputEvent.PrimaryTap, EInputAction.Select),
+                (InputEvent.SecondaryTap, EInputAction.Back),
+                (InputEvent.SecondaryDoubleTap, EInputAction.Home),
+                (InputEvent.Up, EInputAction.Up),
+                (InputEvent.Right, EInputAction.Right),
+                (InputEvent.Down, EInputAction.Down),
+                (InputEvent.Left, EInputAction.Left),
             };
-            var axisMappings = new List<IAxisMapping> { new SingleIncrementalAxisMapping(Axis.Z, registry.GetAction(EInputAction.LocalVolumeUp), registry.GetAction(EInputAction.LocalVolumeDown)) };
-            return Create("LocalDPad", buttons, axisMappings);
+            var axisMappings = new List<IAxisMapping> { new SingleIncrementalAxisMapping(Axis.Z, registry.GetAction(EInputAction.VolumeUp), registry.GetAction(EInputAction.VolumeDown)) };
+            return Create("LocalDPad", buttons, axisMappings, registry);
         }
 
         private static readonly Vector2 SamsungResolution = new Vector2(1440, 3088);

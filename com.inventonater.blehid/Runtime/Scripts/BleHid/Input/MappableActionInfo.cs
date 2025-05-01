@@ -5,31 +5,26 @@ namespace Inventonater.BleHid
 {
     public class MappableActionInfo
     {
-        public EInputAction Id { get; }
-        public string DisplayName { get; }
-        public string Description { get; }
-        public MethodInfo Method { get; }
+        public MappableActionAttribute Attribute { get; }
+        public EInputAction Id => Attribute.Id;
+        public string DisplayName => Attribute.DisplayName;
+        public string Description => Attribute.Description;
+        public Action Action { get; }
+        public MethodInfo MethodInfo { get; }
         public object Target { get; }
-        
-        public MappableActionInfo(EInputAction id, string displayName, string description, MethodInfo method, object target)
+
+        public MappableActionInfo(MappableActionAttribute attribute, MethodInfo methodInfo, object target)
         {
-            Id = id;
-            DisplayName = displayName;
-            Description = description;
-            Method = method;
+            Attribute = attribute;
+            MethodInfo = methodInfo;
             Target = target;
+            Action = () => methodInfo.Invoke(target, null);
         }
-        
+
         public void Invoke()
         {
-            try 
-            { 
-                Method.Invoke(Target, null);
-            }
-            catch (Exception e) 
-            { 
-                LoggingManager.Instance.Exception(e); 
-            }
+            try { Action(); }
+            catch (Exception e) { LoggingManager.Instance.Exception(e); }
         }
     }
 }

@@ -40,8 +40,8 @@ namespace Inventonater.BleHid
 
             // Navigation row 1 - Back, Home, Recents
             _navRow1Labels = new[] { "Back", "Home", "Recents" };
-            _navRow1Actions = new Action[] { _bridge.Back, _bridge.Home, _bridge.Recents };
-            _navRow1EditorMessages = new[] { "Local Back pressed", "Local Home pressed", "Local Recents pressed" };
+            _navRow1Actions = new Action[] { _bridge.Back, _bridge.Home };
+            _navRow1EditorMessages = new[] { "Local Back pressed", "Local Home pressed" };
 
             _navRow3Labels = new[] { "Left", "Down", "Right" };
             _navRow3Actions = new Action[] { _bridge.DPadLeft, _bridge.DPadDown, _bridge.DPadRight };
