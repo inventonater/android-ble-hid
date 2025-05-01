@@ -454,8 +454,7 @@ public class BleGattServerManager {
 
         @SuppressLint("MissingPermission")
         @Override
-        public void onCharacteristicReadRequest(BluetoothDevice device, int requestId, int offset,
-                                                BluetoothGattCharacteristic characteristic) {
+        public void onCharacteristicReadRequest(BluetoothDevice device, int requestId, int offset, BluetoothGattCharacteristic characteristic) {
             Log.d(TAG, "Read request for characteristic: " + characteristic.getUuid() + " from device: " + device.getAddress());
             
             UUID charUuid = characteristic.getUuid();
