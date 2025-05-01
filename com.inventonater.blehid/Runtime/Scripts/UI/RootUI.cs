@@ -19,7 +19,7 @@ namespace Inventonater.BleHid
             var connectionBridge = _bleHidManager.ConnectionBridge;
             var mouseBridge = _bleHidManager.BleBridge.Mouse;
             var bleHidPermissionHandler = _bleHidManager.BleBridge.Permissions;
-            var accessibilityServiceBridge = _bleHidManager.AccessibilityService;
+            var accessibilityServiceBridge = _bleHidManager.AccessibilityServiceBridge;
 
             var javaBroadcaster = FindFirstObjectByType<JavaBroadcaster>();
             javaBroadcaster.OnInitializeComplete += (success, message) =>
@@ -36,27 +36,21 @@ namespace Inventonater.BleHid
             _statusUI = new StatusUI(connectionBridge);
             _permissionsUI = new PermissionsUI(bleHidPermissionHandler, accessibilityServiceBridge);
 
-            var debug = new TabGroup("Debug", new List<SectionUI>()
-            {
-                new MediaDeviceUI(),
-                new MouseDeviceUI(mouseBridge),
-                new KeyboardUI(),
-                new AccessibilityUI(accessibilityServiceBridge),
-            });
-
-            var connectivity = new TabGroup("Connectivity", new List<SectionUI>()
-            {
-                new ConnectionUI(connectionBridge, javaBroadcaster),
-                new IdentityUI(connectionBridge)
-            });
-
-            var mappingSections = _bleHidManager.InputRouter.Mappings.Select(mapping => new InputDeviceMappingUI(mapping)).ToList<SectionUI>();
-            
             _tabGroup = new TabGroup("Main", new List<SectionUI>
             {
-                new TabGroup("Mappings", mappingSections),
-                debug,
-                connectivity,
+                new MappingSection(),
+                new TabGroup("Debug", new List<SectionUI>()
+                {
+                    new MediaDeviceUI(),
+                    new MouseDeviceUI(mouseBridge),
+                    new KeyboardUI(),
+                    new AccessibilityUI(accessibilityServiceBridge),
+                }),
+                new TabGroup("Connectivity", new List<SectionUI>()
+                {
+                    new ConnectionUI(connectionBridge, javaBroadcaster),
+                    new IdentityUI(connectionBridge)
+                }),
             });
         }
 

@@ -40,7 +40,7 @@ namespace Inventonater.BleHid
             UpdateTabs(_tabComponents);
         }
 
-        private void UpdateTabs(List<SectionUI> sections)
+        public void UpdateTabs(List<SectionUI> sections)
         {
             _tabComponents = sections.ToList();
             _activeTabNames = _tabComponents.Select(t => t.TabName).ToArray();

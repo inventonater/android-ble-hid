@@ -8,12 +8,6 @@ namespace Inventonater.BleHid
     [DefaultExecutionOrder(ExecutionOrder.Initialize)]
     public class BleHidManager : MonoBehaviour
     {
-        private InputDeviceMapping _localDPad;
-        private InputDeviceMapping _localMedia;
-        private InputDeviceMapping _bleMouse;
-        private InputDeviceMapping _bleMedia;
-        private InputDeviceMapping _localDragNavigation;
-
         public bool IsInitialized { get; private set; }
         public bool IsInPipMode { get; internal set; }
         public PipBackgroundWorker PipWorker { get; private set; }
@@ -23,47 +17,41 @@ namespace Inventonater.BleHid
         public InputRouter InputRouter { get; private set; }
 
         public BleBridge BleBridge { get; private set; }
-        public AccessibilityServiceBridge AccessibilityService { get; private set; }
+        public AccessibilityServiceBridge AccessibilityServiceBridge { get; private set; }
 
         public static BleHidManager Instance => FindFirstObjectByType<BleHidManager>();
 
         private void Awake()
         {
             Debug.Log("BleHidManager starting");
-
             Application.runInBackground = true;
 
             JavaBridge = new JavaBridge();
             BleBridge = new BleBridge(JavaBridge);
-            AccessibilityService = new AccessibilityServiceBridge(JavaBridge);
-
-            JavaBroadcaster = gameObject.AddComponent<JavaBroadcaster>();
-            InputRouter = gameObject.AddComponent<InputRouter>();
-
-            var accessibilityServiceRegistry = new ActionRegistry(AccessibilityService);
-            _localMedia = InputDeviceMapping.LocalMedia(accessibilityServiceRegistry);
-            _localDPad = InputDeviceMapping.LocalDPad(accessibilityServiceRegistry);
-
-            var bleHidRegistry = new ActionRegistry(BleBridge.Mouse, BleBridge.Keyboard, BleBridge.Media);
-            _bleMouse = InputDeviceMapping.BleMouse(bleHidRegistry);
-            _bleMedia = InputDeviceMapping.BleMedia(bleHidRegistry);
-
-            InputRouter.AddMapping(_localMedia);
-            InputRouter.AddMapping(_localDPad);
-            InputRouter.AddMapping(_bleMouse);
-            InputRouter.AddMapping(_bleMedia);
-
+            AccessibilityServiceBridge = new AccessibilityServiceBridge(JavaBridge);
             ConnectionBridge = new ConnectionBridge(JavaBridge);
             PipWorker = new PipBackgroundWorker();
 
+            JavaBroadcaster = gameObject.AddComponent<JavaBroadcaster>();
             // JavaBroadcaster.OnPipModeChanged += HandlePipModeChanged;
             JavaBroadcaster.OnAdvertisingStateChanged += (advertising, message) => ConnectionBridge.IsAdvertising = advertising;
             JavaBroadcaster.OnConnectionStateChanged += (connected, deviceName, address) => ConnectionBridge.SetConnectionState(connected, deviceName, address);
             JavaBroadcaster.OnConnectionParametersChanged += (interval, latency, timeout, mtu) => ConnectionBridge.SetConnectionParameters(interval, latency, timeout, mtu);
             JavaBroadcaster.OnRssiRead += rssi => ConnectionBridge.Rssi = rssi;
 
+            InputRouter = gameObject.AddComponent<InputRouter>();
+
+            var accessibilityServiceRegistry = new ActionRegistry(AccessibilityServiceBridge);
+            AddMapping(InputDeviceMapping.LocalMedia(accessibilityServiceRegistry));
+            AddMapping(InputDeviceMapping.LocalDPad(accessibilityServiceRegistry));
+
+            var bleHidRegistry = new ActionRegistry(BleBridge.Mouse, BleBridge.Keyboard, BleBridge.Media);
+            AddMapping(InputDeviceMapping.BleMouse(bleHidRegistry));
+            AddMapping(InputDeviceMapping.BleMedia(bleHidRegistry));
             Debug.Log("BleHidManager initialized");
         }
+
+        public void AddMapping(InputDeviceMapping inputDeviceMapping) => InputRouter.AddMapping(inputDeviceMapping);
 
         private async void Start()
         {
@@ -76,7 +64,7 @@ namespace Inventonater.BleHid
             try
             {
                 await BleBridge.Permissions.Initialize();
-                await AccessibilityService.Initialize();
+                await AccessibilityServiceBridge.Initialize();
                 IsInitialized = Application.isEditor || JavaBridge.Call<bool>("initialize", gameObject.name);
                 // manager.ForegroundServiceManager.Initialize(bridgeInstance);
                 ConnectionBridge.InitializeIdentity();
