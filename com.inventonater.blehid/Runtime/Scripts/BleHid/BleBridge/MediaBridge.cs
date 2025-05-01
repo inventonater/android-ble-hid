@@ -1,4 +1,5 @@
 using System;
+using Cysharp.Threading.Tasks;
 using UnityEngine;
 
 namespace Inventonater.BleHid
@@ -26,5 +27,19 @@ namespace Inventonater.BleHid
         
         [MappableAction(id: EInputAction.Mute, displayName: "Mute", description: "Mute or unmute the audio")]
         public void Mute() => _java.Call("mute");
+
+        [MappableAction(id: EInputAction.Chirp)]
+        public async UniTask Chirp()
+        {
+            const int blinkOffMs = 110;
+            const int blinkOnMs = 180;
+            Mute();
+            await UniTask.Delay(blinkOffMs);
+            Mute();
+            await UniTask.Delay(blinkOnMs);
+            Mute();
+            await UniTask.Delay(blinkOffMs);
+            Mute();
+        }
     }
 }

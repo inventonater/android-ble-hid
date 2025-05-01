@@ -39,6 +39,8 @@ namespace Inventonater.BleHid
             _mapping = mapping;
             WhenMappingChanged(_mapping);
             LoggingManager.Instance.Log($"SetMapping: {mapping.Name}");
+            Action chirp = _mapping.GetAction(EInputAction.Chirp);
+            chirp?.Invoke();
         }
 
         public void CycleMapping()

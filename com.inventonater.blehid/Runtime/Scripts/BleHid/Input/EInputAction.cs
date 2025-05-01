@@ -21,5 +21,6 @@ namespace Inventonater.BleHid
         PrimaryRelease,
         SecondaryPress,
         SecondaryRelease,
+        Chirp
     }
 }

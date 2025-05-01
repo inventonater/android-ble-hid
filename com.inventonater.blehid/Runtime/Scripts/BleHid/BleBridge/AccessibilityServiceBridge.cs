@@ -150,6 +150,20 @@ namespace Inventonater.BleHid
         [MappableAction(id: EInputAction.Video, displayName: "Launch Video", description: "Open the video capture app")]
         public void LaunchVideoCapture() => _java.Call("launchVideoCapture");
 
+        [MappableAction(id: EInputAction.Chirp)]
+        public async UniTask Chirp()
+        {
+            const int blinkOffMs = 110;
+            const int blinkOnMs = 180;
+            Mute();
+            await UniTask.Delay(blinkOffMs);
+            Mute();
+            await UniTask.Delay(blinkOnMs);
+            Mute();
+            await UniTask.Delay(blinkOffMs);
+            Mute();
+        }
+
         public void ClickFocusedNode() => PerformFocusedNodeAction(AccessibilityAction.Click); // not working
         public void PerformFocusedNodeAction(AccessibilityAction action) => _java.Call("localPerformFocusedNodeAction", (int)action);
 
