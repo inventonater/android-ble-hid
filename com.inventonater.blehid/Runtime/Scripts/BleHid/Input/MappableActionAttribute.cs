@@ -30,11 +30,11 @@ namespace Inventonater.BleHid
         /// <param name="id">Unique identifier for the action</param>
         /// <param name="displayName">User-friendly name to display in the UI</param>
         /// <param name="description">Description of what the action does</param>
-        public MappableActionAttribute(EInputAction id, string displayName, string description = "")
+        public MappableActionAttribute(EInputAction id, string displayName = "", string description = "")
         {
             Id = id;
-            DisplayName = displayName;
-            Description = description;
+            DisplayName = string.IsNullOrEmpty(displayName) ? $"{id}" : displayName;
+            Description = string.IsNullOrEmpty(description) ? $"{id}" : description;
         }
     }
 }
