@@ -40,14 +40,6 @@ namespace Inventonater.BleHid
             JavaBroadcaster.OnRssiRead += rssi => ConnectionBridge.Rssi = rssi;
 
             InputRouter = gameObject.AddComponent<InputRouter>();
-
-            var accessibilityServiceRegistry = new ActionRegistry(AccessibilityServiceBridge);
-            AddMapping(InputDeviceMapping.LocalMedia(accessibilityServiceRegistry));
-            AddMapping(InputDeviceMapping.LocalDPad(accessibilityServiceRegistry));
-
-            var bleHidRegistry = new ActionRegistry(BleBridge.Mouse, BleBridge.Keyboard, BleBridge.Media);
-            AddMapping(InputDeviceMapping.BleMouse(bleHidRegistry));
-            AddMapping(InputDeviceMapping.BleMedia(bleHidRegistry));
             Debug.Log("BleHidManager initialized");
         }
 

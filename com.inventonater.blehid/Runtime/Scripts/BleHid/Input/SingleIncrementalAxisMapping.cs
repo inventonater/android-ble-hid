@@ -45,7 +45,6 @@ namespace Inventonater.BleHid
                 if (_active == value) return;
                 ResetPosition();
                 _active = value;
-                LoggingManager.Instance.Log($"SingleIncrementalAxisMapping.Active: {_active}");
             }
         }
 
@@ -54,7 +53,6 @@ namespace Inventonater.BleHid
             _initialized = false;
             _pendingDelta = 0;
             _accumulatedDelta = 0;
-            LoggingManager.Instance.Log("SingleIncrementalAxisMapping.ResetPosition");
         }
 
         float _accumulatedDelta;
