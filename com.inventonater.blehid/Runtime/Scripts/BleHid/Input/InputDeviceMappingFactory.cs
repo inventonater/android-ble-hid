@@ -21,7 +21,7 @@ namespace Inventonater.BleHid
             var axisMappings = new List<IAxisMapping>
             {
                 new MousePositionAxisMapping(registry.MouseMoveAction),
-                new SingleIncrementalAxisMapping(Axis.Z, registry.GetAction(EInputAction.VolumeUp), registry.GetAction(EInputAction.VolumeDown)),
+                new SingleAxisMappingIncremental(Axis.Z, registry.GetAction(EInputAction.VolumeUp), registry.GetAction(EInputAction.VolumeDown)),
             };
 
             return new InputDeviceMapping("BleMouse", registry, buttons, axisMappings);
@@ -38,7 +38,7 @@ namespace Inventonater.BleHid
                 (InputEvent.Down, EInputAction.Mute),
             };
             var axisMappings = new List<IAxisMapping>
-                { new SingleIncrementalAxisMapping(Axis.Z, registry.GetAction(EInputAction.VolumeUp), registry.GetAction(EInputAction.VolumeDown)) };
+                { new SingleAxisMappingIncremental(Axis.Z, registry.GetAction(EInputAction.VolumeUp), registry.GetAction(EInputAction.VolumeDown)) };
 
             return new InputDeviceMapping("BleMedia", registry, buttons, axisMappings);
         }
@@ -54,7 +54,7 @@ namespace Inventonater.BleHid
                 (InputEvent.Down, EInputAction.Mute),
             };
             var axisMappings = new List<IAxisMapping>
-                { new SingleIncrementalAxisMapping(Axis.Z, registry.GetAction(EInputAction.VolumeUp), registry.GetAction(EInputAction.VolumeDown)) };
+                { new SingleAxisMappingIncremental(Axis.Z, registry.GetAction(EInputAction.VolumeUp), registry.GetAction(EInputAction.VolumeDown)) };
 
             return new InputDeviceMapping("LocalMedia", registry, buttons, axisMappings);
         }
@@ -72,7 +72,7 @@ namespace Inventonater.BleHid
                 (InputEvent.Left, EInputAction.Left),
             };
             var axisMappings = new List<IAxisMapping>
-                { new SingleIncrementalAxisMapping(Axis.Z, registry.GetAction(EInputAction.VolumeUp), registry.GetAction(EInputAction.VolumeDown)) };
+                { new SingleAxisMappingIncremental(Axis.Z, registry.GetAction(EInputAction.VolumeUp), registry.GetAction(EInputAction.VolumeDown)) };
             return new InputDeviceMapping("LocalDPad", registry, buttons, axisMappings);
         }
 

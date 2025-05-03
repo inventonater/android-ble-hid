@@ -83,7 +83,7 @@ namespace Inventonater.BleHid
 
         private void HandlePositionDeltaEvent(Vector3 delta)
         {
-            foreach (var mapping in _mapping.AxisMappings) mapping.SetPositionDelta(delta);
+            foreach (var mapping in _mapping.AxisMappings) mapping.AddDelta(delta);
         }
 
         // ExecutionOrder Process

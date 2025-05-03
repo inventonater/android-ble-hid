@@ -122,7 +122,7 @@ namespace Inventonater.BleHid
             return InputFilterFactory.FilterType.OneEuro; // Default
         }
 
-        public void SetPositionDelta(Vector3 delta)
+        public void AddDelta(Vector3 delta)
         {
             if (_flipY) delta.y = -delta.y;
             delta.x *= HorizontalSensitivity;

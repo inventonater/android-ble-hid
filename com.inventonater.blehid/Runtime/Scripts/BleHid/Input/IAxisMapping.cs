@@ -4,7 +4,7 @@ namespace Inventonater.BleHid
 {
     public interface IAxisMapping
     {
-        public void SetPositionDelta(Vector3 delta);
+        public void AddDelta(Vector3 delta);
         void Update(float time);
         void Handle(InputEvent pendingButtonEvent);
     }
