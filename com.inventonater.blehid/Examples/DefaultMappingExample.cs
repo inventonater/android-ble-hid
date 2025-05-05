@@ -1,4 +1,4 @@
-using Inventonater.BleHid;
+using Inventonater;
 using UnityEngine;
 
 namespace Examples

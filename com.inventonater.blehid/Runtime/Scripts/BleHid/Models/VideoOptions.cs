@@ -1,6 +1,6 @@
 using UnityEngine;
 
-namespace Inventonater.BleHid
+namespace Inventonater
 {
     /// <summary>
     /// Options for video recording operations.

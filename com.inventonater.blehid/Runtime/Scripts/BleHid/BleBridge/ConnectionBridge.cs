@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using UnityEngine;
 
-namespace Inventonater.BleHid
+namespace Inventonater
 {
     [Serializable]
     public class ConnectionBridge

@@ -1,7 +1,7 @@
 using UnityEngine;
 using System;
 
-namespace Inventonater.BleHid
+namespace Inventonater
 {
     /// <summary>
     /// UI component for media controls (play/pause, volume, etc.)

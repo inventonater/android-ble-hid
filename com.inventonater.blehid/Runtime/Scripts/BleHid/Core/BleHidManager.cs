@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using Cysharp.Threading.Tasks;
 using UnityEngine;
 
-namespace Inventonater.BleHid
+namespace Inventonater
 {
     [DefaultExecutionOrder(ExecutionOrder.Initialize)]
     public class BleHidManager : MonoBehaviour

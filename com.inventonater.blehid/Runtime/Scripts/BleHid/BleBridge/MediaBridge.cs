@@ -2,7 +2,7 @@ using System;
 using Cysharp.Threading.Tasks;
 using UnityEngine;
 
-namespace Inventonater.BleHid
+namespace Inventonater
 {
     [Serializable]
     public class MediaBridge

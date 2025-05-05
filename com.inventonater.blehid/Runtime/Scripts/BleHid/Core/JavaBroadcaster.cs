@@ -1,7 +1,7 @@
 using UnityEngine;
 using UnityEngine.Scripting;
 
-namespace Inventonater.BleHid
+namespace Inventonater
 {
     /// <summary>
     /// Handles events for the BLE HID system, processing callbacks from the native plugin.

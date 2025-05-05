@@ -3,6 +3,7 @@
     "rootNamespace": "Inventonater.BleHid",
     "references": [
         "Unity.TextMeshPro",
+        "Inventonater.Input",
         "Inventonater.BleHid"
     ],
     "includePlatforms": [],

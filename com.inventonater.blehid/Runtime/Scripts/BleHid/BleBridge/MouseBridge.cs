@@ -2,7 +2,7 @@ using System;
 using Unity.Profiling;
 using UnityEngine;
 
-namespace Inventonater.BleHid
+namespace Inventonater
 {
     [Serializable]
     public class MouseBridge

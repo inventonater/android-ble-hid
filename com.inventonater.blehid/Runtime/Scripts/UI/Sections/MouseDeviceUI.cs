@@ -3,7 +3,7 @@ using System;
 using System.Linq;
 using JetBrains.Annotations;
 
-namespace Inventonater.BleHid
+namespace Inventonater
 {
     public class MouseDeviceUI : SectionUI, IInputSourceDevice
     {

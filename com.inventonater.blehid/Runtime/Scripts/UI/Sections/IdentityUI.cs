@@ -1,7 +1,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-namespace Inventonater.BleHid
+namespace Inventonater
 {
     public class IdentityUI : SectionUI
     {

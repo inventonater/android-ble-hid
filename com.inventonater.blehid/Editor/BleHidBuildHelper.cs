@@ -3,7 +3,7 @@ using UnityEngine;
 using System.IO;
 using System;
 
-namespace Inventonater.BleHid.Editor
+namespace Inventonater.Editor
 {
     /// <summary>
     /// Editor utility for helping with plugin build and setup

@@ -1,6 +1,6 @@
 using System;
 
-namespace Inventonater.BleHid
+namespace Inventonater
 {
     [Serializable]
     public class KeyboardBridge

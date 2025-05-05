@@ -2,7 +2,7 @@ using System;
 using System.Threading;
 using UnityEngine;
 
-namespace Inventonater.BleHid
+namespace Inventonater
 {
     public class PipBackgroundWorker
     {

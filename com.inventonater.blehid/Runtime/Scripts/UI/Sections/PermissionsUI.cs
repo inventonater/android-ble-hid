@@ -2,7 +2,7 @@ using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
 
-namespace Inventonater.BleHid
+namespace Inventonater
 {
     public class PermissionsUI
     {

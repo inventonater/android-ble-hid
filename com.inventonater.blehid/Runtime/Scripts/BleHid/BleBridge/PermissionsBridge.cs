@@ -5,7 +5,7 @@ using System.Linq;
 using Cysharp.Threading.Tasks;
 using UnityEngine;
 
-namespace Inventonater.BleHid
+namespace Inventonater
 {
     /// <summary>
     /// Handles Android permission requests and checks for BLE HID functionality.

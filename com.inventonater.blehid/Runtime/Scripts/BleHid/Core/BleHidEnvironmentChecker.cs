@@ -1,4 +1,4 @@
-namespace Inventonater.BleHid
+namespace Inventonater
 {
     /// <summary>
     /// Handles environment checks for BLE HID functionality.

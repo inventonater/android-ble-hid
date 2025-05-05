@@ -3,7 +3,7 @@ using Unity.Profiling;
 using UnityEngine;
 using UnityEngine.Profiling;
 
-namespace Inventonater.BleHid
+namespace Inventonater
 {
     public class JavaBridge
     {

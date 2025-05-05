@@ -2,7 +2,7 @@ using System;
 using System.Collections;
 using UnityEngine;
 
-namespace Inventonater.BleHid
+namespace Inventonater
 {
     /// <summary>
     /// Base class for UI components in the BLE HID system.

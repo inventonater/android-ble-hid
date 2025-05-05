@@ -1,7 +1,7 @@
 using UnityEngine;
 using System;
 
-namespace Inventonater.BleHid
+namespace Inventonater
 {
     /// <summary>
     /// UI component for displaying BLE HID status and advertising controls

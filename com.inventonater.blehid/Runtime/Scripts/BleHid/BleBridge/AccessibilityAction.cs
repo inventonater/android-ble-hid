@@ -1,6 +1,6 @@
 using System;
 
-namespace Inventonater.BleHid
+namespace Inventonater
 {
     /// <summary>
     /// Enum for accessibility actions that can be performed on nodes.

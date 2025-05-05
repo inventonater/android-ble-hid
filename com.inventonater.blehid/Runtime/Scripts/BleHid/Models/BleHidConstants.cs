@@ -1,6 +1,6 @@
 using UnityEngine;
 
-namespace Inventonater.BleHid
+namespace Inventonater
 {
     /// <summary>
     /// Contains constants for the HID keyboard, mouse, media key codes, and options parameters.

@@ -1,7 +1,8 @@
 {
     "name": "Inventonater.BleHid",
-    "rootNamespace": "Inventonater.BleHid",
+    "rootNamespace": "Inventonater",
     "references": [
+        "Inventonater.Input",
         "Unity.TextMeshPro",
         "UniTask"
     ],

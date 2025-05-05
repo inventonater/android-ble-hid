@@ -1,7 +1,7 @@
 using System;
 using UnityEngine;
 
-namespace Inventonater.BleHid
+namespace Inventonater
 {
     /// <summary>
     /// UI component for local device control functionality
