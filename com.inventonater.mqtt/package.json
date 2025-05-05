@@ -1,0 +1,36 @@
+{
+  "name": "com.inventonater.mqtt",
+  "version": "1.0.0",
+  "displayName": "Inventonater Mqtt",
+  "description": "",
+  "unity": "2021.3",
+  "license": "MIT",
+  "author": {
+    "name": "Inventonater",
+    "url": "https://www.inventonater.com"
+  },
+  "dependencies": {
+    "com.inventonater.input": "1.0.0",
+    "com.tivadar.best.mqtt": "3.0.4",
+    "com.unity.nuget.newtonsoft-json": "3.2.1",
+    "com.cysharp.unitask": "2.5.10"
+  },
+  "keywords": [],
+  "scopedRegistries": [
+    {
+      "name": "package.openupm.com",
+      "url": "https://package.openupm.com",
+      "scopes": [
+        "com.openupm",
+        "org.nuget",
+        "com.adrenak",
+        "com.cysharp",
+        "com.openai",
+        "com.utilities",
+        "com.dbrizov",
+        "com.neuecc",
+        "com.browar"
+      ]
+    }
+  ]
+}

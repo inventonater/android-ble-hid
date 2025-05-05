@@ -21,6 +21,8 @@ namespace Inventonater
         PrimaryRelease,
         SecondaryPress,
         SecondaryRelease,
+        TertiaryPress,
+        TertiaryRelease,
         Chirp
     }
 }
