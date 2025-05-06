@@ -30,7 +30,7 @@ namespace Inventonater
             _entity.Publish(new MqttShellEntity.Command(inputEvent: inputEvent));
         }
 
-        private MqttShellEntity _entity = new("shell/nav");
+        private MqttShellEntity _entity = new();
 
         public class MqttShellEntity : InventoMqttClient.MqttEntity<MqttShellEntity.Command>
         {
@@ -45,7 +45,8 @@ namespace Inventonater
             }
             private readonly Command _value;
 
-            public MqttShellEntity(string commandTopic) : base(commandTopic) { }
+            public const string DefaultTopic = "shell/nav";
+            public MqttShellEntity(string commandTopic = DefaultTopic) : base(commandTopic) { }
         }
     }
 }

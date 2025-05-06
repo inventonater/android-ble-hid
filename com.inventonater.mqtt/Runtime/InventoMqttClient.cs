@@ -55,6 +55,7 @@ namespace Inventonater
                     
                 try
                 {
+                    Debug.Log($"OnMessage: {payload}");
                     T message = JsonConvert.DeserializeObject<T>(payload);
                     MessageReceived(message);
                 }

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Newtonsoft.Json;
 
 namespace Inventonater
 {
@@ -10,17 +11,10 @@ namespace Inventonater
         public readonly Phase phase;
         public readonly Direction direction;
 
-        public InputEvent(Id id, Phase phase)
+        public InputEvent(Id id = Id.Primary, Phase phase = Phase.None, Direction direction = Direction.None)
         {
             this.id = id;
             this.phase = phase;
-            this.direction = Direction.None;
-        }
-
-        public InputEvent(Direction direction)
-        {
-            this.id = Id.Primary;
-            this.phase = Phase.None;
             this.direction = direction;
         }
 
@@ -52,13 +46,13 @@ namespace Inventonater
             Left
         }
 
-        public bool IsPress => phase == Phase.Press;
-        public bool IsRelease => phase == Phase.Release;
-        public bool IsHoldBegin => phase == Phase.HoldBegin;
-        public bool IsHoldEnd => phase == Phase.HoldEnd;
-        public bool IsTap => phase == Phase.Tap;
-        public bool IsDoubleTap => phase == Phase.DoubleTap;
-        public bool IsLongPress => phase == Phase.LongPress;
+        [JsonIgnore] public bool IsPress => phase == Phase.Press;
+        [JsonIgnore] public bool IsRelease => phase == Phase.Release;
+        [JsonIgnore] public bool IsHoldBegin => phase == Phase.HoldBegin;
+        [JsonIgnore] public bool IsHoldEnd => phase == Phase.HoldEnd;
+        [JsonIgnore] public bool IsTap => phase == Phase.Tap;
+        [JsonIgnore] public bool IsDoubleTap => phase == Phase.DoubleTap;
+        [JsonIgnore] public bool IsLongPress => phase == Phase.LongPress;
 
         public static readonly InputEvent PrimaryPress = new(Id.Primary, Phase.Press);
         public static readonly InputEvent PrimaryRelease = new(Id.Primary, Phase.Release);
@@ -78,10 +72,10 @@ namespace Inventonater
         public static readonly InputEvent TertiaryDoubleTap = new(Id.Tertiary, Phase.DoubleTap);
         public static readonly InputEvent TertiaryLongPress = new(Id.Tertiary, Phase.LongPress);
 
-        public static readonly InputEvent Up = new(Direction.Up);
-        public static readonly InputEvent Right = new(Direction.Right);
-        public static readonly InputEvent Down = new(Direction.Down);
-        public static readonly InputEvent Left = new(Direction.Left);
+        public static readonly InputEvent Up = new(direction:Direction.Up);
+        public static readonly InputEvent Right = new(direction:Direction.Right);
+        public static readonly InputEvent Down = new(direction:Direction.Down);
+        public static readonly InputEvent Left = new(direction:Direction.Left);
 
         public static InputEvent Get(Id id, Phase phase) => new(id, phase);
 
