@@ -19,9 +19,50 @@ namespace Inventonater
         public class MqttEntity<T>
         {
             [SerializeField] private string commandTopic;
+            private event Action<T> MessageReceived;
+            private SubscriptionTopic _subscriptionTopic;
+            
             public MqttEntity(string commandTopic) => this.commandTopic = commandTopic;
 
             public void Publish(T payload) => Publish(commandTopic, JsonConvert.SerializeObject(payload));
+            
+            // Subscribe using the native MQTT subscription system
+            public void Subscribe(Action<T> handler)
+            {
+                bool wasEmpty = MessageReceived == null;
+                MessageReceived += handler;
+                
+                if (wasEmpty && _client != null)
+                {
+                    _client.CreateSubscriptionBuilder(commandTopic).WithMessageCallback((client, topic, topicName, message) => {
+                            string payload = System.Text.Encoding.UTF8.GetString(message.Payload.Data, message.Payload.Offset, message.Payload.Count);
+                            OnMessage(payload);
+                        }).BeginSubscribe();
+                }
+            }
+            
+            // Unsubscribe method
+            public void Unsubscribe(Action<T> handler)
+            {
+                MessageReceived -= handler;
+                if (MessageReceived == null && _client != null) _client.CreateUnsubscribePacketBuilder(commandTopic).BeginUnsubscribe();
+            }
+            
+            // Internal method to handle incoming messages
+            private void OnMessage(string payload)
+            {
+                if (MessageReceived == null) return;
+                    
+                try
+                {
+                    T message = JsonConvert.DeserializeObject<T>(payload);
+                    MessageReceived(message);
+                }
+                catch (Exception ex)
+                {
+                    Debug.LogError($"Failed to process message for topic {commandTopic}: {ex.Message}");
+                }
+            }
 
             private void Publish(string topic, string message, QoSLevels qos = QoSLevels.AtLeastOnceDelivery)
             {
@@ -61,28 +102,12 @@ namespace Inventonater
             _client.OnConnected += HandleConnected;
             _client.OnError += HandleError;
             _client.OnDisconnect += HandleDisconnected;
-            _client.OnStateChanged += HandleStateChanged;
             _client.BeginConnect(ConnectPacketBuilderCallback);
         }
 
         private void HandleConnected(MQTTClient client) => Debug.Log($"MqttClient Connected to MQTT: {client.State}");
         private void HandleDisconnected(MQTTClient client, DisconnectReasonCodes code, string reason) => Debug.Log($"MqttClient Disconnected: {reason}");
         private void HandleError(MQTTClient client, string reason) => Debug.LogError($"MqttClient MQTT Error: {reason}");
-
-        private void HandleStateChanged(MQTTClient client, ClientStates oldState, ClientStates newState)
-        {
-            if (newState == ClientStates.Connected)
-            {
-                var subscribeTopic = "#";
-                _client.CreateBulkSubscriptionBuilder()
-                    .WithTopic(new SubscribeTopicBuilder(subscribeTopic)
-                        // .WithMaximumQoS(qos)
-                        // .WithAcknowledgementCallback(OnSubscriptionAcknowledgement)
-                        .WithMessageCallback(OnApplicationMessage))
-                    .BeginSubscribe();
-                Debug.Log($"MqttClient Client state changed from {oldState} to {newState}");
-            }
-        }
 
         private ConnectPacketBuilder ConnectPacketBuilderCallback(MQTTClient client, ConnectPacketBuilder builder)
         {
@@ -92,16 +117,6 @@ namespace Inventonater
             if (!string.IsNullOrEmpty(password)) builder.WithPassword(password);
             builder.WithKeepAlive(60);
             return builder;
-        }
-
-        private void OnSubscriptionAcknowledgement(MQTTClient client, SubscriptionTopic topic, SubscribeAckReasonCodes reasonCode)
-        {
-            Debug.Log($"MqttClient OnSubscriptionAcknowledgement {topic} - {reasonCode}");
-        }
-
-        private void OnApplicationMessage(MQTTClient client, SubscriptionTopic topic, string topicName, ApplicationMessage applicationMessage)
-        {
-            // Debug.Log($"MqttClient OnApplicationMessage {topic} - {topicName} - {applicationMessage}");
         }
 
         private void OnDestroy()
