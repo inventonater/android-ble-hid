@@ -54,6 +54,11 @@ namespace Inventonater
         [JsonIgnore] public bool IsDoubleTap => phase == Phase.DoubleTap;
         [JsonIgnore] public bool IsLongPress => phase == Phase.LongPress;
 
+        [JsonIgnore] public bool IsLeft => direction == Direction.Left;
+        [JsonIgnore] public bool IsRight => direction == Direction.Right;
+        [JsonIgnore] public bool IsUp => direction == Direction.Up;
+        [JsonIgnore] public bool IsDown => direction == Direction.Down;
+
         public static readonly InputEvent PrimaryPress = new(Id.Primary, Phase.Press);
         public static readonly InputEvent PrimaryRelease = new(Id.Primary, Phase.Release);
         public static readonly InputEvent PrimaryTap = new(Id.Primary, Phase.Tap);
