@@ -3,32 +3,11 @@ using Best.MQTT;
 using Best.MQTT.Packets;
 using Best.MQTT.Packets.Builders;
 using Newtonsoft.Json;
+using NUnit.Framework;
 using UnityEngine;
 
 namespace Inventonater
 {
-    [Serializable]
-    public class MqttTopic<TPayload>
-    {
-        [SerializeField] private InventoMqttClient _client;
-        [SerializeField] private string _topic;
-        [SerializeField] private QoSLevels _qos;
-        [SerializeField] private bool _retain;
-
-        public MqttTopic(InventoMqttClient client, string topic, QoSLevels qos = QoSLevels.AtLeastOnceDelivery, bool retain = false)
-        {
-            _client = client;
-            _retain = retain;
-            _qos = qos;
-            _topic = topic;
-        }
-
-        public void Publish(TPayload payload) => _client.Publish(_topic, JsonConvert.SerializeObject(payload), _qos, _retain);
-        public void Publish(TPayload payload, QoSLevels qos) => _client.Publish(_topic, JsonConvert.SerializeObject(payload), qos, _retain);
-        public void Subscribe(Action<TPayload> handler) => _client.Subscribe(_topic, handler);
-        public void Unsubscribe(Action<TPayload> handler) => _client.Unsubscribe(_topic, handler);
-    }
-
     public class InventoMqttClient : MonoBehaviour
     {
         [SerializeField] private string host = "192.168.10.7";
@@ -61,8 +40,21 @@ namespace Inventonater
             _client.BeginConnect(ConnectPacketBuilderCallback);
         }
 
-        private void HandleConnected(MQTTClient client) => Debug.Log($"MqttClient Connected to MQTT: {client.State}");
-        private void HandleDisconnected(MQTTClient client, DisconnectReasonCodes code, string reason) => Debug.Log($"MqttClient Disconnected: {reason}");
+        public event Action WhenConnected = delegate { };
+        public event Action WhenDisconnected = delegate { };
+
+        private void HandleConnected(MQTTClient client)
+        {
+            Debug.Log($"MqttClient Connected to MQTT: {client.State}");
+            WhenConnected();
+        }
+
+        private void HandleDisconnected(MQTTClient client, DisconnectReasonCodes code, string reason)
+        {
+            Debug.Log($"MqttClient Disconnected: {reason}");
+            WhenDisconnected();
+        }
+
         private void HandleError(MQTTClient client, string reason) => Debug.LogError($"MqttClient MQTT Error: {reason}");
 
         private ConnectPacketBuilder ConnectPacketBuilderCallback(MQTTClient client, ConnectPacketBuilder builder)
@@ -89,13 +81,33 @@ namespace Inventonater
         {
             _client.CreateSubscriptionBuilder(subscriptionTopic).WithMessageCallback((client, topic, topicName, message) =>
             {
+                string payload = System.Text.Encoding.UTF8.GetString(message.Payload.Data, message.Payload.Offset, message.Payload.Count);
+                if (verbose) LoggingManager.Instance.Log($"{topic} {payload}");
+                TPayload result = default;
+                bool deserializationSuccessful = false;
+
                 try
                 {
-                    string payload = System.Text.Encoding.UTF8.GetString(message.Payload.Data, message.Payload.Offset, message.Payload.Count);
-                    if (verbose) LoggingManager.Instance.Log($"{topic} {payload}");
-                    callback(JsonConvert.DeserializeObject<TPayload>(payload));
+                    result = JsonConvert.DeserializeObject<TPayload>(payload);
+                    deserializationSuccessful = true;
                 }
-                catch (Exception ex) { Debug.LogError($"Failed to process message for topic {subscriptionTopic}: {ex.Message}"); }
+                catch (Exception ex)
+                {
+                    LoggingManager.Instance.Error($"Failed to deserialize message for topic {subscriptionTopic} {payload} \n{ex.Message}");
+                    if (ex.InnerException != null) LoggingManager.Instance.Error($"Inner Exception: {ex.InnerException.Message}");
+                }
+
+                if (!deserializationSuccessful) return;
+
+                try
+                {
+                    callback(result);
+                }
+                catch (Exception callbackEx)
+                {
+                    LoggingManager.Instance.Error($"Error executing callback for topic {subscriptionTopic}. \n{callbackEx.Message}\n{callbackEx.StackTrace}");
+                    if (callbackEx.InnerException != null) LoggingManager.Instance.Error($"Inner Exception: {callbackEx.InnerException.Message}");
+                }
             }).BeginSubscribe();
         }
 

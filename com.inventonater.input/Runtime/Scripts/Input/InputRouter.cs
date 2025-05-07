@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using JetBrains.Annotations;
 using UnityEngine;
 
@@ -26,15 +27,19 @@ namespace Inventonater
 
         public void AddMapping(InputDeviceMapping mapping)
         {
+            if (Mappings.Any(m => m.Name == mapping.Name)) return;
             Mappings.Add(mapping);
             WhenMappingAdded(mapping);
             if (_mapping == null) SetMapping(mapping);
         }
 
+        public void SetMapping(string mappingName) => SetMapping(Mappings.FirstOrDefault(m => m.Name == mappingName));
+
         public void SetMapping(InputDeviceMapping mapping)
         {
-            if (!Mappings.Contains(mapping)) AddMapping(mapping);
-            if (_mapping == mapping) return;
+            if (mapping == null) return;
+            if (Mappings.All(m => m.Name != mapping.Name)) AddMapping(mapping);
+            if (_mapping != null && _mapping.Name == mapping.Name) return;
 
             _mapping = mapping;
             WhenMappingChanged(_mapping);
