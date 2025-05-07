@@ -1,11 +1,16 @@
 using System;
+using Best.MQTT.Packets;
 using Cysharp.Threading.Tasks;
 
 namespace Inventonater
 {
     [Serializable]
-    public class MqttShellBridge
+    public class MqttShellBridge : MqttTopic<InputEvent>
     {
+        public const string DefaultTopic = "shell/nav";
+        public const QoSLevels DefaultQos = QoSLevels.ExactlyOnceDelivery;
+        public MqttShellBridge(InventoMqttClient mqttClient) : base(mqttClient, DefaultTopic, DefaultQos) { }
+
         [MappableAction(id: EInputAction.PrimaryPress)] public void PrimaryPress() => Publish(InputEvent.PrimaryPress);
         [MappableAction(id: EInputAction.PrimaryRelease)] public void PrimaryRelease() => Publish(InputEvent.PrimaryRelease);
         [MappableAction(id: EInputAction.Select)] public void Select() => Publish(InputEvent.PrimaryTap);
@@ -26,33 +31,6 @@ namespace Inventonater
         {
             await UniTask.Yield();
             LoggingManager.Instance.Log("Shell.Chirp");
-        }
-
-        private void Publish(InputEvent inputEvent)
-        {
-            _entity.Publish(new MqttShellEntity.Command(inputEvent: inputEvent));
-        }
-
-        public void Subscribe(Action<MqttShellEntity.Command> handler) => _entity.Subscribe(handler);
-        public void Unsubscribe(Action<MqttShellEntity.Command> handler) => _entity.Unsubscribe(handler);
-
-        private MqttShellEntity _entity = new();
-
-        public class MqttShellEntity : InventoMqttClient.MqttEntity<MqttShellEntity.Command>
-        {
-            [Serializable]
-            public class Command
-            {
-                public InputEvent inputEvent;
-                public Command(InputEvent inputEvent)
-                {
-                    this.inputEvent = inputEvent;
-                }
-            }
-            private readonly Command _value;
-
-            public const string DefaultTopic = "shell/nav";
-            public MqttShellEntity(string commandTopic = DefaultTopic) : base(commandTopic) { }
         }
     }
 }

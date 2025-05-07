@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Best.MQTT.Packets;
 using Cysharp.Threading.Tasks;
 using UnityEngine;
 using Random = UnityEngine.Random;
@@ -38,28 +39,33 @@ namespace Inventonater
             CurrentLight.SetStatusOn();
         }
 
-        private List<MqttLightEntity> _mqttLights = new()
-        {
-            new("kauf-bulb-302bb8/light/kauf-bulb-302bb8/command"),
-            new("kauf-bulb-302a9e/light/kauf-bulb-302a9e/command")
-        };
+        private List<MqttLightTopic> _mqttLights;
         private int _currentLightIndex;
 
-        private MqttLightEntity CurrentLight => _mqttLights[_currentLightIndex];
+        public MqttLightsBridge(InventoMqttClient mqttClient)
+        {
+            _mqttLights = new()
+            {
+                new(mqttClient, "kauf-bulb-302bb8/light/kauf-bulb-302bb8/command"),
+                new(mqttClient, "kauf-bulb-302a9e/light/kauf-bulb-302a9e/command")
+            };
+        }
 
-        public class MqttLightEntity : InventoMqttClient.MqttEntity<MqttLightEntity.Command>
+        private MqttLightTopic CurrentLight => _mqttLights[_currentLightIndex];
+
+        public class MqttLightTopic : MqttTopic<MqttLightTopic.Payload>
         {
             [Serializable]
-            public class Command
+            public class Payload
             {
                 public string state = "ON";
                 public byte brightness = 255;
                 public Color32 color = new Color32(255, 255, 255, 255);
             }
 
-            private readonly Command _value = new();
+            private readonly Payload _value = new();
 
-            public MqttLightEntity(string commandTopic) : base(commandTopic)
+            public MqttLightTopic(InventoMqttClient client, string commandTopic) : base(client, commandTopic)
             {
             }
 
@@ -69,16 +75,16 @@ namespace Inventonater
                 Publish(_value);
             }
 
-            public void SetBrightness(int brightness)
+            public void SetBrightness(int brightness, QoSLevels qos = QoSLevels.AtLeastOnceDelivery)
             {
                 _value.state = "ON";
                 _value.brightness = (byte)Mathf.Clamp(brightness, 0, 255);
-                Publish(_value);
+                Publish(_value, qos);
             }
 
             public void IncrementBrightness(int increment)
             {
-                SetBrightness(_value.brightness + increment);
+                SetBrightness(_value.brightness + increment, QoSLevels.AtMostOnceDelivery);
             }
 
             public void SetStatusOff()

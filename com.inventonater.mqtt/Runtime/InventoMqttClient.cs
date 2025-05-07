@@ -2,89 +2,44 @@ using System;
 using Best.MQTT;
 using Best.MQTT.Packets;
 using Best.MQTT.Packets.Builders;
-using Cysharp.Threading.Tasks;
 using Newtonsoft.Json;
 using UnityEngine;
 
 namespace Inventonater
 {
+    [Serializable]
+    public class MqttTopic<TPayload>
+    {
+        [SerializeField] private InventoMqttClient _client;
+        [SerializeField] private string _topic;
+        [SerializeField] private QoSLevels _qos;
+        [SerializeField] private bool _retain;
+
+        public MqttTopic(InventoMqttClient client, string topic, QoSLevels qos = QoSLevels.AtLeastOnceDelivery, bool retain = false)
+        {
+            _client = client;
+            _retain = retain;
+            _qos = qos;
+            _topic = topic;
+        }
+
+        public void Publish(TPayload payload) => _client.Publish(_topic, JsonConvert.SerializeObject(payload), _qos, _retain);
+        public void Publish(TPayload payload, QoSLevels qos) => _client.Publish(_topic, JsonConvert.SerializeObject(payload), qos, _retain);
+        public void Subscribe(Action<TPayload> handler) => _client.Subscribe(_topic, handler);
+        public void Unsubscribe(Action<TPayload> handler) => _client.Unsubscribe(_topic, handler);
+    }
+
     public class InventoMqttClient : MonoBehaviour
     {
         [SerializeField] private string host = "192.168.10.7";
         [SerializeField] private int port = 1883;
         [SerializeField] private string userName = "inventonater";
         [SerializeField] private string password = "asdfasdf";
+        [SerializeField] private bool verbose = true;
 
-        [Serializable]
-        public class MqttEntity<T>
-        {
-            [SerializeField] private string commandTopic;
-            private event Action<T> MessageReceived;
-            private SubscriptionTopic _subscriptionTopic;
-            
-            public MqttEntity(string commandTopic) => this.commandTopic = commandTopic;
-
-            public void Publish(T payload) => Publish(commandTopic, JsonConvert.SerializeObject(payload));
-            
-            // Subscribe using the native MQTT subscription system
-            public void Subscribe(Action<T> handler)
-            {
-                bool wasEmpty = MessageReceived == null;
-                MessageReceived += handler;
-                
-                if (wasEmpty && _client != null)
-                {
-                    _client.CreateSubscriptionBuilder(commandTopic).WithMessageCallback((client, topic, topicName, message) => {
-                            string payload = System.Text.Encoding.UTF8.GetString(message.Payload.Data, message.Payload.Offset, message.Payload.Count);
-                            OnMessage(payload);
-                        }).BeginSubscribe();
-                }
-            }
-            
-            // Unsubscribe method
-            public void Unsubscribe(Action<T> handler)
-            {
-                MessageReceived -= handler;
-                if (MessageReceived == null && _client != null) _client.CreateUnsubscribePacketBuilder(commandTopic).BeginUnsubscribe();
-            }
-            
-            // Internal method to handle incoming messages
-            private void OnMessage(string payload)
-            {
-                if (MessageReceived == null) return;
-                    
-                try
-                {
-                    Debug.Log($"OnMessage: {payload}");
-                    T message = JsonConvert.DeserializeObject<T>(payload);
-                    MessageReceived(message);
-                }
-                catch (Exception ex)
-                {
-                    Debug.LogError($"Failed to process message for topic {commandTopic}: {ex.Message}");
-                }
-            }
-
-            private void Publish(string topic, string message, QoSLevels qos = QoSLevels.AtLeastOnceDelivery)
-            {
-                if (_client == null)
-                {
-                    Debug.LogError($"No mqtt client has been initialized in InventoMqttClient for MqttEntity {commandTopic}");
-                    return;
-                }
-
-                _client.CreateApplicationMessageBuilder(topic)
-                    .WithQoS(qos)
-                    .WithRetain(false)
-                    .WithPayload(message)
-                    .BeginPublish();
-                Debug.Log($"{topic} {message}");
-            }
-        }
-
-        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
-        private static void StaticReload() => _client = null;
-        private static MQTTClient _client;
+        // [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
+        // private static void StaticReload() => _client = null;
+        private MQTTClient _client;
         private QoSLevels qosLevels = QoSLevels.ExactlyOnceDelivery;
 
         private ConnectionOptions ConnectionOptions => new()
@@ -118,6 +73,36 @@ namespace Inventonater
             if (!string.IsNullOrEmpty(password)) builder.WithPassword(password);
             builder.WithKeepAlive(60);
             return builder;
+        }
+
+        public void Publish(string topic, string message, QoSLevels qos = QoSLevels.AtLeastOnceDelivery, bool retain = false)
+        {
+            _client.CreateApplicationMessageBuilder(topic)
+                .WithQoS(qos)
+                .WithRetain(retain)
+                .WithPayload(message)
+                .BeginPublish();
+            Debug.Log($"{topic} {message}");
+        }
+
+        public void Subscribe<TPayload>(string subscriptionTopic, Action<TPayload> callback)
+        {
+            _client.CreateSubscriptionBuilder(subscriptionTopic).WithMessageCallback((client, topic, topicName, message) =>
+            {
+                try
+                {
+                    string payload = System.Text.Encoding.UTF8.GetString(message.Payload.Data, message.Payload.Offset, message.Payload.Count);
+                    if (verbose) LoggingManager.Instance.Log($"{topic} {payload}");
+                    callback(JsonConvert.DeserializeObject<TPayload>(payload));
+                }
+                catch (Exception ex) { Debug.LogError($"Failed to process message for topic {subscriptionTopic}: {ex.Message}"); }
+            }).BeginSubscribe();
+        }
+
+        public void Unsubscribe<TPayload>(string topic, Action<TPayload> handler)
+        {
+            Debug.Log("TODO confirm double subscription, unsubscribe works properly?");
+            _client.CreateUnsubscribePacketBuilder(topic).BeginUnsubscribe();
         }
 
         private void OnDestroy()
