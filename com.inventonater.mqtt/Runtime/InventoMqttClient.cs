@@ -33,6 +33,13 @@ namespace Inventonater
 
         public async void Awake()
         {
+            TryInitialize();
+        }
+
+        private void TryInitialize()
+        {
+            if (_isInitialized) return;
+            _isInitialized = true;
             _client = new MQTTClient(ConnectionOptions);
             _client.OnConnected += HandleConnected;
             _client.OnError += HandleError;
@@ -40,13 +47,26 @@ namespace Inventonater
             _client.BeginConnect(ConnectPacketBuilderCallback);
         }
 
-        public event Action WhenConnected = delegate { };
+        private Action _whenConnected = delegate{};
+        private bool _isInitialized;
+
+        public event Action WhenConnected
+        {
+            add
+            {
+                _whenConnected += value;
+                TryInitialize();
+                if (_client.State == ClientStates.Connected) value();
+            }
+            remove => _whenConnected -= value;
+        }
+
         public event Action WhenDisconnected = delegate { };
 
         private void HandleConnected(MQTTClient client)
         {
             Debug.Log($"MqttClient Connected to MQTT: {client.State}");
-            WhenConnected();
+            _whenConnected();
         }
 
         private void HandleDisconnected(MQTTClient client, DisconnectReasonCodes code, string reason)
@@ -79,6 +99,8 @@ namespace Inventonater
 
         public void Subscribe<TPayload>(string subscriptionTopic, Action<TPayload> callback)
         {
+            LoggingManager.Instance.Log($"Subscribing: {subscriptionTopic}");
+
             _client.CreateSubscriptionBuilder(subscriptionTopic).WithMessageCallback((client, topic, topicName, message) =>
             {
                 string payload = System.Text.Encoding.UTF8.GetString(message.Payload.Data, message.Payload.Offset, message.Payload.Count);
@@ -97,7 +119,11 @@ namespace Inventonater
                     if (ex.InnerException != null) LoggingManager.Instance.Error($"Inner Exception: {ex.InnerException.Message}");
                 }
 
-                if (!deserializationSuccessful) return;
+                if (!deserializationSuccessful)
+                {
+                    LoggingManager.Instance.Error($"Subscribing FAILED: {subscriptionTopic}");
+                    return;
+                }
 
                 try
                 {

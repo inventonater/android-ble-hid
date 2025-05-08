@@ -18,7 +18,7 @@ namespace Inventonater
                 (InputEvent.Up, EInputAction.VolumeUp),
                 (InputEvent.Down, EInputAction.VolumeDown),
             };
-            var axisMappings = new List<IAxisMapping> { new SingleAxisMappingIncremental(Axis.Z, registry.GetAction(EInputAction.VolumeUp), registry.GetAction(EInputAction.VolumeDown)) };
+            var axisMappings = new List<IAxisMapping> { new SingleAxisMappingIncremental(Axis.Z, registry.GetAction(EInputAction.VolumeUp), registry.GetAction(EInputAction.VolumeDown), scale: 0.4f, timeInterval: 0.04f) };
 
             return new InputDeviceMapping("Speaker", registry, buttons, axisMappings);
         }
@@ -36,7 +36,7 @@ namespace Inventonater
                 (InputEvent.Down, EInputAction.Down),
             };
             
-            var axisMapping = new SingleAxisMappingDelta(Axis.Z, bridge.IncrementBrightness, scale: -1, timeInterval: 0.4f);
+            var axisMapping = new SingleAxisMappingDelta(Axis.Z, bridge.IncrementBrightness, scale: 1.4f, timeInterval: 0.4f);
             return new InputDeviceMapping("Lights", registry, buttons, new List<IAxisMapping> { axisMapping });
         }
 

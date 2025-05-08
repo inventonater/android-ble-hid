@@ -34,13 +34,13 @@ namespace Inventonater
         {
             const int blinkOffMs = 110;
             const int blinkOnMs = 180;
-            VolumeUp();
+            PlayPause();
             await UniTask.Delay(blinkOffMs);
-            VolumeUp();
+            PlayPause();
             await UniTask.Delay(blinkOnMs);
-            VolumeDown();
+            PlayPause();
             await UniTask.Delay(blinkOffMs);
-            VolumeDown();
+            PlayPause();
         }
 
         private const string DefaultCommandTopic = "spotify/media/command";

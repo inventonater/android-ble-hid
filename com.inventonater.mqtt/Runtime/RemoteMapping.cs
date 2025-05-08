@@ -7,10 +7,6 @@ namespace Inventonater
     [Serializable]
     public class RemoteMapping
     {
-        // This property should not be serialized as it's derived
-        [JsonIgnore]
-        public string ResourceId => $"remotes/device?id={Id}";
-
         // These fields will be serialized
         [SerializeField] private string id;
         [SerializeField] private string name;
@@ -90,7 +86,7 @@ namespace Inventonater
 
         public override string ToString() => $"{Name} ({Category})";
 
-        private string GetDeviceIdFromMapping(InputDeviceMapping mapping) => $"device-{mapping.Name.ToLower().Replace(" ", "-")}";
+        public static string GetDeviceIdFromMapping(InputDeviceMapping mapping) => $"device-{mapping.Name.ToLower().Replace(" ", "-")}";
 
         private DeviceCategory DetermineCategory(InputDeviceMapping mapping)
         {
