@@ -47,7 +47,8 @@ namespace Inventonater
             _mqttLights = new()
             {
                 new(mqttClient, "kauf-bulb-302bb8/light/kauf-bulb-302bb8/command"),
-                new(mqttClient, "kauf-bulb-302a9e/light/kauf-bulb-302a9e/command")
+                new(mqttClient, "kauf-bulb-302a9e/light/kauf-bulb-302a9e/command"),
+                new(mqttClient, "kauf-bulb-302a8b/light/kauf-bulb-302a8b/command")
             };
         }
 
