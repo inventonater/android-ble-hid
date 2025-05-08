@@ -10,7 +10,7 @@ namespace Inventonater
         private JavaBridge _java;
         public MediaBridge(JavaBridge java) => _java = java;
 
-        [MappableAction(id: EInputAction.PlayPause, displayName: "Play/Pause", description: "Toggle media playback between play and pause states")]
+        [MappableAction(id: EInputAction.PlayToggle, displayName: "Play/Pause", description: "Toggle media playback between play and pause states")]
         public void PlayPause() => _java.Call("playPause");
         
         [MappableAction(id: EInputAction.NextTrack, displayName: "Next Track", description: "Skip to the next track")]
@@ -25,7 +25,7 @@ namespace Inventonater
         [MappableAction(id: EInputAction.VolumeDown, displayName: "Volume Down", description: "Decrease the volume")]
         public void VolumeDown() => _java.Call("volumeDown");
         
-        [MappableAction(id: EInputAction.Mute, displayName: "Mute", description: "Mute or unmute the audio")]
+        [MappableAction(id: EInputAction.MuteToggle, displayName: "Mute", description: "Mute or unmute the audio")]
         public void Mute() => _java.Call("mute");
 
         [MappableAction(id: EInputAction.Chirp)]

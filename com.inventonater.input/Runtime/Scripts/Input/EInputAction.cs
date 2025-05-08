@@ -2,12 +2,12 @@ namespace Inventonater
 {
     public enum EInputAction
     {
-        PlayPause,
+        PlayToggle,
         NextTrack,
         PreviousTrack,
         VolumeUp,
         VolumeDown,
-        Mute,
+        MuteToggle,
         Up,
         Down,
         Left,

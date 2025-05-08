@@ -1,0 +1,63 @@
+using System;
+using Cysharp.Threading.Tasks;
+
+namespace Inventonater
+{
+    [Serializable]
+    public class MqttSpotifyBridge
+    {
+        [MappableAction(id: EInputAction.PlayToggle, displayName: "Play/Pause", description: "Toggle media playback between play and pause states")]
+        public void PlayPause() => _spotify.Call(MediaPayload.PlayToggle);
+
+        [MappableAction(id: EInputAction.NextTrack, displayName: "Next Track", description: "Skip to the next track")]
+        public void NextTrack() => _spotify.Call(MediaPayload.Next);
+
+        [MappableAction(id: EInputAction.PreviousTrack, displayName: "Previous Track", description: "Go back to the previous track")]
+        public void PreviousTrack() => _spotify.Call(MediaPayload.Previous);
+
+        [MappableAction(id: EInputAction.VolumeUp, displayName: "Volume Up", description: "Increase the volume")]
+        public void VolumeUp() => _spotify.Call(MediaPayload.VolumeUp);
+
+        [MappableAction(id: EInputAction.VolumeDown, displayName: "Volume Down", description: "Decrease the volume")]
+        public void VolumeDown() => _spotify.Call(MediaPayload.VolumeDown);
+
+        // private bool _previousMute;
+        // [MappableAction(id: EInputAction.MuteToggle, displayName: "Mute", description: "Mute or unmute the audio")]
+        // public void Mute()
+        // {
+        //     _previousMute = !_previousMute;
+        //     _spotify.Call(_previousMute ? "MUTE_ON" : "MUTE_OFF");
+        // }
+
+        [MappableAction(id: EInputAction.Chirp)]
+        public async UniTask Chirp()
+        {
+            const int blinkOffMs = 110;
+            const int blinkOnMs = 180;
+            VolumeUp();
+            await UniTask.Delay(blinkOffMs);
+            VolumeUp();
+            await UniTask.Delay(blinkOnMs);
+            VolumeDown();
+            await UniTask.Delay(blinkOffMs);
+            VolumeDown();
+        }
+
+        private const string DefaultCommandTopic = "spotify/media/command";
+        private readonly SpotifyCommandTopic _spotify;
+        public MqttSpotifyBridge(InventoMqttClient client, string commandTopic = DefaultCommandTopic)
+        {
+            _spotify = new SpotifyCommandTopic(client, commandTopic);
+        }
+
+        public class SpotifyCommandTopic : MqttTopic<MediaPayload>
+        {
+
+            public SpotifyCommandTopic(InventoMqttClient client, string commandTopic) : base(client, commandTopic)
+            {
+            }
+
+            public void Call(MediaPayload msg) => Publish(msg);
+        }
+    }
+}

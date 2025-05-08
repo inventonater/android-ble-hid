@@ -100,7 +100,7 @@ namespace Inventonater
             }
         }
 
-        [MappableAction(id: EInputAction.PlayPause, displayName: "Play/Pause", description: "Toggle media playback between play and pause states")]
+        [MappableAction(id: EInputAction.PlayToggle, displayName: "Play/Pause", description: "Toggle media playback between play and pause states")]
         public void PlayPause() => _java.Call("localPlayPause");
 
         [MappableAction(id: EInputAction.NextTrack, displayName: "Next Track", description: "Skip to the next track")]
@@ -115,7 +115,7 @@ namespace Inventonater
         [MappableAction(id: EInputAction.VolumeDown, displayName: "Volume Down", description: "Decrease the volume")]
         public void VolumeDown() => _java.Call("localVolumeDown");
 
-        [MappableAction(id: EInputAction.Mute, displayName: "Mute", description: "Mute or unmute the audio")]
+        [MappableAction(id: EInputAction.MuteToggle, displayName: "Mute", description: "Mute or unmute the audio")]
         public void Mute() => _java.Call("localMute");
 
         public void Tap(int x, int y) => _java.Call("localTap", x, y);

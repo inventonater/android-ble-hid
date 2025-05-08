@@ -31,11 +31,11 @@ namespace Inventonater
         {
             var buttons = new List<(InputEvent, EInputAction)>
             {
-                (InputEvent.PrimaryDoubleTap, EInputAction.PlayPause),
+                (InputEvent.PrimaryDoubleTap, EInputAction.PlayToggle),
                 (InputEvent.Right, EInputAction.NextTrack),
                 (InputEvent.Left, EInputAction.PreviousTrack),
-                (InputEvent.Up, EInputAction.Mute),
-                (InputEvent.Down, EInputAction.Mute),
+                (InputEvent.Up, EInputAction.MuteToggle),
+                (InputEvent.Down, EInputAction.MuteToggle),
             };
             var axisMappings = new List<IAxisMapping>
                 { new SingleAxisMappingIncremental(Axis.Z, registry.GetAction(EInputAction.VolumeUp), registry.GetAction(EInputAction.VolumeDown)) };
@@ -47,11 +47,11 @@ namespace Inventonater
         {
             var buttons = new List<(InputEvent, EInputAction)>
             {
-                (InputEvent.PrimaryDoubleTap, EInputAction.PlayPause),
+                (InputEvent.PrimaryDoubleTap, EInputAction.PlayToggle),
                 (InputEvent.Right, EInputAction.NextTrack),
                 (InputEvent.Left, EInputAction.PreviousTrack),
-                (InputEvent.Up, EInputAction.Mute),
-                (InputEvent.Down, EInputAction.Mute),
+                (InputEvent.Up, EInputAction.MuteToggle),
+                (InputEvent.Down, EInputAction.MuteToggle),
             };
             var axisMappings = new List<IAxisMapping>
                 { new SingleAxisMappingIncremental(Axis.Z, registry.GetAction(EInputAction.VolumeUp), registry.GetAction(EInputAction.VolumeDown)) };

@@ -22,12 +22,22 @@ namespace Inventonater
             _retain = retain;
             _qos = qos;
             _topic = topic;
+
+            _client.WhenConnected += HandleConnected;
+        }
+
+        private void HandleConnected()
+        {
             _client.Subscribe<TPayload>(_topic, Handler);
         }
 
         ~MqttTopic()
         {
-            if(_client != null) _client.Unsubscribe<TPayload>(_topic, Handler);
+            if (_client != null)
+            {
+                _client.WhenConnected -= HandleConnected;
+                _client.Unsubscribe<TPayload>(_topic, Handler);
+            }
             _client = null;
             _topic = null;
             _qos = QoSLevels.AtLeastOnceDelivery;
