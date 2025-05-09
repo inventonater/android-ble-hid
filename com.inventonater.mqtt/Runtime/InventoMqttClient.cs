@@ -4,6 +4,7 @@ using Best.MQTT.Packets;
 using Best.MQTT.Packets.Builders;
 using Newtonsoft.Json;
 using NUnit.Framework;
+using Unity.Android.Gradle;
 using UnityEngine;
 
 namespace Inventonater
@@ -89,12 +90,20 @@ namespace Inventonater
 
         public void Publish(string topic, string message, QoSLevels qos = QoSLevels.AtLeastOnceDelivery, bool retain = false)
         {
+            string logMessage = $"Publish: {(retain ? "retain=true" : "")} {topic} {message}";
+
+            if (_client.State != ClientStates.Connected)
+            {
+                LoggingManager.Instance.Error($"Not Connected: {logMessage}");
+                return;
+            }
             _client.CreateApplicationMessageBuilder(topic)
                 .WithQoS(qos)
                 .WithRetain(retain)
                 .WithPayload(message)
                 .BeginPublish();
-            Debug.Log($"{topic} {message}");
+
+            if(verbose) Debug.Log(logMessage);
         }
 
         public void Subscribe<TPayload>(string subscriptionTopic, Action<TPayload> callback)

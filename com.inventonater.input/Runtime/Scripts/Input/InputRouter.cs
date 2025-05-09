@@ -82,7 +82,7 @@ namespace Inventonater
 
         private void HandleInputEvent(InputEvent buttonEvent)
         {
-            if (buttonEvent == new InputEvent(InputEvent.Id.Tertiary, InputEvent.Phase.DoubleTap)) CycleMapping();
+            if (buttonEvent == new InputEvent(InputEvent.Id.Primary, InputEvent.Phase.TripleTap)) CycleMapping();
             pendingButtonEvents.Add(buttonEvent);
         }
 

@@ -1,5 +1,6 @@
 using System;
 using System.Reflection;
+using UnityEngine;
 
 namespace Inventonater
 {
@@ -24,7 +25,11 @@ namespace Inventonater
         public void Invoke()
         {
             try { Action(); }
-            catch (Exception e) { LoggingManager.Instance.Exception(e); }
+            catch (Exception e)
+            {
+                LoggingManager.Instance.Error($"Failed to Invoke {DisplayName} - {Id} - {Description}");
+                Debug.LogException(e);
+            }
         }
     }
 }

@@ -32,9 +32,10 @@ namespace Inventonater
             Release,
             HoldBegin,
             HoldEnd,
-            Tap,
+            SingleTap,
             DoubleTap,
-            LongPress,
+            TripleTap,
+            Hold,
         }
 
         public enum Direction
@@ -50,9 +51,11 @@ namespace Inventonater
         [JsonIgnore] public bool IsRelease => phase == Phase.Release;
         [JsonIgnore] public bool IsHoldBegin => phase == Phase.HoldBegin;
         [JsonIgnore] public bool IsHoldEnd => phase == Phase.HoldEnd;
-        [JsonIgnore] public bool IsTap => phase == Phase.Tap;
+        [JsonIgnore] public bool IsTap => phase == Phase.SingleTap;
         [JsonIgnore] public bool IsDoubleTap => phase == Phase.DoubleTap;
-        [JsonIgnore] public bool IsLongPress => phase == Phase.LongPress;
+        [JsonIgnore] public bool IsTripleTap => phase == Phase.TripleTap;
+
+        [JsonIgnore] public bool IsLongPress => phase == Phase.Hold;
 
         [JsonIgnore] public bool IsLeft => direction == Direction.Left;
         [JsonIgnore] public bool IsRight => direction == Direction.Right;
@@ -61,21 +64,24 @@ namespace Inventonater
 
         public static readonly InputEvent PrimaryPress = new(Id.Primary, Phase.Press);
         public static readonly InputEvent PrimaryRelease = new(Id.Primary, Phase.Release);
-        public static readonly InputEvent PrimaryTap = new(Id.Primary, Phase.Tap);
+        public static readonly InputEvent PrimaryTap = new(Id.Primary, Phase.SingleTap);
         public static readonly InputEvent PrimaryDoubleTap = new(Id.Primary, Phase.DoubleTap);
-        public static readonly InputEvent PrimaryLongPress = new(Id.Primary, Phase.LongPress);
+        public static readonly InputEvent PrimaryTripleTap = new(Id.Primary, Phase.TripleTap);
+        public static readonly InputEvent PrimaryLongPress = new(Id.Primary, Phase.Hold);
 
         public static readonly InputEvent SecondaryPress = new(Id.Secondary, Phase.Press);
         public static readonly InputEvent SecondaryRelease = new(Id.Secondary, Phase.Release);
-        public static readonly InputEvent SecondaryTap = new(Id.Secondary, Phase.Tap);
+        public static readonly InputEvent SecondaryTap = new(Id.Secondary, Phase.SingleTap);
         public static readonly InputEvent SecondaryDoubleTap = new(Id.Secondary, Phase.DoubleTap);
-        public static readonly InputEvent SecondaryLongPress = new(Id.Secondary, Phase.LongPress);
+        public static readonly InputEvent SecondaryTripleTap = new(Id.Secondary, Phase.TripleTap);
+        public static readonly InputEvent SecondaryLongPress = new(Id.Secondary, Phase.Hold);
 
         public static readonly InputEvent TertiaryPress = new(Id.Tertiary, Phase.Press);
         public static readonly InputEvent TertiaryRelease = new(Id.Tertiary, Phase.Release);
-        public static readonly InputEvent TertiaryTap = new(Id.Tertiary, Phase.Tap);
+        public static readonly InputEvent TertiaryTap = new(Id.Tertiary, Phase.SingleTap);
         public static readonly InputEvent TertiaryDoubleTap = new(Id.Tertiary, Phase.DoubleTap);
-        public static readonly InputEvent TertiaryLongPress = new(Id.Tertiary, Phase.LongPress);
+        public static readonly InputEvent TertiaryTripleTap = new(Id.Tertiary, Phase.TripleTap);
+        public static readonly InputEvent TertiaryLongPress = new(Id.Tertiary, Phase.Hold);
 
         public static readonly InputEvent Up = new(direction:Direction.Up);
         public static readonly InputEvent Right = new(direction:Direction.Right);
@@ -96,18 +102,21 @@ namespace Inventonater
             yield return PrimaryRelease;
             yield return PrimaryTap;
             yield return PrimaryDoubleTap;
+            yield return PrimaryTripleTap;
             yield return PrimaryLongPress;
             
             yield return SecondaryPress;
             yield return SecondaryRelease;
             yield return SecondaryTap;
             yield return SecondaryDoubleTap;
+            yield return SecondaryTripleTap;
             yield return SecondaryLongPress;
             
             yield return TertiaryPress;
             yield return TertiaryRelease;
             yield return TertiaryTap;
             yield return TertiaryDoubleTap;
+            yield return TertiaryTripleTap;
             yield return TertiaryLongPress;
             
             // Direction events
