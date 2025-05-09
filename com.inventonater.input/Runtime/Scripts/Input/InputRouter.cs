@@ -80,10 +80,12 @@ namespace Inventonater
             WhenDeviceChanged(prevSourceDevice, _sourceDevice);
         }
 
-        private void HandleInputEvent(InputEvent buttonEvent)
+        [SerializeField] private bool _verbose = true;
+        private void HandleInputEvent(InputEvent inputEvent)
         {
-            if (buttonEvent == new InputEvent(InputEvent.Id.Primary, InputEvent.Phase.TripleTap)) CycleMapping();
-            pendingButtonEvents.Add(buttonEvent);
+            if(_verbose) Debug.Log(inputEvent);
+            if (inputEvent == new InputEvent(InputEvent.Button.Primary, InputEvent.Phase.TripleTap)) CycleMapping();
+            pendingButtonEvents.Add(inputEvent);
         }
 
         private void HandlePositionDeltaEvent(Vector3 delta)

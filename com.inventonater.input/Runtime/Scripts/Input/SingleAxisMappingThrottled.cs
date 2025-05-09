@@ -15,8 +15,8 @@ namespace Inventonater
         private readonly float _timeInterval;
         private float _lastUpdate;
         private float _scale;
-        private readonly InputEvent _start = new(InputEvent.Id.Primary, InputEvent.Phase.Press);
-        private readonly InputEvent _end = new(InputEvent.Id.Primary, InputEvent.Phase.Release);
+        private readonly InputEvent _start = new(InputEvent.Button.Primary, InputEvent.Phase.Press);
+        private readonly InputEvent _end = new(InputEvent.Button.Primary, InputEvent.Phase.Release);
         private static readonly ProfilerMarker _profileMarker = new("BleHid.ThrottledAxisMapping.Update");
         private int _lastIncrementValue;
         private float _accumulatedDelta;

@@ -42,7 +42,7 @@ namespace Inventonater
             if (pendingButtonEvent == InputEvent.SecondaryDoubleTap) ToggleMouseSleep();
 
             if (!_requirePress) return;
-            if (pendingButtonEvent.id != InputEvent.Id.Primary) return;
+            if (!pendingButtonEvent.IsPrimary) return;
             if(pendingButtonEvent.phase == InputEvent.Phase.Press) IsPressing = true;
             if(pendingButtonEvent.phase == InputEvent.Phase.Release) IsPressing = false;
         }
