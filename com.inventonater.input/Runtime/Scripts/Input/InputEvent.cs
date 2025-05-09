@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using Newtonsoft.Json;
+using UnityEngine;
 
 namespace Inventonater
 {
@@ -27,13 +28,20 @@ namespace Inventonater
         [JsonProperty(DefaultValueHandling = DefaultValueHandling.Ignore)] [DefaultValue(GestureState.None)]
         public readonly GestureState state; // None for non-holding events, Begin/End for hold-type phases
 
-        public InputEvent(Button button = Button.Primary, Phase phase = Phase.None, Direction direction = Direction.None, GestureState state = GestureState.None)
+        public InputEvent(Direction direction) : this(Button.Primary, Phase.None, direction, GestureState.None) { }
+        public InputEvent(Button button, Phase phase) : this(button, phase, Direction.None, GestureState.None) { }
+        public InputEvent(Button button, Phase phase, bool isHolding) : this(button, phase, Direction.None, isHolding ? GestureState.Begin : GestureState.End) { }
+        public InputEvent(Button button, Phase phase, GestureState state) : this(button, phase, Direction.None, state) { }
+        private InputEvent(Button button, Phase phase, Direction direction, GestureState state)
         {
             this.button = button;
             this.phase = phase;
             this.direction = direction;
             this.state = state;
+            if (state == GestureState.None && IsAnyHold(phase)) LoggingManager.Instance.Error($"Malformed InputEvent {ToString()}");
         }
+
+        private static bool IsAnyHold(Phase phase) => phase is Phase.Hold or Phase.DoubleTap or Phase.TripleTap;
 
         public enum Button
         {
