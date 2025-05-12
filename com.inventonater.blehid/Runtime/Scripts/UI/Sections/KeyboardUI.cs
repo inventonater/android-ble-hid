@@ -12,7 +12,7 @@ namespace Inventonater
     {
         public const string Name = "Keyboard";
         public override string TabName => Name;
-        private KeyboardBridge Keyboard => BleHidManager.Instance.BleBridge.Keyboard;
+        private KeyboardBridge Keyboard => BleHidClient.Instance.BleBridge.Keyboard;
 
         // Key mapping for characters to key codes
         private static readonly Dictionary<string, byte> keyMapping = new Dictionary<string, byte>()

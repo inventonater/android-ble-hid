@@ -29,9 +29,11 @@ namespace Inventonater
                 () => _mouse.ClickMouseButton(BleHidConstants.BUTTON_MIDDLE),
                 () => _mouse.ClickMouseButton(BleHidConstants.BUTTON_RIGHT)
             };
-            BleHidManager.Instance.InputRouter.WhenMappingChanged += HandleMappingChanged;
+            _inputRouter = GameObject.FindFirstObjectByType<InputRouter>();
 
-            if (!BleHidManager.Instance.InputRouter.HasDevice) BleHidManager.Instance.InputRouter.SetSourceDevice(this);
+            _inputRouter.WhenMappingChanged += HandleMappingChanged;
+
+            if (!_inputRouter.HasDevice) _inputRouter.SetSourceDevice(this);
         }
 
         private void HandleMappingChanged(InputDeviceMapping mapping)
@@ -55,6 +57,8 @@ namespace Inventonater
         }
 
         private Vector3 _lastPosition;
+        private readonly InputRouter _inputRouter;
+
         public override void Update()
         {
             if (IsEditorMode)
@@ -102,7 +106,7 @@ namespace Inventonater
             UIHelper.BeginSection("Mouse Buttons");
             GUILayout.Label("Click buttons to send mouse button actions to the connected device");
             UIHelper.ActionButtonRow(_buttonLabels, _buttonActions, _buttonMessages, UIHelper.LargeButtonOptions);
-            if (GUILayout.Button("Switch Mapping")) BleHidManager.Instance.InputRouter.RequestCycle();
+            if (GUILayout.Button("Switch Mapping")) _inputRouter.RequestCycle();
             UIHelper.EndSection();
         }
 

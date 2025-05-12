@@ -16,7 +16,7 @@ namespace Inventonater
         private readonly string[] _volumeMessages;
         public const string Name = "Media";
         public override string TabName => Name;
-        private MediaBridge Media => BleHidManager.Instance.BleBridge.Media;
+        private MediaBridge Media => BleHidClient.Instance.BleBridge.Media;
 
         public MediaDeviceUI()
         {

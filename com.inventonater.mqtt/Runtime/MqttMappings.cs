@@ -1,11 +1,36 @@
+using System;
 using System.Collections.Generic;
-using Inventonater;
-using UnityEngine;
 
 namespace Inventonater
 {
-    public class MqttMappingFactory : InputDeviceMappingFactory
+    [Serializable]
+    public class MqttMappings
     {
+        private InputDeviceMapping _mqttSpeaker;
+        private InputDeviceMapping _mqttLights;
+        private InputDeviceMapping _mqttChromecast;
+        private InputDeviceMapping _shell;
+
+        public InputDeviceMapping Speaker => _mqttSpeaker;
+        public InputDeviceMapping Lights => _mqttLights;
+        public InputDeviceMapping Chromecast => _mqttChromecast;
+        public InputDeviceMapping Shell => _shell;
+
+        public MqttMappings(InputRouter inputRouter, MqttBridge bridge)
+        {
+            _mqttSpeaker = CreateSpeakerMapping(bridge.SpotifyBridge);
+            inputRouter.AddMapping(_mqttSpeaker);
+
+            _mqttLights = CreateLightMapping(bridge.LightsBridge);
+            inputRouter.AddMapping(_mqttLights);
+
+            _mqttChromecast = CreateChromecastMapping(bridge.ChromecastBridge);
+            inputRouter.AddMapping(_mqttChromecast);
+
+            _shell = CreateShellMapping(bridge.ShellBridge);
+            inputRouter.AddMapping(_shell);
+        }
+
         public InputDeviceMapping CreateSpeakerMapping(MqttSpotifyBridge bridge)
         {
             ActionRegistry registry = new ActionRegistry(bridge);
@@ -40,7 +65,7 @@ namespace Inventonater
             return new InputDeviceMapping("Lights", registry, buttons, new List<IAxisMapping> { axisMapping });
         }
 
-        public InputDeviceMapping CreateDPadMapping(MqttChromecastBridge bridge)
+        public InputDeviceMapping CreateChromecastMapping(MqttChromecastBridge bridge)
         {
             ActionRegistry registry = new ActionRegistry(bridge);
 

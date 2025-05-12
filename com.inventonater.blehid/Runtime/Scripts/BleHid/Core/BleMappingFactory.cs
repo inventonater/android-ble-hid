@@ -3,8 +3,19 @@ using UnityEngine;
 
 namespace Inventonater
 {
-    public class InputDeviceMappingFactory
+    public class BleMappingFactory
     {
+        public void AddBleHidMappings(InputRouter inputRouter, BleBridge bleBridge, AccessibilityServiceBridge accessibilityServiceBridge)
+        {
+            var accessibilityServiceRegistry = new ActionRegistry(accessibilityServiceBridge);
+            var bleHidRegistry = new ActionRegistry(bleBridge.Mouse, bleBridge.Keyboard, bleBridge.Media);
+            var mappingFactory = new BleMappingFactory();
+            inputRouter.AddMapping(mappingFactory.LocalMedia(accessibilityServiceRegistry));
+            inputRouter.AddMapping(mappingFactory.LocalDPad(accessibilityServiceRegistry));
+            inputRouter.AddMapping(mappingFactory.BleMouse(bleHidRegistry));
+            inputRouter.AddMapping(mappingFactory.BleMedia(bleHidRegistry));
+        }
+
         public InputDeviceMapping BleMouse(ActionRegistry registry)
         {
             var buttons = new List<(InputEvent, EInputAction)>
@@ -37,8 +48,7 @@ namespace Inventonater
                 (InputEvent.Up, EInputAction.MuteToggle),
                 (InputEvent.Down, EInputAction.MuteToggle),
             };
-            var axisMappings = new List<IAxisMapping>
-                { new SingleAxisMappingIncremental(Axis.Z, registry.GetAction(EInputAction.VolumeUp), registry.GetAction(EInputAction.VolumeDown)) };
+            var axisMappings = new List<IAxisMapping> { new SingleAxisMappingIncremental(Axis.Z, registry.GetAction(EInputAction.VolumeUp), registry.GetAction(EInputAction.VolumeDown)) };
 
             return new InputDeviceMapping("BleMedia", registry, buttons, axisMappings);
         }
@@ -53,8 +63,7 @@ namespace Inventonater
                 (InputEvent.Up, EInputAction.MuteToggle),
                 (InputEvent.Down, EInputAction.MuteToggle),
             };
-            var axisMappings = new List<IAxisMapping>
-                { new SingleAxisMappingIncremental(Axis.Z, registry.GetAction(EInputAction.VolumeUp), registry.GetAction(EInputAction.VolumeDown)) };
+            var axisMappings = new List<IAxisMapping> { new SingleAxisMappingIncremental(Axis.Z, registry.GetAction(EInputAction.VolumeUp), registry.GetAction(EInputAction.VolumeDown)) };
 
             return new InputDeviceMapping("LocalMedia", registry, buttons, axisMappings);
         }

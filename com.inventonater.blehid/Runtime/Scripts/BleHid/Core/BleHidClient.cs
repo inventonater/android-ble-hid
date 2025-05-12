@@ -6,7 +6,7 @@ using UnityEngine;
 namespace Inventonater
 {
     [DefaultExecutionOrder(ExecutionOrder.Initialize)]
-    public class BleHidManager : MonoBehaviour
+    public class BleHidClient : MonoBehaviour
     {
         public bool IsInitialized { get; private set; }
         public bool IsInPipMode { get; internal set; }
@@ -14,17 +14,15 @@ namespace Inventonater
         public JavaBridge JavaBridge { get; private set; }
         public JavaBroadcaster JavaBroadcaster { get; private set; }
         public ConnectionBridge ConnectionBridge { get; private set; }
-        public InputRouter InputRouter { get; private set; }
 
         public BleBridge BleBridge { get; private set; }
         public AccessibilityServiceBridge AccessibilityServiceBridge { get; private set; }
 
-        public static BleHidManager Instance => FindFirstObjectByType<BleHidManager>();
+        public static BleHidClient Instance => FindFirstObjectByType<BleHidClient>();
 
         private void Awake()
         {
             Debug.Log("BleHidManager starting");
-            InputRouter = gameObject.AddComponent<InputRouter>();
             Application.runInBackground = true;
 
             JavaBridge = new JavaBridge();

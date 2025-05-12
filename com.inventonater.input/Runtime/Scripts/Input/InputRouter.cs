@@ -16,15 +16,14 @@ namespace Inventonater
         public event Action<InputDeviceMapping> WhenMappingChanged = delegate { };
 
         private IInputSourceDevice _sourceDevice;
-
         private InputDeviceMapping _mapping;
         public List<InputDeviceMapping> Mappings { get; } = new();
 
         public bool HasMapping => _mapping != null;
         public bool HasDevice => _sourceDevice != null;
         [CanBeNull] public InputDeviceMapping Mapping => _mapping;
-
         [SerializeField] private List<InputEvent> pendingButtonEvents = new();
+        [SerializeField] private bool _verbose = true;
 
         public void AddMapping(InputDeviceMapping mapping)
         {
@@ -48,6 +47,9 @@ namespace Inventonater
             Action chirp = _mapping.GetAction(EInputAction.Chirp);
             chirp?.Invoke();
         }
+
+        public InputEvent CycleEvent = InputEvent.PrimaryTripleTap;
+        public InputEvent EscapeEvent = InputEvent.SecondaryDoubleTap;
 
         public void RequestCycle()
         {
@@ -85,11 +87,6 @@ namespace Inventonater
 
             WhenDeviceChanged(prevSourceDevice, _sourceDevice);
         }
-
-        public InputEvent CycleEvent = InputEvent.PrimaryTripleTap;
-        public InputEvent EscapeEvent = InputEvent.SecondaryDoubleTap;
-
-        [SerializeField] private bool _verbose = true;
 
         private void HandleInputEvent(InputEvent inputEvent)
         {

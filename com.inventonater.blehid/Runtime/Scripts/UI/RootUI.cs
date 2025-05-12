@@ -10,16 +10,16 @@ namespace Inventonater
 
         private StatusUI _statusUI;
         private PermissionsUI _permissionsUI;
-        private BleHidManager _bleHidManager;
+        private BleHidClient _bleHidClient;
         private TabGroup _tabGroup;
 
         private void Start()
         {
-            _bleHidManager = BleHidManager.Instance;
-            var connectionBridge = _bleHidManager.ConnectionBridge;
-            var mouseBridge = _bleHidManager.BleBridge.Mouse;
-            var bleHidPermissionHandler = _bleHidManager.BleBridge.Permissions;
-            var accessibilityServiceBridge = _bleHidManager.AccessibilityServiceBridge;
+            _bleHidClient = BleHidClient.Instance;
+            var connectionBridge = _bleHidClient.ConnectionBridge;
+            var mouseBridge = _bleHidClient.BleBridge.Mouse;
+            var bleHidPermissionHandler = _bleHidClient.BleBridge.Permissions;
+            var accessibilityServiceBridge = _bleHidClient.AccessibilityServiceBridge;
 
             var javaBroadcaster = FindFirstObjectByType<JavaBroadcaster>();
             javaBroadcaster.OnInitializeComplete += (success, message) =>
@@ -71,7 +71,7 @@ namespace Inventonater
             _permissionsUI.DrawIssues();
             _statusUI.DrawUI();
 
-            if (!_bleHidManager.IsInitialized)
+            if (!_bleHidClient.IsInitialized)
             {
                 GUILayout.Space(5);
                 GUILayout.Label("BleHidManager Not Initialized");
