@@ -102,7 +102,7 @@ namespace Inventonater
             UIHelper.BeginSection("Mouse Buttons");
             GUILayout.Label("Click buttons to send mouse button actions to the connected device");
             UIHelper.ActionButtonRow(_buttonLabels, _buttonActions, _buttonMessages, UIHelper.LargeButtonOptions);
-            if (GUILayout.Button("Switch Mapping")) BleHidManager.Instance.InputRouter.CycleMapping();
+            if (GUILayout.Button("Switch Mapping")) BleHidManager.Instance.InputRouter.RequestCycle();
             UIHelper.EndSection();
         }
 

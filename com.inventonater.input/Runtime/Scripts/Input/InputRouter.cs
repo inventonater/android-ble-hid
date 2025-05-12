@@ -16,6 +16,7 @@ namespace Inventonater
         public event Action<InputDeviceMapping> WhenMappingChanged = delegate { };
 
         private IInputSourceDevice _sourceDevice;
+
         private InputDeviceMapping _mapping;
         public List<InputDeviceMapping> Mappings { get; } = new();
 
@@ -48,12 +49,18 @@ namespace Inventonater
             chirp?.Invoke();
         }
 
-        public void CycleMapping()
+        public void RequestCycle()
         {
             if (Mappings.Count <= 1) return;
             int currentIndex = Mappings.IndexOf(_mapping);
             int nextIndex = (currentIndex + 1) % Mappings.Count;
             SetMapping(Mappings[nextIndex]);
+        }
+
+        public void RequestShellMapping()
+        {
+            var shellMapping = Mappings.First(m => m.Name.ToLower().Contains("shell"));
+            SetMapping(shellMapping);
         }
 
         public void SetSourceDevice(IInputSourceDevice inputSourceDevice)
@@ -64,7 +71,6 @@ namespace Inventonater
                 LoggingManager.Instance.Log($"unregistered: {prevSourceDevice.Name}");
                 prevSourceDevice.EmitPositionDelta -= HandlePositionDeltaEvent;
                 prevSourceDevice.EmitInputEvent -= HandleInputEvent;
-
                 prevSourceDevice.InputDeviceDisabled();
             }
 
@@ -80,11 +86,14 @@ namespace Inventonater
             WhenDeviceChanged(prevSourceDevice, _sourceDevice);
         }
 
+        public InputEvent CycleEvent = InputEvent.PrimaryTripleTap;
+        public InputEvent EscapeEvent = InputEvent.SecondaryDoubleTap;
+
         [SerializeField] private bool _verbose = true;
+
         private void HandleInputEvent(InputEvent inputEvent)
         {
-            if(_verbose) Debug.Log(inputEvent);
-            if (inputEvent == new InputEvent(InputEvent.Button.Primary, InputEvent.Phase.TripleTap)) CycleMapping();
+            if (_verbose) Debug.Log(inputEvent);
             pendingButtonEvents.Add(inputEvent);
         }
 
@@ -117,12 +126,10 @@ namespace Inventonater
                     catch (Exception e) { LoggingManager.Instance.Exception(e); }
                 }
             }
+
             pendingButtonEvents.Clear();
 
-            foreach (var axisMapping in _mapping.AxisMappings)
-            {
-                axisMapping.Update(Time.time);
-            }
+            foreach (var axisMapping in _mapping.AxisMappings) { axisMapping.Update(Time.time); }
         }
     }
 }

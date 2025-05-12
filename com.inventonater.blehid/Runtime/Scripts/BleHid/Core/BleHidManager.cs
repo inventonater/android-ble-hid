@@ -24,6 +24,7 @@ namespace Inventonater
         private void Awake()
         {
             Debug.Log("BleHidManager starting");
+            InputRouter = gameObject.AddComponent<InputRouter>();
             Application.runInBackground = true;
 
             JavaBridge = new JavaBridge();
@@ -39,11 +40,8 @@ namespace Inventonater
             JavaBroadcaster.OnConnectionParametersChanged += (interval, latency, timeout, mtu) => ConnectionBridge.SetConnectionParameters(interval, latency, timeout, mtu);
             JavaBroadcaster.OnRssiRead += rssi => ConnectionBridge.Rssi = rssi;
 
-            InputRouter = gameObject.AddComponent<InputRouter>();
             Debug.Log("BleHidManager initialized");
         }
-
-        public void AddMapping(InputDeviceMapping inputDeviceMapping) => InputRouter.AddMapping(inputDeviceMapping);
 
         private async void Start()
         {
