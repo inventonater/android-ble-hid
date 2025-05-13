@@ -5,17 +5,17 @@ namespace Inventonater
 {
     public static class UserMappingManager
     {
-        private static readonly Dictionary<InputEvent, EInputAction> _buttonToActionMap = new();
+        private static readonly Dictionary<ButtonEvent, MappableActionId> _buttonToActionMap = new();
         
-        public static void SetMapping(InputEvent buttonId, EInputAction actionId)
+        public static void SetMapping(ButtonEvent buttonId, MappableActionId actionId)
         {
             _buttonToActionMap[buttonId] = actionId;
             LoggingManager.Instance.Log($"UserMappingManager: Mapped button {buttonId} to action {actionId}");
         }
 
-        public static bool TryGetActionForButton(InputEvent buttonId, out EInputAction actionId) => _buttonToActionMap.TryGetValue(buttonId, out actionId);
+        public static bool TryGetActionForButton(ButtonEvent buttonId, out MappableActionId actionId) => _buttonToActionMap.TryGetValue(buttonId, out actionId);
 
-        public static bool RemoveMapping(InputEvent buttonId)
+        public static bool RemoveMapping(ButtonEvent buttonId)
         {
             if (!_buttonToActionMap.Remove(buttonId)) return false;
             LoggingManager.Instance.Log($"UserMappingManager: Removed mapping for button {buttonId}");
@@ -63,7 +63,7 @@ namespace Inventonater
             
             public SerializableMappings() { }
             
-            public SerializableMappings(Dictionary<InputEvent, EInputAction> mappings)
+            public SerializableMappings(Dictionary<ButtonEvent, MappableActionId> mappings)
             {
                 foreach (var kvp in mappings)
                 {
@@ -75,8 +75,8 @@ namespace Inventonater
         [System.Serializable]
         private class SerializableMapping
         {
-            public InputEvent ButtonId;
-            public EInputAction ActionId;
+            public ButtonEvent ButtonId;
+            public MappableActionId ActionId;
         }
     }
 }

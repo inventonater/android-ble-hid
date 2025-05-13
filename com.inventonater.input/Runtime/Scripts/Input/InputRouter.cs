@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using JetBrains.Annotations;
 using UnityEngine;
 
@@ -10,62 +9,33 @@ namespace Inventonater
     public class InputRouter : MonoBehaviour
     {
         public delegate void InputDeviceChangedEvent(IInputSourceDevice prev, IInputSourceDevice next);
-
-        public event InputDeviceChangedEvent WhenDeviceChanged = delegate { };
-        public event Action<InputDeviceMapping> WhenMappingAdded = delegate { };
-        public event Action<InputDeviceMapping> WhenMappingChanged = delegate { };
+        public event InputDeviceChangedEvent WhenInputDeviceChanged = delegate { };
+        public event Action<InputBinding> WhenBindingChanged = delegate { };
 
         private IInputSourceDevice _sourceDevice;
-        private InputDeviceMapping _mapping;
-        public List<InputDeviceMapping> Mappings { get; } = new();
+        private InputBinding _binding;
+        private InputBinding _shell;
 
-        public bool HasMapping => _mapping != null;
+        public bool HasMapping => _binding != null;
         public bool HasDevice => _sourceDevice != null;
-        [CanBeNull] public InputDeviceMapping Mapping => _mapping;
-        [SerializeField] private List<InputEvent> pendingButtonEvents = new();
+        [CanBeNull] public InputBinding Binding => _binding;
+        [SerializeField] private List<ButtonEvent> pendingButtonEvents = new();
         [SerializeField] private bool _verbose = true;
 
-        public void AddMapping(InputDeviceMapping mapping)
+        public void SetBinding(InputBinding binding)
         {
-            if (Mappings.Any(m => m.Name == mapping.Name)) return;
-            Mappings.Add(mapping);
-            WhenMappingAdded(mapping);
-            if (_mapping == null) SetMapping(mapping);
+            if (binding == null) return;
+            if (_binding != null && _binding.Name == binding.Name) return;
+
+            _binding = binding;
+            WhenBindingChanged(_binding);
+            LoggingManager.Instance.Log($"SetMapping: {binding.Name}");
+            _binding.Chirp();
         }
 
-        public void SetMapping(string mappingName) => SetMapping(Mappings.FirstOrDefault(m => m.Name == mappingName));
+        public void SetShellBinding(InputBinding shell) => _shell = shell;
 
-        public void SetMapping(InputDeviceMapping mapping)
-        {
-            if (mapping == null) return;
-            if (Mappings.All(m => m.Name != mapping.Name)) AddMapping(mapping);
-            if (_mapping != null && _mapping.Name == mapping.Name) return;
-
-            _mapping = mapping;
-            WhenMappingChanged(_mapping);
-            LoggingManager.Instance.Log($"SetMapping: {mapping.Name}");
-            Action chirp = _mapping.GetAction(EInputAction.Chirp);
-            chirp?.Invoke();
-        }
-
-        public InputEvent CycleEvent = InputEvent.PrimaryTripleTap;
-        public InputEvent EscapeEvent = InputEvent.SecondaryDoubleTap;
-
-        public void RequestCycle()
-        {
-            if (Mappings.Count <= 1) return;
-            int currentIndex = Mappings.IndexOf(_mapping);
-            int nextIndex = (currentIndex + 1) % Mappings.Count;
-            SetMapping(Mappings[nextIndex]);
-        }
-
-        public void RequestShellMapping()
-        {
-            var shellMapping = Mappings.First(m => m.Name.ToLower().Contains("shell"));
-            SetMapping(shellMapping);
-        }
-
-        public void SetSourceDevice(IInputSourceDevice inputSourceDevice)
+        public void SetSource(IInputSourceDevice inputSourceDevice)
         {
             IInputSourceDevice prevSourceDevice = _sourceDevice;
             if (prevSourceDevice != null)
@@ -85,48 +55,20 @@ namespace Inventonater
                 _sourceDevice.InputDeviceEnabled();
             }
 
-            WhenDeviceChanged(prevSourceDevice, _sourceDevice);
+            WhenInputDeviceChanged(prevSourceDevice, _sourceDevice);
         }
 
-        private void HandleInputEvent(InputEvent inputEvent)
-        {
-            if (_verbose) Debug.Log(inputEvent);
-            pendingButtonEvents.Add(inputEvent);
-        }
+        public void HandleInputEvent(ButtonEvent buttonEvent) => pendingButtonEvents.Add(buttonEvent);
 
-        private void HandlePositionDeltaEvent(Vector3 delta)
-        {
-            foreach (var mapping in _mapping.AxisMappings) mapping.AddDelta(delta);
-        }
+        public void HandlePositionDeltaEvent(Vector3 delta) => _binding?.AddPositionDelta(delta);
 
         // ExecutionOrder Process
-        private void Update()
+        public void Update()
         {
-            foreach (var pendingButtonEvent in pendingButtonEvents)
-            {
-                if (_mapping.ButtonMapping.TryGetValue(pendingButtonEvent, out var buttonActions))
-                {
-                    foreach (var inputAction in buttonActions)
-                    {
-                        try
-                        {
-                            var action = _mapping.GetAction(inputAction);
-                            action();
-                        }
-                        catch (Exception e) { LoggingManager.Instance.Exception(e); }
-                    }
-                }
-
-                foreach (var axisMapping in _mapping.AxisMappings)
-                {
-                    try { axisMapping.Handle(pendingButtonEvent); }
-                    catch (Exception e) { LoggingManager.Instance.Exception(e); }
-                }
-            }
-
+            foreach (var pendingButtonEvent in pendingButtonEvents) _binding?.Invoke(pendingButtonEvent);
             pendingButtonEvents.Clear();
 
-            foreach (var axisMapping in _mapping.AxisMappings) { axisMapping.Update(Time.time); }
+            _binding?.Update(Time.time);
         }
     }
 }

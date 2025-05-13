@@ -7,7 +7,7 @@ namespace Inventonater
     public class MappableActionInfo
     {
         public MappableActionAttribute Attribute { get; }
-        public EInputAction Id => Attribute.Id;
+        public MappableActionId Id => Attribute.Id;
         public string DisplayName => Attribute.DisplayName;
         public string Description => Attribute.Description;
         public Action Action { get; }

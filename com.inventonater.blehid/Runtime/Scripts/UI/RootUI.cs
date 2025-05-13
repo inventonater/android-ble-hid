@@ -16,6 +16,7 @@ namespace Inventonater
         private void Start()
         {
             _bleHidClient = BleHidClient.Instance;
+            var bindingSet = FindFirstObjectByType<BindingSet>();
             var connectionBridge = _bleHidClient.ConnectionBridge;
             var mouseBridge = _bleHidClient.BleBridge.Mouse;
             var bleHidPermissionHandler = _bleHidClient.BleBridge.Permissions;
@@ -38,7 +39,7 @@ namespace Inventonater
 
             _tabGroup = new TabGroup("Main", new List<SectionUI>
             {
-                new MappingSection(),
+                new MappingSection(bindingSet),
                 new TabGroup("Debug", new List<SectionUI>()
                 {
                     new MediaDeviceUI(),

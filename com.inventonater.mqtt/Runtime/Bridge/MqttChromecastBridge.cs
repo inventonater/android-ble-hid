@@ -8,14 +8,14 @@ namespace Inventonater
     {
         private const string DefaultCommandTopic = "chromecast/dpad";
 
-        [MappableAction(id: EInputAction.Select)] public void Select() => Publish("DPAD_CENTER");
-        [MappableAction(id: EInputAction.Back)] public void Back() => Publish("BACK");
-        [MappableAction(id: EInputAction.Up)] public void Up() => Publish("DPAD_UP");
-        [MappableAction(id: EInputAction.Down)] public void Down() => Publish("DPAD_DOWN");
-        [MappableAction(id: EInputAction.Left)] public void Left() => Publish("DPAD_LEFT");
-        [MappableAction(id: EInputAction.Right)] public void Right() => Publish("DPAD_RIGHT");
+        [MappableAction(id: MappableActionId.Select)] public void Select() => Publish("DPAD_CENTER");
+        [MappableAction(id: MappableActionId.Back)] public void Back() => Publish("BACK");
+        [MappableAction(id: MappableActionId.Up)] public void Up() => Publish("DPAD_UP");
+        [MappableAction(id: MappableActionId.Down)] public void Down() => Publish("DPAD_DOWN");
+        [MappableAction(id: MappableActionId.Left)] public void Left() => Publish("DPAD_LEFT");
+        [MappableAction(id: MappableActionId.Right)] public void Right() => Publish("DPAD_RIGHT");
 
-        [MappableAction(id: EInputAction.Chirp)]
+        [MappableAction(id: MappableActionId.Chirp)]
         public async UniTask Chirp()
         {
             const int blinkOffMs = 400;

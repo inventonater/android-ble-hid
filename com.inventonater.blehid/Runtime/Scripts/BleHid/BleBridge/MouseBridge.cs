@@ -25,27 +25,27 @@ namespace Inventonater
         public void ReleaseMouseButton(int button) => _java.Call("releaseMouseButton", button);
         public void ClickMouseButton(int button) => _java.Call("clickMouseButton", button);
         
-        [MappableAction(id: EInputAction.Select, displayName: "Left Click", description: "Perform a left mouse button click")]
+        [MappableAction(id: MappableActionId.Select, displayName: "Left Click", description: "Perform a left mouse button click")]
         public void LeftClick() => ClickMouseButton(0);
         public void RightClick() => ClickMouseButton(1);
         public void MiddleClick() => ClickMouseButton(2);
 
-        [MappableAction(id: EInputAction.PrimaryPress, displayName: "Left Press", description: "Press the left mouse button")]
+        [MappableAction(id: MappableActionId.PrimaryPress, displayName: "Left Press", description: "Press the left mouse button")]
         public void LeftPress() => PressMouseButton(0);
 
-        [MappableAction(id: EInputAction.PrimaryRelease, displayName: "Left Release", description: "Release the left mouse button")]
+        [MappableAction(id: MappableActionId.PrimaryRelease, displayName: "Left Release", description: "Release the left mouse button")]
         public void LeftRelease() => ReleaseMouseButton(0);
 
-        [MappableAction(id: EInputAction.SecondaryPress, displayName: "Right Press", description: "Press the right mouse button")]
+        [MappableAction(id: MappableActionId.SecondaryPress, displayName: "Right Press", description: "Press the right mouse button")]
         public void RightPress() => PressMouseButton(1);
 
-        [MappableAction(id: EInputAction.SecondaryRelease, displayName: "Right Release", description: "Release the right mouse button")]
+        [MappableAction(id: MappableActionId.SecondaryRelease, displayName: "Right Release", description: "Release the right mouse button")]
         public void RightRelease() => ReleaseMouseButton(1);
 
-        [MappableAction(id: EInputAction.SecondaryPress, displayName: "Middle Press", description: "Press the middle mouse button")]
+        [MappableAction(id: MappableActionId.SecondaryPress, displayName: "Middle Press", description: "Press the middle mouse button")]
         public void MiddlePress() => PressMouseButton(2);
 
-        [MappableAction(id: EInputAction.SecondaryRelease, displayName: "Middle Release", description: "Release the middle mouse button")]
+        [MappableAction(id: MappableActionId.SecondaryRelease, displayName: "Middle Release", description: "Release the middle mouse button")]
         public void MiddleRelease() => ReleaseMouseButton(2);
     }
 }

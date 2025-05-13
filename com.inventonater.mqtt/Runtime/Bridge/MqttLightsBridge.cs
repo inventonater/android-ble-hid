@@ -10,22 +10,22 @@ namespace Inventonater
     [Serializable]
     public class MqttLightsBridge
     {
-        [MappableAction(id: EInputAction.Back, displayName: "Play/Pause", description: "Toggle media playback between play and pause states")]
+        [MappableAction(id: MappableActionId.Back, displayName: "Play/Pause", description: "Toggle media playback between play and pause states")]
         public void Back() => RandomizeAndPublish();
 
-        [MappableAction(id: EInputAction.Right, displayName: "Next Light", description: "Switch to the next light in the sequence")]
+        [MappableAction(id: MappableActionId.Right, displayName: "Next Light", description: "Switch to the next light in the sequence")]
         public void Right() => CycleLight();
 
-        [MappableAction(id: EInputAction.Left, displayName: "Previous Light", description: "Switch to the previous light in the sequence")]
+        [MappableAction(id: MappableActionId.Left, displayName: "Previous Light", description: "Switch to the previous light in the sequence")]
         public void Left() => CycleLight(-1);
 
-        [MappableAction(id: EInputAction.Up, displayName: "Brightness Up", description: "Increase brightness")]
+        [MappableAction(id: MappableActionId.Up, displayName: "Brightness Up", description: "Increase brightness")]
         public void Up() => SetBrightness(255);
 
-        [MappableAction(id: EInputAction.Down, displayName: "Brightness Down", description: "Decrease brightness")]
+        [MappableAction(id: MappableActionId.Down, displayName: "Brightness Down", description: "Decrease brightness")]
         public void Down() => SetBrightness(0);
         
-        [MappableAction(id: EInputAction.Chirp)]
+        [MappableAction(id: MappableActionId.Chirp)]
         public async UniTask Chirp()
         {
             const int blinkOffMs = 110;

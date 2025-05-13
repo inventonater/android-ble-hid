@@ -29,11 +29,11 @@ namespace Inventonater
         }
 
         // Constructor for creating from InputDeviceMapping
-        public RemoteMapping(InputDeviceMapping inputDeviceMapping)
+        public RemoteMapping(InputBinding inputBinding)
         {
-            Id = GetDeviceIdFromMapping(inputDeviceMapping);
-            Name = inputDeviceMapping.Name;
-            Category = DetermineCategory(inputDeviceMapping).ToString();
+            Id = GetDeviceIdFromMapping(inputBinding);
+            Name = inputBinding.Name;
+            Category = DetermineCategory(inputBinding).ToString();
             IsConnected = false;
             Image = null;
         }
@@ -86,9 +86,9 @@ namespace Inventonater
 
         public override string ToString() => $"{Name} ({Category})";
 
-        public static string GetDeviceIdFromMapping(InputDeviceMapping mapping) => $"device-{mapping.Name.ToLower().Replace(" ", "-")}";
+        public static string GetDeviceIdFromMapping(InputBinding mapping) => $"device-{mapping.Name.ToLower().Replace(" ", "-")}";
 
-        private DeviceCategory DetermineCategory(InputDeviceMapping mapping)
+        private DeviceCategory DetermineCategory(InputBinding mapping)
         {
             string name = mapping.Name.ToLower();
             if (name.Contains("light")) return DeviceCategory.Lights;

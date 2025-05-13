@@ -7,17 +7,18 @@ namespace Inventonater
     public class MappingSection : SectionUI
     {
         public override string TabName => "Mapping";
+        private float lastUpdate;
+        private readonly BindingSet _bindingSet;
 
-        private List<SectionUI> Tabs => _inputRouter.Mappings.Select(mapping => new InputDeviceMappingUI(mapping)).ToList<SectionUI>();
+        private List<SectionUI> Tabs => _bindingSet.Bindings.Select(mapping => new InputDeviceMappingUI(mapping)).ToList<SectionUI>();
 
         private readonly InputRouter _inputRouter;
         private readonly TabGroup _tabGroup;
-        public MappingSection()
+        public MappingSection(BindingSet bindingSet)
         {
-            _inputRouter = GameObject.FindFirstObjectByType<InputRouter>();
+            _bindingSet = bindingSet;
             _tabGroup = new("Mappings", Tabs);
         }
-        private float lastUpdate;
 
         public override void Update()
         {

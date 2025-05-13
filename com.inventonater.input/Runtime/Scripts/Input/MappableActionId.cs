@@ -1,6 +1,6 @@
 namespace Inventonater
 {
-    public enum EInputAction
+    public enum MappableActionId
     {
         PlayToggle,
         NextTrack,

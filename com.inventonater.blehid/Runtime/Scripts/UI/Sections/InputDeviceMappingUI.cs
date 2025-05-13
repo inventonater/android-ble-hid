@@ -7,7 +7,7 @@ namespace Inventonater
 {
     public class InputDeviceMappingUI : SectionUI
     {
-        private readonly InputDeviceMapping _mapping;
+        private readonly InputBinding _binding;
         public override string TabName { get; }
 
         // For adding new mappings
@@ -15,17 +15,17 @@ namespace Inventonater
         private int _selectedActionIndex = 0;
         private string[] _eventOptions;
         private string[] _actionOptions;
-        private InputEvent[] _eventValues;
-        private EInputAction[] _actionValues;
+        private ButtonEvent[] _eventValues;
+        private MappableActionId[] _actionValues;
         
         // For dropdown UI
         private bool _showDropdown = false;
         private int _activeDropdownId = 0;
         
-        public InputDeviceMappingUI(InputDeviceMapping mapping)
+        public InputDeviceMappingUI(InputBinding binding)
         {
-            TabName = mapping.Name;
-            _mapping = mapping;
+            TabName = binding.Name;
+            _binding = binding;
 
             // Initialize dropdown options
             InitializeDropdownOptions();
@@ -34,11 +34,11 @@ namespace Inventonater
         private void InitializeDropdownOptions()
         {
             // Get all input events
-            _eventValues = InputEvent.GetAll().ToArray();
+            _eventValues = ButtonEvent.GetAll().ToArray();
             _eventOptions = _eventValues.Select(e => e.ToString()).ToArray();
             
             // Get all input actions
-            _actionValues = Enum.GetValues(typeof(EInputAction)).Cast<EInputAction>().ToArray();
+            _actionValues = Enum.GetValues(typeof(MappableActionId)).Cast<MappableActionId>().ToArray();
             _actionOptions = _actionValues.Select(a => a.ToString()).ToArray();
         }
 
@@ -79,30 +79,31 @@ namespace Inventonater
             GUILayout.Label("Current Mappings", GUI.skin.label);
             
             // Display existing mappings with remove buttons
-            foreach (var (inputEvent, actions) in _mapping.ButtonMapping)
+            var buttonMapEntries = _binding.Map.Buttons;
+            foreach (var entry in buttonMapEntries)
             {
+                var inputEvent = entry.ButtonEvent;
+                var actionId = entry.ActionId;
+
                 GUILayout.BeginVertical("box");
                 GUILayout.Label(inputEvent.ToString(), GUI.skin.label);
                 
-                foreach (var action in actions)
+                GUILayout.BeginHorizontal();
+                if (_binding.Registry.TryGetMappedAction(actionId, out MappedActions mappedActions))
                 {
-                    GUILayout.BeginHorizontal();
-                    if (_mapping.Registry.TryGetInfo(action, out var info))
-                    {
-                        GUILayout.Label($"{info.DisplayName} - {info.Description}");
-                    }
-                    else
-                    {
-                        GUILayout.Label(action.ToString());
-                    }
-                    
-                    if (GUILayout.Button("Remove", GUILayout.Width(80)))
-                    {
-                        _mapping.RemoveAction(inputEvent, action);
-                    }
-                    GUILayout.EndHorizontal();
+                    foreach (var mappedAction in mappedActions.ActionInfos) GUILayout.Label($"{mappedAction.DisplayName} - {mappedAction.Description}");
                 }
-                
+                else
+                {
+                    GUILayout.Label(actionId.ToString());
+                }
+
+                if (GUILayout.Button("Remove", GUILayout.Width(80)))
+                {
+                    _binding.Map.Remove(entry);
+                }
+                GUILayout.EndHorizontal();
+
                 GUILayout.EndVertical();
             }
             
@@ -122,11 +123,11 @@ namespace Inventonater
             
             if (GUILayout.Button("Add Mapping"))
             {
-                InputEvent selectedEvent = _eventValues[_selectedEventIndex];
-                EInputAction selectedAction = _actionValues[_selectedActionIndex];
+                ButtonEvent selectedEvent = _eventValues[_selectedEventIndex];
+                MappableActionId selectedAction = _actionValues[_selectedActionIndex];
                 
                 // Add the new mapping
-                _mapping.AddAction(selectedEvent, selectedAction);
+                _binding.Add(selectedEvent, selectedAction);
             }
         }
     }

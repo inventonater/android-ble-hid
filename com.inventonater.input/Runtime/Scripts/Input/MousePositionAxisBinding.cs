@@ -35,16 +35,16 @@ namespace Inventonater
             IsPressing = !_requirePress;
         }
 
-        public void Handle(InputEvent pendingButtonEvent)
+        public void Handle(ButtonEvent pendingButtonEvent)
         {
             ResetPosition();
 
-            if (pendingButtonEvent == InputEvent.SecondaryDoubleTap) ToggleMouseSleep();
+            if (pendingButtonEvent == ButtonEvent.SecondaryDoubleTap) ToggleMouseSleep();
 
             if (!_requirePress) return;
             if (!pendingButtonEvent.IsPrimary) return;
-            if(pendingButtonEvent.phase == InputEvent.Phase.Press) IsPressing = true;
-            if(pendingButtonEvent.phase == InputEvent.Phase.Release) IsPressing = false;
+            if(pendingButtonEvent.phase == ButtonEvent.Phase.Press) IsPressing = true;
+            if(pendingButtonEvent.phase == ButtonEvent.Phase.Release) IsPressing = false;
         }
 
         private void ToggleMouseSleep()

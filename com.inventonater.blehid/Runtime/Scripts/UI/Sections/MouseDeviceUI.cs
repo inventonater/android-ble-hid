@@ -8,7 +8,7 @@ namespace Inventonater
     public class MouseDeviceUI : SectionUI, IInputSourceDevice
     {
         public string Name { get; } = "Mouse";
-        public event Action<InputEvent> EmitInputEvent = delegate { };
+        public event Action<ButtonEvent> EmitInputEvent = delegate { };
         public event Action<Vector3> EmitPositionDelta = delegate { };
         public override string TabName => Name;
 
@@ -30,16 +30,17 @@ namespace Inventonater
                 () => _mouse.ClickMouseButton(BleHidConstants.BUTTON_RIGHT)
             };
             _inputRouter = GameObject.FindFirstObjectByType<InputRouter>();
+            _bindingSet = GameObject.FindObjectOfType<BindingSet>();
 
-            _inputRouter.WhenMappingChanged += HandleMappingChanged;
+            _inputRouter.WhenBindingChanged += HandleBindingChanged;
 
-            if (!_inputRouter.HasDevice) _inputRouter.SetSourceDevice(this);
+            if (!_inputRouter.HasDevice) _inputRouter.SetSource(this);
         }
 
-        private void HandleMappingChanged(InputDeviceMapping mapping)
+        private void HandleBindingChanged(InputBinding binding)
         {
             Debug.Log("TODO improve MouseDeviceUI HandleMappingChanged");
-            _mousePositionAxisMapping = mapping.AxisMappings.FirstOrDefault(m => m is MousePositionAxisMapping) as MousePositionAxisMapping;
+            _mousePositionAxisMapping = binding.Map.Axis.FirstOrDefault(m => m is MousePositionAxisMapping) as MousePositionAxisMapping;
         }
 
         public void InputDeviceEnabled()
@@ -58,6 +59,7 @@ namespace Inventonater
 
         private Vector3 _lastPosition;
         private readonly InputRouter _inputRouter;
+        private readonly BindingSet _bindingSet;
 
         public override void Update()
         {
@@ -106,7 +108,7 @@ namespace Inventonater
             UIHelper.BeginSection("Mouse Buttons");
             GUILayout.Label("Click buttons to send mouse button actions to the connected device");
             UIHelper.ActionButtonRow(_buttonLabels, _buttonActions, _buttonMessages, UIHelper.LargeButtonOptions);
-            if (GUILayout.Button("Switch Mapping")) _inputRouter.RequestCycle();
+            if (GUILayout.Button("Switch Mapping")) _bindingSet.CycleNextBinding(_inputRouter.Binding);
             UIHelper.EndSection();
         }
 

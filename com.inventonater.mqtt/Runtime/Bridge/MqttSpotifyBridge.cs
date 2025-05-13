@@ -6,19 +6,19 @@ namespace Inventonater
     [Serializable]
     public class MqttSpotifyBridge
     {
-        [MappableAction(id: EInputAction.PlayToggle, displayName: "Play/Pause", description: "Toggle media playback between play and pause states")]
+        [MappableAction(id: MappableActionId.PlayToggle, displayName: "Play/Pause", description: "Toggle media playback between play and pause states")]
         public void PlayPause() => _spotify.Call(MediaPayload.PlayToggle);
 
-        [MappableAction(id: EInputAction.NextTrack, displayName: "Next Track", description: "Skip to the next track")]
+        [MappableAction(id: MappableActionId.NextTrack, displayName: "Next Track", description: "Skip to the next track")]
         public void NextTrack() => _spotify.Call(MediaPayload.Next);
 
-        [MappableAction(id: EInputAction.PreviousTrack, displayName: "Previous Track", description: "Go back to the previous track")]
+        [MappableAction(id: MappableActionId.PreviousTrack, displayName: "Previous Track", description: "Go back to the previous track")]
         public void PreviousTrack() => _spotify.Call(MediaPayload.Previous);
 
-        [MappableAction(id: EInputAction.VolumeUp, displayName: "Volume Up", description: "Increase the volume")]
+        [MappableAction(id: MappableActionId.VolumeUp, displayName: "Volume Up", description: "Increase the volume")]
         public void VolumeUp() => _spotify.Call(MediaPayload.VolumeUp);
 
-        [MappableAction(id: EInputAction.VolumeDown, displayName: "Volume Down", description: "Decrease the volume")]
+        [MappableAction(id: MappableActionId.VolumeDown, displayName: "Volume Down", description: "Decrease the volume")]
         public void VolumeDown() => _spotify.Call(MediaPayload.VolumeDown);
 
         // private bool _previousMute;
@@ -29,7 +29,7 @@ namespace Inventonater
         //     _spotify.Call(_previousMute ? "MUTE_ON" : "MUTE_OFF");
         // }
 
-        [MappableAction(id: EInputAction.Chirp)]
+        [MappableAction(id: MappableActionId.Chirp)]
         public async UniTask Chirp()
         {
             const int blinkOffMs = 110;

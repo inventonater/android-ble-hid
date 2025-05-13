@@ -13,16 +13,16 @@ namespace Inventonater
         public void SendKeyWithModifiers(HidKeyCode keyCode, HidKeyModifier modifiers) => _java.Call("sendKeyWithModifiers", (int)keyCode, (int)modifiers);
         public void TypeText(string text) => _java.Call("typeText", text);
 
-        [MappableAction(id: EInputAction.Up, displayName: "Send Arrow Up", description: "Send Arrow Up key")]
+        [MappableAction(id: MappableActionId.Up, displayName: "Send Arrow Up", description: "Send Arrow Up key")]
         public void ArrowUpKey() => SendKey(HidKeyCode.UpArrow);
 
-        [MappableAction(id: EInputAction.Down, displayName: "Send Arrow Down", description: "Send Arrow Down key")]
+        [MappableAction(id: MappableActionId.Down, displayName: "Send Arrow Down", description: "Send Arrow Down key")]
         public void ArrowDownKey() => SendKey(HidKeyCode.DownArrow);
 
-        [MappableAction(id: EInputAction.Left, displayName: "Send Arrow Left", description: "Send Arrow Left key")]
+        [MappableAction(id: MappableActionId.Left, displayName: "Send Arrow Left", description: "Send Arrow Left key")]
         public void ArrowLeftKey() => SendKey(HidKeyCode.LeftArrow);
 
-        [MappableAction(id: EInputAction.Right, displayName: "Send Arrow Right", description: "Send Arrow Right key")]
+        [MappableAction(id: MappableActionId.Right, displayName: "Send Arrow Right", description: "Send Arrow Right key")]
         public void ArrowRightKey() => SendKey(HidKeyCode.RightArrow);
 
         public void EnterKey() => SendKey(HidKeyCode.Enter);

@@ -14,7 +14,7 @@ namespace Inventonater
     }
 
     [Serializable]
-    public readonly struct InputEvent : IEquatable<InputEvent>
+    public readonly struct ButtonEvent : IEquatable<ButtonEvent>
     {
         [JsonProperty(DefaultValueHandling = DefaultValueHandling.Ignore)] [DefaultValue(Button.Primary)]
         public readonly Button button;
@@ -28,11 +28,11 @@ namespace Inventonater
         [JsonProperty(DefaultValueHandling = DefaultValueHandling.Ignore)] [DefaultValue(GestureState.None)]
         public readonly GestureState state; // None for non-holding events, Begin/End for hold-type phases
 
-        public InputEvent(Direction direction) : this(Button.Primary, Phase.None, direction, GestureState.None) { }
-        public InputEvent(Button button, Phase phase) : this(button, phase, Direction.None, GestureState.None) { }
-        public InputEvent(Button button, Phase phase, bool isHolding) : this(button, phase, Direction.None, isHolding ? GestureState.Begin : GestureState.End) { }
-        public InputEvent(Button button, Phase phase, GestureState state) : this(button, phase, Direction.None, state) { }
-        private InputEvent(Button button, Phase phase, Direction direction, GestureState state)
+        public ButtonEvent(Direction direction) : this(Button.Primary, Phase.None, direction, GestureState.None) { }
+        public ButtonEvent(Button button, Phase phase) : this(button, phase, Direction.None, GestureState.None) { }
+        public ButtonEvent(Button button, Phase phase, bool isHolding) : this(button, phase, Direction.None, isHolding ? GestureState.Begin : GestureState.End) { }
+        public ButtonEvent(Button button, Phase phase, GestureState state) : this(button, phase, Direction.None, state) { }
+        private ButtonEvent(Button button, Phase phase, Direction direction, GestureState state)
         {
             this.button = button;
             this.phase = phase;
@@ -106,78 +106,78 @@ namespace Inventonater
         [JsonIgnore] public bool IsDown => direction == Direction.Down;
 
         // Primary button events
-        public static readonly InputEvent PrimaryPress = new(Button.Primary, Phase.Press);
-        public static readonly InputEvent PrimaryRelease = new(Button.Primary, Phase.Release);
-        public static readonly InputEvent PrimarySingleTap = new(Button.Primary, Phase.SingleTap);
-        public static readonly InputEvent PrimaryDoubleTap = new(Button.Primary, Phase.DoubleTap);
-        public static readonly InputEvent PrimaryTripleTap = new(Button.Primary, Phase.TripleTap);
+        public static readonly ButtonEvent PrimaryPress = new(Button.Primary, Phase.Press);
+        public static readonly ButtonEvent PrimaryRelease = new(Button.Primary, Phase.Release);
+        public static readonly ButtonEvent PrimarySingleTap = new(Button.Primary, Phase.SingleTap);
+        public static readonly ButtonEvent PrimaryDoubleTap = new(Button.Primary, Phase.DoubleTap);
+        public static readonly ButtonEvent PrimaryTripleTap = new(Button.Primary, Phase.TripleTap);
 
         // Primary hold events with begin/end variants
-        public static readonly InputEvent PrimaryHoldBegin = new(Button.Primary, Phase.Hold, state: GestureState.Begin);
-        public static readonly InputEvent PrimaryHoldEnd = new(Button.Primary, Phase.Hold, state: GestureState.End);
+        public static readonly ButtonEvent PrimaryHoldBegin = new(Button.Primary, Phase.Hold, state: GestureState.Begin);
+        public static readonly ButtonEvent PrimaryHoldEnd = new(Button.Primary, Phase.Hold, state: GestureState.End);
 
         // Primary complex sequence events
-        public static readonly InputEvent PrimaryTapHoldBegin = new(Button.Primary, Phase.TapHold, state: GestureState.Begin);
-        public static readonly InputEvent PrimaryTapHoldEnd = new(Button.Primary, Phase.TapHold, state: GestureState.End);
-        public static readonly InputEvent PrimaryDoubleTapHoldBegin = new(Button.Primary, Phase.DoubleTapHold, state: GestureState.Begin);
-        public static readonly InputEvent PrimaryDoubleTapHoldEnd = new(Button.Primary, Phase.DoubleTapHold, state: GestureState.End);
+        public static readonly ButtonEvent PrimaryTapHoldBegin = new(Button.Primary, Phase.TapHold, state: GestureState.Begin);
+        public static readonly ButtonEvent PrimaryTapHoldEnd = new(Button.Primary, Phase.TapHold, state: GestureState.End);
+        public static readonly ButtonEvent PrimaryDoubleTapHoldBegin = new(Button.Primary, Phase.DoubleTapHold, state: GestureState.Begin);
+        public static readonly ButtonEvent PrimaryDoubleTapHoldEnd = new(Button.Primary, Phase.DoubleTapHold, state: GestureState.End);
 
         // Backward compatibility
-        public static readonly InputEvent PrimaryTap = PrimarySingleTap;
-        public static readonly InputEvent PrimaryLongPress = PrimaryHoldBegin;
+        public static readonly ButtonEvent PrimaryTap = PrimarySingleTap;
+        public static readonly ButtonEvent PrimaryLongPress = PrimaryHoldBegin;
 
         // Secondary button events
-        public static readonly InputEvent SecondaryPress = new(Button.Secondary, Phase.Press);
-        public static readonly InputEvent SecondaryRelease = new(Button.Secondary, Phase.Release);
-        public static readonly InputEvent SecondarySingleTap = new(Button.Secondary, Phase.SingleTap);
-        public static readonly InputEvent SecondaryDoubleTap = new(Button.Secondary, Phase.DoubleTap);
-        public static readonly InputEvent SecondaryTripleTap = new(Button.Secondary, Phase.TripleTap);
+        public static readonly ButtonEvent SecondaryPress = new(Button.Secondary, Phase.Press);
+        public static readonly ButtonEvent SecondaryRelease = new(Button.Secondary, Phase.Release);
+        public static readonly ButtonEvent SecondarySingleTap = new(Button.Secondary, Phase.SingleTap);
+        public static readonly ButtonEvent SecondaryDoubleTap = new(Button.Secondary, Phase.DoubleTap);
+        public static readonly ButtonEvent SecondaryTripleTap = new(Button.Secondary, Phase.TripleTap);
 
         // Secondary hold events with begin/end variants
-        public static readonly InputEvent SecondaryHoldBegin = new(Button.Secondary, Phase.Hold, state: GestureState.Begin);
-        public static readonly InputEvent SecondaryHoldEnd = new(Button.Secondary, Phase.Hold, state: GestureState.End);
+        public static readonly ButtonEvent SecondaryHoldBegin = new(Button.Secondary, Phase.Hold, state: GestureState.Begin);
+        public static readonly ButtonEvent SecondaryHoldEnd = new(Button.Secondary, Phase.Hold, state: GestureState.End);
 
         // Secondary complex sequence events
-        public static readonly InputEvent SecondaryTapHoldBegin = new(Button.Secondary, Phase.TapHold, state: GestureState.Begin);
-        public static readonly InputEvent SecondaryTapHoldEnd = new(Button.Secondary, Phase.TapHold, state: GestureState.End);
-        public static readonly InputEvent SecondaryDoubleTapHoldBegin = new(Button.Secondary, Phase.DoubleTapHold, state: GestureState.Begin);
-        public static readonly InputEvent SecondaryDoubleTapHoldEnd = new(Button.Secondary, Phase.DoubleTapHold, state: GestureState.End);
+        public static readonly ButtonEvent SecondaryTapHoldBegin = new(Button.Secondary, Phase.TapHold, state: GestureState.Begin);
+        public static readonly ButtonEvent SecondaryTapHoldEnd = new(Button.Secondary, Phase.TapHold, state: GestureState.End);
+        public static readonly ButtonEvent SecondaryDoubleTapHoldBegin = new(Button.Secondary, Phase.DoubleTapHold, state: GestureState.Begin);
+        public static readonly ButtonEvent SecondaryDoubleTapHoldEnd = new(Button.Secondary, Phase.DoubleTapHold, state: GestureState.End);
 
         // Backward compatibility
-        public static readonly InputEvent SecondaryTap = SecondarySingleTap;
-        public static readonly InputEvent SecondaryLongPress = SecondaryHoldBegin;
+        public static readonly ButtonEvent SecondaryTap = SecondarySingleTap;
+        public static readonly ButtonEvent SecondaryLongPress = SecondaryHoldBegin;
 
         // Tertiary button events
-        public static readonly InputEvent TertiaryPress = new(Button.Tertiary, Phase.Press);
-        public static readonly InputEvent TertiaryRelease = new(Button.Tertiary, Phase.Release);
-        public static readonly InputEvent TertiarySingleTap = new(Button.Tertiary, Phase.SingleTap);
-        public static readonly InputEvent TertiaryDoubleTap = new(Button.Tertiary, Phase.DoubleTap);
-        public static readonly InputEvent TertiaryTripleTap = new(Button.Tertiary, Phase.TripleTap);
+        public static readonly ButtonEvent TertiaryPress = new(Button.Tertiary, Phase.Press);
+        public static readonly ButtonEvent TertiaryRelease = new(Button.Tertiary, Phase.Release);
+        public static readonly ButtonEvent TertiarySingleTap = new(Button.Tertiary, Phase.SingleTap);
+        public static readonly ButtonEvent TertiaryDoubleTap = new(Button.Tertiary, Phase.DoubleTap);
+        public static readonly ButtonEvent TertiaryTripleTap = new(Button.Tertiary, Phase.TripleTap);
 
         // Tertiary hold events with begin/end variants
-        public static readonly InputEvent TertiaryHoldBegin = new(Button.Tertiary, Phase.Hold, state: GestureState.Begin);
-        public static readonly InputEvent TertiaryHoldEnd = new(Button.Tertiary, Phase.Hold, state: GestureState.End);
+        public static readonly ButtonEvent TertiaryHoldBegin = new(Button.Tertiary, Phase.Hold, state: GestureState.Begin);
+        public static readonly ButtonEvent TertiaryHoldEnd = new(Button.Tertiary, Phase.Hold, state: GestureState.End);
 
         // Tertiary complex sequence events
-        public static readonly InputEvent TertiaryTapHoldBegin = new(Button.Tertiary, Phase.TapHold, state: GestureState.Begin);
-        public static readonly InputEvent TertiaryTapHoldEnd = new(Button.Tertiary, Phase.TapHold, state: GestureState.End);
-        public static readonly InputEvent TertiaryDoubleTapHoldBegin = new(Button.Tertiary, Phase.DoubleTapHold, state: GestureState.Begin);
-        public static readonly InputEvent TertiaryDoubleTapHoldEnd = new(Button.Tertiary, Phase.DoubleTapHold, state: GestureState.End);
+        public static readonly ButtonEvent TertiaryTapHoldBegin = new(Button.Tertiary, Phase.TapHold, state: GestureState.Begin);
+        public static readonly ButtonEvent TertiaryTapHoldEnd = new(Button.Tertiary, Phase.TapHold, state: GestureState.End);
+        public static readonly ButtonEvent TertiaryDoubleTapHoldBegin = new(Button.Tertiary, Phase.DoubleTapHold, state: GestureState.Begin);
+        public static readonly ButtonEvent TertiaryDoubleTapHoldEnd = new(Button.Tertiary, Phase.DoubleTapHold, state: GestureState.End);
 
         // Backward compatibility
-        public static readonly InputEvent TertiaryTap = TertiarySingleTap;
-        public static readonly InputEvent TertiaryLongPress = TertiaryHoldBegin;
+        public static readonly ButtonEvent TertiaryTap = TertiarySingleTap;
+        public static readonly ButtonEvent TertiaryLongPress = TertiaryHoldBegin;
 
-        public static readonly InputEvent Up = new(direction: Direction.Up);
-        public static readonly InputEvent Right = new(direction: Direction.Right);
-        public static readonly InputEvent Down = new(direction: Direction.Down);
-        public static readonly InputEvent Left = new(direction: Direction.Left);
+        public static readonly ButtonEvent Up = new(direction: Direction.Up);
+        public static readonly ButtonEvent Right = new(direction: Direction.Right);
+        public static readonly ButtonEvent Down = new(direction: Direction.Down);
+        public static readonly ButtonEvent Left = new(direction: Direction.Left);
 
-        public static InputEvent Get(Button button, Phase phase) => new(button, phase);
+        public static ButtonEvent Get(Button button, Phase phase) => new(button, phase);
 
-        public static readonly InputEvent None = default;
+        public static readonly ButtonEvent None = default;
 
-        public static IEnumerable<InputEvent> GetAll()
+        public static IEnumerable<ButtonEvent> GetAll()
         {
             // Return all predefined constants
             yield return None;
@@ -236,11 +236,11 @@ namespace Inventonater
             yield return TertiaryLongPress;
         }
 
-        public bool Equals(InputEvent other) => button == other.button && phase == other.phase && direction == other.direction && state == other.state;
-        public override bool Equals(object obj) => obj is InputEvent other && Equals(other);
+        public bool Equals(ButtonEvent other) => button == other.button && phase == other.phase && direction == other.direction && state == other.state;
+        public override bool Equals(object obj) => obj is ButtonEvent other && Equals(other);
         public override int GetHashCode() => HashCode.Combine((int)button, (int)phase, (int)direction, (int)state);
-        public static bool operator ==(InputEvent left, InputEvent right) => left.Equals(right);
-        public static bool operator !=(InputEvent left, InputEvent right) => !left.Equals(right);
+        public static bool operator ==(ButtonEvent left, ButtonEvent right) => left.Equals(right);
+        public static bool operator !=(ButtonEvent left, ButtonEvent right) => !left.Equals(right);
 
         public override string ToString()
         {
