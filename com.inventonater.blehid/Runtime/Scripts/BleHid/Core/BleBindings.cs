@@ -7,6 +7,11 @@ namespace Inventonater
     [Serializable]
     public class BleBindings
     {
+        public const string BleMediaName = "BleMedia";
+        public const string BleMouseName = "BleMouse";
+        public const string LocalMediaName = "LocalMedia";
+        public const string LocalDPadName = "LocalDPad";
+
         private readonly InputBinding _localMedia;
         private readonly InputBinding _localDPad;
         private readonly InputBinding _bleMouse;
@@ -47,7 +52,7 @@ namespace Inventonater
             };
 
             var map = new InputMap(buttons, axisMappings);
-            return new InputBinding("BleMouse", registry, map);
+            return new InputBinding(BleMouseName, registry, map);
         }
 
         public InputBinding CreateBleMedia(MappableActionRegistry registry)
@@ -62,7 +67,7 @@ namespace Inventonater
             };
             var axisMappings = new List<IAxisMapping> { new SingleAxisMappingVolumeIncremental(Axis.Z, registry) };
             var map = new InputMap(buttons, axisMappings);
-            return new InputBinding("BleMedia", registry, map);
+            return new InputBinding(BleMediaName, registry, map);
         }
 
         public InputBinding CreateLocalMedia(MappableActionRegistry registry)
@@ -77,7 +82,7 @@ namespace Inventonater
             };
             var axisMappings = new List<IAxisMapping> { new SingleAxisMappingVolumeIncremental(Axis.Z, registry) };
             var map = new InputMap(buttons, axisMappings);
-            return new InputBinding("LocalMedia", registry, map);
+            return new InputBinding(LocalMediaName, registry, map);
         }
 
         public InputBinding CreateLocalDPad(MappableActionRegistry registry)
@@ -95,7 +100,7 @@ namespace Inventonater
             var axisMappings = new List<IAxisMapping>
                 { new SingleAxisMappingVolumeIncremental(Axis.Z, registry) };
             var map = new InputMap(buttons, axisMappings);
-            return new InputBinding("LocalDPad", registry, map);
+            return new InputBinding(LocalDPadName, registry, map);
         }
 
         private static readonly Vector2 SamsungResolution = new Vector2(1440, 3088);

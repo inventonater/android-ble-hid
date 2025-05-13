@@ -8,10 +8,13 @@ namespace Inventonater
     [Serializable]
     public class BindingSet : MonoBehaviour
     {
+        public InputBinding DefaultBinding { get; private set; }
         public List<InputBinding> Bindings { get; } = new();
         public event Action<InputBinding> WhenBindingAdded = delegate { };
 
-        public InputBinding Get(string bindingName) => Bindings.First(m => m.Name == bindingName);
+        public InputBinding Get(string bindingName) => Bindings.FirstOrDefault(m => m.Name == bindingName) ?? DefaultBinding;
+
+        public void SetDefault(InputBinding binding) => DefaultBinding = binding;
         public void Add(InputBinding binding)
         {
             if (Bindings.Any(m => m.Name == binding.Name)) return;
@@ -25,5 +28,6 @@ namespace Inventonater
             int nextIndex = (currentIndex + 1) % Bindings.Count;
             return Bindings[nextIndex];
         }
+
     }
 }

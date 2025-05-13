@@ -6,6 +6,12 @@ namespace Inventonater
     [Serializable]
     public class MqttInputBindings
     {
+        public const string SpeakerName = "Speaker";
+        public const string LightsName = "Lights";
+        public const string ChromecastName = "Chromecast";
+        public const string ShellName = "Shell";
+
+
         private InputBinding _mqttSpeaker;
         private InputBinding _mqttLights;
         private InputBinding _mqttChromecast;
@@ -36,7 +42,7 @@ namespace Inventonater
             map.Add(ButtonEvent.Down, MappableActionId.VolumeDown);
             map.Add(new SingleAxisMappingVolumeIncremental(Axis.Z, registry, scale: 0.4f, timeInterval: 0.04f));
 
-            return new InputBinding("Speaker", registry, map);
+            return new InputBinding(SpeakerName, registry, map);
         }
 
         public InputBinding CreateLight(MqttLightsBridge bridge)
@@ -54,7 +60,7 @@ namespace Inventonater
 
             var axisMapping = new SingleAxisMappingDelta(Axis.Z, bridge.IncrementBrightness, scale: 1.4f, timeInterval: 0.4f);
             var map = new InputMap(buttons, new List<IAxisMapping> { axisMapping });
-            return new InputBinding("Lights", registry, map);
+            return new InputBinding(LightsName, registry, map);
         }
 
         public InputBinding CreateChromecast(MqttChromecastBridge bridge)
@@ -73,7 +79,7 @@ namespace Inventonater
             var axisMapping = new SingleAxisMappingVolumeIncremental(Axis.Z, registry, timeInterval: 0.04f);
 
             var map = new InputMap(buttons, new List<IAxisMapping> { axisMapping });
-            return new InputBinding("Chromecast", registry, map);
+            return new InputBinding(ChromecastName, registry, map);
         }
 
         public InputBinding CreateShell(MqttShellBridge bridge)
@@ -100,7 +106,7 @@ namespace Inventonater
             var axisMapping = new SingleAxisMappingVolumeIncremental(Axis.Z, registry, timeInterval: 0.04f);
 
             var map = new InputMap(buttons, new List<IAxisMapping> { axisMapping });
-            return new InputBinding("MQTT Shell", registry, map);
+            return new InputBinding(ShellName, registry, map);
         }
     }
 }

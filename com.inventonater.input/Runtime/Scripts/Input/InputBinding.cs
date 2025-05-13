@@ -77,6 +77,7 @@ namespace Inventonater
     public class InputBinding
     {
         public string Name { get; }
+        public string Description => $"some description of {Name}";
         public InputMap Map { get; }
 
         [SerializeField] private MappableActionRegistry _registry;
