@@ -41,7 +41,7 @@ namespace Inventonater
             if (state == GestureState.None && IsAnyHold(phase)) LoggingManager.Instance.Error($"Malformed InputEvent {ToString()}");
         }
 
-        private static bool IsAnyHold(Phase phase) => phase is Phase.Hold or Phase.DoubleTap or Phase.TripleTap;
+        private static bool IsAnyHold(Phase phase) => phase is Phase.Hold or Phase.TapHold or Phase.DoubleTapHold;
 
         public enum Button
         {
