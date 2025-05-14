@@ -89,8 +89,8 @@ namespace Inventonater
         {
             var buttons = new List<ButtonMapEntry>
             {
-                new (ButtonEvent.PrimaryTap, MappableActionId.Select),
-                new (ButtonEvent.SecondaryTap, MappableActionId.Back),
+                new (ButtonEvent.PrimarySingleTap, MappableActionId.Select),
+                new (ButtonEvent.SecondarySingleTap, MappableActionId.Back),
                 new (ButtonEvent.SecondaryDoubleTap, MappableActionId.Home),
                 new (ButtonEvent.Up, MappableActionId.Up),
                 new (ButtonEvent.Right, MappableActionId.Right),

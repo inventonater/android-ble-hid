@@ -90,8 +90,8 @@ namespace Inventonater
             {
                 new (ButtonEvent.PrimaryPress, MappableActionId.PrimaryPress),
                 new (ButtonEvent.PrimaryRelease, MappableActionId.PrimaryRelease),
-                new (ButtonEvent.PrimaryTap, MappableActionId.Select),
-                new (ButtonEvent.SecondaryTap, MappableActionId.Back),
+                new (ButtonEvent.PrimarySingleTap, MappableActionId.Select),
+                new (ButtonEvent.SecondarySingleTap, MappableActionId.Back),
 
                 new (ButtonEvent.SecondaryPress, MappableActionId.SecondaryPress),
                 new (ButtonEvent.SecondaryRelease, MappableActionId.SecondaryRelease),

@@ -14,19 +14,19 @@ namespace Inventonater
     }
 
     [Serializable]
-    public readonly struct ButtonEvent : IEquatable<ButtonEvent>
+    public struct ButtonEvent : IEquatable<ButtonEvent>
     {
         [JsonProperty(DefaultValueHandling = DefaultValueHandling.Ignore)] [DefaultValue(Button.Primary)]
-        public readonly Button button;
+        public Button button;
 
         [JsonProperty(DefaultValueHandling = DefaultValueHandling.Ignore)] [DefaultValue(Phase.None)]
-        public readonly Phase phase;
+        public Phase phase;
 
         [JsonProperty(DefaultValueHandling = DefaultValueHandling.Ignore)] [DefaultValue(Direction.None)]
-        public readonly Direction direction;
+        public Direction direction;
 
         [JsonProperty(DefaultValueHandling = DefaultValueHandling.Ignore)] [DefaultValue(GestureState.None)]
-        public readonly GestureState state; // None for non-holding events, Begin/End for hold-type phases
+        public GestureState state; // None for non-holding events, Begin/End for hold-type phases
 
         public ButtonEvent(Direction direction) : this(Button.Primary, Phase.None, direction, GestureState.None) { }
         public ButtonEvent(Button button, Phase phase) : this(button, phase, Direction.None, GestureState.None) { }
@@ -72,6 +72,8 @@ namespace Inventonater
             Left
         }
 
+        [JsonIgnore] public bool IsEmpty => this == default;
+
         [JsonIgnore] public bool IsPrimary => button == Button.Primary;
         [JsonIgnore] public bool IsSecondary => button == Button.Secondary;
         [JsonIgnore] public bool IsTertiary => button == Button.Tertiary;
@@ -105,6 +107,8 @@ namespace Inventonater
         [JsonIgnore] public bool IsUp => direction == Direction.Up;
         [JsonIgnore] public bool IsDown => direction == Direction.Down;
 
+        public static readonly ButtonEvent Empty = default;
+
         // Primary button events
         public static readonly ButtonEvent PrimaryPress = new(Button.Primary, Phase.Press);
         public static readonly ButtonEvent PrimaryRelease = new(Button.Primary, Phase.Release);
@@ -121,10 +125,6 @@ namespace Inventonater
         public static readonly ButtonEvent PrimaryTapHoldEnd = new(Button.Primary, Phase.TapHold, state: GestureState.End);
         public static readonly ButtonEvent PrimaryDoubleTapHoldBegin = new(Button.Primary, Phase.DoubleTapHold, state: GestureState.Begin);
         public static readonly ButtonEvent PrimaryDoubleTapHoldEnd = new(Button.Primary, Phase.DoubleTapHold, state: GestureState.End);
-
-        // Backward compatibility
-        public static readonly ButtonEvent PrimaryTap = PrimarySingleTap;
-        public static readonly ButtonEvent PrimaryLongPress = PrimaryHoldBegin;
 
         // Secondary button events
         public static readonly ButtonEvent SecondaryPress = new(Button.Secondary, Phase.Press);
@@ -143,10 +143,6 @@ namespace Inventonater
         public static readonly ButtonEvent SecondaryDoubleTapHoldBegin = new(Button.Secondary, Phase.DoubleTapHold, state: GestureState.Begin);
         public static readonly ButtonEvent SecondaryDoubleTapHoldEnd = new(Button.Secondary, Phase.DoubleTapHold, state: GestureState.End);
 
-        // Backward compatibility
-        public static readonly ButtonEvent SecondaryTap = SecondarySingleTap;
-        public static readonly ButtonEvent SecondaryLongPress = SecondaryHoldBegin;
-
         // Tertiary button events
         public static readonly ButtonEvent TertiaryPress = new(Button.Tertiary, Phase.Press);
         public static readonly ButtonEvent TertiaryRelease = new(Button.Tertiary, Phase.Release);
@@ -163,10 +159,6 @@ namespace Inventonater
         public static readonly ButtonEvent TertiaryTapHoldEnd = new(Button.Tertiary, Phase.TapHold, state: GestureState.End);
         public static readonly ButtonEvent TertiaryDoubleTapHoldBegin = new(Button.Tertiary, Phase.DoubleTapHold, state: GestureState.Begin);
         public static readonly ButtonEvent TertiaryDoubleTapHoldEnd = new(Button.Tertiary, Phase.DoubleTapHold, state: GestureState.End);
-
-        // Backward compatibility
-        public static readonly ButtonEvent TertiaryTap = TertiarySingleTap;
-        public static readonly ButtonEvent TertiaryLongPress = TertiaryHoldBegin;
 
         public static readonly ButtonEvent Up = new(direction: Direction.Up);
         public static readonly ButtonEvent Right = new(direction: Direction.Right);
@@ -226,14 +218,6 @@ namespace Inventonater
             yield return Right;
             yield return Down;
             yield return Left;
-
-            // Backward compatibility
-            yield return PrimaryTap;
-            yield return PrimaryLongPress;
-            yield return SecondaryTap;
-            yield return SecondaryLongPress;
-            yield return TertiaryTap;
-            yield return TertiaryLongPress;
         }
 
         public bool Equals(ButtonEvent other) => button == other.button && phase == other.phase && direction == other.direction && state == other.state;

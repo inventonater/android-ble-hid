@@ -13,8 +13,8 @@ namespace Inventonater
 
         [MappableAction(id: MappableActionId.PrimaryPress)] public void PrimaryPress() => Publish(ButtonEvent.PrimaryPress);
         [MappableAction(id: MappableActionId.PrimaryRelease)] public void PrimaryRelease() => Publish(ButtonEvent.PrimaryRelease);
-        [MappableAction(id: MappableActionId.Select)] public void Select() => Publish(ButtonEvent.PrimaryTap);
-        [MappableAction(id: MappableActionId.Back)] public void Back() => Publish(ButtonEvent.SecondaryTap);
+        [MappableAction(id: MappableActionId.Select)] public void Select() => Publish(ButtonEvent.PrimarySingleTap);
+        [MappableAction(id: MappableActionId.Back)] public void Back() => Publish(ButtonEvent.SecondarySingleTap);
 
         [MappableAction(id: MappableActionId.SecondaryPress)] public void SecondaryPress() => Publish(ButtonEvent.SecondaryPress);
         [MappableAction(id: MappableActionId.SecondaryRelease)] public void SecondaryRelease() => Publish(ButtonEvent.SecondaryRelease);
