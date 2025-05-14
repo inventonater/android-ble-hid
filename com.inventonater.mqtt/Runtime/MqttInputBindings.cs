@@ -11,7 +11,6 @@ namespace Inventonater
         public const string ChromecastName = "Chromecast";
         public const string ShellName = "Shell";
 
-
         private InputBinding _mqttSpeaker;
         private InputBinding _mqttLights;
         private InputBinding _mqttChromecast;
@@ -69,8 +68,9 @@ namespace Inventonater
 
             var buttons = new List<ButtonMapEntry>
             {
-                new(ButtonEvent.PrimaryPress, MappableActionId.Select),
-                new(ButtonEvent.SecondaryPress, MappableActionId.Back),
+                new(ButtonEvent.PrimarySingleTap, MappableActionId.Select),
+                new(ButtonEvent.SecondarySingleTap, MappableActionId.Back),
+                new(ButtonEvent.SecondaryHoldBegin, MappableActionId.Home),
                 new(ButtonEvent.Up, MappableActionId.Up),
                 new(ButtonEvent.Down, MappableActionId.Down),
                 new(ButtonEvent.Left, MappableActionId.Left),

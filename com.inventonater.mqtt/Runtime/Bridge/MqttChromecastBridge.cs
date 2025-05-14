@@ -10,6 +10,8 @@ namespace Inventonater
 
         [MappableAction(id: MappableActionId.Select)] public void Select() => Publish("DPAD_CENTER");
         [MappableAction(id: MappableActionId.Back)] public void Back() => Publish("BACK");
+        [MappableAction(id: MappableActionId.Home)] public void Home() => Publish("HOME");
+
         [MappableAction(id: MappableActionId.Up)] public void Up() => Publish("DPAD_UP");
         [MappableAction(id: MappableActionId.Down)] public void Down() => Publish("DPAD_DOWN");
         [MappableAction(id: MappableActionId.Left)] public void Left() => Publish("DPAD_LEFT");

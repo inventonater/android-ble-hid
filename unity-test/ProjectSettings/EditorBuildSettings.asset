@@ -6,8 +6,8 @@ EditorBuildSettings:
   serializedVersion: 2
   m_Scenes:
   - enabled: 1
-    path: Packages/com.inventonater.blehid/Runtime/BleHidSimpleScene.unity
-    guid: 5d92e45d7f3f24e8aa0ec55b94db0f7c
+    path: Packages/com.inventonater.blehid/Runtime/BleExample.unity
+    guid: ea66e7380478345cea5ea5ab361f324e
   m_configObjects:
     com.unity.input.settings.actions: {fileID: -944628639613478452, guid: 052faaac586de48259a63d0c4782560b, type: 3}
   m_UseUCBPForAssetBundles: 0
