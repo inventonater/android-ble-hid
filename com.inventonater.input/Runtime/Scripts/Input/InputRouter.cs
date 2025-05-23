@@ -8,16 +8,16 @@ namespace Inventonater
     [DefaultExecutionOrder(ExecutionOrder.InputRouting)]
     public class InputRouter : MonoBehaviour
     {
-        public delegate void InputDeviceChangedEvent(IInputSourceDevice prev, IInputSourceDevice next);
+        public delegate void InputDeviceChangedEvent(IInputSource prev, IInputSource next);
         public event InputDeviceChangedEvent WhenInputDeviceChanged = delegate { };
         public event Action<InputBinding> WhenBindingChanged = delegate { };
 
-        private IInputSourceDevice _sourceDevice;
+        private IInputSource _source;
         private InputBinding _binding;
         private InputBinding _shell;
 
         public bool HasMapping => _binding != null;
-        public bool HasDevice => _sourceDevice != null;
+        public bool HasDevice => _source != null;
         [CanBeNull] public InputBinding Binding => _binding;
         [SerializeField] private List<ButtonEvent> pendingButtonEvents = new();
         [SerializeField] private bool _verbose = true;
@@ -35,27 +35,27 @@ namespace Inventonater
 
         public void SetShellBinding(InputBinding shell) => _shell = shell;
 
-        public void SetSource(IInputSourceDevice inputSourceDevice)
+        public void SetSource(IInputSource inputSource)
         {
-            IInputSourceDevice prevSourceDevice = _sourceDevice;
-            if (prevSourceDevice != null)
+            IInputSource prevSource = _source;
+            if (prevSource != null)
             {
-                LoggingManager.Instance.Log($"unregistered: {prevSourceDevice.Name}");
-                prevSourceDevice.EmitPositionDelta -= HandlePositionDeltaEvent;
-                prevSourceDevice.EmitInputEvent -= HandleInputEvent;
-                prevSourceDevice.InputDeviceDisabled();
+                LoggingManager.Instance.Log($"unregistered: {prevSource.Name}");
+                prevSource.EmitPositionDelta -= HandlePositionDeltaEvent;
+                prevSource.EmitInputEvent -= HandleInputEvent;
+                prevSource.InputDeviceDisabled();
             }
 
-            _sourceDevice = inputSourceDevice;
-            if (_sourceDevice != null)
+            _source = inputSource;
+            if (_source != null)
             {
-                LoggingManager.Instance.Log($"registered: {_sourceDevice.Name}");
-                _sourceDevice.EmitPositionDelta += HandlePositionDeltaEvent;
-                _sourceDevice.EmitInputEvent += HandleInputEvent;
-                _sourceDevice.InputDeviceEnabled();
+                LoggingManager.Instance.Log($"registered: {_source.Name}");
+                _source.EmitPositionDelta += HandlePositionDeltaEvent;
+                _source.EmitInputEvent += HandleInputEvent;
+                _source.InputDeviceEnabled();
             }
 
-            WhenInputDeviceChanged(prevSourceDevice, _sourceDevice);
+            WhenInputDeviceChanged(prevSource, _source);
         }
 
         public void HandleInputEvent(ButtonEvent buttonEvent) => pendingButtonEvents.Add(buttonEvent);

@@ -12,7 +12,12 @@ namespace Inventonater
         private List<string> logMessages = new List<string>();
         private Vector2 scrollPosition;
 
-        public void Exception(Exception exception) => Error(exception.Message);
+        public void Exception(Exception exception)
+        {
+            Error(exception.Message + "\n" + exception.StackTrace);
+            if(exception.InnerException != null) Error(exception.InnerException.Message + "\n" + exception.InnerException.StackTrace);
+        }
+
         public void Warning(string message) => Log(message, false);
         public void Error(string message) => Log(message, true);
 

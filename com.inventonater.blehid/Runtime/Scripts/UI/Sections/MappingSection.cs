@@ -8,15 +8,15 @@ namespace Inventonater
     {
         public override string TabName => "Mapping";
         private float lastUpdate;
-        private readonly BindingSet _bindingSet;
+        private readonly BindingList _bindingList;
 
-        private List<SectionUI> Tabs => _bindingSet.Bindings.Select(mapping => new InputDeviceMappingUI(mapping)).ToList<SectionUI>();
+        private List<SectionUI> Tabs => _bindingList.Bindings.Select(mapping => new InputDeviceMappingUI(mapping)).ToList<SectionUI>();
 
         private readonly InputRouter _inputRouter;
         private readonly TabGroup _tabGroup;
-        public MappingSection(BindingSet bindingSet)
+        public MappingSection(BindingList bindingList)
         {
-            _bindingSet = bindingSet;
+            _bindingList = bindingList;
             _tabGroup = new("Mappings", Tabs);
         }
 

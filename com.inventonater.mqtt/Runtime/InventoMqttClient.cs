@@ -9,7 +9,24 @@ namespace Inventonater
 {
     public class InventoMqttClient : MonoBehaviour
     {
-        [SerializeField] private string host = "192.168.10.7";
+        public enum ConnectionStatus
+        {
+            Disconnected,
+            Connecting,
+            Connected,
+            Error
+        }
+
+        public class MqttMessage
+        {
+            public string Topic { get; set; }
+            public string Payload { get; set; }
+            public DateTime Timestamp { get; set; }
+        }
+
+        public ConnectionStatus Status { get; private set; } = ConnectionStatus.Disconnected;
+        public MqttMessage LastReceivedMessage { get; private set; }
+        [SerializeField] private string host = "";
         [SerializeField] private int port = 1883;
         [SerializeField] private string userName = "inventonater";
         [SerializeField] private string password = "asdfasdf";
@@ -32,30 +49,40 @@ namespace Inventonater
 
         public async void Awake()
         {
-            TryInitialize();
-        }
+            Status = ConnectionStatus.Connecting;
+            try
+            {
+                if (string.IsNullOrEmpty(host))
+                {
+                    host = await HomeAssistantDiscovery.DiscoverHomeAssistantIpAsync();
+                    if(string.IsNullOrEmpty(host)) 
+                    {
+                        Debug.LogError("Could not find MQTT host IP address");
+                        Status = ConnectionStatus.Error;
+                    }
+                }
 
-        private void TryInitialize()
-        {
-            if (_isInitialized) return;
-            _isInitialized = true;
-            _client = new MQTTClient(ConnectionOptions);
-            _client.OnConnected += HandleConnected;
-            _client.OnError += HandleError;
-            _client.OnDisconnect += HandleDisconnected;
-            _client.BeginConnect(ConnectPacketBuilderCallback);
+                _client = new MQTTClient(ConnectionOptions);
+                _client.OnConnected += HandleConnected;
+                _client.OnError += HandleError;
+                _client.OnDisconnect += HandleDisconnected;
+                _client.BeginConnect(ConnectPacketBuilderCallback);
+            }
+            catch (Exception e)
+            {
+                Status = ConnectionStatus.Error;
+                LoggingManager.Instance.Exception(e);
+            }
         }
 
         private Action _whenConnected = delegate{};
-        private bool _isInitialized;
 
         public event Action WhenConnected
         {
             add
             {
                 _whenConnected += value;
-                TryInitialize();
-                if (_client.State == ClientStates.Connected) value();
+                if (_client is { State: ClientStates.Connected }) value();
             }
             remove => _whenConnected -= value;
         }
@@ -65,16 +92,22 @@ namespace Inventonater
         private void HandleConnected(MQTTClient client)
         {
             Debug.Log($"MqttClient Connected to MQTT: {client.State}");
+            Status = ConnectionStatus.Connected;
             _whenConnected();
         }
 
         private void HandleDisconnected(MQTTClient client, DisconnectReasonCodes code, string reason)
         {
             Debug.Log($"MqttClient Disconnected: {reason}");
+            Status = ConnectionStatus.Disconnected;
             WhenDisconnected();
         }
 
-        private void HandleError(MQTTClient client, string reason) => Debug.LogError($"MqttClient MQTT Error: {reason}");
+        private void HandleError(MQTTClient client, string reason)
+        {
+            Debug.LogError($"MqttClient MQTT Error: {reason}");
+            Status = ConnectionStatus.Error;
+        }
 
         private ConnectPacketBuilder ConnectPacketBuilderCallback(MQTTClient client, ConnectPacketBuilder builder)
         {
@@ -89,6 +122,11 @@ namespace Inventonater
         public void Publish(string topic, string message, QoSLevels qos = QoSLevels.AtLeastOnceDelivery, bool retain = false)
         {
             string logMessage = $"Publish: {(retain ? "retain=true" : "")} {topic} {message}";
+            if (_client == null)
+            {
+                LoggingManager.Instance.Error($"MQTT Client not ready for {logMessage}");
+                return;
+            }
 
             if (_client.State != ClientStates.Connected)
             {
@@ -106,11 +144,26 @@ namespace Inventonater
 
         public void Subscribe<TPayload>(string subscriptionTopic, Action<TPayload> callback)
         {
+            if (_client == null)
+            {
+                LoggingManager.Instance.Error($"MQTT Client not ready for Subscribe {subscriptionTopic}");
+                return;
+            }
+
             LoggingManager.Instance.Log($"Subscribing: {subscriptionTopic}");
 
             _client.CreateSubscriptionBuilder(subscriptionTopic).WithMessageCallback((client, topic, topicName, message) =>
             {
                 string payload = System.Text.Encoding.UTF8.GetString(message.Payload.Data, message.Payload.Offset, message.Payload.Count);
+                
+                // Store the last received message
+                LastReceivedMessage = new MqttMessage
+                {
+                    Topic = topicName,
+                    Payload = payload,
+                    Timestamp = DateTime.Now
+                };
+                
                 if (verbose) LoggingManager.Instance.Log($"{topic} {payload}");
                 TPayload result = default;
                 bool deserializationSuccessful = false;
