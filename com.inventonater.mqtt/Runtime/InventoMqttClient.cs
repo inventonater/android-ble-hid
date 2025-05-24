@@ -26,7 +26,7 @@ namespace Inventonater
 
         public ConnectionStatus Status { get; private set; } = ConnectionStatus.Disconnected;
         public MqttMessage LastReceivedMessage { get; private set; }
-        [SerializeField] private string host = "";
+        [SerializeField] private string mqttHost = "192.168.0.234";
         [SerializeField] private int port = 1883;
         [SerializeField] private string userName = "inventonater";
         [SerializeField] private string password = "asdfasdf";
@@ -39,7 +39,7 @@ namespace Inventonater
 
         private ConnectionOptions ConnectionOptions => new()
         {
-            Host = host,
+            Host = mqttHost,
             Port = port,
             Transport = SupportedTransports.TCP,
             UseTLS = false,
@@ -52,10 +52,10 @@ namespace Inventonater
             Status = ConnectionStatus.Connecting;
             try
             {
-                if (string.IsNullOrEmpty(host))
+                if (string.IsNullOrEmpty(mqttHost))
                 {
-                    host = await HomeAssistantDiscovery.DiscoverHomeAssistantIpAsync();
-                    if(string.IsNullOrEmpty(host)) 
+                    mqttHost = await HomeAssistantDiscovery.DiscoverHomeAssistantIpAsync();
+                    if(string.IsNullOrEmpty(mqttHost))
                     {
                         Debug.LogError("Could not find MQTT host IP address");
                         Status = ConnectionStatus.Error;

@@ -4,7 +4,6 @@ using UnityEngine;
 
 namespace Inventonater
 {
-
     [Serializable]
     public class MqttTopicMessageIncomingCommand : MqttTopic<MqttTopicMessageIncomingCommand.Payload>
     {
